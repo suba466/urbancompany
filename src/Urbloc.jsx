@@ -1,0 +1,96 @@
+import Container from 'react-bootstrap/Container';
+import Row from 'react-bootstrap/Row';
+import Col from 'react-bootstrap/Col';
+import { Dropdown, Modal } from 'react-bootstrap';
+import { IoMdLocate } from "react-icons/io";
+import { CiLocationOn } from "react-icons/ci";
+import { CiSearch } from "react-icons/ci";
+import { useState, useEffect } from 'react';
+import { LuNotepadText } from "react-icons/lu";
+import { LuShoppingCart } from "react-icons/lu";
+import { IoMdContact } from "react-icons/io";
+import './Urbanav.css';
+
+function Urbloc() {
+  const [show, setShow] = useState(false);
+  const handleClose = () => setShow(false);
+  const handleShow = () => setShow(true);
+  const [searchValue, setSearchValue]=useState("")
+  const placeholders = ["Facial", "AC Service", "Kitchen cleaning"];
+  const [index, setIndex] = useState(0);
+  const [subIndex, setSubIndex] = useState(0);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    const currentWord = placeholders[index];
+    const speed = deleting ? 80 : 120;
+    const timer = setTimeout(() => {
+      if (!deleting && subIndex < currentWord.length) {
+        setSubIndex(subIndex + 1);
+      } else if (!deleting && subIndex === currentWord.length) {
+        setDeleting(true);
+      } else if (deleting && subIndex > 0) {
+        setSubIndex(subIndex - 1);
+      } else if (deleting && subIndex === 0) {
+        setDeleting(false);
+        setIndex((prev) => (prev + 1) % placeholders.length);
+      }
+    }, speed);
+
+    return () => clearTimeout(timer);
+  }, [subIndex, deleting, index, placeholders]);
+
+  return (
+    <Container fluid>
+      <Row className="urban-row g-2 ">
+        <Col xs="auto" >
+          <Dropdown className='location-box '>
+            <Dropdown.Toggle 
+              variant="outline-secondary"
+              onClick={handleShow}
+              style={{
+                padding: "8px",
+                borderRadius: "5px",
+                border: "1px solid #ccc",
+                fontSize: "12px"
+              }}>
+              <CiLocationOn style={{ marginRight: "6px" }} />
+              184, Balaji Nagar- New....
+            </Dropdown.Toggle>
+          </Dropdown>
+          <Modal show={show} onHide={handleClose} centered>
+            <Modal.Header closeButton></Modal.Header>
+            <Modal.Body>
+              <input type="text" placeholder="Search location..." className=" mr-sm-2"/>
+              <a href="#" style={{ color: "#1a6692", textDecoration: "none", fontSize: "12px" }}>
+                <IoMdLocate /> Use current location
+              </a>
+            </Modal.Body>
+          </Modal>
+        </Col>
+        <Col xs="auto">
+        <div className='search-wrapper' style={{position:"relative"}}>
+          {searchValue==""&&(
+            <CiSearch className='search-icon' />
+          )}
+          <input
+            type="text" value={searchValue} onChange={(e)=>setSearchValue(e.target.value)}
+            placeholder={"     Search for " + placeholders[index].substring(0, subIndex) + "..."}
+            className='form-control search-box'
+            style={{
+              padding: "8px",
+              borderRadius: "5px",
+              border: "1px solid #ccc",
+              fontSize: "12px"
+            }}
+          /></div>
+        </Col>
+        <Col  ><LuNotepadText className='note row-sm'/></Col>
+        <Col  ><LuShoppingCart className='note row-sm'/></Col>
+        <Col  ><IoMdContact className='note row-sm'/></Col>
+      </Row>
+    </Container>
+  );
+}
+
+export default Urbloc;
