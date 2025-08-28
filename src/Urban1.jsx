@@ -11,11 +11,11 @@ import rating from './assets/rating.webp';
 import people from './assets/people.webp';
 function Urban1() {
   return (
-    <Container style={{margin:"50px auto"}}>
+    <Container style={{margin:"50px auto",marginLeft:"100px"}}>
       <Row>
         <Col style={{position:"relative"}}>
           <h1 style={{margin:"45px auto"}}>Home services at your <br />doorstep</h1>
-          <div style={{border:"2px solid rgb(171,171,171"}}>
+          <div style={{border:"1px solid rgb(171,171,171"}}>
             <p style={{fontWeight:"600",fontSize:"20px",color:"rgb(84,84,84)",margin:"20px "}}>
               What are you looking for?
             </p>
@@ -48,22 +48,19 @@ function Urban1() {
                 </Col>
             </Row>
           </div>
-        <Row style={{border:"1px solid black", marginTop:"80px"}}>
-        <Col> <img src={rating} alt="" style={{display:"inline"}}/>
-            <p><span style={{fontSize:"20px"}}>4.8</span></p></Col>
-          
-        <Col><Row><Col> <img src={people} alt="" /></Col>
-            <Col>2</Col>
+        <Row style={{ marginTop:"80px"}}>
+        <Col><Row><Col xs={3}> <img src={rating} alt="" /></Col>
+            <Col><p style={{color:"rgb(84,84,84)"}}><span style={{fontSize:"20px",fontWeight:"bold",color:"black"}}>4.8</span> <br /> Service Rating*</p></Col>
+          </Row>
+        </Col>
+        <Col><Row><Col xs={3}> <img src={people} alt="" /></Col>
+            <Col><p style={{color:"rgb(84,84,84)"}}><span style={{fontSize:"20px",fontWeight:"bold",color:"black"}}>12M+</span> <br /> Costumers Globally*</p></Col>
           </Row></Col>
       </Row>
         </Col>
-        
-        
-      
         <Col>
-          <img src={urban1} style={{width:"100%"}} alt="" />
+          <img src={urban1} style={{width:"100%",height:"650px",marginLeft:"50px"}} alt="" />
         </Col>
-        
       </Row>
       
     </Container>

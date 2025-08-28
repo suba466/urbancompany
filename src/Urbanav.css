@@ -11,6 +11,11 @@ p, a, span, input, button {
 .img {
   transition: transform 0.1s ease;
 }
+.navbar{
+  position: sticky;
+  top: 0; /* required */
+  z-index: 1000; 
+}
 .img:hover {
   transform: scale(1.03);
 }
