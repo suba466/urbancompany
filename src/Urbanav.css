@@ -9,10 +9,10 @@ p, a, span, input, button {
   font-size: 14px;  
 }
 .img {
-  transition: transform 0.3s ease;
+  transition: transform 0.1s ease;
 }
 .img:hover {
-  transform: scale(1.1);
+  transform: scale(1.03);
 }
 .native {
   width:400.33px;
@@ -109,6 +109,7 @@ p, a, span, input, button {
 .css3:hover .label::after {
   transform: scaleX(1);
 }
+
 
 
 
