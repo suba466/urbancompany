@@ -12,15 +12,15 @@ import people from './assets/people.webp';
 function Urban1() {
   return (
     <Container style={{paddingTop: "50px", paddingBottom: "50px"}}>
-      <Row className='align-items-center'>
-        <Col  lg={6} md={12}>
+      <Row >
+        <Col  lg={6} md={12} >
           <h1 style={{margin:"20px 0"}}>Home services at your <br />doorstep</h1>
           <div style={{border:"1px solid rgb(171,171,171"}}>
             <p style={{fontWeight:"600",fontSize:"20px",color:"rgb(84,84,84)",margin:"20px "}}>
               What are you looking for?
             </p>
             <Row className='g-2 px-3 mb-3' >
-              <Col xs={12} sm={6} className="css2">
+              <Col xs={12} sm={5} className="css2">
                 <p>Salon for women <img src={salon} alt="" /></p>
               </Col>
               <Col xs={12} sm={6} className="css2">
