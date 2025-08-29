@@ -11,55 +11,60 @@ import rating from './assets/rating.webp';
 import people from './assets/people.webp';
 function Urban1() {
   return (
-    <Container style={{margin:"50px auto",marginLeft:"100px"}}>
-      <Row>
-        <Col xs={12} md={6} style={{position:"relative"}}>
-          <h1 style={{margin:"45px auto"}}>Home services at your <br />doorstep</h1>
+    <Container style={{paddingTop: "50px", paddingBottom: "50px"}}>
+      <Row className='align-items-center'>
+        <Col  lg={6} md={12}>
+          <h1 style={{margin:"20px 0"}}>Home services at your <br />doorstep</h1>
           <div style={{border:"1px solid rgb(171,171,171"}}>
             <p style={{fontWeight:"600",fontSize:"20px",color:"rgb(84,84,84)",margin:"20px "}}>
               What are you looking for?
             </p>
-            <Row style={{margin:"5px"}} >
-              <Col xs={4} className="css2" style={{marginLeft:"17px"}}>
+            <Row className='g-2 px-3 mb-3' >
+              <Col xs={12} sm={6} className="css2">
                 <p>Salon for women <img src={salon} alt="" /></p>
               </Col>
-              <Col xs={6} className="css2" style={{width:"307px"}}>
+              <Col xs={12} sm={6} className="css2">
                 <p>AC & Appliance Repair <img src={ac} alt="" /></p>
               </Col>
             </Row>
-            <Row style={{margin:"5px",marginBottom:"20px"}}>
-                <Col xs={3} className='css3'style={{width:"170px"}}>
-                    <Col className="css2 " style={{justifyContent:"center"}}>
-                    <img src={clean} className='img1'/></Col>
-                    <Col><p className='label '>Bathroom & Kitchen Cleaning</p>
-                    </Col>
-                </Col>
-                <Col xs={4} className='css3' style={{width:"180px"}}>
-                    <Col className="css2 " style={{justifyContent:"center"}}>
-                    <img src={electric} alt="" /></Col>
-                    <Col><p className='label'>Electrician, Plumber & Carpenters</p>
-                    </Col>
-                </Col>
-                <Col xs={3} className='css3' style={{width:"180px"}}>
-                    <Col className="css2 " style={{justifyContent:"center"}}>
-                    <img src={water} alt="" /></Col>
-                    <Col><p className='label'>Native Water Purifier</p>
-                    </Col>
-                </Col>
+            <Row className='g-3 px-3 pb-3'>
+                <Col xs={12} sm={4} className="css3">
+                <div className="css2 d-flex justify-content-center">
+                  <img src={clean} alt="" />
+                </div>
+                <p className="label">Bathroom & Kitchen Cleaning</p>
+              </Col>
+                <Col xs={12} sm={4} className="css3">
+                <div className="css2 d-flex justify-content-center">
+                  <img src={electric} alt="" />
+                </div>
+                <p className="label">Electrician, Plumber & Carpenters</p>
+              </Col>
+                <Col xs={12} sm={4} className="css3">
+                <div className="css2 d-flex justify-content-center">
+                  <img src={water} alt="" />
+                </div>
+                <p className="label">Native Water Purifier</p>
+              </Col>
             </Row>
           </div>
-        <Row style={{ marginTop:"80px"}}>
-        <Col><Row><Col xs={3}> <img src={rating} alt="" /></Col>
+        <Row className='mt-4'>
+        <Col xs={6}><Row><Col xs={3}> <img src={rating} alt=""className="img-fluid"  /></Col>
             <Col><p style={{color:"rgb(84,84,84)"}}><span style={{fontSize:"20px",fontWeight:"bold",color:"black"}}>4.8</span> <br /> Service Rating*</p></Col>
           </Row>
         </Col>
-        <Col><Row><Col xs={3}> <img src={people} alt="" /></Col>
+        <Col xs={6}><Row><Col xs={3}> <img src={people} alt="" className="img-fluid"/></Col>
             <Col><p style={{color:"rgb(84,84,84)"}}><span style={{fontSize:"20px",fontWeight:"bold",color:"black"}}>12M+</span> <br /> Costumers Globally*</p></Col>
           </Row></Col>
       </Row>
         </Col>
-        <Col xs={12} md={6} className="text-center">
-          <img src={urban1} style={{width:"100%",height:"650px",marginLeft:"50px"}} alt="" />
+        <Col lg={6} md={12} className="text-center mt-4 mt-lg-0">
+          <img 
+            src={urban1} 
+            className="img-fluid" 
+            style={{ maxHeight: "650px" }} 
+            alt="Urban Services"
+          />
         </Col>
       </Row>
       

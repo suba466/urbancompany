@@ -12,8 +12,9 @@ p, a, span, input, button {
   transition: transform 0.1s ease;
 }
 .navbar{
+  padding: 0.8rem 1.2rem;
   position: sticky;
-  top: 0; /* required */
+  top: 0; 
   z-index: 1000; 
 }
 .img:hover {
@@ -25,7 +26,7 @@ p, a, span, input, button {
   color: rgba(84, 84, 84, 1.00);
 }
 .logo-img {
-  height: 35px;
+  height: 50px;
   width: auto;
 }
 .urban-row {
