@@ -13,7 +13,7 @@ function Urban1() {
   return (
     <Container style={{margin:"50px auto",marginLeft:"100px"}}>
       <Row>
-        <Col style={{position:"relative"}}>
+        <Col xs={12} md={6} style={{position:"relative"}}>
           <h1 style={{margin:"45px auto"}}>Home services at your <br />doorstep</h1>
           <div style={{border:"1px solid rgb(171,171,171"}}>
             <p style={{fontWeight:"600",fontSize:"20px",color:"rgb(84,84,84)",margin:"20px "}}>
@@ -58,7 +58,7 @@ function Urban1() {
           </Row></Col>
       </Row>
         </Col>
-        <Col>
+        <Col xs={12} md={6} className="text-center">
           <img src={urban1} style={{width:"100%",height:"650px",marginLeft:"50px"}} alt="" />
         </Col>
       </Row>
