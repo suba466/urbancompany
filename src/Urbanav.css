@@ -21,7 +21,6 @@ p, a, span, input, button {
   transform: scale(1.03);
 }
 .native {
-  width:400.33px;
   font-size: 14px;
   color: rgba(84, 84, 84, 1.00);
 }

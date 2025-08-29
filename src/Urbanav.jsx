@@ -9,16 +9,14 @@ function Urbanav(){
         <Navbar expand="lg" className="bg-body-tertiary py-3" style={{borderBottom:"1px solid gray"}}>
       <Container>
         <Navbar.Brand href="#home" style={{color:"black"}}>
-            <img src={Uc} className='img img-fluid logo-img' />
+            <img src={Uc} className='img ' />
         </Navbar.Brand>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
-          <Nav className="ms-auto">
+          <Nav className="ms-0">
             <Nav.Link href="#home" className='native'>Native</Nav.Link>
-            
-            <Urbloc />
-            
-          </Nav>
+
+          </Nav><Urbloc />
         </Navbar.Collapse>
       </Container>
     </Navbar>

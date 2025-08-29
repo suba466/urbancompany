@@ -1,4 +1,3 @@
-import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import { Dropdown, Modal } from 'react-bootstrap';
@@ -10,17 +9,15 @@ import { LuNotepadText } from "react-icons/lu";
 import { LuShoppingCart } from "react-icons/lu";
 import { IoMdContact } from "react-icons/io";
 import './Urbanav.css';
-
 function Urbloc() {
   const [show, setShow] = useState(false);
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
-  const [searchValue, setSearchValue]=useState("")
+  const [searchValue, setSearchValue] = useState("");
   const placeholders = ["Facial", "AC Service", "Kitchen cleaning"];
   const [index, setIndex] = useState(0);
   const [subIndex, setSubIndex] = useState(0);
   const [deleting, setDeleting] = useState(false);
-
   useEffect(() => {
     const currentWord = placeholders[index];
     const speed = deleting ? 80 : 120;
@@ -41,57 +38,68 @@ function Urbloc() {
   }, [subIndex, deleting, index, placeholders]);
 
   return (
-    <Container fluid>
-      <Row className="urban-row g-2 ">
-        <Col xs="auto" >
-          <Dropdown className='location-box '>
-            <Dropdown.Toggle 
-              variant="outline-secondary"
-              onClick={handleShow}
-              style={{
-                padding: "8px",
-                borderRadius: "5px",
-                border: "1px solid #ccc",
-                fontSize: "12px"
-              }}>
-              <CiLocationOn style={{ marginRight: "6px" }} />
-              184, Balaji Nagar- New....
-            </Dropdown.Toggle>
-          </Dropdown>
-          <Modal show={show} onHide={handleClose} centered>
-            <Modal.Header closeButton></Modal.Header>
-            <Modal.Body>
-              <input type="text" placeholder="Search location..." className=" mr-sm-2"/>
-              <a href="#" style={{ color: "#1a6692", textDecoration: "none", fontSize: "12px" }}>
-                <IoMdLocate /> Use current location
-              </a>
-            </Modal.Body>
-          </Modal>
-        </Col>
-        <Col xs="auto">
-        <div className='search-wrapper' style={{position:"relative"}}>
-          {searchValue==""&&(
-            <CiSearch className='search-icon' />
-          )}
-          <input
-            type="text" value={searchValue} onChange={(e)=>setSearchValue(e.target.value)}
-            placeholder={"     Search for " + placeholders[index].substring(0, subIndex) + "..."}
-            className='form-control search-box'
+    <Row className="align-items-center justify-content-end g-5 w-100">
+      <Col xs="auto">
+        <Dropdown className="location-box">
+          <Dropdown.Toggle
+            variant="outline-secondary"
+            onClick={handleShow}
             style={{
               padding: "8px",
               borderRadius: "5px",
               border: "1px solid #ccc",
               fontSize: "12px"
+            }}>
+            <CiLocationOn style={{ marginRight: "6px" }} />
+            184, Balaji Nagar- New....
+          </Dropdown.Toggle>
+        </Dropdown>
+        <Modal show={show} onHide={handleClose} centered>
+          <Modal.Header closeButton></Modal.Header>
+          <Modal.Body>
+            <input
+              type="text"
+              placeholder="Search location..."
+              className="mr-sm-2"
+            />
+            <a
+              href="#"
+              style={{
+                color: "#1a6692",
+                textDecoration: "none",
+                fontSize: "12px"
+              }}
+            >
+              <IoMdLocate /> Use current location
+            </a>
+          </Modal.Body>
+        </Modal>
+      </Col>
+      <Col xs="auto">
+        <div className="search-wrapper" style={{ position: "relative" }}>
+          {searchValue === "" && <CiSearch className="search-icon" />}
+          <input
+            type="text"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            placeholder={
+              "     Search for " + placeholders[index].substring(0, subIndex) + "..."
+            }
+            className="form-control search-box"
+            style={{width:"250px",
+              padding: "8px",
+              borderRadius: "5px",
+              border: "1px solid #ccc",
+              fontSize: "12px"
             }}
-          /></div>
-        </Col>
-        <Col><LuNotepadText className='note row-sm'/></Col>
-        <Col  ><LuShoppingCart className='note row-sm'/></Col>
-        <Col  ><IoMdContact className='note row-sm'/></Col>
-      </Row>
-    </Container>
+          />
+        </div>
+      </Col>
+      <Col xs="auto"><LuNotepadText className="note row-sm" /></Col>
+      <Col xs="auto"><LuShoppingCart className="note row-sm" /></Col>
+      <Col xs="auto"><IoMdContact className="note row-sm" /></Col>
+    </Row>
   );
 }
 
 export default Urbloc;
-
