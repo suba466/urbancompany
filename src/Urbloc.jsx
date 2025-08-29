@@ -8,12 +8,14 @@ import { useState, useEffect } from 'react';
 import { LuNotepadText } from "react-icons/lu";
 import { LuShoppingCart } from "react-icons/lu";
 import { IoMdContact } from "react-icons/io";
+import SearchDropdown from './Searchdropdown.jsx';
 import './Urbanav.css';
 function Urbloc() {
   const [show, setShow] = useState(false);
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
   const [searchValue, setSearchValue] = useState("");
+  const[open,setOpen]=useState(false);
   const placeholders = ["Facial", "AC Service", "Kitchen cleaning"];
   const [index, setIndex] = useState(0);
   const [subIndex, setSubIndex] = useState(0);
@@ -81,6 +83,7 @@ function Urbloc() {
           <input
             type="text"
             value={searchValue}
+            onFocus={()=>setOpen(true)}
             onChange={(e) => setSearchValue(e.target.value)}
             placeholder={
               "     Search for " + placeholders[index].substring(0, subIndex) + "..."
@@ -93,6 +96,15 @@ function Urbloc() {
               fontSize: "12px"
             }}
           />
+          {open && (
+          <SearchDropdown
+            searchValue={searchValue}
+            onSelect={(val) => {
+              setSearchValue(val);
+              setOpen(false);
+            }}
+          />
+        )}
         </div>
       </Col>
       <Col xs="auto"><LuNotepadText className="note row-sm" /></Col>
