@@ -85,7 +85,7 @@ function Urbloc() {
             }}
           /></div>
         </Col>
-        <Col style={{marginLeft:"40px"}} ><LuNotepadText className='note row-sm'/></Col>
+        <Col><LuNotepadText className='note row-sm'/></Col>
         <Col  ><LuShoppingCart className='note row-sm'/></Col>
         <Col  ><IoMdContact className='note row-sm'/></Col>
       </Row>
@@ -94,3 +94,4 @@ function Urbloc() {
 }
 
 export default Urbloc;
+
