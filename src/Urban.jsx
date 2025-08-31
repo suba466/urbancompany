@@ -1,4 +1,3 @@
-import 'bootstrap/dist/css/bootstrap.min.css';
 import Urbanav from './Urbanav';
 import Urban1 from './Urban1';
 import Native from './Native';             
@@ -15,4 +14,5 @@ function Urban(){
         </>
     );
 }
+
 export default Urban;
