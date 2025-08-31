@@ -1,20 +1,20 @@
 import { useState } from "react";
-
+import { FaArrowTrendUp } from "react-icons/fa6";
 function SearchDropdown({ searchValue, onSelect }) {
   const [recent, setRecent] = useState(
     JSON.parse(localStorage.getItem("recentSearches")) || []
   );
 
   const trending = [
-    "Professional cleaning",
-    "Electricians",
-    "Salon",
-    "Plumbers",
-    "Carpenters",
-    "Washing machine repair",
-    "Ro repair",
-    "Refrigerator repair",
-    "Microwave repair"
+    "  Professional cleaning",
+    "  Electricians",
+    "  Salon",
+    "  Plumbers",
+    "  Carpenters",
+    "  Washing machine repair",
+    "  Ro repair",
+    "   repair",
+    "   repair"
   ];
 
   const filtered = searchValue
@@ -46,24 +46,27 @@ function SearchDropdown({ searchValue, onSelect }) {
         padding: "10px",
         boxShadow: "0 4px rgba(0,0,0,0.1)",
         zIndex: "1000",
+         maxHeight: "300px",  
+         overflowY: "auto",  
       }}
     >
       {recent.length > 0 && (
         <>
-          <h6 style={{ fontSize: "13px", color: "#666" }}>Recent searches</h6>
+          <h6 style={{ fontSize: "12px", color: "#000000ff",fontWeight:"bold" }}>Recent searches</h6>
           <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
-            {recent.map((item, i) => (
+            {recent.map((item, i) =>  (
               <span
                 key={i}
                 onClick={() => handleClick(item)}
                 style={{
                   padding: "4px 10px",
-                  background: "#f1f3f4",
-                  borderRadius: "15px",
+                  background: "#fbfbfbff",
+                  borderRadius: "5px",
                   fontSize: "12px",
+                  border: "1px solid #ddd",
                   cursor: "pointer",
                 }}
-              >
+              ><FaArrowTrendUp />
                 {item}
               </span>
             ))}
@@ -71,7 +74,7 @@ function SearchDropdown({ searchValue, onSelect }) {
         </>
       )}
 
-      <h6 style={{ fontSize: "13px", color: "#666", marginTop: "10px" }}>
+      <h6 style={{ fontSize: "12px", color: "#070707ff", marginTop: "10px",fontWeight:"bold" }}>
         Trending searches
       </h6>
       <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
@@ -80,14 +83,14 @@ function SearchDropdown({ searchValue, onSelect }) {
             key={i}
             onClick={() => handleClick(item)}
             style={{
-              padding: "6px 12px",
-              background: "#f8f9fa",
+              padding: "7px 12px",
+              background: "#fbfbfbff",
               border: "1px solid #ddd",
-              borderRadius: "20px",
+              borderRadius: "5px",
               fontSize: "12px",
               cursor: "pointer",
             }}
-          >
+          ><FaArrowTrendUp/>
             {item}
           </span>
         ))}
