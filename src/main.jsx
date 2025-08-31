@@ -5,7 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 
 
 import Urban from './Urban.jsx';
-import Task1 from './Task1.jsx';
+
 
 
 createRoot(document.getElementById('root')).render(
