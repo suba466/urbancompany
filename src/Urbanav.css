@@ -149,5 +149,8 @@ p, a, span, input, button {
 .native2:hover{
   transform:scale(1.03);
 }
-
+.native-card:active {
+          transform: scale(0.95);
+          transition: transform 0.1s;
+        }
 
