@@ -78,7 +78,7 @@ function Urbloc() {
         </Modal>
       </Col>
       <Col xs="auto">
-        <div className="search-wrapper" style={{ position: "relative" }}>
+        <div className="search-wrapper w-100" style={{ position: "relative" }}>
           {searchValue === "" && <CiSearch className="search-icon" />}
           <input
             type="text"

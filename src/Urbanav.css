@@ -37,7 +37,6 @@ p, a, span, input, button {
   width: 100%;
   min-width: 0; 
 }
-
 .modal input {
   width: 100%;
   padding: 8px;
@@ -47,7 +46,6 @@ p, a, span, input, button {
 }
 .search-wrapper {
   position: relative;
-  width: 100%;
 }
 .search-icon {
   position: absolute;
@@ -114,8 +112,42 @@ p, a, span, input, button {
 .css3:hover .label::after {
   transform: scaleX(1);
 }
-
-
-
+.native1{
+  display: inline-block;
+  overflow: hidden;
+  margin: 45px auto;
+  cursor: pointer;
+}
+.native1img{
+  width: 100%;
+  height: auto;
+  transition: transform 0.4s ease;
+}
+.native1img:hover{
+  transform:scale(1.03);
+}
+.close-btn{
+  position: absolute;
+  color: black;
+  top: -35px;   
+  right: 0px;  
+  background: white;
+  border-radius: 50%;
+  width: 25px;
+  height: 25px;
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.native2{
+  transition: transform 0.4s ease;
+}
+.native2:hover{
+  transform:scale(1.03);
+}
 
 
