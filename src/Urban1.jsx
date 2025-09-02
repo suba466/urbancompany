@@ -21,10 +21,10 @@ function Urban1() {
             </p>
             <Row className='g-2 px-3 mb-3' >
               <Col xs={12} sm={5} className="css2">
-                <p>Salon for women <img src={salon} alt="" /></p>
+                <p>Salon for women </p><img src={salon} alt="" />
               </Col>
               <Col xs={12} sm={6} className="css2">
-                <p>AC & Appliance Repair <img src={ac} alt="" /></p>
+                <p>AC & Appliance Repair </p><img src={ac} alt="" />
               </Col>
             </Row>
             <Row className='g-3 px-3 pb-3'>

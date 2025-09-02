@@ -4,11 +4,9 @@ import { BrowserRouter } from "react-router-dom";
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 import Urban from './Urban.jsx';
-
+//import Reducertask from './Reducertask.jsx';<Reducertask/>
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <BrowserRouter>
-      <Urban/>
-    </BrowserRouter>
+      <BrowserRouter><Urban/></BrowserRouter>
   </StrictMode>
 );
