@@ -20,7 +20,7 @@ function Urban1() {
               What are you looking for?
             </p>
             <Row className='g-2 px-3 mb-3' >
-              <Col xs={5} sm={5} className="css2">
+              <Col xs={6} sm={5} className="css2">
                 <p>Salon for women </p><img src={salon} alt="" />
               </Col>
               <Col xs={6} sm={6} className="css2">
