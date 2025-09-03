@@ -141,6 +141,9 @@ p, a, span, input, button {
   .dropdown-toggle::after {
     display: none !important;
   }
+  .css2 p,.label{
+    font-size:12px!important;
+  }
 }
 @media (min-width: 426px) {
   .desktop-layout {
@@ -168,4 +171,12 @@ p, a, span, input, button {
     margin-top: 8px;
     margin-left: 0 !important;
   }
+  .native{
+    display: none;
+  }
 }
+@media (min-width: 1024px){
+  .css2 p,.label{
+    font-size: 11.4px!important;
+  }
+} 

@@ -20,27 +20,27 @@ function Urban1() {
               What are you looking for?
             </p>
             <Row className='g-2 px-3 mb-3' >
-              <Col xs={12} sm={5} className="css2">
+              <Col xs={5} sm={5} className="css2">
                 <p>Salon for women </p><img src={salon} alt="" />
               </Col>
-              <Col xs={12} sm={6} className="css2">
+              <Col xs={6} sm={6} className="css2">
                 <p>AC & Appliance Repair </p><img src={ac} alt="" />
               </Col>
             </Row>
             <Row className='g-3 px-3 pb-3'>
-                <Col xs={12} sm={4} className="css3">
+                <Col xs={4} sm={4} className="css3">
                 <div className="css2 d-flex justify-content-center">
                   <img src={clean} alt="" />
                 </div>
                 <p className="label">Bathroom & Kitchen Cleaning</p>
               </Col>
-                <Col xs={12} sm={4} className="css3">
+                <Col xs={4} sm={4} className="css3">
                 <div className="css2 d-flex justify-content-center">
                   <img src={electric} alt="" />
                 </div>
                 <p className="label">Electrician, Plumber & Carpenters</p>
               </Col>
-                <Col xs={12} sm={4} className="css3">
+                <Col xs={4} sm={4} className="css3">
                 <div className="css2 d-flex justify-content-center">
                   <img src={water} alt="" />
                 </div>
