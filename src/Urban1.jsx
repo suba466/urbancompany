@@ -9,66 +9,128 @@ import electric from './assets/electric.webp';
 import water from './assets/water.webp';
 import rating from './assets/rating.webp';
 import people from './assets/people.webp';
+
 function Urban1() {
-  return (
-    <Container style={{paddingTop: "50px", paddingBottom: "50px"}}>
-      <Row >
-        <Col  lg={6} md={12} >
-          <h1 style={{margin:"20px 0"}}>Home services at your <br />doorstep</h1>
-          <div style={{border:"1px solid rgb(171,171,171"}}>
-            <p style={{fontWeight:"600",fontSize:"20px",color:"rgb(84,84,84)",margin:"20px "}}>
+  return (<>
+    <Container style={{ paddingTop: "50px", paddingBottom: "50px" }}>
+      <Row className="align-items-center g-5 desktop" >
+        <Col lg={6} md={12}>
+          <h1 style={{ margin: "20px 0" }}>
+            Home services at your doorstep
+          </h1>
+          <div style={{ border: "1px solid rgb(171,171,171)" }}>
+            <p style={{
+              fontWeight: "600",
+              fontSize: "20px",
+              color: "rgb(84,84,84)",
+              margin: "20px "
+            }}>
               What are you looking for?
             </p>
-            <Row className='g-2 px-3 mb-3' >
-              <Col xs={6} sm={5} className="css2">
-                <p>Salon for women </p><img src={salon} alt="" />
+            <Row className="px-3 mb-3">
+              <Col xs={5} sm={5} className="css2" style={{marginLeft:"10px"}}>
+                <p>Salon for women</p>
+                <img src={salon} alt="Salon" />
               </Col>
               <Col xs={6} sm={6} className="css2">
-                <p>AC & Appliance Repair </p><img src={ac} alt="" />
+                <p>AC & Appliance Repair</p>
+                <img src={ac} alt="AC" />
               </Col>
             </Row>
-            <Row className='g-3 px-3 pb-3'>
-                <Col xs={4} sm={4} className="css3">
+            <Row className=" g-3 px-3 pb-3">
+              <Col xs={4} sm={4} className="css3">
                 <div className="css2 d-flex justify-content-center">
-                  <img src={clean} alt="" />
+                  <img src={clean} alt="Cleaning" />
                 </div>
                 <p className="label">Bathroom & Kitchen Cleaning</p>
               </Col>
-                <Col xs={4} sm={4} className="css3">
+              <Col xs={4} sm={4} className="css3">
                 <div className="css2 d-flex justify-content-center">
-                  <img src={electric} alt="" />
+                  <img src={electric} alt="Electric" />
                 </div>
                 <p className="label">Electrician, Plumber & Carpenters</p>
               </Col>
-                <Col xs={4} sm={4} className="css3">
+              <Col xs={4} sm={4} className="css3">
                 <div className="css2 d-flex justify-content-center">
-                  <img src={water} alt="" />
+                  <img src={water} alt="Water" />
                 </div>
                 <p className="label">Native Water Purifier</p>
               </Col>
             </Row>
           </div>
-        <Row className='mt-4'>
-        <Col xs={6}><Row><Col xs={3}> <img src={rating} alt=""className="img-fluid"  /></Col>
-            <Col><p style={{color:"rgb(84,84,84)"}}><span style={{fontSize:"20px",fontWeight:"bold",color:"black"}}>4.8</span> <br /> Service Rating*</p></Col>
+          <Row className="mt-4">
+            <Col xs={6}>
+              <Row>
+                <Col xs={3}>
+                  <img src={rating} alt="Rating" className="img-fluid" />
+                </Col>
+                <Col>
+                  <p style={{ color: "rgb(84,84,84)" }}>
+                    <span style={{ fontSize: "20px", fontWeight: "bold", color: "black" }}>4.8</span>
+                    <br /> Service Rating*
+                  </p>
+                </Col>
+              </Row>
+            </Col>
+            <Col xs={6}>
+              <Row>
+                <Col xs={3}>
+                  <img src={people} alt="People" className="img-fluid" />
+                </Col>
+                <Col>
+                  <p style={{ color: "rgb(84,84,84)" }}>
+                    <span style={{ fontSize: "20px", fontWeight: "bold", color: "black" }}>12M+</span>
+                    <br /> Customers Globally*
+                  </p>
+                </Col>
+              </Row>
+            </Col>
           </Row>
         </Col>
-        <Col xs={6}><Row><Col xs={3}> <img src={people} alt="" className="img-fluid"/></Col>
-            <Col><p style={{color:"rgb(84,84,84)"}}><span style={{fontSize:"20px",fontWeight:"bold",color:"black"}}>12M+</span> <br /> Costumers Globally*</p></Col>
-          </Row></Col>
-      </Row>
-        </Col>
         <Col lg={6} md={12} className="text-center mt-4 mt-lg-0">
-          <img 
-            src={urban1} 
-            className="img-fluid" 
-            style={{ maxHeight: "650px" }} 
+          <img
+            src={urban1}
+            className="img-fluid"
+            style={{ maxHeight: "650px" }}
             alt="Urban Services"
           />
         </Col>
-      </Row>
-      
-    </Container>
+      </Row></Container>
+     <Container fluid className="mobile" style={{ padding: "0px 10px 30px 10px" }}>
+  <Row className="px-2 mb-2 g-2">
+    <Col xs={6} className="css2">
+      <p>Salon for women</p>
+      <img src={salon} alt="Salon" className="img-fluid" />
+    </Col>
+    <Col xs={6} className="css2">
+      <p>AC & Appliance Repair</p>
+      <img src={ac} alt="AC" className="img-fluid" />
+    </Col>
+  </Row>
+  <Row className="px-2 g-2 text-center">
+    <Col xs={4} className="css3">
+      <div className="css2 d-flex justify-content-center">
+        <img src={clean} alt="Cleaning" className="img-fluid" />
+      </div>
+      <p className="label">Bathroom & Kitchen Cleaning</p>
+    </Col>
+    <Col xs={4} className="css3">
+      <div className="css2 d-flex justify-content-center">
+        <img src={electric} alt="Electric" className="img-fluid" />
+      </div>
+      <p className="label">Electrician, Plumber & Carpenters</p>
+    </Col>
+    <Col xs={4} className="css3">
+      <div className="css2 d-flex justify-content-center">
+        <img src={water} alt="Water" className="img-fluid" />
+      </div>
+      <p className="label">Native Water Purifier</p>
+    </Col>
+  </Row>
+</Container>
+
+
+    </>
   );
 }
 

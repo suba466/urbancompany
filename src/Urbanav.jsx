@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 
 function Urbanav(){
     return(
-        <Navbar expand="lg" className="bg-body-tertiary py-3" style={{borderBottom:"1px solid gray"}}>
+        <Navbar expand="lg" className="bg-body-tertiary py-3" style={{borderBottom:"1px solid gray" }}>
             <Container>
                 <Navbar.Brand as={Link} to="/" style={{color:"black"}}>   
                     <img src={Uc} className='img ' alt="Urban Logo" />
