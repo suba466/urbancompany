@@ -33,12 +33,9 @@ function Native() {
   return (
     <>
       <Container>
-        {/* Main image */}
         <div className='native1' onClick={handleShow}>
           <img src={native1} alt="water purifier" className="native1img w-100" />
         </div>
-
-        {/* Modal */}
         <Modal show={show} onHide={handleClose} centered>
           <Button onClick={handleClose} variant="light" className='close-btn'>✕</Button>
           <Modal.Body>
@@ -48,8 +45,6 @@ function Native() {
             <img src={native2} className='native2 w-100' alt="Native Details" />
           </Modal.Body>
         </Modal>
-
-        {/* Carousel */}
         <h2>Best-in-class features</h2>
         <div style={{ position: "relative" }}>
           <FaArrowLeft onClick={handlePrev} className="custom-arrow left" style={{

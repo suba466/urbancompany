@@ -1,3 +1,4 @@
+
 body {
   color: #1a1a1a;
 }
@@ -44,6 +45,7 @@ p, a, span, input, button {
     margin-bottom: 15px;
   }
 }
+
 .img {
   transition: transform 0.2s ease;
 }
@@ -65,64 +67,7 @@ p, a, span, input, button {
 .search-box {
   padding-left: 35px;
 }
-.css2 {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px;
-  border-radius: 10px;
-  margin: 5px;
-  background-color: #f4f2f2;
-  gap: 15px;
-  transition: all 0.3s ease;
-}
-.css2:hover {
-  opacity: 0.7;        
-  cursor: pointer;
-}
-.css2 p {
-  margin: 0;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  flex: 1;
-}
-.css2 img {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-.css3 {
-  align-items: center;
-  position: relative;
-}
-.css3:hover {
-  opacity: 0.7;        
-  cursor: pointer;
-}
-.label {
-  margin-top: 8px;
-  text-align: center;
-  font-size: 12px;
-  display: inline-block;
-  position: relative;
-}
-.label::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  bottom: -2px;
-  width: 100%;
-  height: 2px;
-  background: black;
-  transform: scaleX(0);
-  transition: transform 0.3s ease;
-  transform-origin: center;
-}
-.css3:hover .label::after {
-  transform: scaleX(1);
-}
+
 .native1 {
   display: inline-block;
   margin: 45px auto;
@@ -146,9 +91,71 @@ p, a, span, input, button {
   transform: scale(0.95);
   transition: transform 0.1s;
 }
+.css2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border-radius: 10px;
+  margin: 5px;
+  background-color: #f4f2f2;
+  gap: 15px;
+  transition: all 0.3s ease;
+}
+.css2:hover {
+  opacity: 0.7;
+  cursor: pointer;
+}
+.css2 p {
+  margin: 0;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+.css2 img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+.css2 img:hover {
+  transform: scale(1.05);
+}
+
+.css3 {
+  display: flex;
+  flex-direction: column;
+
+  position: relative;
+}
+.label {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 12px;
+  display: inline-block;
+  position: relative;
+}
+.label::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 100%;
+  height: 2px;
+  background: black;
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+  transform-origin: center;
+}
+.css3:hover .label::after {
+  transform: scaleX(1);
+}
+
+
 @media (max-width: 425px) {
-  .desktop-layout, .desktop,
-  .native {
+  .desktop-layout, .desktop, .native {
     display: none !important;
   }
   .mobile-layout, .mobile {
@@ -164,9 +171,9 @@ p, a, span, input, button {
   }
   .css2 {
     width: 100% !important;
-    margin: 5px 0 !important; 
+    margin: 5px 0 !important;
   }
-   .css3 {
+  .css3 {
     width: 100% !important;
   }
 }
@@ -211,7 +218,7 @@ p, a, span, input, button {
     align-items: flex-start;
     gap: 10px;
   }
-  .desktop-layout, .desktop,.native {
+  .desktop-layout, .desktop, .native {
     display: none !important;
   }
   .mobile-layout, .mobile {
@@ -227,4 +234,6 @@ p, a, span, input, button {
     font-size: 13px !important;
   }
 }
-
+.mobile, .py-5{
+  padding-top: 0px!important;
+}
