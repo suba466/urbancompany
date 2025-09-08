@@ -14,7 +14,7 @@ import people from './assets/people.webp';
 function Urban1() {
   return (
     <>
-      <Container className="py-5">
+      <Container  style={{marginTop:"80px"}}>
         <Row className="align-items-center g-5 desktop">
           <Col lg={6} md={12}>
             <h1 className="my-4">Home services at your doorstep</h1>

@@ -5,26 +5,28 @@ import Uc from './assets/Uc.png';
 import Urbloc from './Urbloc'; 
 import { Link } from "react-router-dom";  
 
-function Urbanav(){
-    return(
-        <Navbar expand="lg" className="bg-body-tertiary py-3" style={{borderBottom:"1px solid gray" }}>
-            <Container>
-                <Navbar.Brand as={Link} to="/" style={{color:"black"}}>   
-                    <img src={Uc} className='img ' alt="Urban Logo" />
-                </Navbar.Brand>
-                <Navbar.Toggle aria-controls="basic-navbar-nav" />
-                <Navbar.Collapse id="basic-navbar-nav">
-                    <Nav className="ms-0">
-                        
-                        <Nav.Link as={Link} to="/native" className='native'>
-                            Native
-                        </Nav.Link>
-                    </Nav>
-                    <Urbloc />
-                </Navbar.Collapse>
-            </Container>
-        </Navbar>
-    );
+function Urbanav() {
+  return (
+    <Navbar expand="lg" className="bg-body-tertiary py-3" style={{ borderBottom: "1px solid gray" }}>
+      <Container>
+        <Navbar.Brand as={Link} to="/" style={{ color: "black" }}>
+          <img src={Uc} className="img" alt="Urban Logo" />
+        </Navbar.Brand>
+        <Navbar.Toggle aria-controls="basic-navbar-nav" />
+        <Navbar.Collapse id="basic-navbar-nav">
+          <Nav className="ms-0">
+            <Nav.Link as={Link} to="/native" className="native">Native</Nav.Link>
+          </Nav>
+          <Urbloc />
+        </Navbar.Collapse>
+      </Container>
+
+      {/* ✅ Full-width mobile layout outside Container */}
+      <div className="mobile-layout-wrapper w-100 px-0">
+        <Urbloc />
+      </div>
+    </Navbar>
+  );
 }
 
 export default Urbanav;

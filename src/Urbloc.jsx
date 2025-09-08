@@ -1,6 +1,6 @@
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
-import { Dropdown, Modal } from 'react-bootstrap';
+import { Container, Dropdown, Modal } from 'react-bootstrap';
 import { IoMdLocate } from "react-icons/io";
 import { FaLocationDot } from "react-icons/fa6";
 import { CiSearch } from "react-icons/ci";
@@ -45,7 +45,6 @@ function Urbloc() {
 
   return (
     <>
-
       <Row className="align-items-center justify-content-end g-5 w-100 desktop-layout">
         <Col xs="auto">
           <Dropdown className="location-box">
@@ -121,35 +120,20 @@ function Urbloc() {
         <Col xs="auto"><LuShoppingCart className="note row-sm" /></Col>
         <Col xs="auto"><IoMdContact className="note row-sm" /></Col>
       </Row>
-
- 
       <Row className="mobile-layout w-100">
-        <Col xs={12} className="location-box">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                  <FaLocationDot style={{ color: "black", fontSize: "18px" }} />
-                  <strong style={{ color: "black", fontSize: "16px" }}>184</strong>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-                  <p style={{ margin: 0, fontSize: "13px", color: "#555" }}>
-                    Balaji Nagar - New Sidhapudur - Coim...
-                  </p>
-                  <span style={{ fontSize: "12px", color: "#555" }}>▼</span>
-                </div>
-              </div>
-            </div>
-            <LuShoppingCart
-              className="cart-icon"
-              style={{
-                fontSize: "22px",
-                marginLeft: "8px",
-                marginRight: "2px",
-                flexShrink: 0
-              }}
-            />
-          </div>
+        <Col xs={12} className="d-flex justify-content-between align-items-center mb-2">
+          <Dropdown className="location-box" style={{ flex: 1 }}>
+            <Dropdown.Toggle
+              variant="outline-secondary"
+              onClick={handleShow}
+              className="w-100"
+              style={{ padding: "8px", border: "0px solid #ccc", fontSize: "12px", display: "flex", alignItems: "center" }}
+            >
+              <span><FaLocationDot style={{ marginRight: "6px" }} />184, Balaji Nagar ...</span>
+              
+            </Dropdown.Toggle>
+          </Dropdown>
+          <LuShoppingCart className="cart-icon" style={{ fontSize: "22px", marginLeft: "8px", flexShrink: 0 }} />
         </Col>
 
         <Modal show={show} onHide={handleClose} centered>
