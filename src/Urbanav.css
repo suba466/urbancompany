@@ -39,11 +39,7 @@ p, a, span, input, button {
   font-size: 14px;
   color: rgba(84, 84, 84, 1);
 }
-@media (max-width: 425px) {
-  .navbar-toggler {
-    display: none !important;
-  }
-}
+
 .nav-items {
   display: flex;
   flex-wrap: wrap;
@@ -169,27 +165,35 @@ p, a, span, input, button {
   transform: scaleX(1);
 }
 @media (max-width: 425px) {
-  .desktop-layout, .desktop, .native,.img {
+  .desktop-layout,.desktop,.native,.img,.desktop-toggler{
     display: none !important;
   }
-  .mobile-layout, .mobile {
+  .mobile-layout, .mobile,.mobile-collapse {
     display: flex !important;
     flex-direction: column;
     gap: 8px;
   }
-  .dropdown-toggle::after {
-    display: none !important;
-  }
+.mobile, .py-5 {
+  padding-top: 0px !important;
+}
+.container{
+  margin-top: 0px!important;
+}
+.navbar{
+  border:0px !important;
+  background-color: #ffffff !important;
+}
+.dropdown-toggle::after{
+  margin-top: 40px;
+  font-size: 20px;
+}
   .css2 p, .label {
     font-size: 12px !important;
   }
   .css2 {
-    width: 100% !important;
-    margin: 5px 0 !important;
+    margin-top: 0px !important;
   }
-  .css3 {
-    width: 100% !important;
-  }
+
 }
 @media (min-width: 426px) {
   .desktop-layout, .desktop {
@@ -198,56 +202,28 @@ p, a, span, input, button {
   .mobile-layout, .mobile {
     display: none !important;
   }
-}
-@media (min-width: 768px) and (max-width: 991px) {
-  .desktop-layout {
-    flex-wrap: wrap;
-    justify-content: flex-start;
-  }
-  .desktop-layout .location-box,
-  .desktop-layout .search-wrapper {
-    flex: 1 1 100% !important;
-    max-width: 100% !important;
-    margin: 5px 0;
-  }
-  .desktop-layout .search-box {
-    width: 100% !important;
-  }
-  .desktop-layout .note {
-    margin-top: 8px;
-    margin-left: 0 !important;
-  }
-  .native {
-    display: none;
+  .mobile-collapse{
+    display: block;
   }
 }
+
 @media (min-width: 1024px) {
   .css2 p, .label {
     font-size: 11.4px !important;
   }
 }
-@media (min-width: 426px) and (max-width: 767px) {
-  .navbar {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
+@media (min-width: 426px) and (max-width: 786px){
+  .native,.mobile-layout, .mobile {
+    display: none!important;
   }
-  .desktop-layout, .desktop, .native {
-    display: none !important;
-  }
-  .mobile-layout, .mobile {
+  .desktop-layout{
     display: flex !important;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .css2 {
+    flex-wrap: nowrap;
+    margin-left: 2px;
     justify-content: flex-start;
-    gap: 10px;
+    align-items: center;
   }
-  .css2 p, .label {
-    font-size: 13px !important;
-  }
+  
 }
-.mobile, .py-5 {
-  padding-top: 0px !important;
-}
+
+

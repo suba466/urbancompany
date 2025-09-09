@@ -112,11 +112,11 @@ function Urban1() {
       </Container>
       <Container fluid className="mobile px-2 pb-3">
         <Row className="px-2 mb-2 g-2">
-          <Col xs={5} className="css2 ms-2">
+          <Col xs={5} className="css2">
             <p>Salon for women</p>
             <img src={salon} alt="Salon" className="img-fluid" />
           </Col>
-          <Col xs={6} className="css2" style={{ width: "320px" }}>
+          <Col xs={6} className="css2">
             <p>AC & Appliance Repair</p>
             <img src={ac} alt="AC" className="img-fluid" />
           </Col>

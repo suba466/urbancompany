@@ -1,12 +1,11 @@
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
-import { Container, Dropdown, Modal } from 'react-bootstrap';
+import { Dropdown, Modal } from 'react-bootstrap';
 import { IoMdLocate } from "react-icons/io";
 import { FaLocationDot } from "react-icons/fa6";
 import { CiSearch } from "react-icons/ci";
 import { useState, useEffect } from 'react';
-import { LuNotepadText } from "react-icons/lu";
-import { LuShoppingCart } from "react-icons/lu";
+import { LuNotepadText, LuShoppingCart } from "react-icons/lu";
 import { IoMdContact } from "react-icons/io";
 import SearchDropdown from './Searchdropdown.jsx';
 import './Urbanav.css';
@@ -61,27 +60,6 @@ function Urbloc() {
               184, Balaji Nagar- New....
             </Dropdown.Toggle>
           </Dropdown>
-
-          <Modal show={show} onHide={handleClose} centered>
-            <Modal.Header closeButton></Modal.Header>
-            <Modal.Body>
-              <input
-                type="text"
-                placeholder="Search location..."
-                className="mr-sm-2"
-              />
-              <a
-                href="#"
-                style={{
-                  color: "#1a6692",
-                  textDecoration: "none",
-                  fontSize: "12px"
-                }}
-              >
-                <IoMdLocate /> Use current location
-              </a>
-            </Modal.Body>
-          </Modal>
         </Col>
 
         <Col xs="auto">
@@ -120,38 +98,40 @@ function Urbloc() {
         <Col xs="auto"><LuShoppingCart className="note row-sm" /></Col>
         <Col xs="auto"><IoMdContact className="note row-sm" /></Col>
       </Row>
-      <Row className="mobile-layout w-100">
-        <Col xs={12} className="d-flex justify-content-between align-items-center mb-2">
+      <Row className="mobile-layout">
+        <Col xs={12} className="d-flex justify-content-between align-items-start mb-2">
           <Dropdown className="location-box" style={{ flex: 1 }}>
             <Dropdown.Toggle
               variant="outline-secondary"
               onClick={handleShow}
               className="w-100"
-              style={{ padding: "8px", border: "0px solid #ccc", fontSize: "12px", display: "flex", alignItems: "center" }}
-            >
-              <span><FaLocationDot style={{ marginRight: "6px" }} />184, Balaji Nagar ...</span>
-              
-            </Dropdown.Toggle>
-          </Dropdown>
-          <LuShoppingCart className="cart-icon" style={{ fontSize: "22px", marginLeft: "8px", flexShrink: 0 }} />
-        </Col>
-
-        <Modal show={show} onHide={handleClose} centered>
-          <Modal.Header closeButton></Modal.Header>
-          <Modal.Body>
-            <input type="text" placeholder="Search location..." className="mr-sm-2" />
-            <a
-              href="#"
               style={{
-                color: "#1a6692",
-                textDecoration: "none",
-                fontSize: "12px"
+                padding: "8px 12px",
+                border:"0",
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "flex-start",
+                fontSize: "14px",
+                lineHeight: "1",
+                gap: "8px"
               }}
             >
-              <IoMdLocate /> Use current location
-            </a>
-          </Modal.Body>
-        </Modal>
+              <FaLocationDot 
+                style={{ 
+                  color: 'black', 
+                  fontSize: "22px", 
+                  flexShrink: 0, 
+                  marginTop: "2px" 
+                }} 
+              />
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                <span style={{ fontWeight: "bold", fontSize: "20px", color: 'black' }}>184,</span> <br />
+                <span style={{ fontSize: "18px"}}>Balaji Nagar-New ...</span>
+              </div>
+            </Dropdown.Toggle>
+          </Dropdown>
+          <LuShoppingCart className="cart-icon" style={{ fontSize: "24px", marginLeft: "12px", flexShrink: 0 }} />
+        </Col>
 
         <Col xs={12} className="d-flex align-items-center mt-2">
           <div className="search-wrapper w-100" style={{ position: "relative" }}>
@@ -170,7 +150,7 @@ function Urbloc() {
                 padding: "8px",
                 borderRadius: "5px",
                 border: "1px solid #ccc",
-                fontSize: "12px"
+                fontSize: "15px"
               }}
             />
             {open && (
@@ -185,6 +165,32 @@ function Urbloc() {
           </div>
         </Col>
       </Row>
+      <Modal show={show} onHide={handleClose} centered>
+        <Modal.Header closeButton></Modal.Header>
+        <Modal.Body>
+          <input
+            type="text"
+            placeholder="Search location/city/apartment..."
+            className="mr-sm-2"
+            style={{
+              width:"100%",
+              height:"50px",
+              border:"1px solid #dfddddff",
+              borderRadius:"10px"
+            }}
+          /> <br />
+          <a
+            href="#"
+            style={{
+              color: "#1a6692",
+              textDecoration: "none",
+              fontSize: "15px"
+            }}
+          >
+            <IoMdLocate /> Use current location
+          </a>
+        </Modal.Body>
+      </Modal>
     </>
   );
 }

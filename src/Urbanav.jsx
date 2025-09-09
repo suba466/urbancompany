@@ -12,19 +12,14 @@ function Urbanav() {
         <Navbar.Brand as={Link} to="/" style={{ color: "black" }}>
           <img src={Uc} className="img" alt="Urban Logo" />
         </Navbar.Brand>
-        <Navbar.Toggle aria-controls="basic-navbar-nav" />
-        <Navbar.Collapse id="basic-navbar-nav">
+        <Navbar.Toggle aria-controls="basic-navbar-nav" className="desktop-toggler" />
+        <Navbar.Collapse id="basic-navbar-nav" className="mobile-collapse">
           <Nav className="ms-0">
             <Nav.Link as={Link} to="/native" className="native">Native</Nav.Link>
           </Nav>
           <Urbloc />
         </Navbar.Collapse>
       </Container>
-
-      {/* ✅ Full-width mobile layout outside Container */}
-      <div className="mobile-layout-wrapper w-100 px-0">
-        <Urbloc />
-      </div>
     </Navbar>
   );
 }
