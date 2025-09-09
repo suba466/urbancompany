@@ -218,10 +218,19 @@ p, a, span, input, button {
   }
   .desktop-layout{
     display: flex !important;
-    flex-wrap: nowrap;
-    margin-left: 2px;
+    flex-wrap: wrap;
+    margin-left: 0;
     justify-content: flex-start;
     align-items: center;
+  }
+  .desktop-layout,.nav-items{
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+  }
+  .location-box,.note{
+    margin-top: 5px;
+    
   }
   
 }
