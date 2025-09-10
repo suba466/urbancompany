@@ -1,7 +1,6 @@
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
-
 import urban1 from './assets/urban1.webp';
 import salon from './assets/salon.webp';
 import ac from './assets/ac.webp';
@@ -10,16 +9,16 @@ import electric from './assets/electric.webp';
 import water from './assets/water.webp';
 import rating from './assets/rating.webp';
 import people from './assets/people.webp';
-
+import Shineurban from './Shineurban.jsx';
 function Urban1() {
   return (
-    <>
+    <div className='saloncomp'>
       <Container  style={{marginTop:"80px"}}>
         <Row className="align-items-center g-5 desktop">
-          <Col lg={6} md={12}>
-            <h1 className="my-4">Home services at your doorstep</h1>
+          <Col lg={6} md={12} style={{marginBottom:"0px"}}>
+            <h1 >Home services at your doorstep</h1>
 
-            <div style={{ border: "1px solid rgb(171,171,171)" }}>
+            <br /><div style={{ border: "1px solid rgb(171,171,171)", width:"85%" }}>
               <p
                 style={{
                   fontWeight: "600",
@@ -31,7 +30,7 @@ function Urban1() {
                 What are you looking for?
               </p>
 
-              <Row className="px-3 mb-3">
+              <Row className="px-4 mb-">
                 <Col xs={5} sm={5} className="css2 ms-2">
                   <p>Salon for women</p>
                   <img src={salon} alt="Salon" />
@@ -62,7 +61,7 @@ function Urban1() {
                   <p className="label">Native Water Purifier</p>
                 </Col>
               </Row>
-            </div>
+            </div><br />
 
             <Row className="mt-4">
               <Col xs={6}>
@@ -109,6 +108,7 @@ function Urban1() {
             />
           </Col>
         </Row>
+        
       </Container>
       <Container fluid className="mobile px-2 pb-3">
         <Row className="px-2 mb-2 g-2">
@@ -142,8 +142,9 @@ function Urban1() {
             <p className="label">Native Water Purifier</p>
           </Col>
         </Row>
-      </Container>
-    </>
+      </Container><br /> <br /> <br />
+      <Shineurban/>
+    </div>
   );
 }
 

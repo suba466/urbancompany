@@ -130,8 +130,9 @@ function Urbloc() {
               </div>
             </Dropdown.Toggle>
           </Dropdown>
+          <div className='cart-Wrapper'>
           <LuShoppingCart className="cart-icon" style={{ fontSize: "24px", marginLeft: "12px", flexShrink: 0 }} />
-        </Col>
+        </div></Col>
 
         <Col xs={12} className="d-flex align-items-center mt-2">
           <div className="search-wrapper w-100" style={{ position: "relative" }}>

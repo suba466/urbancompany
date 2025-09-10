@@ -19,7 +19,7 @@ import native8 from './assets/native8.webp';
 
 function Native() {
   const [show, setShow] = useState(false);
-  const [index, setIndex] = useState(0); // Carousel index
+  const [index, setIndex] = useState(0); 
   const carouselRef = useRef(null);
 
   const handleClose = () => setShow(false);
@@ -32,7 +32,7 @@ function Native() {
 
   return (
     <>
-      <Container>
+      <Container className='nativecomp'>
         <div className='native1' onClick={handleShow}>
           <img src={native1} alt="water purifier" className="native1img w-100" />
         </div>
