@@ -15,7 +15,7 @@ function Urban1() {
     <div className='saloncomp'>
       <Container  style={{marginTop:"80px"}}>
         <Row className="align-items-center g-5 desktop">
-          <Col lg={6} md={12} style={{marginBottom:"0px"}}>
+          <Col lg={6} md={12} style={{marginBottom:"0px"}} className='tab'>
             <h1 >Home services at your doorstep</h1>
 
             <br /><div style={{ border: "1px solid rgb(171,171,171)", width:"85%" }}>
@@ -30,12 +30,12 @@ function Urban1() {
                 What are you looking for?
               </p>
 
-              <Row className="px-4 mb-">
+              <Row className="px-4 mb-3 ">
                 <Col xs={5} sm={5} className="css2 ms-2">
                   <p>Salon for women</p>
                   <img src={salon} alt="Salon" />
                 </Col>
-                <Col xs={6} sm={6} className="css2">
+                <Col xs={6} sm={6} className="css2  ac">
                   <p>AC & Appliance Repair</p>
                   <img src={ac} alt="AC" />
                 </Col>

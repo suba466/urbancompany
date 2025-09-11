@@ -35,7 +35,7 @@ function Shineurban() {
 
   return (
     <Container >
-      <div style={{ position: "relative" }}>
+      <div style={{ position: "relative" }} className='cardesktop'>
         {index > 0 && (
           <FaArrowLeft
             onClick={handlePrev}
@@ -86,6 +86,46 @@ function Shineurban() {
             </Row>
           </Carousel.Item>
         </Carousel>
+      </div>
+      <div className='carmobile'>
+        <Carousel>
+      <Carousel.Item>
+        <Card
+          className="native1img shine"style={{ width: "23rem", margin: "auto" }}>
+          <Card.Img variant="top" src={shine} />
+        </Card>
+      </Carousel.Item>
+      <Carousel.Item>
+        <Card
+          className="native1img shine"style={{ width: "23rem", margin: "auto" }}>
+          <Card.Img variant="top" src={deepclean} />
+        </Card>
+      </Carousel.Item>
+      <Carousel.Item>
+         <Card
+          className="native1img shine"style={{ width: "23rem", margin: "auto" }}>
+          <Card.Img variant="top" src={rowater} />
+        </Card>
+      </Carousel.Item>
+      <Carousel.Item>
+         <Card
+          className="native1img shine"style={{ width: "23rem", margin: "auto" }}>
+          <Card.Img variant="top" src={experts} />
+        </Card>
+      </Carousel.Item>
+      <Carousel.Item>
+         <Card
+          className="native1img shine"style={{ width: "23rem", margin: "auto" }}>
+          <Card.Img variant="top" src={perfect} />
+        </Card>
+      </Carousel.Item>
+      <Carousel.Item>
+         <Card
+          className="native1img shine"style={{ width: "23rem", margin: "auto" }}>
+          <Card.Img variant="top" src={relax} />
+        </Card>
+      </Carousel.Item>
+    </Carousel>
       </div>
     </Container>
   );

@@ -1,6 +1,6 @@
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
-import { Dropdown, Modal } from 'react-bootstrap';
+import { Button, Dropdown, Modal } from 'react-bootstrap';
 import { IoMdLocate } from "react-icons/io";
 import { FaLocationDot } from "react-icons/fa6";
 import { CiSearch } from "react-icons/ci";
@@ -106,16 +106,8 @@ function Urbloc() {
               onClick={handleShow}
               className="w-100"
               style={{
-                padding: "8px 12px",
-                border:"0",
-                display: "flex",
-                flexDirection: "row",
-                alignItems: "flex-start",
-                fontSize: "14px",
-                lineHeight: "1",
-                gap: "8px"
-              }}
-            >
+                padding: "8px 12px",border:"0",display: "flex",flexDirection: "row",alignItems: "flex-start", fontSize: "14px",lineHeight: "1",gap: "8px"
+              }} >
               <FaLocationDot 
                 style={{ 
                   color: 'black', 
@@ -166,30 +158,17 @@ function Urbloc() {
           </div>
         </Col>
       </Row>
-      <Modal show={show} onHide={handleClose} centered>
-        <Modal.Header closeButton></Modal.Header>
+      <Modal show={show} onHide={handleClose} centered contentClassName='"location-model'>
+        <Button className='close-btn' onClick={handleClose}>x</Button>
         <Modal.Body>
           <input
             type="text"
             placeholder="Search location/city/apartment..."
-            className="mr-sm-2"
-            style={{
-              width:"100%",
-              height:"50px",
-              border:"1px solid #dfddddff",
-              borderRadius:"10px"
-            }}
-          /> <br />
-          <a
-            href="#"
-            style={{
-              color: "#1a6692",
-              textDecoration: "none",
-              fontSize: "15px"
-            }}
-          >
-            <IoMdLocate /> Use current location
+            className="location-input"/> <br />
+          <a href="#" className='use-location'>
+            <IoMdLocate style={{marginRight:"6px"}}/> Use current location
           </a>
+          
         </Modal.Body>
       </Modal>
     </>

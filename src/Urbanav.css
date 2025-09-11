@@ -8,6 +8,10 @@ p, a, span, input, button {
   font-weight: 400;
   font-size: 14px;
 }
+.btn:hover{
+  background-color: #f5f5f5 !important;
+  color: #777 !important;
+}
 .navbar {
   display: flex;
   justify-content: space-between;
@@ -155,7 +159,7 @@ p, a, span, input, button {
   width: 100%;
   height: 2px;
   background: black;
-  transform: scaleX(0);
+  transform: scaleX(0) ;
   transition: transform 0.3s ease;
   transform-origin: center;
 }
@@ -168,8 +172,44 @@ p, a, span, input, button {
   margin-left: auto;
 }
 .close-btn{
-  width: 10%;
+  position: absolute;
+  top: -45px;
+  right: 0px;
+  width: 32px;
+  height: 32px;
   border-radius: 50px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  line-height: 10px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  color: black;
+}
+.close-btn:hover{
+  color: black;
+  background-color: #f5f5f5;
+}
+.location-input{
+  width:100%;
+  height: 50px;
+  border: 1px solid #dfddddff;
+  border-radius: 10px;
+  padding: 0 12px;
+  margin-bottom: 15px;
+  font-size: 15px;
+}
+.use-location{
+  display: block;
+  color: #1a6692;
+  text-decoration: none;
+  font-size:15px ;
+  margin-top:8px ;
+}
+.powered-by{
+  margin-top: 20px;
+  font-size: 13px;
+  text-align: center;
+  color: #777;
 }
 .active{
   display: none;
@@ -182,13 +222,14 @@ p, a, span, input, button {
 @media (max-width: 425px) {
 .desktop-layout,.desktop,.native,.img,.desktop-toggler,.nativecomp{
     display: none !important;
-  }
-  .mobile-layout, .mobile,.mobile-collapse{
+ }
+.mobile-layout, .mobile,.mobile-collapse{
     display: flex !important;
     flex-direction: column;
     flex-wrap: wrap !important;
     gap: 8px;
-  }
+}
+
 .mobile, .py-5 {
   padding-top:12px !important;
 }
@@ -199,11 +240,16 @@ p, a, span, input, button {
   border:0px !important;
   background-color: #ffffff !important;
 }
+.search-wrapper{
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
 .dropdown-toggle::after{
   margin-top: 40px;
   font-size: 20px;
 }
-  .css2 p, .label {
+.css2 p, .label {
     font-size: 13px !important;
     padding-left:12px ;
   }
@@ -228,7 +274,6 @@ p, a, span, input, button {
   justify-content: flex-end;
   width: 100%;
 }
-
 @media (min-width: 426px) {
   .desktop-layout, .desktop {
     display: flex !important;
@@ -239,18 +284,22 @@ p, a, span, input, button {
   .mobile-collapse{
     display: block;
   }
-  
 }
-
 @media (min-width: 1024px) {
   .css2 p, .label {
     font-size: 11.4px !important;
   }
+  .shine{
+    width: 19rem !important;
+  }
 }
-
-
+@media (max-width: 1440px) {
+  .carmobile{
+    display: none !important;
+  }
+}
 @media (min-width: 426px) and (max-width: 786px){
-  .native,.mobile-layout, .mobile {
+  .native,.mobile-layout, .mobile{
     display: none!important;
   }
   .desktop-layout{
@@ -276,6 +325,13 @@ p, a, span, input, button {
   }
   .shine{
     width: 15rem!important;
+  }
+  .ac{
+    width: 51% !important;
+  }
+  .tab{
+   margin: 0 auto;
+   
   }
 }
 @media (max-width: 320px) {
