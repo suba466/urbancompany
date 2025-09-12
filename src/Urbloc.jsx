@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { LuNotepadText, LuShoppingCart } from "react-icons/lu";
 import { IoMdContact } from "react-icons/io";
 import SearchDropdown from './Searchdropdown.jsx';
+import uc from './assets/uc.png';
 import './Urbanav.css';
 
 function Urbloc() {
@@ -157,6 +158,23 @@ function Urbloc() {
             )}
           </div>
         </Col>
+       <div className="sticky-bottom d-flex justify-content-around align-items-center">
+  <div className="text-center">
+    <img src={uc} alt="UC" style={{width:"30px"}} />
+    <p style={{margin:0, fontSize:"12px"}}>UC</p>
+  </div>
+  <div className="text-center">
+    <p>1</p>
+  </div>
+  <div className="text-center">
+    <p>1</p>
+  </div>
+  <div className="text-center">
+    <p>1</p>
+  </div>
+</div>
+      
+
       </Row>
       <Modal show={show} onHide={handleClose} centered contentClassName='"location-model'>
         <Button className='close-btn' onClick={handleClose}>x</Button>

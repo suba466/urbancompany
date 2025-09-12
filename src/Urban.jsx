@@ -4,7 +4,7 @@ import Urbanav from './Urbanav.jsx';
 import Urban1 from './Urban1.jsx';
 import Native from './Native.jsx';             
 
-function Urban(){
+function Urban() {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -16,14 +16,14 @@ function Urban(){
 
   return(
     <>
-      <Urbanav/>
+      <Urbanav /> 
       <Routes>
-        <Route path="/" element={<Urban1 />} />   
-        {!isMobile ? (
-          <Route path="/native" element={<Native />} /> 
-        ) : (
-          <Route path="/native" element={<Navigate to="/" />} /> 
-        )}
+        <Route path="/" element={<Urban1 />} />
+        <Route 
+          path="/native" 
+          element={isMobile ? <Navigate to="/" /> : <Native />} 
+        />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </>
   );

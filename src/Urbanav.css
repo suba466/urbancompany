@@ -24,6 +24,33 @@ p, a, span, input, button {
   flex-wrap: wrap;
   overflow-x: hidden;
 }
+.arrow{
+  position:absolute;
+  top:40%;
+  z-index: 10;
+  cursor: pointer;
+  font-size: 2rem;
+  color: #333;
+  background-color: white;
+  border-radius: 15px;
+  padding:5px;
+}.left{left:0}.right{right:0}
+.mobile-indicator{
+  position: relative;
+  width: 50px;
+  height: 6px;
+  background-color: #ddd;
+  border-radius: 3px;
+  margin: 10px auto;
+  overflow: hidden;
+}
+.mobile-indicator-inner{
+  width: 53%;
+  height: 100%;
+  background-color: #333;
+  border-radius: 3px;
+  transition: transform 0.5s ease;
+}
 .mobile-layout-wrapper {
   width: 100%;
   padding-left: 0 !important;
@@ -219,6 +246,20 @@ p, a, span, input, button {
   width: 100%;
   margin-right: 40px;
 }
+.sticky-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 60px; /* adjust */
+  background-color: #fff;
+  z-index: 1000;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 -2px 6px rgba(0,0,0,0.2);
+}
+
 @media (max-width: 425px) {
 .desktop-layout,.desktop,.native,.img,.desktop-toggler,.nativecomp{
     display: none !important;
