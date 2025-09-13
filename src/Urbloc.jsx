@@ -7,7 +7,10 @@ import { CiSearch } from "react-icons/ci";
 import { useState, useEffect } from 'react';
 import { LuNotepadText, LuShoppingCart } from "react-icons/lu";
 import { IoMdContact } from "react-icons/io";
+import { PiNotepadBold } from "react-icons/pi";
 import SearchDropdown from './Searchdropdown.jsx';
+import { PiQuestionThin } from "react-icons/pi";
+import { VscAccount } from "react-icons/vsc";
 import uc from './assets/uc.png';
 import './Urbanav.css';
 
@@ -110,13 +113,7 @@ function Urbloc() {
                 padding: "8px 12px",border:"0",display: "flex",flexDirection: "row",alignItems: "flex-start", fontSize: "14px",lineHeight: "1",gap: "8px"
               }} >
               <FaLocationDot 
-                style={{ 
-                  color: 'black', 
-                  fontSize: "22px", 
-                  flexShrink: 0, 
-                  marginTop: "2px" 
-                }} 
-              />
+                style={{ color: 'black',fontSize: "22px",flexShrink: 0,marginTop: "2px" }}/>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
                 <span style={{ fontWeight: "bold", fontSize: "20px", color: 'black' }}>184,</span> <br />
                 <span style={{ fontSize: "18px"}}>Balaji Nagar-New ...</span>
@@ -139,14 +136,7 @@ function Urbloc() {
                 "     Search for " + placeholders[index].substring(0, subIndex) + "..."
               }
               className="form-control search-box"
-              style={{
-                width: "100%",
-                padding: "8px",
-                borderRadius: "5px",
-                border: "1px solid #ccc",
-                fontSize: "15px"
-              }}
-            />
+              style={{width: "100%",padding: "8px",borderRadius: "5px",border: "1px solid #ccc",fontSize: "15px"}}/>
             {open && (
               <SearchDropdown
                 searchValue={searchValue}
@@ -160,17 +150,20 @@ function Urbloc() {
         </Col>
        <div className="sticky-bottom d-flex justify-content-around align-items-center">
   <div className="text-center">
-    <img src={uc} alt="UC" style={{width:"30px"}} />
-    <p style={{margin:0, fontSize:"12px"}}>UC</p>
+    <img src={uc} alt="UC" style={{width:"15px"}} />
+    <p style={{margin:0, fontSize:"10px"}}>UC</p>
   </div>
   <div className="text-center">
-    <p>1</p>
+    <PiNotepadBold />
+    <p style={{margin:0, fontSize:"10px"}}>Bookings</p>
   </div>
   <div className="text-center">
-    <p>1</p>
+    <PiQuestionThin />
+    <p style={{margin:0, fontSize:"10px"}}>Help</p>
   </div>
   <div className="text-center">
-    <p>1</p>
+    <VscAccount />
+    <p style={{margin:0, fontSize:"10px"}}>Account</p>
   </div>
 </div>
       

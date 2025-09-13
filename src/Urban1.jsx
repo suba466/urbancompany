@@ -122,24 +122,14 @@ function Urban1() {
           </Col>
         </Row>
 
-        <Row className="px-2 g-2 text-center">
-          <Col xs={4} className="css3">
-            <div className="css2 d-flex justify-content-center">
-              <img src={clean} alt="Cleaning" className="img-fluid" />
-            </div>
-            <p className="label">Bathroom & Kitchen Cleaning</p>
+        <Row className="px-2 mb-2 g-2">
+          <Col xs={5} className="css2">
+            <p>Cleaning</p>
+            <img src={clean} alt="Cleaning" className="img-fluid" />
           </Col>
-          <Col xs={4} className="css3">
-            <div className="css2 d-flex justify-content-center">
-              <img src={electric} alt="Electric" className="img-fluid" />
-            </div>
-            <p className="label">Electrician, Plumber & Carpenters</p>
-          </Col>
-          <Col xs={4} className="css3">
-            <div className="css2 d-flex justify-content-center">
-              <img src={water} alt="Water" className="img-fluid" />
-            </div>
-            <p className="label">Native Water Purifier</p>
+          <Col xs={6} className="css2">
+            <p>Electrician Plumber & Carpenters</p>
+            <img src={electric} alt="Electric" className="img-fluid" />
           </Col>
         </Row>
       </Container><br /> <br /> <br />

@@ -251,7 +251,7 @@ p, a, span, input, button {
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 60px; /* adjust */
+  height: 40px; 
   background-color: #fff;
   z-index: 1000;
   display: flex;
@@ -361,18 +361,9 @@ p, a, span, input, button {
   .row>*{
     padding-right: 0;
   }
-  .native-card{
-    width: 14rem !important;
-  }
-  .shine{
-    width: 15rem!important;
-  }
-  .ac{
-    width: 51% !important;
-  }
   .tab{
    margin: 0 auto;
-   
+
   }
 }
 @media (max-width: 320px) {
