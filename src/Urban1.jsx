@@ -17,19 +17,9 @@ function Urban1() {
         <Row className="align-items-center g-5 desktop">
           <Col lg={6} md={12} style={{marginBottom:"0px"}} className='tab'>
             <h1 >Home services at your doorstep</h1>
-
-            <br /><div style={{ border: "1px solid rgb(171,171,171)", width:"85%" }}>
-              <p
-                style={{
-                  fontWeight: "600",
-                  fontSize: "20px",
-                  color: "rgb(84,84,84)",
-                  margin: "20px",
-                }}
-              >
-                What are you looking for?
-              </p>
-
+            <br /><div style={{ border: "1px solid rgb(171,171,171)", width:"85%" }} className='tabwidth'>
+              <p style={{fontWeight: "600",fontSize: "20px",color: "rgb(84,84,84)",margin: "20px",}}>
+                What are you looking for?</p>
               <Row className="px-4 mb-3 ">
                 <Col xs={5} sm={5} className="css2 ms-2">
                   <p>Salon for women</p>
