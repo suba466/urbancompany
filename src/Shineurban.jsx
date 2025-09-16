@@ -9,14 +9,14 @@ import intense from './assets/intense.webp';
 import classic from './assets/classic.webp';
 import wall from './assets/wall.png';
 import drawer from './assets/drawer.webp';
-import switchbox from './assets/switchbox.webp';
-import jet from './assets/jet.png';
-import balcony from './assets/balcony.png';
+import fan from './assets/fan.png';
+import western from './assets/western.png';
+import pipe from './assets/pipe.png';
 import intenseclean from './assets/intenseclean.png';
 import img2 from './assets/2.png';
 import microwave from './assets/microwave.webp';
 import { FaArrowLeft, FaArrowRight } from "react-icons/fa6";
-import { Carousel, Container, Row, Col, Card, CarouselItem } from 'react-bootstrap';
+import { Carousel, Container, Row, Col, Card} from 'react-bootstrap';
 
 function Shineurban() {
   const [index, setIndex] = useState(0);
@@ -36,7 +36,18 @@ function Shineurban() {
   const mobileSlides = [shine, deepclean, rowater, experts, perfect, relax];
   const tabSlides = [[shine, deepclean], [rowater, experts], [perfect, relax]];
   const desktopSlides = [[shine, deepclean, rowater], [experts, perfect, relax]];
-  const thirdCarousel=[intense, classic, wall,drawer, microwave, jet,balcony, intenseclean, img2]
+  const thirdCarousel=[
+    {img:intense, title:"Intense bathroom cleaning", rating:"4.79(3M)", pay:"₹549"},
+    {img:classic, title:"Classic bathroom cleaning", rating:"4.82(1.5M)", pay:"₹469"},
+    {img:wall, title:"wall/ceiling light installation", rating:"4.87(77M)", pay:"₹69"},
+    {img:drawer, title:"Drawer channel replacement (one set)", rating:"4.84(3M)", pay:"₹149"},
+    {img:fan, title:"Fan repair (ceiling/exhaust/wall)", rating:"4.82(96M)", pay:"₹109"},
+    {img:microwave, title:"Microwave checkup", rating:"4.84(131K)", pay:"₹299"},
+    {img:western, title:"Western toilet repair(floor mounted)", rating:"4.79(6K)", pay:"₹569"},
+    {img:pipe, title:"Pipeline leakage repair ", rating:"4.75(17M)", pay:"₹199"},
+    {img:intenseclean, title:"Intense bathroom cleaning", rating:"4.79(3M)", pay:"₹549"},
+    {img:img2, title:"Intense bathroom cleaning", rating:"4.79(3M)", pay:"₹549"},
+  ]
   const handlePrev = () => {
     if (index > 0) setIndex(index - 1);
   };
