@@ -16,7 +16,7 @@ import intenseclean from './assets/intenseclean.png';
 import img2 from './assets/2.png';
 import microwave from './assets/microwave.webp';
 import { FaArrowLeft, FaArrowRight } from "react-icons/fa6";
-import { Carousel, Container, Row, Col, Card } from 'react-bootstrap';
+import { Carousel, Container, Row, Col, Card, CarouselItem } from 'react-bootstrap';
 
 function Shineurban() {
   const [index, setIndex] = useState(0);
@@ -36,7 +36,7 @@ function Shineurban() {
   const mobileSlides = [shine, deepclean, rowater, experts, perfect, relax];
   const tabSlides = [[shine, deepclean], [rowater, experts], [perfect, relax]];
   const desktopSlides = [[shine, deepclean, rowater], [experts, perfect, relax]];
-  const thirdCarousel=[intense, classic, wall,switchbox,drawer, microwave, jet,balcony, intenseclean, img2]
+  const thirdCarousel=[intense, classic, wall,drawer, microwave, jet,balcony, intenseclean, img2]
   const handlePrev = () => {
     if (index > 0) setIndex(index - 1);
   };
@@ -47,14 +47,24 @@ function Shineurban() {
       setIndex(index + 1);
     }
   };
-  const handleThirdprev=()=>{
-    if(thirdIndex>0) setthirdIndex(thirdIndex-1)
-  };
-const handleThirdnext=()=>{
-  if(thirdIndex<thirdCarousel.length-5){
-    setthirdIndex(thirdIndex+1);
+  const handleThirdprev = () => {
+  if (isTab) {
+    if (thirdIndex > 0) setthirdIndex(thirdIndex - 2);
+  } else {
+    if (thirdIndex > 0) setthirdIndex(thirdIndex - 1);
   }
-}
+};
+const handleThirdnext = () => {
+  if (isTab) {
+    if (thirdIndex < thirdCarousel.length - 2) {
+      setthirdIndex(thirdIndex + 2);}
+  } else {
+    if (thirdIndex < thirdCarousel.length - 5) {
+      setthirdIndex(thirdIndex + 1);
+    }
+  }
+};
+
   return (
     <Container>
       {isMob ? (
@@ -89,7 +99,7 @@ const handleThirdnext=()=>{
                 <Row>
                   {group.map((img, i) => (
                     <Col key={i} xs={12} sm={6} className="d-flex justify-content-center">
-                      <Card className="native1img shine" style={{ width: "17rem", margin: "auto" }}>
+                      <Card style={{ width: "17rem", margin: "auto" }}>
                         <Card.Img variant="top" src={img} />
                       </Card>
                     </Col>
@@ -122,20 +132,50 @@ const handleThirdnext=()=>{
         </div>
       )} <br /> <br /> <br /><br />
       <h1>Most booked services</h1>
-      <div style={{position:"relative", marginTop:"3rem"}}>
-        {thirdIndex>0 && <FaArrowLeft onClick={handleThirdprev} className='arrow left'/>}
-        {thirdIndex<thirdCarousel.length-4 && (
-          <FaArrowRight onClick={handleThirdnext} className='arrow right'/>
+      <div style={{marginTop:"3rem"}}>
+        {isMob ?(
+          <Carousel interval={null} indicators={false} controls={false} touch={true}>
+            {thirdCarousel.map((img,i)=>(
+              <Carousel.Item key={i}>
+                <Card style={{width:"80%", margin:"auto"}}>
+                  <Card.Img variant='top' src={img}></Card.Img>
+                </Card>
+              </Carousel.Item>
+            ))}
+          </Carousel>
+        ): isTab ? (
+        <div style={{ position: "relative" }}>
+          {thirdIndex > 0 && <FaArrowLeft onClick={handleThirdprev} className="arrow left" />}
+          {thirdIndex < thirdCarousel.length - 2 && <FaArrowRight onClick={handleThirdnext} className="arrow right" />}
+          <Row>
+              {thirdCarousel.slice(thirdIndex, thirdIndex+2).map((img,i)=>(
+                    <Col key={i} xs={12} sm={6} className="d-flex justify-content-center">
+                      <Card style={{ width: "17rem", margin: "auto" }}>
+                        <Card.Img variant="top" src={img} />
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
+        </div>
+      ) : (
+          <div style={{position:'relative'}}>
+            {thirdIndex>0 &&(
+              <FaArrowLeft onClick={handleThirdprev} className='arrow left'/>
+            )}
+            {thirdIndex<thirdCarousel.length-5 && (
+              <FaArrowRight onClick={handleThirdnext} className='arrow right'/>
+            )}
+            <Row>
+              {thirdCarousel.slice(thirdIndex, thirdIndex + 5).map((img, i) => (
+                <Col key={i} className="d-flex justify-content-center">
+                  <Card>
+                    <Card.Img variant="top" src={img} />
+                  </Card>
+                </Col>
+              ))}
+          </Row>
+          </div>
         )}
-        <Row>
-    {thirdCarousel.slice(thirdIndex, thirdIndex + 5).map((img, i) => (
-      <Col key={i} xs={6} md={2} className="d-flex justify-content-center">
-        <Card className="native1img shine" style={{ width: "30rem !important", margin: "auto" }}>
-          <Card.Img variant="top" src={img} />
-        </Card>
-      </Col>
-    ))}
-  </Row>
       </div>
     </Container>
   );
