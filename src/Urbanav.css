@@ -24,6 +24,10 @@ p, a, span, input, button {
   flex-wrap: wrap;
   overflow-x: hidden;
 }
+.track{
+  --bs-gutter-x: 1rem;
+  padding: 5px;
+}
 .arrow{
   position:absolute;
   top:40%;

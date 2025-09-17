@@ -13,7 +13,7 @@ import { PiQuestionThin } from "react-icons/pi";
 import { VscAccount } from "react-icons/vsc";
 import uc from './assets/uc.png';
 import './Urbanav.css';
-
+import { FaArrowLeft } from "react-icons/fa";
 function Urbloc() {
   const [show, setShow] = useState(false);
   const handleClose = () => setShow(false);
@@ -172,10 +172,14 @@ function Urbloc() {
       <Modal show={show} onHide={handleClose} centered contentClassName='"location-model'>
         <Button className='close-btn' onClick={handleClose}>x</Button>
         <Modal.Body>
-          <input
+          <div style={{position:"relative"}}>
+            <FaArrowLeft onClick={handleClose}style={{position:"absolute", top:"27%",left:"10px", cursor:"pointer"}}/>
+            <input
             type="text"
             placeholder="Search location/city/apartment..."
-            className="location-input"/> <br />
+            className="location-input" style={{padding:"8px 8px 8px 34px"}}/> 
+          </div>
+          <br />
           <a href="#" className='use-location'>
             <IoMdLocate style={{marginRight:"6px"}}/> Use current location
           </a>

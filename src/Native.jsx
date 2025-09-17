@@ -6,8 +6,7 @@ import Carousel from 'react-bootstrap/Carousel';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 import { FaArrowLeft, FaArrowRight } from "react-icons/fa6";
-import { useState, useRef } from 'react';
-
+import { useState, useRef, useEffect } from 'react';
 import native1 from './assets/native1.webp';
 import native2 from './assets/native2.webp';
 import native3 from './assets/native3.webp';
@@ -16,73 +15,170 @@ import native5 from './assets/native5.webp';
 import native6 from './assets/native6.webp';
 import native7 from './assets/native7.webp';
 import native8 from './assets/native8.webp';
-
+import native9 from './assets/native9.webp';
+import native10 from './assets/native10.webp';
+import native11 from './assets/native11.png';
+import native12 from './assets/native12.png';
+import native13 from './assets/native13.png';
+import native14 from './assets/native14.png';
+import native15 from './assets/native15.png';
+import rate from './assets/rate.png';
+import { TfiCheck } from "react-icons/tfi";
 function Native() {
   const [show, setShow] = useState(false);
   const [index, setIndex] = useState(0); 
   const carouselRef = useRef(null);
-
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
-
+  const [Tab, setTab] = useState(window.innerWidth > 425 && window.innerWidth <= 786);
+  useEffect(() => {
+    const handleResize = () => {
+      setTab(window.innerWidth > 425 && window.innerWidth <= 786);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  const tabSlides = [[native3, native4], [native5, native6], [native7, native8]];
+  const desktopSlides = [[native3, native4, native5], [native6, native7, native8]];
   const handlePrev = () => {
-    if (index > 0) carouselRef.current.prev();
+    if (index > 0) setIndex(index - 1);
   };
-  const handleNext = () => carouselRef.current.next();
-
+  const handleNext = () => {
+    if (Tab && index < tabSlides.length - 1) {
+      setIndex(index + 1);
+    } else if (!Tab && index < desktopSlides.length - 1) {
+      setIndex(index + 1);
+    }
+  };
   return (
     <>
       <Container className='nativecomp'>
         <div className='native1' onClick={handleShow}>
           <img src={native1} alt="water purifier" className="native1img w-100" />
         </div>
-        <Modal show={show} onHide={handleClose} centered>
+
+        <Modal show={show} onHide={handleClose} centered >
           <Button onClick={handleClose} variant="light" className='close-btn'>✕</Button>
-          <Modal.Body>
-            <FaArrowLeft onClick={handleClose} /><br /><br />
-            <h6 style={{ color: "#5d5f5fff" }}>Native Water Purifiers</h6>
-            <h2 style={{ fontWeight: "bold" }}>No service for 2 years</h2>
-            <img src={native2} className='native2 w-100' alt="Native Details" />
+          <Modal.Body 
+            style={{ 
+              padding:"0", 
+              height:"80vh",        
+              overflowY:"auto",     
+              overflowX:"hidden"   
+            }}>
+            <div style={{height:"50px"}}>
+              <FaArrowLeft/>
+            </div>
+            <div style={{backgroundColor:"black" , height:"75px",objectFit:"cover"}}>
+              <h5 style={{color:"white", textAlign:"center", fontSize:"22px", padding:"18px"}}>
+                2-year anniversary sale. Up to ₹3,000 off 
+              </h5>
+            </div>
+            <br /> <br />
+            <div style={{padding:"8px"}}>
+              <h5 style={{ color: "#5d5f5fff", fontSize:"30px" }}>Native Water Purifiers</h5>
+              <h2 style={{ fontSize:"35px" }}>No service for 2 years</h2>
+              <img src={native2} className='native2 w-100' alt="Native Details" style={{maxWidth:"100%"}} />
+              <img src={native9} className='native2 w-100' alt="Native Details" style={{maxWidth:"100%"}} />
+              <img src={native10} className='native2 w-100' alt="Native Details" style={{maxWidth:"100%"}} />
+              <br /> <br /> <br />
+              <div style={{padding:"6px"}}>
+                <h3>Thing's you'll love</h3><br />
+                <img src={native11} alt="" style={{maxWidth:"100%"}}/> <br /> <br />
+                <img src={native12} alt="" style={{maxWidth:"100%"}}/>
+                <Row className='track'>
+                  <Col><img src={native13} alt="" style={{width:"100%"}}/></Col>
+                  <Col><img src={native14} alt="" style={{width:"100%"}}/></Col>
+                </Row>
+              </div>
+              <img src={native15} alt="" style={{padding:"8px", maxWidth:"100%"}} />
+            </div>
+            <br />
+            <div style={{backgroundColor:"rgba(219, 215, 215, 0.32)", padding:"12px"}}>
+              <h2 style={{fontSize:"35px"}}>Highest rated purifier on Amazon</h2>
+              <h1 style={{fontSize:"50px"}}>
+                4.4
+                <span style={{fontSize:"20px"}}>
+                  /5 <img src={rate} style={{marginBottom:"15px"}} alt="rating stars"/>
+                </span>
+              </h1>
+              <h5 style={{color:"black",margin:"4px"}}>
+                {(79000).toLocaleString()}+ reviews
+              </h5>
+              <Row style={{margin:"4px"}}>
+                <Col style={{backgroundColor:"white"}}><TfiCheck /> Water taste</Col>
+                <Col style={{backgroundColor:"white", marginLeft:"12px"}}><TfiCheck /> 2-year life</Col>
+                <Col style={{backgroundColor:"white", marginLeft:"12px"}}><TfiCheck /> Filtration</Col>
+              </Row>
+              <Row style={{margin:"4px"}}>
+                <Col style={{backgroundColor:"white"}}><TfiCheck /> Value for money</Col>
+                <Col style={{backgroundColor:"white", marginLeft:"12px"}}><TfiCheck /> Smart app</Col>
+              </Row>
+               <Row style={{margin:"4px"}}>
+                <Col style={{backgroundColor:"white"}}><TfiCheck /> Service quality</Col>
+                <Col style={{backgroundColor:"white", marginLeft:"12px"}}><TfiCheck /> Design</Col>
+              </Row>
+            </div>
           </Modal.Body>
         </Modal>
+
         <h2>Best-in-class features</h2>
-        <div style={{ position: "relative" }}>
-          <FaArrowLeft onClick={handlePrev} className="custom-arrow left" style={{
-            position: "absolute", top: "40%", left: 0, zIndex: 10, cursor: "pointer", fontSize: "2rem", color: "#333"
-          }} />
-          <FaArrowRight onClick={handleNext} className="custom-arrow right" style={{
-            position: "absolute", top: "40%", right: 0, zIndex: 10, cursor: "pointer", fontSize: "2rem", color: "#333"
-          }} />
-
-          <Carousel ref={carouselRef} activeIndex={index} onSelect={setIndex} controls={false} interval={null} touch={true}>
-            <Carousel.Item>
-              <Row>
-                {[native3, native4, native5].map((img, idx) => (
-                  <Col key={idx}>
-                    <Card className="native-card" style={{ width: '18rem', margin: "auto" }}>
-                      <Card.Img variant="top" src={img} />
-                    </Card>
-                  </Col>
-                ))}
-              </Row>
-            </Carousel.Item>
-
-            <Carousel.Item>
-              <Row>
-                {[native6, native7, native8].map((img, idx) => (
-                  <Col key={idx}>
-                    <Card className="native-card" style={{ width: '18rem', margin: "auto" }}>
-                      <Card.Img variant="top" src={img} />
-                    </Card>
-                  </Col>
-                ))}
-              </Row>
-            </Carousel.Item>
-          </Carousel>
-        </div>
+        {Tab ? (
+          <div style={{ position: "relative" }}>
+            {index > 0 && <FaArrowLeft onClick={handlePrev} className="arrow left" />}
+            {index < tabSlides.length - 1 && <FaArrowRight onClick={handleNext} className="arrow right" />}
+            <Carousel
+              ref={carouselRef}
+              activeIndex={index}
+              onSelect={(selectedIndex) => setIndex(selectedIndex)}
+              controls={false}
+              interval={null}
+              indicators={false}
+              touch={true}>
+              {tabSlides.map((group, idx) => (
+                <Carousel.Item key={idx}>
+                  <Row>
+                    {group.map((img, i) => (
+                      <Col key={i} xs={12} sm={6} className="d-flex justify-content-center">
+                        <Card className="native-card" style={{ width: "17rem", margin: "auto" }}>
+                          <Card.Img variant="top" src={img} />
+                        </Card>
+                      </Col>
+                    ))}
+                  </Row>
+                </Carousel.Item>
+              ))}
+            </Carousel>
+          </div>
+        ) : (
+          <div style={{ position: "relative" }}>
+            {index > 0 && <FaArrowLeft onClick={handlePrev} className="arrow left" />}
+            {index < desktopSlides.length - 1 && <FaArrowRight onClick={handleNext} className="arrow right" />}
+            <Carousel
+              ref={carouselRef}
+              activeIndex={index}
+              onSelect={(selectedIndex) => setIndex(selectedIndex)}
+              controls={false}
+              interval={null}
+              indicators={false}
+              touch={true}>
+              {desktopSlides.map((group, idx) => (
+                <Carousel.Item key={idx}>
+                  <Row>
+                    {group.map((img, i) => (
+                      <Col key={i} xs={12} sm={6} md={4} className="d-flex justify-content-center">
+                        <Card className="native-card" style={{ width: "23rem", margin: "auto" }}>
+                          <Card.Img variant="top" src={img} />
+                        </Card>
+                      </Col>
+                    ))}
+                  </Row>
+                </Carousel.Item>
+              ))}
+            </Carousel>
+          </div>
+        )}
       </Container>
-
-      
     </>
   );
 }

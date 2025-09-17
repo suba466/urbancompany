@@ -7,14 +7,14 @@ import perfect from './assets/perfect.webp';
 import relax from './assets/relax.webp';
 import intense from './assets/intense.webp';
 import classic from './assets/classic.webp';
-import wall from './assets/wall.png';
-import drawer from './assets/drawer.webp';
-import fan from './assets/fan.png';
-import western from './assets/western.png';
-import pipe from './assets/pipe.png';
+import switch1 from './assets/switch.png';
+import switchbox from './assets/switch box.webp';
+import topload from './assets/topload.webp';
+import walldecor from './assets/walldecor.png';
+import automatic from './assets/automatic.png';
 import intenseclean from './assets/intenseclean.png';
 import img2 from './assets/2.png';
-import microwave from './assets/microwave.webp';
+import tap from './assets/tap.jpeg';
 import { FaArrowLeft, FaArrowRight } from "react-icons/fa6";
 import { Carousel, Container, Row, Col, Card } from 'react-bootstrap';
 import { FaStar } from "react-icons/fa";
@@ -42,12 +42,12 @@ function Shineurban() {
   const thirdCarousel = [
     { img: intense, title: "Intense bathroom cleaning", rating: "4.79 (3M)", pay: "₹549" },
     { img: classic, title: "Classic bathroom cleaning", rating: "4.82 (1.5M)", pay: "₹469" },
-    { img: wall, title: "Wall/ceiling light installation", rating: "4.87 (77M)", pay: "₹69" },
-    { img: drawer, title: "Drawer channel replacement (one set)", rating: "4.84 (3M)", pay: "₹149" },
-    { img: fan, title: "Fan repair (ceiling/exhaust/wall)", rating: "4.82 (96M)", pay: "₹109" },
-    { img: microwave, title: "Microwave checkup", rating: "4.84 (131K)", pay: "₹299" },
-    { img: western, title: "Western toilet repair (floor mounted)", rating: "4.79 (6K)", pay: "₹569" },
-    { img: pipe, title: "Pipeline leakage repair", rating: "4.75 (17M)", pay: "₹199" },
+    { img: switch1, title: "Switch/socket replacement", rating: "4.87 (71M)", pay: "₹49" },
+    { img: switchbox, title: "Switch board/switchbox repair", rating: "4.85 (70M)", pay: "₹79" },
+    { img: topload, title: "Automatic top load machine check-up", rating: "4.79 (324M)", pay: "₹299" },
+    { img: walldecor, title: "Drill & hang (wall decor)", rating: "4.86 (100K)", pay: "₹49" },
+    { img: tap, title: "Tap repair", rating: "4.82 (124K)", pay: "₹49" },
+    { img: automatic, title: "Automatic front load machine check-up", rating: "4.76 (147k)", pay: "₹299" },
     { img: intenseclean, title: "Intense cleaning (2 bathrooms)", rating: "4.79 (3M)", pay: "₹1,016", pay1: "₹1,098" },
     { img: img2, title: "Classic cleaning (2 bathrooms)", rating: "4.82 (1.5M)", pay: "₹868", pay1: "₹938" },
   ];
@@ -81,6 +81,7 @@ function Shineurban() {
       }
     }
   };
+  
 
   return (
     <Container>
@@ -204,11 +205,11 @@ function Shineurban() {
             <Row>
               {thirdCarousel.slice(thirdIndex, thirdIndex + 5).map((item, i) => (
                 <Col key={i} className="d-flex justify-content-center">
-                  <Card style={{ width: "10rem", margin: "auto", border:"none" }}>
-                    <Card.Img variant="top" src={item.img} /> 
+                  <Card style={{ width: "13.7rem",border:"none" }}>
+                    <Card.Img variant="top" src={item.img} style={{height:"233px"}}/> 
                     <Card.Body className='card-body'>
-                      <Card.Title ><p style={{fontWeight:"bold", fontSize:"11.4px"}}>{item.title}</p></Card.Title>
-                      <Card.Text><p style={{fontSize:"12px"}}><FaStar  style={{fontSize:"10px"}}/>{item.rating}</p> </Card.Text>
+                      <Card.Title ><h6 style={{fontWeight:"bold", fontSize:"12px"}}>{item.title}</h6></Card.Title>
+                      <Card.Text> <pre ><FaStar style={{marginTop:"-4px"}}/> <span >{item.rating}</span></pre></Card.Text>
                       <Card.Text >{item.pay}{" "}{item.pay1 && (
                           <span style={{ textDecoration: "line-through", color: "gray", marginLeft: "6px" }}>
                             {item.pay1}
