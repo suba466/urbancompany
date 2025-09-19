@@ -267,6 +267,14 @@ p, a, span, input, button {
   padding-top: 5px;
   padding-left: 0;
 }
+.water{
+  background-color:white;
+  margin-left:12px;
+  margin-bottom:10px;
+  border-radius:8px;
+  height: 35px;
+  padding: 6px;
+}
 @media (max-width: 425px) {
 .desktop-layout,.desktop,.native,.img,.desktop-toggler,.nativecomp{
     display: none !important;
@@ -339,6 +347,10 @@ p, a, span, input, button {
   }
   .shine{
     width: 19rem !important;
+  }
+  .third{
+    width: 11rem !important;
+    height: 233px;
   }
 }
 @media (max-width: 1440px) {

@@ -154,9 +154,9 @@ function Shineurban() {
           <Carousel interval={null} indicators={false} controls={false} touch={true}>
             {thirdCarousel.map((item, i) => (
               <Carousel.Item key={i}>
-                <Card style={{ width: "80%", margin: "auto" }}>
+                <Card style={{ width: "80%", margin: "auto",border:"none"  }}>
                   <Card.Img variant='top' src={item.img}></Card.Img>
-                  <Card.Body className="text-center">
+                  <Card.Body >
                     <Card.Title className='fw-bold'>{item.title}</Card.Title>
                     <Card.Text><FaStar /> {item.rating}</Card.Text>
                     <Card.Text className='fw-semibold'>
@@ -179,12 +179,12 @@ function Shineurban() {
             <Row>
               {thirdCarousel.slice(thirdIndex, thirdIndex + 2).map((item, i) => (
                 <Col key={i} xs={12} sm={6} className="d-flex justify-content-center">
-                  <Card style={{ width: "17rem", margin: "auto" }}>
+                  <Card style={{ width: "17rem", margin: "auto",border:"none"  }}>
                     <Card.Img variant="top" src={item.img} />
-                    <Card.Body className="text-center">
-                      <Card.Title className='fw-bold'>{item.title}</Card.Title>
+                    <Card.Body >
+                      <Card.Title className='fw-bold' style={{fontSize:"15px"}}>{item.title}</Card.Title>
                       <Card.Text><FaStar /> {item.rating}</Card.Text>
-                      <Card.Text className='fw-semibold'>
+                      <Card.Text className='fw-semibold' >
                         {item.pay}{" "}
                         {item.pay1 && (
                           <span style={{ textDecoration: "line-through", color: "gray", marginLeft: "6px" }}>
@@ -205,7 +205,7 @@ function Shineurban() {
             <Row>
               {thirdCarousel.slice(thirdIndex, thirdIndex + 5).map((item, i) => (
                 <Col key={i} className="d-flex justify-content-center">
-                  <Card style={{ width: "13.7rem",border:"none" }}>
+                  <Card style={{ width: "13.7rem",border:"none" }} className='third'>
                     <Card.Img variant="top" src={item.img} style={{height:"233px"}}/> 
                     <Card.Body className='card-body'>
                       <Card.Title ><h6 style={{fontWeight:"bold", fontSize:"12px"}}>{item.title}</h6></Card.Title>
