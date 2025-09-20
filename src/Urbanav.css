@@ -28,6 +28,7 @@ p, a, span, input, button {
   --bs-gutter-x: 1rem;
   padding: 5px;
 }
+
 .arrow{
   position:absolute;
   top:40%;
@@ -246,7 +247,6 @@ p, a, span, input, button {
   display: none;
 }
 .saloncomp{
-  overflow-x: hidden;
   width: 100%;
   margin-right: 40px;
 }
@@ -349,8 +349,9 @@ p, a, span, input, button {
     width: 19rem !important;
   }
   .third{
-    width: 11rem !important;
-    height: 233px;
+    width: 13.7rem !important;
+    height: 240px;
+    border: none;
   }
 }
 @media (max-width: 1440px) {
@@ -405,4 +406,39 @@ p, a, span, input, button {
     font-size: 12px !important; 
   }
 }
+.card-body {
+  padding: 10px 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  text-align: left;
+}
 
+.card-body h5, .card-body .fw-bold {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 5px 0;
+  line-height: 1.2;
+}
+
+.card-body p, .card-body .fw-semibold, .card-body span {
+  font-size: 14px;
+  margin: 2px 0;
+}
+
+.card-body .rating {
+  display: flex;
+  gap: 4px;
+}
+
+.card-body .price {
+  font-weight: 600;
+}
+
+.card-body .price span {
+  text-decoration: line-through;
+  color: gray;
+  margin-left: 6px;
+  font-weight: 400;
+}

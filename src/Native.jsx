@@ -5,7 +5,7 @@ import Card from 'react-bootstrap/Card';
 import Carousel from 'react-bootstrap/Carousel';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
-import { FaArrowLeft, FaArrowRight } from "react-icons/fa6";
+import { FaArrowLeft, FaArrowRight, FaRoad } from "react-icons/fa6";
 import { useState, useRef, useEffect } from 'react';
 import { MdVerified } from "react-icons/md";
 import { BsDot } from "react-icons/bs";
@@ -24,13 +24,16 @@ import native12 from './assets/native12.png';
 import native13 from './assets/native13.png';
 import native14 from './assets/native14.png';
 import native15 from './assets/native15.png';
-import rate from './assets/rate.png';
 import ro from './assets/ro.png';
 import ro1 from './assets/ro1.png'
 import good from './assets/good.png'
-import { TfiCheck } from "react-icons/tfi";
-
+import high from './assets/high.png'
+import nativem2 from './assets/nativem2.png'
+import build from './assets/build.png';
+import innovate from './assets/innovate.png'
+import year from './assets/2year.png'
 function Native() {
+  
   const [show, setShow] = useState(false);
   const [index, setIndex] = useState(0); 
   const carouselRef = useRef(null);
@@ -63,10 +66,8 @@ function Native() {
             <div style={{height:"50px", marginLeft:"15px", marginTop:"20px"}}>
               <FaArrowLeft/>
             </div>
-            <div style={{backgroundColor:"black" , height:"75px",objectFit:"cover"}}>
-              <h5 style={{color:"white", textAlign:"center", fontSize:"21px", padding:"18px"}}>
-                2-year anniversary sale. Up to ₹3,000 off 
-              </h5>
+            <div>
+              <img src={year} alt="" />
             </div>
             <br /> <br />
             <div style={{padding:"8px"}}>
@@ -89,65 +90,23 @@ function Native() {
             </div>
             <br />
             <div style={{backgroundColor:"rgba(219, 215, 215, 0.32)", padding:"12px"}}>
-              <h2 style={{fontSize:"35px"}}>Highest rated purifier on Amazon</h2>
-              <h1 style={{fontSize:"50px"}}>
-                4.4
-                <span style={{fontSize:"20px"}}>
-                  /5 <img src={rate} style={{marginBottom:"15px"}} alt="rating stars"/>
-                </span>
-              </h1>
-              <h5 style={{color:"black",margin:"4px"}}>
-                {(79000).toLocaleString()}+ reviews
-              </h5> <br />
-              <Row className="mb-2 g-2">
-                <Col xs={12} sm={4} className='water'><TfiCheck /> Water taste</Col>
-                <Col xs={12} sm={3} className='water'><TfiCheck /> 2-year life</Col>
-                <Col xs={12} sm={4} className='water'><TfiCheck /> Filtration</Col>
-              </Row>
-              <Row sclassName="mb-2 g-2" style={{marginLeft:"-3px",marginBottom:"8px"}}>
-                <Col xs={12} sm={5} className='water'><TfiCheck /> Value for money</Col>
-                <Col xs={12} sm={4} className='water'><TfiCheck /> Smart app</Col>
-              </Row> 
-               <Row className="mb-2 g-2">
-                <Col xs={12} sm={5} className='water' ><TfiCheck /> Service quality</Col>
-                <Col xs={12} sm={4} className='water'><TfiCheck /> Design</Col>
-              </Row> <br /><br />
-              <div style={{ backgroundColor: "white", borderRadius: "8px", padding: "12px", overflowX: "hidden" }}>
-                <h5 className='fw-semibold' style={{ fontSize: "25px", whiteSpace: "normal", lineHeight: "1.4" }}>
-                "I almost forgot that I have a <br /> RO Installed at my home <br /> 2-year filter life is insane"
-              </h5><br />
-              <h5 style={{fontSize:"20px"}}>Raman Chaudhary <MdVerified style={{ marginLeft: "5px" }} /></h5>
-              <h6 style={{fontSize:"18px"}}>Rated on Amazon<BsDot />21 Feb, 2025</h6><br />
+              <img src={high} alt="" />
+              <div style={{ backgroundColor: "white", borderRadius: "8px" , padding:"2px"}}>
               <img src={ro} alt="" />
             </div><br />
-            <div style={{ backgroundColor: "white", borderRadius: "8px", padding: "12px", overflowX: "hidden" }}>
-                <h5 className='fw-semibold' style={{ fontSize: "25px", whiteSpace: "normal", lineHeight: "1.4" }}>
-                "...looks quite good, smart & minimalistic, black with the LED white light ring on the front..."
-              </h5><br />
-              <h5 style={{fontSize:"20px"}}>Avirup <MdVerified style={{ marginLeft: "5px" }} /></h5>
-              <h6 style={{fontSize:"18px"}}>Rated on Amazon<BsDot />16 June, 2025</h6><br />
+            <div style={{ backgroundColor: "white", borderRadius: "8px" , padding:"2px"}}>
               <img src={good} alt="" />
             </div><br />
-             <div style={{ backgroundColor: "white", borderRadius: "8px", padding: "12px", overflowX: "hidden" }}>
-                <h5 className='fw-semibold' style={{ fontSize: "25px", whiteSpace: "normal", lineHeight: "1.4" }}>
-                "Native M2 is the best RO of all segments. Nice display monitoring & water quality"
-              </h5><br />
-              <h5 style={{fontSize:"20px"}}>Pradeep Pandey <MdVerified style={{ marginLeft: "5px" }} /></h5>
-              <h6 style={{fontSize:"18px"}}>Rated on Amazon<BsDot />6 Feb, 2025</h6><br />
+             <div style={{ backgroundColor: "white", borderRadius: "8px", padding:"2px" }}>
+              <img src={nativem2} alt="" />
             </div><br /><br />
             </div><br />
             <div style={{padding:"8px"}}>
-              <h3>Build with <br /> world-class quality</h3><br /><br />
-              <h4 style={{fontSize:"25px"}}>Meets the highest standards</h4>
-              <h6 style={{fontSize:"20px" ,color:"rgba(44, 44, 44, 0.71)"}}>Every Native purifier goes through rigorous checks, from R&D to final inspection, to meet the highest global standards</h6>
-              <img src={ro1} style={{borderRadius:"8px"}}/>
+              <img src={build} alt="" />
+              <img src={ro1} style={{borderRadius:"8px", width:"97%", marginLeft:"12px"}}/>
             </div> <br />
-            <div style={{backgroundColor:"black", color:"white", padding:"8px"}}> <br />
-              <h5 style={{fontSize:"30px"}}>Innovative. <br /> Customer-first products. <br /> Designed in India, for India.</h5><br />
-              <h5 style={{fontSize:"20px", color:"rgba(230, 229, 229, 0.86)"}}>At Native, we don't follow trends. <br /> We set new  standards <br /><br /> 
-                  Our every product is deeply researched, <br /> built from scratch by industry experts, <br />
-                  crafted with precision, and tested  rigorously. <br /> So it works beautifully, every single time.</h5><br /><br /><br />
-              <h3 style={{fontFamily:" 'Montserrat', sans-serif"}}>NATIVE</h3>
+            <div style={{padding:"8px"}}> <br />
+              <img src={innovate} alt="" />
             </div>
             <div style={{height:"20px", backgroundColor:"white"}}></div>
           </Modal.Body>

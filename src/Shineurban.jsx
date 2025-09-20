@@ -17,15 +17,18 @@ import img2 from './assets/2.png';
 import tap from './assets/tap.jpeg';
 import { FaArrowLeft, FaArrowRight } from "react-icons/fa6";
 import { Carousel, Container, Row, Col, Card } from 'react-bootstrap';
+import waxing from './assets/waxing.png';
+import cleanup from './assets/cleanup.png';
+import manicure from './assets/manicure.png';
+import haircare from './assets/haircare.png';
 import { FaStar } from "react-icons/fa";
-
+import smartlocks from './assets/smartlocks.webp'
 function Shineurban() {
   const [index, setIndex] = useState(0);
   const carouselRef = useRef(null);
   const [isMob, setIsMob] = useState(window.innerWidth <= 425);
   const [isTab, setIsTab] = useState(window.innerWidth > 425 && window.innerWidth <= 786);
   const [thirdIndex, setthirdIndex] = useState(0);
-
   useEffect(() => {
     const handleResize = () => {
       setIsMob(window.innerWidth <= 425);
@@ -34,11 +37,9 @@ function Shineurban() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-
-  const mobileSlides = [shine, deepclean, rowater, experts, perfect, relax];
-  const tabSlides = [[shine, deepclean], [rowater, experts], [perfect, relax]];
-  const desktopSlides = [[shine, deepclean, rowater], [experts, perfect, relax]];
-
+  const mobileSlides = [shine, deepclean, relax,rowater, experts, perfect, ];
+  const tabSlides = [[shine, deepclean], [relax, rowater], [experts, perfect]];
+  const desktopSlides = [[shine, deepclean,relax], [rowater, experts, perfect]];
   const thirdCarousel = [
     { img: intense, title: "Intense bathroom cleaning", rating: "4.79 (3M)", pay: "₹549" },
     { img: classic, title: "Classic bathroom cleaning", rating: "4.82 (1.5M)", pay: "₹469" },
@@ -51,7 +52,11 @@ function Shineurban() {
     { img: intenseclean, title: "Intense cleaning (2 bathrooms)", rating: "4.79 (3M)", pay: "₹1,016", pay1: "₹1,098" },
     { img: img2, title: "Classic cleaning (2 bathrooms)", rating: "4.82 (1.5M)", pay: "₹868", pay1: "₹938" },
   ];
-
+  const saloncard=[{img:waxing, title:"Waxing"},
+                   {img:cleanup, title:"Cleanup"},
+                   {img:manicure, title:"Manicure"},
+                   {img:haircare, title:"Haircare"},
+  ]
   const handlePrev = () => {
     if (index > 0) setIndex(index - 1);
   };
@@ -62,7 +67,6 @@ function Shineurban() {
       setIndex(index + 1);
     }
   };
-
   const handleThirdprev = () => {
     if (isTab) {
       if (thirdIndex > 0) setthirdIndex(thirdIndex - 2);
@@ -81,8 +85,6 @@ function Shineurban() {
       }
     }
   };
-  
-
   return (
     <Container>
       {isMob ? (
@@ -136,8 +138,8 @@ function Shineurban() {
                 <Row>
                   {group.map((img, i) => (
                     <Col key={i} xs={12} sm={6} md={4} className="d-flex justify-content-center">
-                      <Card className="native1img shine" style={{ width: "23rem", margin: "auto" }}>
-                        <Card.Img variant="top" src={img} />
+                      <Card className="native1img shine" style={{ width: "23rem", marginRight:"70px"}}>
+                        <Card.Img variant="top" src={img} style={{ width: "23rem"}}/>
                       </Card>
                     </Col>
                   ))}
@@ -205,16 +207,16 @@ function Shineurban() {
             <Row>
               {thirdCarousel.slice(thirdIndex, thirdIndex + 5).map((item, i) => (
                 <Col key={i} className="d-flex justify-content-center">
-                  <Card style={{ width: "13.7rem",border:"none" }} className='third'>
-                    <Card.Img variant="top" src={item.img} style={{height:"233px"}}/> 
+                  <Card className='third'>
+                    <Card.Img variant="top" src={item.img} style={{height:"233px", borderRadius:"8px"}}/> 
                     <Card.Body className='card-body'>
-                      <Card.Title ><h6 style={{fontWeight:"bold", fontSize:"12px"}}>{item.title}</h6></Card.Title>
-                      <Card.Text> <pre ><FaStar style={{marginTop:"-4px"}}/> <span >{item.rating}</span></pre></Card.Text>
-                      <Card.Text >{item.pay}{" "}{item.pay1 && (
-                          <span style={{ textDecoration: "line-through", color: "gray", marginLeft: "6px" }}>
-                            {item.pay1}
-                          </span>
-                        )}
+                      <Card.Title className='fw-bold'>{item.title}</Card.Title>
+                      <Card.Text className='rating'>
+                        <FaStar /> {item.rating}
+                      </Card.Text>
+                      <Card.Text className='price'>
+                        {item.pay}
+                        {item.pay1 && <span>{item.pay1}</span>}
                       </Card.Text>
                     </Card.Body>
                   </Card>
@@ -223,6 +225,23 @@ function Shineurban() {
             </Row>
           </div>
         )}
+      </div><br /><br /><br /><br /><br /><br /><br />
+      <div >
+        <h1>Salon for Women</h1>
+         <Row className='mt-3'>
+          {saloncard.map((item,i)=>(
+            <Col key={i} xs={12} sm={6} md={3} className="d-flex justify-content-center mb-4">
+                <Card style={{ width: "18rem", height:"303px",position: "relative" }}>
+                  <Card.Title className='fw-semibold ' style={{padding:"20px", fontSize:"15px"}}>{item.title}</Card.Title>
+                  <Card.Img  src={item.img} style={{marginTop:"47px", overflow:"hidden"}}/> 
+                </Card>
+            </Col>
+          ))}
+         </Row>
+      </div>
+
+      <div>
+        <img src="" alt="" />
       </div>
     </Container>
   );
