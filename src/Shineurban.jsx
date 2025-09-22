@@ -137,9 +137,9 @@ function Shineurban() {
               <Carousel.Item key={idx}>
                 <Row>
                   {group.map((img, i) => (
-                    <Col key={i} xs={12} sm={6} md={4} className="d-flex justify-content-center">
-                      <Card className="native1img shine" style={{ width: "23rem", marginRight:"70px"}}>
-                        <Card.Img variant="top" src={img} style={{ width: "23rem"}}/>
+                    <Col key={i} xs={12} sm={6} md={4} >
+                      <Card className="native1img shine">
+                        <Card.Img variant="top" src={img} style={{borderRadius:"8px"}}/>
                       </Card>
                     </Col>
                   ))}
@@ -204,44 +204,42 @@ function Shineurban() {
           <div style={{ position: 'relative' }}>
             {thirdIndex > 0 && <FaArrowLeft onClick={handleThirdprev} className='arrow left' />}
             {thirdIndex < thirdCarousel.length - 5 && <FaArrowRight onClick={handleThirdnext} className='arrow right' />}
-            <Row>
+            <Row style={{ display: "flex", gap: "10px", justifyContent: "space-between" }}>
               {thirdCarousel.slice(thirdIndex, thirdIndex + 5).map((item, i) => (
-                <Col key={i} className="d-flex justify-content-center">
+                <div key={i} style={{ flex: "1 1 calc(20% - 8px)" }}>
                   <Card className='third'>
-                    <Card.Img variant="top" src={item.img} style={{height:"233px", borderRadius:"8px"}}/> 
+                    <Card.Img variant="top" src={item.img} style={{ borderRadius:"8px" }}/> 
                     <Card.Body className='card-body'>
                       <Card.Title className='fw-bold'>{item.title}</Card.Title>
-                      <Card.Text className='rating'>
-                        <FaStar /> {item.rating}
-                      </Card.Text>
+                      <Card.Text className='rating'><FaStar /> {item.rating}</Card.Text>
                       <Card.Text className='price'>
-                        {item.pay}
-                        {item.pay1 && <span>{item.pay1}</span>}
+                        {item.pay}{item.pay1 && <span>{item.pay1}</span>}
                       </Card.Text>
                     </Card.Body>
                   </Card>
-                </Col>
+                </div>
               ))}
             </Row>
+
           </div>
         )}
-      </div><br /><br /><br /><br /><br /><br /><br />
+      </div><br /><br /><br /><br /><br /><br />
       <div >
         <h1>Salon for Women</h1>
          <Row className='mt-3'>
           {saloncard.map((item,i)=>(
             <Col key={i} xs={12} sm={6} md={3} className="d-flex justify-content-center mb-4">
-                <Card style={{ width: "18rem", height:"303px",position: "relative" }}>
+                <Card style={{ width: "15rem", height:"303px",position: "relative" }}>
                   <Card.Title className='fw-semibold ' style={{padding:"20px", fontSize:"15px"}}>{item.title}</Card.Title>
-                  <Card.Img  src={item.img} style={{marginTop:"47px", overflow:"hidden"}}/> 
+                  <Card.Img  src={item.img} style={{marginTop:"75px", overflow:"hidden"}}/> 
                 </Card>
             </Col>
           ))}
          </Row>
-      </div>
+      </div><br /><br /><br />
 
-      <div>
-        <img src="" alt="" />
+      <div >
+        <img src={smartlocks} alt="" className="native1img " />
       </div>
     </Container>
   );
