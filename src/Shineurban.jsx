@@ -137,8 +137,8 @@ function Shineurban() {
               <Carousel.Item key={idx}>
                 <Row>
                   {group.map((img, i) => (
-                    <Col key={i} xs={12} sm={6} md={4} >
-                      <Card className="native1img shine">
+                    <Col key={i} xs={12} sm={6} md={4}  className="d-flex justify-content-center">
+                      <Card className="native1img shine ">
                         <Card.Img variant="top" src={img} style={{borderRadius:"8px"}}/>
                       </Card>
                     </Col>
@@ -207,7 +207,7 @@ function Shineurban() {
             <Row style={{ display: "flex", gap: "10px", justifyContent: "space-between" }}>
               {thirdCarousel.slice(thirdIndex, thirdIndex + 5).map((item, i) => (
                 <div key={i} style={{ flex: "1 1 calc(20% - 8px)" }}>
-                  <Card className='third'>
+                  <Card className='third card'>
                     <Card.Img variant="top" src={item.img} style={{ borderRadius:"8px" }}/> 
                     <Card.Body className='card-body'>
                       <Card.Title className='fw-bold'>{item.title}</Card.Title>

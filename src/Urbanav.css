@@ -278,14 +278,29 @@ p, a, span, input, button {
 .third{
   border: none !important;
 }
-/*@media (min-width:991px){
-  .shine{
-    width: 15rem !important;
+.shine {
+  width: 100% !important; 
+  max-width: 100%;
+}
+.native1img {
+  width: 100%;
+  height: auto;
+}
+@media (max-width: 575px) {
+  .native1img {
+    max-width: 90%;
+    margin: auto;
   }
-  .native1img{
-    width:20rem !important;
+  .carousel-item {
+    display: flex;
+    justify-content: center;
   }
-}*/
+}
+@media (min-width:978px) and (max-width:991px){
+  .card{
+    margin: 5px auto !important;
+  }
+}
 @media (max-width: 425px) {
 .desktop-layout,.desktop,.native,.img,.desktop-toggler,.nativecomp{
     display: none !important;
