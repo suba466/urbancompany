@@ -22,13 +22,11 @@ import cleanup from './assets/cleanup.png';
 import manicure from './assets/manicure.png';
 import haircare from './assets/haircare.png';
 import smartlocks from './assets/smartlocks.webp';
-
 function Shineurban() {
   const [index, setIndex] = useState(0);
   const [thirdIndex, setThirdIndex] = useState(0);
   const [isMob, setIsMob] = useState(window.innerWidth <= 425);
   const [isTab, setIsTab] = useState(window.innerWidth > 425 && window.innerWidth <= 786);
-
   useEffect(() => {
     const handleResize = () => {
       setIsMob(window.innerWidth <= 425);
@@ -37,11 +35,9 @@ function Shineurban() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
   const mobileSlides = [shine, deepclean, relax, rowater, experts, perfect];
   const tabSlides = [[shine, deepclean], [relax, rowater], [experts, perfect]];
   const desktopSlides = [[shine, deepclean, relax], [rowater, experts, perfect]];
-
   const thirdCarousel = [
     { img: intense, title: "Intense bathroom cleaning", rating: "4.79 (3M)", pay: "₹549" },
     { img: classic, title: "Classic bathroom cleaning", rating: "4.82 (1.5M)", pay: "₹469" },
@@ -54,27 +50,22 @@ function Shineurban() {
     { img: intenseclean, title: "Intense cleaning (2 bathrooms)", rating: "4.79 (3M)", pay: "₹1,016", pay1: "₹1,098" },
     { img: img2, title: "Classic cleaning (2 bathrooms)", rating: "4.82 (1.5M)", pay: "₹868", pay1: "₹938" },
   ];
-
   const saloncard = [
     { img: waxing, title: "Waxing" },
     { img: cleanup, title: "Cleanup" },
     { img: manicure, title: "Manicure" },
     { img: haircare, title: "Haircare" },
   ];
-
-  // Main carousel arrows
   const handlePrev = () => { if (index > 0) setIndex(index - 1); };
   const handleNext = () => {
-    if (isTab && index < tabSlides.length - 1) setIndex(index + 1);
+    if (isMob && index < mobileSlides.length - 1) setIndex(index + 1);
+    else if (isTab && index < tabSlides.length - 1) setIndex(index + 1);
     else if (!isMob && !isTab && index < desktopSlides.length - 1) setIndex(index + 1);
   };
-
-  // 3rd carousel arrows
   const handleThirdPrev = () => {
     if (isMob || isTab) { if (thirdIndex > 0) setThirdIndex(thirdIndex - 2); }
     else { if (thirdIndex > 0) setThirdIndex(thirdIndex - 1); }
   };
-
   const handleThirdNext = () => {
     if (isMob || isTab) { if (thirdIndex < thirdCarousel.length - 2) setThirdIndex(thirdIndex + 2); }
     else { if (thirdIndex < thirdCarousel.length - 5) setThirdIndex(thirdIndex + 1); }
@@ -82,48 +73,18 @@ function Shineurban() {
 
   return (
     <Container style={{ overflowX: 'hidden' }}>
-      {/* Main Carousel */}
-      {isMob ? (
-        <div style={{ overflow: 'hidden' }}>
-          <div style={{ display: 'flex', transition: 'transform 0.5s ease', transform: `translateX(-${index * 100}%)` }}>
-            {mobileSlides.map((img, idx) => (
-              <Card key={idx} className="native1img shine" style={{ width: "90%", margin: "auto" }}>
-                <Card.Img variant="top" src={img} />
-              </Card>
-            ))}
-          </div>
+      <div style={{ position: 'relative', overflow: 'hidden' }}>
+        {index > 0 && <FaArrowLeft onClick={handlePrev} className="arrow left" />}
+        {((isMob && index < mobileSlides.length - 1) || (isTab && index < tabSlides.length - 1) || (!isMob && !isTab && index < desktopSlides.length - 1)) && 
+          <FaArrowRight onClick={handleNext} className="arrow right" />}
+        <div style={{ display: 'flex', transition: 'transform 0.5s ease', transform: `translateX(-${index * (isMob ? 100 : isTab ? 50 : 33.33)}%)` }}>
+          {(isMob ? mobileSlides : isTab ? tabSlides.flat() : desktopSlides.flat()).map((img, idx) => (
+            <Card key={idx} className="native1img shine" style={{ flex: isMob ? '0 0 100%' : isTab ? '0 0 50%' : '0 0 33.33%', margin: 'auto' }}>
+              <Card.Img variant="top" src={img} style={{ borderRadius: '8px' }} />
+            </Card>
+          ))}
         </div>
-      ) : isTab ? (
-        <div style={{ position: 'relative' }}>
-          {index > 0 && <FaArrowLeft onClick={handlePrev} className="arrow left" />}
-          {index < tabSlides.length - 1 && <FaArrowRight onClick={handleNext} className="arrow right" />}
-          <div style={{ display: 'flex', gap: '15px', overflow: 'hidden' }}>
-            {tabSlides[index].map((img, i) => (
-              <div key={i} style={{ flex: '0 0 50%' }}>
-                <Card style={{ width: '100%', margin: 'auto' }}>
-                  <Card.Img variant="top" src={img} />
-                </Card>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div style={{ position: 'relative' }}>
-          {index > 0 && <FaArrowLeft onClick={handlePrev} className="arrow left" />}
-          {index < desktopSlides.length - 1 && <FaArrowRight onClick={handleNext} className="arrow right" />}
-          <div style={{ display: 'flex', gap: '15px', overflow: 'hidden' }}>
-            {desktopSlides[index].map((img, i) => (
-              <div key={i} style={{ flex: '0 0 33.33%' }}>
-                <Card className="native1img shine">
-                  <Card.Img variant="top" src={img} style={{ borderRadius: '8px' }} />
-                </Card>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Most Booked Services */}
+      </div>
       <h1 className="mt-5">Most booked services</h1>
       <div style={{ marginTop: '3rem' }}>
         <div style={{ position: 'relative' }}>
@@ -137,9 +98,7 @@ function Shineurban() {
                   <Card.Body className="card-body">
                     <Card.Title className="fw-bold">{item.title}</Card.Title>
                     <Card.Text className="rating"><FaStar /> {item.rating}</Card.Text>
-                    <Card.Text className="price">
-                      {item.pay}{item.pay1 && <span>{item.pay1}</span>}
-                    </Card.Text>
+                    <Card.Text className="price">{item.pay}{item.pay1 && <span>{item.pay1}</span>}</Card.Text>
                   </Card.Body>
                 </Card>
               </div>
@@ -147,8 +106,6 @@ function Shineurban() {
           </div>
         </div>
       </div>
-
-      {/* Salon for Women */}
       <h1 className="mt-5">Salon for Women</h1>
       <Row className="mt-3">
         {saloncard.map((item, i) => (
@@ -160,8 +117,6 @@ function Shineurban() {
           </Col>
         ))}
       </Row>
-
-      {/* Footer Image */}
       <div>
         <img src={smartlocks} alt="" className="native1img" />
       </div>
