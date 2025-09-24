@@ -80,21 +80,7 @@ p, a, span, input, button {
   gap: 10px;
   align-items: center;
 }
-@media (max-width: 575px) {
-  .navbar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .logo-img {
-    margin-bottom: 15px;
-  }
-  .nav-items {
-    flex-direction: column;
-    align-items: flex-start;
-    width: 100%;
-    gap: 8px;
-  }
-}
+
 .search-wrapper {
   position: relative;
 }
@@ -286,16 +272,7 @@ p, a, span, input, button {
   width: 100%;
   height: auto;
 }
-@media (max-width: 575px) {
-  .native1img {
-    max-width: 90%;
-    margin: auto;
-  }
-  .carousel-item {
-    display: flex;
-    justify-content: center;
-  }
-}
+
 @media (min-width:978px) and (max-width:991px){
   .card{
     margin: 5px auto !important;
@@ -468,4 +445,23 @@ p, a, span, input, button {
   margin-left: 6px;
   font-weight: 400;
 }
+@media (max-width: 575px) and (min-width: 426px) {
+  .carousel-item {
+    display: flex !important;     
+    justify-content: center;
+    align-items: center;
+  }
+.carousel .col, .carousel .col-sm-6 {
+    flex: 0 0 48% !important;
+    max-width: 48% !important;
+  }
+  .native1img, .shine {
+    width: auto !important;  
+    max-width: 48%;          
+    margin: 0 5px;
+  }
+}
+
+
+
 
