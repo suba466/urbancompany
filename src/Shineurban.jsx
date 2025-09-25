@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Container, Row, Col, Card } from 'react-bootstrap';
+import { Container, Row, Col, Card, Carousel } from 'react-bootstrap';
 import { FaArrowLeft, FaArrowRight, FaStar } from 'react-icons/fa';
 import shine from './assets/shine.webp';
 import deepclean from './assets/deepclean.webp';
@@ -22,11 +22,13 @@ import cleanup from './assets/cleanup.png';
 import manicure from './assets/manicure.png';
 import haircare from './assets/haircare.png';
 import smartlocks from './assets/smartlocks.webp';
+
 function Shineurban() {
   const [index, setIndex] = useState(0);
   const [thirdIndex, setThirdIndex] = useState(0);
   const [isMob, setIsMob] = useState(window.innerWidth <= 425);
   const [isTab, setIsTab] = useState(window.innerWidth > 425 && window.innerWidth <= 786);
+
   useEffect(() => {
     const handleResize = () => {
       setIsMob(window.innerWidth <= 425);
@@ -35,8 +37,9 @@ function Shineurban() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
   const mobileSlides = [shine, deepclean, relax, rowater, experts, perfect];
-  const tabSlides = [[shine, deepclean], [relax, rowater], [experts, perfect]];
+  const tabletSlides = [[shine, deepclean], [relax, rowater], [experts, perfect]];
   const desktopSlides = [[shine, deepclean, relax], [rowater, experts, perfect]];
   const thirdCarousel = [
     { img: intense, title: "Intense bathroom cleaning", rating: "4.79 (3M)", pay: "₹549" },
@@ -59,43 +62,99 @@ function Shineurban() {
   const handlePrev = () => { if (index > 0) setIndex(index - 1); };
   const handleNext = () => {
     if (isMob && index < mobileSlides.length - 1) setIndex(index + 1);
-    else if (isTab && index < tabSlides.length - 1) setIndex(index + 1);
+    else if (isTab && index < tabletSlides.length - 1) setIndex(index + 1);
     else if (!isMob && !isTab && index < desktopSlides.length - 1) setIndex(index + 1);
   };
   const handleThirdPrev = () => {
-    if (isMob || isTab) { if (thirdIndex > 0) setThirdIndex(thirdIndex - 2); }
-    else { if (thirdIndex > 0) setThirdIndex(thirdIndex - 1); }
+    if (isMob) { if (thirdIndex > 0) setThirdIndex(thirdIndex - 1); }
+    else if (isTab) { if (thirdIndex > 0) setThirdIndex(thirdIndex - 2); }
+    else { if (thirdIndex > 0) setThirdIndex(thirdIndex - 5); }
   };
   const handleThirdNext = () => {
-    if (isMob || isTab) { if (thirdIndex < thirdCarousel.length - 2) setThirdIndex(thirdIndex + 2); }
-    else { if (thirdIndex < thirdCarousel.length - 5) setThirdIndex(thirdIndex + 1); }
+    if (isMob) { if (thirdIndex < thirdCarousel.length - 1) setThirdIndex(thirdIndex + 1); }
+    else if (isTab) { if (thirdIndex < thirdCarousel.length - 2) setThirdIndex(thirdIndex + 2); }
+    else { if (thirdIndex < thirdCarousel.length - 5) setThirdIndex(thirdIndex + 5); }
   };
 
   return (
     <Container style={{ overflowX: 'hidden' }}>
       <div style={{ position: 'relative', overflow: 'hidden' }}>
-        {index > 0 && <FaArrowLeft onClick={handlePrev} className="arrow left" />}
-        {((isMob && index < mobileSlides.length - 1) || (isTab && index < tabSlides.length - 1) || (!isMob && !isTab && index < desktopSlides.length - 1)) && 
+        {!isMob && index > 0 && <FaArrowLeft onClick={handlePrev} className="arrow left" />}
+        {!isMob && ((isTab && index < tabletSlides.length - 1) || (!isTab && index < desktopSlides.length - 1)) &&
           <FaArrowRight onClick={handleNext} className="arrow right" />}
-        <div style={{ display: 'flex', transition: 'transform 0.5s ease', transform: `translateX(-${index * (isMob ? 100 : isTab ? 50 : 33.33)}%)` }}>
-          {(isMob ? mobileSlides : isTab ? tabSlides.flat() : desktopSlides.flat()).map((img, idx) => (
-            <Card key={idx} className="native1img shine" style={{ flex: isMob ? '0 0 100%' : isTab ? '0 0 50%' : '0 0 33.33%', margin: 'auto' }}>
-              <Card.Img variant="top" src={img} style={{ borderRadius: '8px' }} />
-            </Card>
-          ))}
-        </div>
+        {isMob ? (
+          <>
+            <Carousel
+              touch={true}
+              indicators={false}
+              controls={false}
+              interval={null}
+              activeIndex={index}
+              onSelect={setIndex} >
+              {mobileSlides.map((img, i) => (
+                <Carousel.Item key={i}>
+                  <Card style={{ border: 'none', width: '100%' }}>
+                    <Card.Img variant="top" src={img} style={{ borderRadius: '8px', width: '100%' }} />
+                  </Card>
+                </Carousel.Item>
+              ))}
+            </Carousel>
+            <div className='mobile-indicator'>
+              <div
+                className='mobile-indicator-inner'
+                style={{ width: `${((index + 1) / mobileSlides.length) * 100}%` }}
+              />
+            </div>
+          </>
+        ) : (
+          <div style={{ display: 'flex', transition: 'transform 0.5s ease', transform: `translateX(-${index * 100}%)` }}>
+            {(isTab ? tabletSlides : desktopSlides).map((group, gIdx) => {
+              const flexWidth = `${100 / group.length}%`;
+              return (
+                <div key={gIdx} style={{ display: 'flex', flex: '0 0 100%', gap: '0px' }}>
+                  {group.map((img, i) => (
+                    <Card key={i} style={{ flex: `0 0 ${flexWidth}`, border: 'none',width:"100%" }}>
+                      <Card.Img variant="top" src={img} style={{ borderRadius: '8px', width:"90%" }} />
+                    </Card>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
       <h1 className="mt-5">Most booked services</h1>
-      <div style={{ marginTop: '3rem' }}>
-        <div style={{ position: 'relative' }}>
-          {(isTab || !isMob) && thirdIndex > 0 && <FaArrowLeft onClick={handleThirdPrev} className="arrow left" />}
-          {(isTab || !isMob) && thirdIndex < thirdCarousel.length - (isTab ? 2 : 5) && <FaArrowRight onClick={handleThirdNext} className="arrow right" />}
-          <div style={{ display: 'flex', gap: '10px', overflow: 'hidden' }}>
-            {thirdCarousel.slice(thirdIndex, thirdIndex + (isMob ? 2 : isTab ? 2 : 5)).map((item, i) => (
-              <div key={i} style={{ flex: `0 0 ${isMob ? '50%' : isTab ? '50%' : '20%'}` }}>
-                <Card className="third card">
-                  <Card.Img variant="top" src={item.img} style={{ borderRadius: '8px' }} />
-                  <Card.Body className="card-body">
+      <div style={{ marginTop: '3rem', position: 'relative' }}>
+        {(isTab || !isMob) && thirdIndex > 0 && <FaArrowLeft onClick={handleThirdPrev} className="arrow left" />}
+        {(isTab || !isMob) && thirdIndex < thirdCarousel.length - (isTab ? 2 : 5) && <FaArrowRight onClick={handleThirdNext} className="arrow right" />}
+        {isMob ? (
+          <Carousel
+            touch={true}
+            indicators={false}
+            controls={false}
+            interval={null}
+            activeIndex={thirdIndex}
+            onSelect={setThirdIndex}>
+            {thirdCarousel.map((item, i) => (
+              <Carousel.Item key={i}>
+                <Card className="third card" style={{ border: 'none' }}>
+                  <Card.Img variant="top" src={item.img} style={{ borderRadius: '8px', width: '100%' }} />
+                  <Card.Body>
+                    <Card.Title className="fw-bold">{item.title}</Card.Title>
+                    <Card.Text className="rating"><FaStar /> {item.rating}</Card.Text>
+                    <Card.Text className="price">{item.pay}{item.pay1 && <span>{item.pay1}</span>}</Card.Text>
+                  </Card.Body>
+                </Card>
+              </Carousel.Item>
+            ))}
+          </Carousel>
+        ) : (
+          <div style={{ display: 'flex', gap: '5px', overflow: 'hidden',width:"95%" }}>
+            {thirdCarousel.slice(thirdIndex, thirdIndex + (isTab ? 2 : 5)).map((item, i) => (
+              <div key={i} style={{ flex: `0 0 ${isTab ? '50%' : '20%'}` }}>
+                <Card className="third card" style={{ border: 'none' }}>
+                  <Card.Img variant="top" src={item.img} style={{ borderRadius: '8px' ,width:"90%"}} />
+                  <Card.Body>
                     <Card.Title className="fw-bold">{item.title}</Card.Title>
                     <Card.Text className="rating"><FaStar /> {item.rating}</Card.Text>
                     <Card.Text className="price">{item.pay}{item.pay1 && <span>{item.pay1}</span>}</Card.Text>
@@ -104,7 +163,7 @@ function Shineurban() {
               </div>
             ))}
           </div>
-        </div>
+        )}
       </div>
       <h1 className="mt-5">Salon for Women</h1>
       <Row className="mt-3">
