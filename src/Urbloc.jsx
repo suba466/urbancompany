@@ -48,7 +48,7 @@ function Urbloc() {
 
   return (
     <>
-      <Row className="align-items-center justify-content-end g-5 w-100 desktop-layout">
+      <Row className="align-items-center justify-content-end  w-100 desktop-layout" >
         <Col xs="auto">
           <Dropdown className="location-box">
             <Dropdown.Toggle

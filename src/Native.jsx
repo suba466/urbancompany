@@ -33,7 +33,6 @@ import build from './assets/build.png';
 import innovate from './assets/innovate.png'
 import year from './assets/2year.png'
 function Native() {
-  
   const [show, setShow] = useState(false);
   const [index, setIndex] = useState(0); 
   const carouselRef = useRef(null);
@@ -56,8 +55,8 @@ function Native() {
   return (
     <>
       <Container className='nativecomp'>
-        <div className='native1' onClick={handleShow}>
-          <img src={native1} alt="water purifier" className="native1img w-100" />
+        <div className='native1' onClick={handleShow} style={{margin:'50px auto'}} >
+          <img src={native1} alt="water purifier" className="native1img " />
         </div>
         <Modal show={show} onHide={handleClose} centered >
           <Button onClick={handleClose} variant="light" className='close-btn'>✕</Button>
