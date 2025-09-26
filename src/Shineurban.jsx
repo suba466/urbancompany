@@ -22,11 +22,11 @@ import cleanup from './assets/cleanup.png';
 import manicure from './assets/manicure.png';
 import haircare from './assets/haircare.png';
 import smartlocks from './assets/smartlocks.webp';
-
+import cleaning1 from './assets/cleaning.png';
+import sofa from './assets/sofa.png';
 function Shineurban() {
   const [index, setIndex] = useState(0);
   const [thirdIndex, setThirdIndex] = useState(0);
-  const [salonIndex, setSalonIndex] = useState(0);
   const [isMob, setIsMob] = useState(window.innerWidth <= 425);
   const [isTab, setIsTab] = useState(window.innerWidth > 425 && window.innerWidth <= 786);
 
@@ -55,14 +55,15 @@ function Shineurban() {
     { img: intenseclean, title: "Intense cleaning (2 bathrooms)", rating: "4.79 (3M)", pay: "₹1,016", pay1: "₹1,098" },
     { img: img2, title: "Classic cleaning (2 bathrooms)", rating: "4.82 (1.5M)", pay: "₹868", pay1: "₹938" },
   ];
-
   const saloncard = [
     { img: waxing, title: "Waxing" },
     { img: cleanup, title: "Cleanup" },
     { img: manicure, title: "Manicure" },
     { img: haircare, title: "Haircare" },
   ];
-
+  const cleaning=[{img:cleaning1, title:"Bathroom & Kitchen Cleaning"},
+                  {img:sofa, title:"Sofa & Carpet Cleaning"}
+  ];
   const handlePrev = () => { if (index > 0) setIndex(index - 1); };
   const handleNext = () => {
     if (isMob && index < mobileSlides.length - 1) setIndex(index + 1);
@@ -81,15 +82,6 @@ function Shineurban() {
     else if (isTab) { if (thirdIndex < thirdCarousel.length - 2) setThirdIndex(thirdIndex + 2); }
     else { if (thirdIndex < thirdCarousel.length - 5) setThirdIndex(thirdIndex + 5); }
   };
-
-  const handleSalonPrev = () => {
-    if (salonIndex > 0) setSalonIndex(salonIndex - 1);
-  };
-  const handleSalonNext = () => {
-    if (isMob && salonIndex < saloncard.length - 1) setSalonIndex(salonIndex + 1);
-    else if (isTab && salonIndex < saloncard.length - 2) setSalonIndex(salonIndex + 1);
-  };
-
   return (
     <Container style={{ overflowX: 'hidden' }}>
       <div style={{ position: 'relative', overflow: 'hidden' }}>
@@ -97,13 +89,7 @@ function Shineurban() {
         {!isMob && ((isTab && index < tabletSlides.length - 1) || (!isTab && index < desktopSlides.length - 1)) &&
           <FaArrowRight onClick={handleNext} className="arrow right" />}
         {isMob ? (
-          <div style={{
-            display: 'flex',
-            overflowX: 'auto',
-            gap: '10px',
-            scrollSnapType: 'x mandatory',
-            padding: '10px 0'
-          }}>
+          <div style={{display: 'flex', overflowX: 'auto', gap: '10px',scrollSnapType: 'x mandatory', padding: '10px 0' }}>
             {mobileSlides.map((img, i) => (
               <Card key={i} style={{ flex: '0 0 80%', scrollSnapAlign: 'start', borderRadius: '8px', border: 'none' }}>
                 <Card.Img src={img} style={{ width: '100%', borderRadius: '8px' }} />
@@ -161,22 +147,12 @@ function Shineurban() {
           </div>
         )}
       </div>
-      <h1 className="mt-5">Salon for Women</h1>
+      <h1 className="mt-3">Salon for Women</h1><br />
       {isMob ? (
-        <div style={{
-          display: 'flex',
-          overflowX: 'auto',
-          gap: '10px',
-          scrollSnapType: 'x mandatory',
-          padding: '10px 0'
-        }}>
+        <div style={{ display: 'flex',overflowX: 'auto', gap: '10px', scrollSnapType: 'x mandatory',padding: '10px 0'}}>
           {saloncard.map((item, i) => (
             <Card key={i} style={{
-              flex: '0 0 80%',          
-              scrollSnapAlign: 'start',
-              borderRadius: '8px',
-              border: 'none'
-            }}>
+              flex: '0 0 80%',scrollSnapAlign: 'start', borderRadius: '8px', border: 'none'}}>
               <Card.Title className="fw-semibold" style={{ padding: '20px', fontSize: '15px' }}>{item.title}</Card.Title>
               <Card.Img src={item.img} style={{ marginTop: '20px', borderRadius: '8px' }} />
             </Card>
@@ -185,23 +161,31 @@ function Shineurban() {
       ) : (
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           {saloncard.map((item, i) => (
-            <Card key={i} style={{
-              flex: '0 0 23%',
-              borderRadius: '8px',
-              border: 'none',
-              marginBottom: '20px'
-            }}>
-              <Card.Title className="fw-semibold" style={{ padding: '20px', fontSize: '15px' }}>{item.title}</Card.Title>
-              <Card.Img src={item.img} style={{ marginTop: '20px', borderRadius: '8px' }} />
-            </Card>
-          ))}
+          <Card key={i} style={{flex: '0 0 23%', borderRadius: '8px', marginBottom: '20px',display: 'flex',flexDirection: 'column',overflow: 'hidden'  }}>
+            <Card.Title className="fw-semibold" style={{ padding: '20px', fontSize: '15px' }}>
+              {item.title}
+            </Card.Title>
+            <Card.Img 
+              src={item.img} 
+              style={{  borderRadius: '0 0 8px 8px', flexGrow: 1,  objectFit: 'cover',  }}  />
+          </Card>
+        ))}
         </div>
       )}
       <br />
-      <div style={{ border: '1px solid darkblue' }} className='native1'>
-  <img src={smartlocks} alt='' className='native1img' />
-</div>
-
+      <div  style={{ border: '1px solid darkblue' }} className='native1 mt-3'>
+        <img src={smartlocks} alt='' className='native1img' />
+      </div>
+      <div className='mt-5'>
+         <h1>Cleaning & pest control</h1><br />
+          <Card style={{ width: '18rem' }}>
+            <Card.Body>
+              <h3>Bathroom & Kitchen Cleaning</h3>
+            </Card.Body>
+            <Card.Img variant="top" src={cleaning1} />
+            
+          </Card>
+      </div>
 
 
     </Container>
