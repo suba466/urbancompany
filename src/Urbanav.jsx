@@ -64,9 +64,9 @@ function Urbanav() {
   }, []);
   //Fetch logo for bottom menu
   useEffect(()=>{
-    fetch("http://localhost:5000/api/logo1")
+    fetch("http://your-backed-url.com/api/logo1")
     .then((res)=>res.json())
-    .then((data)=>setLogo1(`http://localhost:5000${data.logo1}`))
+    .then((data)=>setLogo1(`http://your-backed-url.com${data.logo1}`))
     .catch((err)=>console.log(err));
   },[]);
   // Close dropdown when clicking outside
@@ -246,4 +246,5 @@ function Urbanav() {
 }
 
 export default Urbanav;
+
 
