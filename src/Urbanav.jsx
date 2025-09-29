@@ -11,7 +11,7 @@ import "./Urbancom.css";
 
 function Urbanav() {
   const [logo, setLogo] = useState("");
-  const [logo1, setLogo1] = useState("");
+  const [logo1,setLogo1]=useState("");
   const [searchValue, setSearchValue] = useState("");
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const [placeholder, setPlaceholder] = useState("Search for ");
@@ -24,8 +24,6 @@ function Urbanav() {
   const typingSpeed = 120;
   const erasingSpeed = 80;
   const delayBetweenWords = 1200;
-
-  const backendURL = "https://urban-backend.onrender.com"; // 🔹 Replace with your deployed backend
 
   // Typing effect
   useEffect(() => {
@@ -57,22 +55,23 @@ function Urbanav() {
     type();
   }, []);
 
-  // Fetch logos from deployed backend
+  // Fetch logo
   useEffect(() => {
-    fetch(`${backendURL}/api/logo`)
-      .then(res => res.json())
-      .then(data => setLogo(`${backendURL}${data.logo}`))
-      .catch(err => console.log("Error fetching top logo:", err));
-
-    fetch(`${backendURL}/api/logo1`)
-      .then(res => res.json())
-      .then(data => setLogo1(`${backendURL}${data.logo1}`))
-      .catch(err => console.log("Error fetching bottom logo:", err));
+    fetch("http://localhost:5000/api/logo")
+      .then((res) => res.json())
+      .then((data) => setLogo(`http://localhost:5000${data.logo}`))
+      .catch((err) => console.log(err));
   }, []);
-
+  //Fetch logo for bottom menu
+  useEffect(()=>{
+    fetch("http://localhost:5000/api/logo1")
+    .then((res)=>res.json())
+    .then((data)=>setLogo1(`http://localhost:5000${data.logo1}`))
+    .catch((err)=>console.log(err));
+  },[]);
   // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = e => {
+    const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setShowDropdown(false);
       }
@@ -85,6 +84,7 @@ function Urbanav() {
     <>
       <Navbar sticky="top" className="urban-nav">
         <Container fluid className="d-flex justify-content-between align-items-center">
+
           {/* Desktop Left */}
           <Navbar.Brand className="d-flex align-items-center left">
             {logo && <img src={logo} alt="UC Logo" className="logo" />}
@@ -109,14 +109,14 @@ function Urbanav() {
                 type="text"
                 placeholder={placeholder}
                 value={searchValue}
-                onChange={e => setSearchValue(e.target.value)}
+                onChange={(e) => setSearchValue(e.target.value)}
                 onClick={() => setShowDropdown(true)}
                 className="location-input"
               />
               {showDropdown && (
                 <Searchdropdown
                   searchValue={searchValue}
-                  onSelect={val => {
+                  onSelect={(val) => {
                     setSearchValue(val);
                     setShowDropdown(false);
                   }}
@@ -155,14 +155,14 @@ function Urbanav() {
                   type="text"
                   placeholder={placeholder}
                   value={searchValue}
-                  onChange={e => setSearchValue(e.target.value)}
+                  onChange={(e) => setSearchValue(e.target.value)}
                   onClick={() => setShowDropdown(true)}
                   className="location-input"
                 />
                 {showDropdown && (
                   <Searchdropdown
                     searchValue={searchValue}
-                    onSelect={val => {
+                    onSelect={(val) => {
                       setSearchValue(val);
                       setShowDropdown(false);
                     }}
@@ -171,6 +171,7 @@ function Urbanav() {
               </div>
             </div>
           </div>
+
         </Container>
       </Navbar>
 
@@ -198,7 +199,7 @@ function Urbanav() {
           <div className="use-location-container mt-3">
             <a
               href="#"
-              onClick={e => {
+              onClick={(e) => {
                 e.preventDefault();
                 alert("Using current location...");
               }}
