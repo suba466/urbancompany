@@ -1,0 +1,259 @@
+/* Sticky Navbar */
+.urban-nav {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  padding: 10px 20px;
+  background: #fff;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100px;
+}
+
+/* Left section */
+.left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo {
+  width: 120px;
+  height: auto;
+  transition: transform 0.3s ease-in-out;
+}
+.logo:hover { transform: scale(1.08); }
+
+.native-text {
+  color: rgb(64, 64, 64);
+  font-size: 18px;
+}
+
+/* Right section base */
+.right-menu {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-right: 80px;
+}
+
+/* Location input container */
+.location-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.location-input {
+  width: 220px;
+  font-size: 13px;
+  padding-left: 35px;
+  padding-right: 35px;
+  height: 40px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+.location-icon-inside {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #4c4d4e;
+  font-size: 20px;
+  pointer-events: none;
+}
+.left { left: 10px; }
+.right { right: 10px; }
+
+/* Search container */
+.search-container {
+  position: relative;
+ 
+}
+
+.search-container input {
+  width: 220px;
+}
+
+.search-dropdown {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+/* Icons */
+.icons {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-left: 20px;
+}
+
+/* Modal */
+.modal-search-container {
+  position: relative;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.modal-left-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20px;
+  pointer-events: none;
+}
+
+.popup-search-input {
+  width: 100%;
+  padding-left: 35px;
+  height: 35px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+.closebtn {
+  position: absolute;
+  top: -40px;
+  right: 5px;
+  border: 2px solid white;
+  background-color: white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Tablet / Mobile adjustments (≤991px) */
+@media (max-width: 991px) {
+  .urban-nav{
+      height: 120px;
+      padding: 10px 0px;
+  }
+  
+  .left { display: none !important; }
+  .right-menu .icons { display: none !important; }
+
+  /* First line: location left, cart right */
+  .location-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    margin-bottom: 5px;
+    flex-wrap: wrap;
+    padding-bottom: 0px;
+  }
+
+  .location-container {
+    display: flex;
+    flex-direction: column;
+    width: 80%;
+  }
+  .container-fluid{
+    padding-left: -10px !important;
+    margin-right: 60px !important;
+  }
+  .location-top {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 500;
+    font-size: 16px;
+  }
+
+  /* Bold location icon */
+  .location-top .location-icon-inside {
+    font-size: 26px;
+    color: #000;
+  }
+
+  .location-text {
+    font-size: 16px;
+    font-weight: bold;
+  }
+
+  .dropdown-toggle {
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .cart-icon {
+    font-size: 22px;
+    color: #000;
+    margin-top: 10px;
+  }
+
+  /* Second line: search bar full width */
+  .search-line {
+    width: 100%;
+   /* leave space for bottom menu */
+  }
+
+  .search-line .search-container input {
+    width: 100%;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding-left: 10px;
+    padding-right: 10px;
+    height: 38px;
+  }
+
+  /* Bottom Menu - Tablet/Mobile */
+.bottom-menu {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: #fff;
+  border-top: 1px solid #ddd;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 6px 0;
+  z-index: 999;
+}
+
+.bottom-menu button {
+  background: none;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 12px;
+  color: #777;
+  cursor: pointer;
+}
+
+.bottom-menu button.active {
+  color: #033870;
+}
+
+.bottom-menu button span {
+  margin-top: 2px;
+}
+
+}
