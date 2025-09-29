@@ -10,6 +10,7 @@ import Searchdropdown from "./Searchdropdown.jsx";
 import "./Urbancom.css";
 
 function Urbanav() {
+  const [logo, setLogo] = useState("/assets/Uc.png"); // fallback for Netlify
   const [searchValue, setSearchValue] = useState("");
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const [placeholder, setPlaceholder] = useState("Search for ");
@@ -53,6 +54,16 @@ function Urbanav() {
     type();
   }, []);
 
+  // Fetch logo from backend only in development
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      fetch("http://localhost:5000/api/logo")
+        .then((res) => res.json())
+        .then((data) => setLogo(`http://localhost:5000${data.logo}`))
+        .catch((err) => console.log(err));
+    }
+  }, []);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -68,10 +79,9 @@ function Urbanav() {
     <>
       <Navbar sticky="top" className="urban-nav">
         <Container fluid className="d-flex justify-content-between align-items-center">
-
           {/* Desktop Left */}
           <Navbar.Brand className="d-flex align-items-center left">
-            <img src="/assets/Uc.png" alt="UC Logo" className="logo" />
+            {logo && <img src={logo} alt="UC Logo" className="logo" />}
             <span className="native-text">Native</span>
           </Navbar.Brand>
 
@@ -155,7 +165,6 @@ function Urbanav() {
               </div>
             </div>
           </div>
-
         </Container>
       </Navbar>
 
@@ -201,28 +210,6 @@ function Urbanav() {
           </div>
         </Modal.Body>
       </Modal>
-
-      {/* Bottom Menu for Tablet/Mobile */}
-      <div className="d-lg-none bottom-menu">
-        {[
-          { type: "logo1", src: "/assets/Uc-bottom.png", label: "" },
-          { type: "icon", icon: <LuNotepadText size={22} />, label: "Bookings" },
-          { type: "icon", icon: <CiShoppingCart size={22} />, label: "Help" },
-          { type: "text", label: "Native" },
-          { type: "icon", icon: <CgProfile size={22} />, label: "Account" },
-        ].map((item, idx) => (
-          <button
-            key={idx}
-            className={activeTab === idx ? "active" : ""}
-            onClick={() => setActiveTab(idx)}
-          >
-            {item.type === "logo1" && <img src={item.src} alt="Logo1" style={{ width: 24, height: 24 }} />}
-            {item.type === "icon" && item.icon}
-            {item.type === "text" && <span>{item.label}</span>}
-            {item.type !== "logo1" && <span>{item.label}</span>}
-          </button>
-        ))}
-      </div>
     </>
   );
 }
