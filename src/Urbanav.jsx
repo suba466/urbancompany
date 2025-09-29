@@ -57,9 +57,9 @@ function Urbanav() {
 
   // Fetch logo
   useEffect(() => {
-    fetch("http://localhost:5000/api/logo")
+    fetch("http://your-backed-url.com/api/logo")
       .then((res) => res.json())
-      .then((data) => setLogo(`http://localhost:5000${data.logo}`))
+      .then((data) => setLogo(`http://your-backed-url.com${data.logo}`))
       .catch((err) => console.log(err));
   }, []);
   //Fetch logo for bottom menu
@@ -246,3 +246,4 @@ function Urbanav() {
 }
 
 export default Urbanav;
+
