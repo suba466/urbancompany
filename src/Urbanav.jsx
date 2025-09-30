@@ -10,7 +10,7 @@ import Searchdropdown from "./Searchdropdown.jsx";
 import "./Urbancom.css";
 
 function Urbanav() {
-  const [logo, setLogo] = useState(""); // fallback for Netlify
+  const [logo, setLogo] = useState("/assets/Uc.png"); // fallback for Netlify
   const [searchValue, setSearchValue] = useState("");
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const [placeholder, setPlaceholder] = useState("Search for ");
@@ -215,4 +215,5 @@ function Urbanav() {
 }
 
 export default Urbanav;
+
 
