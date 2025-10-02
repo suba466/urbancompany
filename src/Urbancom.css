@@ -1,3 +1,7 @@
+/* ============================
+   GENERAL STYLES (Desktop ≥786px)
+============================ */
+
 /* Sticky Navbar */
 .urban-nav {
   position: sticky;
@@ -9,7 +13,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 100px;
+  height: 70px;
 }
 
 /* Left section */
@@ -20,18 +24,21 @@
 }
 
 .logo {
-  width: 120px;
+  width: 100px;
   height: auto;
   transition: transform 0.3s ease-in-out;
 }
-.logo:hover { transform: scale(1.08); }
+
+.logo:hover {
+  transform: scale(1.08);
+}
 
 .native-text {
   color: rgb(64, 64, 64);
-  font-size: 18px;
+  font-size: 16px;
 }
 
-/* Right section base */
+/* Right section */
 .right-menu {
   display: flex !important;
   flex-direction: row !important;
@@ -50,11 +57,11 @@
 }
 
 .location-input {
-  width: 220px;
+  width: 200px;
   font-size: 13px;
   padding-left: 35px;
   padding-right: 35px;
-  height: 40px;
+  height: 33px;
   border-radius: 5px;
   border: 1px solid #ccc;
 }
@@ -67,13 +74,13 @@
   font-size: 20px;
   pointer-events: none;
 }
+
 .left { left: 10px; }
 .right { right: 10px; }
 
 /* Search container */
 .search-container {
   position: relative;
- 
 }
 
 .search-container input {
@@ -141,17 +148,59 @@
   justify-content: center;
 }
 
-/* Tablet / Mobile adjustments (≤991px) */
-@media (max-width: 991px) {
-  .urban-nav{
-      height: 120px;
-      padding: 10px 0px;
-  }
-  
-  .left { display: none !important; }
-  .right-menu .icons { display: none !important; }
+/* Services Section */
+.service-container {
+  border: 1px solid #d1d1e0;
+  width: 380px;
+  border-radius: 8px;
+  padding: 1rem;
+}
 
-  /* First line: location left, cart right */
+.services-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.service-box {
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.row1 {
+  background-color: #f3f3f4ff;
+  width: 160px;
+  height: 60px;
+}
+
+/* ============================
+   MOBILE STYLES (≤786px)
+============================ */
+@media (max-width: 786px) {
+  /* Navbar adjustments */
+  .urban-nav {
+    height: 120px;
+    padding: 10px 0px;
+  }
+  .logo,.native-text{
+    display: none !important;
+  }
+  /* Hide desktop elements */
+  .desktop-only { display: none !important; }
+
+  /* Show mobile elements */
+  .mobile-only { display: block !important; }
+
+  /* Banner and extra elements hidden */
+  .banner, .look {
+    display: none !important;
+  }
+
+  .salon {
+    width: 100%;
+  }
+
+  /* First line: location + cart */
   .location-line {
     display: flex;
     justify-content: space-between;
@@ -167,10 +216,12 @@
     flex-direction: column;
     width: 80%;
   }
-  .container-fluid{
+
+  .container-fluid {
     padding-left: -10px !important;
     margin-right: 60px !important;
   }
+
   .location-top {
     display: flex;
     align-items: center;
@@ -179,7 +230,6 @@
     font-size: 16px;
   }
 
-  /* Bold location icon */
   .location-top .location-icon-inside {
     font-size: 26px;
     color: #000;
@@ -207,10 +257,9 @@
     margin-top: 10px;
   }
 
-  /* Second line: search bar full width */
+  /* Search bar full width */
   .search-line {
     width: 100%;
-   /* leave space for bottom menu */
   }
 
   .search-line .search-container input {
@@ -222,38 +271,60 @@
     height: 38px;
   }
 
-  /* Bottom Menu - Tablet/Mobile */
-.bottom-menu {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  background: #fff;
-  border-top: 1px solid #ddd;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  padding: 6px 0;
-  z-index: 999;
+  /* Services row full width */
+  .services-row {
+    flex-direction: row;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .service-box {
+    width: 48%; /* two items per row for mobile */
+    margin-bottom: 10px;
+  }
+
+  .service-box img {
+    max-width: 35px;
+    max-height: 35px;
+  }
+
+  /* Bottom Menu */
+  .bottom-menu {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #fff;
+    border-top: 1px solid #ddd;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 6px 0;
+    z-index: 999;
+  }
+
+  .bottom-menu button {
+    background: none;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 12px;
+    color: #777;
+    cursor: pointer;
+  }
+
+  .bottom-menu button.active {
+    color: #033870;
+  }
+
+  .bottom-menu button span {
+    margin-top: 2px;
+  }
 }
 
-.bottom-menu button {
-  background: none;
-  border: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  font-size: 12px;
-  color: #777;
-  cursor: pointer;
-}
-
-.bottom-menu button.active {
-  color: #033870;
-}
-
-.bottom-menu button span {
-  margin-top: 2px;
-}
-
-}
+/* ============================
+   CLASSES FOR ELEMENT VISIBILITY
+============================ */
+.desktop-only { display: flex; }
+.mobile-only { display: none; }

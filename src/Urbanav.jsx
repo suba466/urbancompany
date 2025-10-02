@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Navbar, Container, Nav, FormControl, Modal, Button } from "react-bootstrap";
-import { CiLocationOn, CiShoppingCart } from "react-icons/ci";
+import { CiLocationOn, CiShoppingCart, CiSearch } from "react-icons/ci";
 import { IoIosArrowDown } from "react-icons/io";
 import { BiLeftArrowAlt } from "react-icons/bi";
 import { LuNotepadText } from "react-icons/lu";
@@ -10,12 +10,12 @@ import Searchdropdown from "./Searchdropdown.jsx";
 import "./Urbancom.css";
 
 function Urbanav() {
-  const [logo, setLogo] = useState("/assets/Uc.png"); // fallback for Netlify
+  const [logo, setLogo] = useState("/assets/Uc.png");
   const [searchValue, setSearchValue] = useState("");
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const [placeholder, setPlaceholder] = useState("Search for ");
   const [showDropdown, setShowDropdown] = useState(false);
-  const [activeTab, setActiveTab] = useState(0);
+
   const dropdownRef = useRef(null);
 
   const fixedText = "Search for ";
@@ -54,7 +54,7 @@ function Urbanav() {
     type();
   }, []);
 
-  // Fetch logo from backend only in development
+  // Fetch logo
   useEffect(() => {
     if (process.env.NODE_ENV === "development") {
       fetch("http://localhost:5000/api/logo")
@@ -64,7 +64,7 @@ function Urbanav() {
     }
   }, []);
 
-  // Close dropdown when clicking outside
+  // Close dropdown
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -79,15 +79,15 @@ function Urbanav() {
     <>
       <Navbar sticky="top" className="urban-nav">
         <Container fluid className="d-flex justify-content-between align-items-center">
-          {/* Desktop Left */}
+          {/* Left - always visible on ≥786px */}
           <Navbar.Brand className="d-flex align-items-center left">
             {logo && <img src={logo} alt="UC Logo" className="logo" />}
             <span className="native-text">Native</span>
           </Navbar.Brand>
 
-          {/* Desktop Right */}
+          {/* Right menu - always visible on ≥786px */}
           <Nav className="d-flex gap-2 right-menu">
-            <div className="location-input-container d-none d-lg-flex">
+            <div className="location-input-container desktop-only">
               <CiLocationOn className="location-icon-inside left" />
               <FormControl
                 type="text"
@@ -98,7 +98,8 @@ function Urbanav() {
               <IoIosArrowDown className="location-icon-inside right" />
             </div>
 
-            <div className="search-container d-none d-lg-flex" ref={dropdownRef}>
+            <div className="search-container desktop-only" ref={dropdownRef}>
+              <CiSearch className="location-icon-inside left" />
               <FormControl
                 type="text"
                 placeholder={placeholder}
@@ -118,15 +119,15 @@ function Urbanav() {
               )}
             </div>
 
-            <div className="icons d-none d-lg-flex">
+            <div className="icons desktop-only">
               <LuNotepadText size={20} />
               <CiShoppingCart size={20} />
               <CgProfile size={20} />
             </div>
           </Nav>
 
-          {/* Tablet / Mobile Top */}
-          <div className="d-lg-none w-100">
+          {/* Mobile view <786px */}
+          <div className="mobile-only w-100">
             <div className="location-line">
               <div className="location-container">
                 <div className="location-top">
@@ -215,5 +216,3 @@ function Urbanav() {
 }
 
 export default Urbanav;
-
-

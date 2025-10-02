@@ -12,30 +12,36 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Serve static files
-app.use('/assets', express.static(path.join(__dirname, 'assets')));
+app.use("/assets", express.static(path.join(__dirname, "assets")));
 
 // API data
 const apiData = {
   logo: "/assets/Uc.png",
   services: [
-    { name: "Home Cleaning" },
-    { name: "Plumbing" },
-    { name: "Electrician" },
-    { name: "AC Repair" },
-    { name: "Carpenter" },
-    { name: "Pest Control" }
-  ]
+    { name: "Salon for women", key: "salon", img: "/assets/salon.webp" },
+    { name: "AC & Appliance Repair", key: "ac", img: "/assets/ac.webp" },
+    { name: "Cleaning", key: "clean", img: "/assets/clean.webp" },
+    { name: "Electrian, Plumber & Carpenters", key: "electric", img: "/assets/electric.webp" },
+    { name: "Native Water Purifier", key: "water", img: "/assets/water.webp" },
+  ],
+  banner: { key: "banner", img: "/assets/banner.webp" }
 };
 
 // Endpoints
 app.get("/api/logo", (req, res) => res.json({ logo: apiData.logo }));
 
 app.get("/api/services", (req, res) => {
-  const query = req.query.query?.toLowerCase() || "";
-  const filtered = apiData.services.filter(s =>
-    s.name.toLowerCase().includes(query)
+  const query = (req.query.query || "").toLowerCase();
+  const filtered = apiData.services.filter(
+    (s) => s.name && s.name.toLowerCase().includes(query)
   );
   res.json(filtered);
 });
 
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+app.get("/api/banner", (req, res) => {
+  res.json(apiData.banner);
+});
+
+app.listen(PORT, () =>
+  console.log(`Server running on http://localhost:${PORT}`)
+);
