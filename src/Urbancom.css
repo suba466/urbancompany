@@ -26,11 +26,6 @@
 .logo {
   width: 100px;
   height: auto;
-  transition: transform 0.3s ease-in-out;
-}
-
-.logo:hover {
-  transform: scale(1.08);
 }
 
 .native-text {
@@ -156,42 +151,103 @@
   padding: 1rem;
 }
 
+/* Row flex container */
 .services-row {
   display: flex;
   justify-content: space-between;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
+/* All service boxes fade on hover */
 .service-box {
-  cursor: pointer;
   font-size: 11px;
+  cursor: pointer;
+  transition: opacity 0.3s ease-in-out;
 }
 
+.service-box:hover {
+  opacity: 0.8;
+}
+
+/* 2nd row underline on hover only for flex-column boxes */
+.services-row .service-box.d-flex.flex-column::after {
+  content: "";
+  display: block;
+  width: 0;
+  height: 2px;
+  background-color: #033870; /* Blue underline */
+  margin-top: 5px;
+  transition: width 0.3s ease-in-out;
+}
+
+.services-row .service-box.d-flex.flex-column:hover::after {
+  width: 100%;
+}
+
+/* First row boxes (row1) */
 .row1 {
+  border-radius: 8px;
   background-color: #f3f3f4ff;
   width: 160px;
   height: 60px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10px;
+}
+
+
+/* ============================
+   TABLET / DESKTOP HYBRID FIX (991px)
+============================ */
+@media (max-width: 990px) and (min-width: 787px) {
+  .row.align-items-center {
+    display: flex;
+    flex-wrap: nowrap; /* prevent wrapping */
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .col-md-6.home,
+  .col-md-6.banner {
+    flex: 0 0 50%;
+    max-width: 50%;
+    padding-left: 0 !important;  /* remove Bootstrap gutter */
+    padding-right: 0 !important; /* remove Bootstrap gutter */
+    box-sizing: border-box;       /* include padding/border in width */
+  }
+
+  /* Make banner image full width inside its column */
+  .col-md-6.banner img {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Make service container full width inside its column */
+  .col-md-6.home .service-container {
+    width: 100%;
+    max-width: 100%;
+  }
 }
 
 /* ============================
    MOBILE STYLES (≤786px)
 ============================ */
 @media (max-width: 786px) {
-  /* Navbar adjustments */
   .urban-nav {
     height: 120px;
-    padding: 10px 0px;
+    padding: 10px 0;
   }
-  .logo,.native-text{
+
+  .logo, .native-text {
     display: none !important;
   }
-  /* Hide desktop elements */
-  .desktop-only { display: none !important; }
 
-  /* Show mobile elements */
+  .desktop-only { display: none !important; }
   .mobile-only { display: block !important; }
 
-  /* Banner and extra elements hidden */
   .banner, .look {
     display: none !important;
   }
@@ -200,7 +256,6 @@
     width: 100%;
   }
 
-  /* First line: location + cart */
   .location-line {
     display: flex;
     justify-content: space-between;
@@ -257,7 +312,6 @@
     margin-top: 10px;
   }
 
-  /* Search bar full width */
   .search-line {
     width: 100%;
   }
@@ -271,7 +325,6 @@
     height: 38px;
   }
 
-  /* Services row full width */
   .services-row {
     flex-direction: row;
     justify-content: space-between;
@@ -279,7 +332,7 @@
   }
 
   .service-box {
-    width: 48%; /* two items per row for mobile */
+    width: 48%;
     margin-bottom: 10px;
   }
 
@@ -288,7 +341,6 @@
     max-height: 35px;
   }
 
-  /* Bottom Menu */
   .bottom-menu {
     position: fixed;
     bottom: 0;
@@ -324,7 +376,7 @@
 }
 
 /* ============================
-   CLASSES FOR ELEMENT VISIBILITY
+   VISIBILITY CLASSES
 ============================ */
 .desktop-only { display: flex; }
 .mobile-only { display: none; }

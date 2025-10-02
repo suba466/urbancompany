@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CiStar } from "react-icons/ci";
 import { GoPeople } from "react-icons/go";
+import "./Urbancom.css";
 
 function Bannerhome() {
   const [services, setServices] = useState([]);
@@ -18,9 +19,9 @@ function Bannerhome() {
 
   return (
     <div className="container my-5">
-      <div className="row align-items-center">
+      <div className="row align-items-center banner-row">
         {/* Left Side */}
-        <div className="col-md-6">
+        <div className="col-md-6 home">
           <h4 className="banner" style={{ fontSize: "35px", fontWeight: "bold" }}>
             Home services at your doorstep
           </h4>
@@ -58,11 +59,11 @@ function Bannerhome() {
                   <div
                     key={idx}
                     className="service-box d-flex flex-column align-items-center"
-                    style={{ width: "calc(25% - 10px)", marginBottom: "10px" }}
+                    style={{ width: "100px", marginBottom: "10px"}}
                   >
                     <div
-                      className="border rounded d-flex justify-content-center w-100 align-items-center"
-                      style={{ backgroundColor: "#f3f3f4ff", height: "60px" }}
+                      className="d-flex justify-content-center w-100 align-items-center"
+                      style={{ backgroundColor: "#f3f3f4ff", height: "60px", borderRadius: "8px" }}
                     >
                       <img
                         src={`http://localhost:5000${service.img}`}
@@ -86,9 +87,7 @@ function Bannerhome() {
               <div>
                 <span style={{ fontWeight: "bold" }}>4.8</span>
                 <br />
-                <span style={{ fontSize: "15px", color: "#1616167e" }}>
-                  Service Rating
-                </span>
+                <span style={{ fontSize: "15px", color: "#1616167e" }}>Service Rating</span>
               </div>
             </div>
             <div className="d-flex align-items-center">
@@ -96,16 +95,14 @@ function Bannerhome() {
               <div>
                 <span style={{ fontWeight: "bold", fontSize: "18px" }}>12M+</span>
                 <br />
-                <span style={{ fontSize: "15px", color: "#1616167e" }}>
-                  Customers Globally
-                </span>
+                <span style={{ fontSize: "15px", color: "#1616167e" }}>Customers Globally</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Right Side Banner */}
-        <div className="col-md-6 text-center banner mt-4 mt-md-0">
+        <div className="col-md-6 banner text-center mt-4 mt-md-0">
           {banner && (
             <img
               src={`http://localhost:5000${banner.img}`}
