@@ -124,7 +124,7 @@
 }
 .look{
    font-size: 20px;
-    color: #606063ff ;
+   color: #606063ff ;
 }
 
 /* Services Section */
@@ -146,7 +146,6 @@
   cursor: pointer;
   transition: opacity 0.3s ease-in-out;
 }
-
 .service-box:hover {
   opacity: 0.8;
 }
@@ -160,7 +159,6 @@
   margin-top: 5px;
   transition: width 0.3s ease-in-out;
 }
-
 .services-row .service-box.d-flex.flex-column:hover::after {
   width: 100%;
 }
@@ -269,7 +267,6 @@
   }
   .service1{
     width: 210px !important;
-    
   }
   .service-box {
     width: 48%;
@@ -316,16 +313,16 @@
     margin-top: 2px;
   }
 }
+
+
 /* ============================
-   TABLET STYLES (786px–990px)
+   TABLET STYLES (786px–991px)
 ============================ */
-@media (min-width: 786px) and (max-width: 990px) {
+@media (min-width: 786px) and (max-width: 992px) {
   .urban-nav {
     height: auto;
-    padding: 10px 15px;
+    padding: 10px 10px; /* reduced left-right padding */
   }
-
-  /* Collapse menu stacks vertically */
   .right-menu {
     display: flex !important;
     align-items: flex-start !important;
@@ -334,10 +331,72 @@
   .icons {
     margin-top: 6px;
   }
-  .mobile-only{
+  .mobile-only {
     display: none !important;
   }
+  /* Left and Right columns each take 50% */
+  .row {
+    display: flex;
+    align-items: stretch; /* keep both columns aligned */
+    margin-left: 0; /* remove left spacing */
+    margin-right: 0; /* remove right spacing */
+  }
+  .row > .col-md-6 {
+    width: 50% !important;
+    flex: 0 0 50% !important;
+    max-width: 50% !important;
+    display: flex;
+    flex-direction: column;
+  }
+  .banner {
+   
+    display: flex !important;
+    align-items: stretch; /* equal height */
+    justify-content: flex-start;
+    text-align: left !important;
+  }
+  .col-md-6.banner img {
+    width: 100% !important;
+    height: 400px !important; /* match services height */
+  }
+  .service-container {
+    width: 100% !important;
+    margin-bottom: 20px;
+    height: 100%;
+    padding-left: 0; /* remove left padding */
+    padding-right: 0; /* remove right padding */
+  }
+
+  /* Services boxes: 2 in the first row */
+  .services-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-left: 0;
+    margin-right: 0;
+  }
+  .service-box {
+    flex: 1 1 calc(50% - 10px);
+    max-width: calc(50% - 10px);
+    box-sizing: border-box;
+  }
+
+  /* In second row (nth-child 3 onwards), exactly 3 per row */
+
+  .services-row .service1 {
+    width: 30.33% !important;    /* Ensure 3 per row */
+    max-width: 30.33% !important;
+    flex: 0 0 33.33%;
+    margin-bottom: 10px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
 }
+
 
 
 /* ============================

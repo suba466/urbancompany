@@ -19,7 +19,7 @@ function Bannerhome() {
 
   return (
     <div className="container my-5">
-      <div className="row align-items-center banner-row">
+      <div className="row align-items-center">
         {/* Left Side */}
         <div className="col-md-6 home">
           <h4 className="banner" style={{ fontSize: "35px", fontWeight: "bold" }}>
