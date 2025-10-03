@@ -1,7 +1,3 @@
-/* ============================
-   GENERAL STYLES (Desktop ≥786px)
-============================ */
-
 /* Sticky Navbar */
 .urban-nav {
   position: sticky;
@@ -15,24 +11,20 @@
   align-items: center;
   height: 70px;
 }
-
 /* Left section */
 .left {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-
 .logo {
   width: 100px;
   height: auto;
 }
-
 .native-text {
   color: rgb(64, 64, 64);
   font-size: 16px;
 }
-
 /* Right section */
 .right-menu {
   display: flex !important;
@@ -42,7 +34,6 @@
   flex-wrap: wrap;
   margin-right: 80px;
 }
-
 /* Location input container */
 .location-input-container {
   position: relative;
@@ -50,7 +41,6 @@
   align-items: center;
   cursor: pointer;
 }
-
 .location-input {
   width: 200px;
   font-size: 13px;
@@ -60,7 +50,6 @@
   border-radius: 5px;
   border: 1px solid #ccc;
 }
-
 .location-icon-inside {
   position: absolute;
   top: 50%;
@@ -69,19 +58,15 @@
   font-size: 20px;
   pointer-events: none;
 }
-
 .left { left: 10px; }
 .right { right: 10px; }
-
 /* Search container */
 .search-container {
   position: relative;
 }
-
 .search-container input {
   width: 220px;
 }
-
 .search-dropdown {
   position: absolute;
   top: 40px;
@@ -94,7 +79,6 @@
   overflow-y: auto;
   z-index: 1000;
 }
-
 /* Icons */
 .icons {
   display: flex;
@@ -102,14 +86,12 @@
   gap: 15px;
   margin-left: 20px;
 }
-
 /* Modal */
 .modal-search-container {
   position: relative;
   width: 100%;
   margin-bottom: 10px;
 }
-
 .modal-left-icon {
   position: absolute;
   left: 10px;
@@ -118,7 +100,6 @@
   font-size: 20px;
   pointer-events: none;
 }
-
 .popup-search-input {
   width: 100%;
   padding-left: 35px;
@@ -126,7 +107,6 @@
   border-radius: 5px;
   border: 1px solid #ccc;
 }
-
 .closebtn {
   position: absolute;
   top: -40px;
@@ -142,26 +122,27 @@
   align-items: center;
   justify-content: center;
 }
+.look{
+   font-size: 20px;
+    color: #606063ff ;
+}
 
 /* Services Section */
 .service-container {
   border: 1px solid #d1d1e0;
-  width: 380px;
+  width: 420px;
   border-radius: 8px;
   padding: 1rem;
 }
-
 /* Row flex container */
 .services-row {
   display: flex;
-  justify-content: space-between;
   gap: 10px;
   flex-wrap: wrap;
 }
-
 /* All service boxes fade on hover */
 .service-box {
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
   transition: opacity 0.3s ease-in-out;
 }
@@ -169,7 +150,6 @@
 .service-box:hover {
   opacity: 0.8;
 }
-
 /* 2nd row underline on hover only for flex-column boxes */
 .services-row .service-box.d-flex.flex-column::after {
   content: "";
@@ -189,73 +169,39 @@
 .row1 {
   border-radius: 8px;
   background-color: #f3f3f4ff;
-  width: 160px;
+  width: 185px;
   height: 60px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 10px;
 }
-
-
-/* ============================
-   TABLET / DESKTOP HYBRID FIX (991px)
-============================ */
-@media (max-width: 990px) and (min-width: 787px) {
-  .row.align-items-center {
-    display: flex;
-    flex-wrap: nowrap; /* prevent wrapping */
-    margin-left: 0;
-    margin-right: 0;
-  }
-
-  .col-md-6.home,
-  .col-md-6.banner {
-    flex: 0 0 50%;
-    max-width: 50%;
-    padding-left: 0 !important;  /* remove Bootstrap gutter */
-    padding-right: 0 !important; /* remove Bootstrap gutter */
-    box-sizing: border-box;       /* include padding/border in width */
-  }
-
-  /* Make banner image full width inside its column */
-  .col-md-6.banner img {
-    width: 100%;
-    max-width: 100%;
-    height: auto;
-  }
-
-  /* Make service container full width inside its column */
-  .col-md-6.home .service-container {
-    width: 100%;
-    max-width: 100%;
-  }
+.service{
+  background-color: #f3f3f4ff;
+  height: 60px;
+  border-radius: 8px;
 }
 
 /* ============================
    MOBILE STYLES (≤786px)
 ============================ */
-@media (max-width: 786px) {
+@media (max-width: 787px) {
   .urban-nav {
     height: 120px;
     padding: 10px 0;
   }
-
-  .logo, .native-text {
+  .service-container,.col-md-6{
+    padding-top: 0px !important;
+    border: none !important;
+    width: 100%;
+  }
+  .logo, .native-text,.desktop-only,.banner, .look {
     display: none !important;
   }
-
-  .desktop-only { display: none !important; }
   .mobile-only { display: block !important; }
-
-  .banner, .look {
-    display: none !important;
-  }
-
   .salon {
     width: 100%;
   }
-
   .location-line {
     display: flex;
     justify-content: space-between;
@@ -265,18 +211,15 @@
     flex-wrap: wrap;
     padding-bottom: 0px;
   }
-
   .location-container {
     display: flex;
     flex-direction: column;
     width: 80%;
   }
-
   .container-fluid {
     padding-left: -10px !important;
     margin-right: 60px !important;
   }
-
   .location-top {
     display: flex;
     align-items: center;
@@ -284,17 +227,14 @@
     font-weight: 500;
     font-size: 16px;
   }
-
   .location-top .location-icon-inside {
     font-size: 26px;
     color: #000;
   }
-
   .location-text {
     font-size: 16px;
     font-weight: bold;
   }
-
   .dropdown-toggle {
     font-size: 14px;
     color: #333;
@@ -305,17 +245,14 @@
     text-overflow: ellipsis;
     max-width: 100%;
   }
-
   .cart-icon {
     font-size: 22px;
     color: #000;
     margin-top: 10px;
   }
-
   .search-line {
     width: 100%;
   }
-
   .search-line .search-container input {
     width: 100%;
     border: 1px solid #ccc;
@@ -324,13 +261,16 @@
     padding-right: 10px;
     height: 38px;
   }
-
+  
   .services-row {
     flex-direction: row;
     justify-content: space-between;
     flex-wrap: wrap;
   }
-
+  .service1{
+    width: 210px !important;
+    
+  }
   .service-box {
     width: 48%;
     margin-bottom: 10px;
@@ -340,7 +280,9 @@
     max-width: 35px;
     max-height: 35px;
   }
-
+  .rating{
+    padding-left: 180px !important;
+  }
   .bottom-menu {
     position: fixed;
     bottom: 0;
@@ -374,6 +316,29 @@
     margin-top: 2px;
   }
 }
+/* ============================
+   TABLET STYLES (786px–990px)
+============================ */
+@media (min-width: 786px) and (max-width: 990px) {
+  .urban-nav {
+    height: auto;
+    padding: 10px 15px;
+  }
+
+  /* Collapse menu stacks vertically */
+  .right-menu {
+    display: flex !important;
+    align-items: flex-start !important;
+    margin-right: 0;
+  }
+  .icons {
+    margin-top: 6px;
+  }
+  .mobile-only{
+    display: none !important;
+  }
+}
+
 
 /* ============================
    VISIBILITY CLASSES

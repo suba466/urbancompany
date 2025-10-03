@@ -27,7 +27,7 @@ function Bannerhome() {
           </h4>
 
           <div className="mt-4 p-3 service-container">
-            <h3 className="look" style={{ fontSize: "20px", color: "#606063ff" }}>
+            <h3 className="look" >
               What are you looking for?
             </h3>
 
@@ -58,19 +58,16 @@ function Bannerhome() {
                 .map((service, idx) => (
                   <div
                     key={idx}
-                    className="service-box d-flex flex-column align-items-center"
-                    style={{ width: "100px", marginBottom: "10px"}}
-                  >
+                    className="service1 d-flex flex-column align-items-center"
+                    style={{ width: "120px", marginBottom: "10px"}}>
                     <div
-                      className="d-flex justify-content-center w-100 align-items-center"
-                      style={{ backgroundColor: "#f3f3f4ff", height: "60px", borderRadius: "8px" }}
-                    >
+                      className="d-flex justify-content-center w-100 align-items-center service"
+                      >
                       <img
                         src={`http://localhost:5000${service.img}`}
                         alt={service.name}
                         width="40"
-                        height="40"
-                      />
+                        height="40"/>
                     </div>
                     <span className="mt-2 text-center" style={{ fontSize: "11px" }}>
                       {service.name}
@@ -81,11 +78,11 @@ function Bannerhome() {
           </div>
 
           {/* Ratings */}
-          <div className="d-flex mt-4 flex-wrap">
+          <div className="d-flex mt-4 flex-wrap rating">
             <div className="me-4 d-flex align-items-center">
               <CiStar style={{ fontSize: "30px", marginRight: "8px" }} />
               <div>
-                <span style={{ fontWeight: "bold" }}>4.8</span>
+                <span style={{fontSize: "20px", fontWeight: "bold" }}>4.8</span>
                 <br />
                 <span style={{ fontSize: "15px", color: "#1616167e" }}>Service Rating</span>
               </div>
@@ -108,7 +105,7 @@ function Bannerhome() {
               src={`http://localhost:5000${banner.img}`}
               alt="banner"
               className="img-fluid rounded shadow"
-              style={{ maxHeight: "400px", width: "100%", objectFit: "cover" }}
+              style={{ width: "100%", objectFit: "cover" }}
             />
           )}
         </div>
