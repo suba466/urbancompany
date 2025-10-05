@@ -1,8 +1,11 @@
-import Bannerhome from './Bannerhome.jsx';
+import  Shine from './Shine.jsx';
+import Banner from './Banner.jsx';
 import Urbanav from './Urbanav.jsx';
 function Urban(){
   return(<>
     <Urbanav/> 
-    <Bannerhome/></>
+    <Banner/>
+    <Shine/>
+    </>
   )
 }export default Urban

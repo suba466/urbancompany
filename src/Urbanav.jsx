@@ -77,60 +77,65 @@ function Urbanav() {
 
   return (
     <>
-      <Navbar sticky="top" className="urban-nav">
+      <Navbar sticky="top" expand="md" className="urban-nav display">
         <Container fluid className="d-flex justify-content-between align-items-center">
-          {/* Left - always visible on ≥786px */}
-          <Navbar.Brand className="d-flex align-items-center left">
+          {/* Brand */}
+          <Navbar.Brand className="d-flex align-items-center left display">
             {logo && <img src={logo} alt="UC Logo" className="logo" />}
-            <span className="native-text">Native</span>
+            <span className="native-text"style={{color:"#545454ff", fontSize:"16px"}}>Native</span>
           </Navbar.Brand>
 
-          {/* Right menu - always visible on ≥786px */}
-          <Nav className="d-flex gap-2 right-menu">
-            <div className="location-input-container desktop-only">
-              <CiLocationOn className="location-icon-inside left" />
-              <FormControl
-                type="text"
-                placeholder="184, Balaji Nagar-New..."
-                readOnly
-                className="location-input"
-              />
-              <IoIosArrowDown className="location-icon-inside right" />
-            </div>
+          {/* Toggle (tablet only) */}
+          <Navbar.Toggle aria-controls="basic-navbar-nav" />
 
-            <div className="search-container desktop-only" ref={dropdownRef}>
-              <CiSearch className="location-icon-inside left" />
-              <FormControl
-                type="text"
-                placeholder={placeholder}
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onClick={() => setShowDropdown(true)}
-                className="location-input"
-              />
-              {showDropdown && (
-                <Searchdropdown
-                  searchValue={searchValue}
-                  onSelect={(val) => {
-                    setSearchValue(val);
-                    setShowDropdown(false);
-                  }}
+          {/* Navbar collapse */}
+          <Navbar.Collapse id="basic-navbar-nav">
+            <Nav className="d-flex gap-2 right-menu left display">
+              <div className="location-input-container display desktop-only">
+                <CiLocationOn className="location-icon-inside left1 display" />
+                <FormControl
+                  type="text"
+                  placeholder="184, Balaji Nagar-New..."
+                  readOnly
+                  className="location-input"
                 />
-              )}
-            </div>
+                <IoIosArrowDown className="location-icon-inside right"  />
+              </div>
 
-            <div className="icons desktop-only">
-              <LuNotepadText size={20} />
-              <CiShoppingCart size={20} />
-              <CgProfile size={20} />
-            </div>
-          </Nav>
+              <div className="search-container desktop-only" ref={dropdownRef}>
+                <CiSearch className="location-icon-inside display left" />
+                <FormControl
+                  type="text"
+                  placeholder={placeholder}
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  onClick={() => setShowDropdown(true)}
+                  className="location-input"
+                />
+                {showDropdown && (
+                  <Searchdropdown
+                    searchValue={searchValue}
+                    onSelect={(val) => {
+                      setSearchValue(val);
+                      setShowDropdown(false);
+                    }}
+                  />
+                )}
+              </div>
 
-          {/* Mobile view <786px */}
+              <div className="icons display desktop-only">
+                <LuNotepadText size={20} />
+                <CiShoppingCart size={20} />
+                <CgProfile size={20} />
+              </div>
+            </Nav>
+          </Navbar.Collapse>
+
+          {/* Mobile view <426px */}
           <div className="mobile-only w-100">
-            <div className="location-line">
+            <div className="location-line display">
               <div className="location-container">
-                <div className="location-top">
+                <div className="location-top display">
                   <CiLocationOn style={{ fontWeight: "bold" }} />
                   <span className="location-text" style={{ fontWeight: "bold" }}>184</span>
                 </div>
@@ -176,7 +181,7 @@ function Urbanav() {
         centered
         dialogClassName="location-modal"
       >
-        <Button onClick={() => setShowLocationPopup(false)} className="closebtn">✕</Button>
+        <Button onClick={() => setShowLocationPopup(false)} className="display closebtn">✕</Button>
         <Modal.Body className="p-4">
           <div className="modal-search-container">
             <BiLeftArrowAlt
@@ -190,7 +195,7 @@ function Urbanav() {
               className="popup-search-input"
             />
           </div>
-          <div className="use-location-container mt-3">
+          <div className=" mt-3">
             <a
               href="#"
               onClick={(e) => {
