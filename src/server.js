@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 const app = express();
 const PORT = 5000;
 app.use(cors());
+app.use(express.json());
 
 // __dirname for ES module
 const __filename = fileURLToPath(import.meta.url);
@@ -21,26 +22,25 @@ const apiData = {
     { name: "Salon for women", key: "salon", img: "/assets/salon.webp" },
     { name: "AC & Appliance Repair", key: "ac", img: "/assets/ac.webp" },
     { name: "Cleaning", key: "clean", img: "/assets/clean.webp" },
-    { name: "Electrian, Plumber & Carpenters", key: "electric", img: "/assets/electric.webp" },
-    { name: "Native Water Purifier", key: "water", img: "/assets/water.webp" },
+    { name: "Electrician, Plumber & Carpenters", key: "electric", img: "/assets/electric.webp" },
+    { name: "Native Water Purifier", key: "native", img: "/assets/native.webp" },
   ],
-  banner: { key: "banner", img: "/assets/banner.webp" }
+  banner: { key: "banner", img: "/assets/banner.webp" },
+  carousel:[
+    {key: "shine", img: "/assets/shine.png"},
+    {key: "festive", img: "/assets/festive.png"},
+    {key: "relax", img: "/assets/relax.png"},
+    {key: "water", img: "/assets/water.png"},
+    {key: "expert", img: "/assets/expert.png"},
+    {key: "deepclean", img: "/assets/deepclean.png"}
+  ]
 };
 
 // Endpoints
 app.get("/api/logo", (req, res) => res.json({ logo: apiData.logo }));
-
-app.get("/api/services", (req, res) => {
-  const query = (req.query.query || "").toLowerCase();
-  const filtered = apiData.services.filter(
-    (s) => s.name && s.name.toLowerCase().includes(query)
-  );
-  res.json(filtered);
-});
-
-app.get("/api/banner", (req, res) => {
-  res.json(apiData.banner);
-});
+app.get("/api/services", (req, res) => res.json({ services: apiData.services }));
+app.get("/api/banner", (req, res) => res.json({ banner: apiData.banner }));
+app.get("/api/carousel", (req, res) => res.json({ carousel: apiData.carousel }));
 
 app.listen(PORT, () =>
   console.log(`Server running on http://localhost:${PORT}`)

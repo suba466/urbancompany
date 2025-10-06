@@ -1,15 +1,18 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Carousel, Card, Button, Row, Col } from "react-bootstrap";
 
 function Shine() {
   const [carouselItems, setCarouselItems] = useState([]);
-
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     fetch("http://localhost:5000/api/carousel")
-      .then((res) => res.json())
-      .then((data) => setCarouselItems(data))
-      .catch((err) => console.error("Error fetching carousel:", err));
+      .then(res => res.json())
+      .then(data => setCarouselItems(data.carousel))
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
   }, []);
+
+  if (loading) return <p>Loading carousel...</p>;
 
   // Group images into slides of 3
   const chunkedItems = [];
@@ -17,22 +20,8 @@ function Shine() {
     chunkedItems.push(carouselItems.slice(i, i + 3));
   }
 
-  // Specific colors as per your requirement
-  const colors = [
-    "#006400", // Green
-    "#8B4513", // Brown
-    "#90EE90", // Leaf light green
-    "#000000", // Black
-    "#87CEEB", // Skyblue
-    "#D3D3D3"  // Lightgray
-  ];
-
-  // Function to determine text color for contrast
-  const getTextColor = (bgColor) => {
-    // Light colors get dark text, dark colors get white text
-    const darkColors = ["#006400", "#8B4513", "#000000"];
-    return darkColors.includes(bgColor) ? "white" : "black";
-  };
+  const colors = ["#00640", "#873902ff", "#92c103ff", "#000000", "#1792cfff", "#D3D3D3"];
+  const getTextColor = bg => ["#006400", "#8B4513", "#000000"].includes(bg) ? "white" : "black";
 
   return (
     <div className="container mt-4">
@@ -63,7 +52,7 @@ function Shine() {
                       }}
                     >
                       <Card.Img
-                        variant="right"
+                        variant="left"
                         src={`http://localhost:5000${item.img}`}
                         style={{
                           width: "50%",
@@ -73,12 +62,8 @@ function Shine() {
                         }}
                       />
                       <Card.Body className="d-flex flex-column justify-content-center">
-                        <Card.Title className="fw-bold text-capitalize">
-                          {item.name}
-                        </Card.Title>
-                        <Button variant={buttonVariant} size="sm">
-                          Book now
-                        </Button>
+                        <Card.Title className="fw-bold text-capitalize">{item.key}</Card.Title>
+                        <Button variant={buttonVariant} size="sm">Book now</Button>
                       </Card.Body>
                     </Card>
                   </Col>
