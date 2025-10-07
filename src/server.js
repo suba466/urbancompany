@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 
 const app = express();
 const PORT = 5000;
+
 app.use(cors());
 app.use(express.json());
 
@@ -26,13 +27,25 @@ const apiData = {
     { name: "Native Water Purifier", key: "native", img: "/assets/native.webp" },
   ],
   banner: { key: "banner", img: "/assets/banner.webp" },
-  carousel:[
-    {key: "shine", img: "/assets/shine.png"},
-    {key: "festive", img: "/assets/festive.png"},
-    {key: "relax", img: "/assets/relax.png"},
-    {key: "water", img: "/assets/water.png"},
-    {key: "expert", img: "/assets/expert.png"},
-    {key: "deepclean", img: "/assets/deepclean.png"}
+  carousel: [
+    { name: "Shine your bathroom deserves", key: "shine", img: "/assets/shine.png" },
+    { name: "Festive packages upto 25% off", descriptions: "Extra 25% off for new users*", key: "festive", img: "/assets/festive.png" },
+    { name: "Relax & rejuvenate at home", descriptions: "Massage for men", key: "relax", img: "/assets/relax.png" },
+    { name: "RO Water Purifier", descriptions: "Needs no service for 2 years", key: "water", img: "/assets/water.png" },
+    { name: "Get experts in 2 hours at ₹149", descriptions: "Electricians, plumbers, carpenters", key: "expert", img: "/assets/expert.png" },
+    { name: "Deep clean with foam-jet AC service", descriptions: "AC service & repair", key: "deepclean", img: "/assets/deepclean.png" }
+  ],
+  book: [
+    { name: "Intense cleaning (2 bathrooms)", title: "4.79 (3.1M)",value:"₹1,016",option:"₹1,098", key: "intenseclean", img: "/assets/intenseclean.png" },
+    { name: "Classic cleaning (2 bathrooms)", title: "4.82 (1.5M)",value:"₹868",option:"₹938", key: "classic", img: "/assets/classic.png" },
+    { name: "Switch/socket replacement", title: "4.85 (72M)",value:"₹49", key: "socket", img: "/assets/socket.png" },
+    { name: "Drill & hang (wall decor)", title: "4.86 (99K)",value:"₹49", key: "wall", img: "/assets/wall.png" },
+    { name: "Switchboard/switchbox repair", title: "4.85 (69K)",value:"₹79", key: "switch", img: "/assets/switch.png" },
+    { name: "Automatic top load machine checkup", title: "4.78 (328K)",value:"₹299", key: "automatic", img: "/assets/automatic.png" },
+    { name: "Tap repair", title: "4.81 (122K)", key: "tap",value:"₹49", img: "/assets/tap.png" },
+    { name: "Intense cleaning (3 bathrooms)", title: "4.79 (3.1M)",value:"₹1,483",option:"₹1,647", key: "intence", img: "/assets/intense.png" },
+    { name: "Fan repair (ceiling/exhaust/wall)", title: "4.81 (95K)",value:"₹109", key: "fan", img: "/assets/fan.png" },
+    { name: "Bulb/tubelight holder installation", title: "4.86 (3.3K)",value:"₹69", key: "bulb", img: "/assets/bulb.png" }
   ]
 };
 
@@ -41,7 +54,9 @@ app.get("/api/logo", (req, res) => res.json({ logo: apiData.logo }));
 app.get("/api/services", (req, res) => res.json({ services: apiData.services }));
 app.get("/api/banner", (req, res) => res.json({ banner: apiData.banner }));
 app.get("/api/carousel", (req, res) => res.json({ carousel: apiData.carousel }));
+app.get("/api/book", (req, res) => res.json({ book: apiData.book })); 
 
+// Start server
 app.listen(PORT, () =>
   console.log(`Server running on http://localhost:${PORT}`)
 );
