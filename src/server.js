@@ -46,6 +46,11 @@ const apiData = {
     { name: "Intense cleaning (3 bathrooms)", title: "4.79 (3.1M)",value:"₹1,483",option:"₹1,647", key: "intence", img: "/assets/intense.png" },
     { name: "Fan repair (ceiling/exhaust/wall)", title: "4.81 (95K)",value:"₹109", key: "fan", img: "/assets/fan.png" },
     { name: "Bulb/tubelight holder installation", title: "4.86 (3.3K)",value:"₹69", key: "bulb", img: "/assets/bulb.png" }
+  ],
+  salon:[
+    {key:"waxing",img:"/assets/waxing.png"},
+    {key:"cleanup", img:"/assets/cleanup.png"},
+    {key:"haircare", img:"/assets/haircare.png"}
   ]
 };
 
@@ -55,6 +60,7 @@ app.get("/api/services", (req, res) => res.json({ services: apiData.services }))
 app.get("/api/banner", (req, res) => res.json({ banner: apiData.banner }));
 app.get("/api/carousel", (req, res) => res.json({ carousel: apiData.carousel }));
 app.get("/api/book", (req, res) => res.json({ book: apiData.book })); 
+app.get("/api/salon",(req,res)=>res.json({salon:apiData.salon}))
 
 // Start server
 app.listen(PORT, () =>
