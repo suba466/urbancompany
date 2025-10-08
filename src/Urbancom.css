@@ -225,10 +225,19 @@
   opacity: 0.8;
   transition: opacity 0.3s;
    z-index: 10;
+  
 }
 .carousel-arrow:hover { opacity: 1; }
 .carousel-arrow.left { left: 0; }
  .carousel-arrow.right { right: 0; }
+
+ .saloncard{
+  border-radius: 10px;
+  box-shadow: 0 0 6px #ddd;
+  display:flex;
+  flex-direction:column;
+  height:100%;
+ }
 
 /* ============================
    RESPONSIVE
