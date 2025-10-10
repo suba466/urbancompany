@@ -5,6 +5,7 @@ import { FaStar } from "react-icons/fa";
 function Book() {
   const [carouselItems, setCarouselItems] = useState([]);
   const [salonItems, setSalonItems] = useState([]);
+  const [smartItems, setSmartItems]=useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -14,19 +15,22 @@ function Book() {
     const fetchData = async () => {
       try {
         // Fetch both book & salon data
-        const [bookRes, salonRes] = await Promise.all([
+        const [bookRes, salonRes,smartlockRes] = await Promise.all([
           fetch("http://localhost:5000/api/book"),
           fetch("http://localhost:5000/api/salon"),
+          fetch("http://localhost:5000/api/smartlock")
         ]);
 
-        if (!bookRes.ok || !salonRes.ok)
+        if (!bookRes.ok || !salonRes.ok ||!smartlockRes)
           throw new Error("Failed to fetch data");
 
         const bookData = await bookRes.json();
         const salonData = await salonRes.json();
+        const smartlockData=await smartlockRes.json();
 
         setCarouselItems(bookData.book);
         setSalonItems(salonData.salon);
+        setSmartItems(smartlockData.smartlock)
       } catch (err) {
         console.error(err);
         setError("Failed to fetch service data");
@@ -149,19 +153,10 @@ function Book() {
               <Row className="g-4">
             {salonItems.map((item, idx) => (
               <Col key={idx} xs={12} sm={6} md={4} lg={3}>
-                <Card
-                  style={{
-                    borderRadius: "10px",
-                    boxShadow: "0 0 6px #ddd",
-                    display: "flex",
-                    flexDirection: "column",
-                    height: "100%",
-                  }}
-                >
+                <Card className="saloncard">
                   <Card.Body style={{ flex: 1 }}>
                     <Card.Title
-                      style={{ fontSize: "15px", fontWeight: "600", padding: "28px" }}
-                    >
+                      style={{ fontSize: "15px", fontWeight: "600", padding: "28px" }}>
                       {item.key.charAt(0).toUpperCase() + item.key.slice(1)}
                     </Card.Title>
                   </Card.Body>
@@ -192,7 +187,15 @@ function Book() {
             &#10095;
           </div>
         )}
-      </div>
+      </div> 
+
+      {/* smart lock banner */}
+
+    <div >
+      {smartItems && smartItems.img &&(
+        <img src={`http://localhost:5000${smartItems.img}`} className="smartlock" />
+      )}
+    </div>
     </>
   );
 }

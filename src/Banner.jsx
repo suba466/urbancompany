@@ -38,7 +38,7 @@ function Banner() {
           <div className="service-box">
             <p className="service-heading home">What are you looking for?</p>
             {/* First Row */}
-            <div className="service-row first-row">
+            <div className=" first-row">
               {firstRow.map((s, index) => (
                 <div key={index} className="services first-row-item">
                   <p className="first-row-text">{s.name}</p>
@@ -52,7 +52,7 @@ function Banner() {
             </div>
 
             {/* Second Row */}
-            <div className="service-row second-row">
+            <div className=" second-row">
               {secondRow.map((s, index) => (
                 <div key={index} className="services second-row-item">
                   <div className="img-box">
