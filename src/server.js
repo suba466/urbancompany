@@ -51,7 +51,8 @@ const apiData = {
     {key:"waxing",img:"/assets/waxing.png"},
     {key:"cleanup", img:"/assets/cleanup.png"},
     {key:"haircare", img:"/assets/haircare.png"}
-  ]
+  ],
+  smartlock:{key:"smartlocks", img:"/assets/smartlocks.png"}
 };
 
 // Endpoints
@@ -61,7 +62,7 @@ app.get("/api/banner", (req, res) => res.json({ banner: apiData.banner }));
 app.get("/api/carousel", (req, res) => res.json({ carousel: apiData.carousel }));
 app.get("/api/book", (req, res) => res.json({ book: apiData.book })); 
 app.get("/api/salon",(req,res)=>res.json({salon:apiData.salon}))
-
+app.get("/api/smartlock",(req,res)=>res.json({smartlock:apiData.smartlock}))
 // Start server
 app.listen(PORT, () =>
   console.log(`Server running on http://localhost:${PORT}`)
