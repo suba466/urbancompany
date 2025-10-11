@@ -112,7 +112,7 @@
 }
 
 /* ============================
-   FIRST ROW (2 items: text left, image right)
+   FIRST ROW (2 items)
 ============================ */
 .first-row {
   display: flex;
@@ -140,7 +140,7 @@
 .first-row-img { width: 60px; height: 30px; object-fit: contain; }
 
 /* ============================
-   SECOND ROW (3 items: image inside box, text below)
+   SECOND ROW (3 items)
 ============================ */
 .second-row {
   display: flex;
@@ -159,7 +159,6 @@
 
 .second-row-item:hover { opacity: 0.7; }
 
-/* Animated line below box */
 .second-row-item::after {
   content: "";
   position: absolute;
@@ -177,7 +176,6 @@
   left: 10%;
 }
 
-/* Image inside box */
 .img-box {
   width: 100%;
   padding: 15px;
@@ -191,6 +189,7 @@
 
 .second-row-img { width: 60px; height: 30px; object-fit: contain; }
 .second-row-text { font-size: 13px; margin: 0; text-align: center; }
+
 .carousel-control-prev-icon,
 .carousel-control-next-icon {
   background-color: rgba(0,0,0,0.5);
@@ -201,16 +200,19 @@
    BANNER IMAGE
 ============================ */
 .banner-img { width: 100%; border-radius: 10px; }
-.shine{
-   display: flex;
-  flex-direction:row;
+
+.shine {
+  display: flex;
+  flex-direction: row;
   align-items: stretch;
   border-radius: 15px;
   overflow: hidden;
   width: 100%;
   height: 200px;
 }
+
 .carousel-container { position: relative; }
+
 .carousel-arrow {
   position: absolute;
   top: 0;
@@ -224,20 +226,92 @@
   font-size: 30px;
   opacity: 0.8;
   transition: opacity 0.3s;
-   z-index: 10;
-  
+  z-index: 10;
 }
+
 .carousel-arrow:hover { opacity: 1; }
 .carousel-arrow.left { left: 0; }
- .carousel-arrow.right { right: 0; }
+.carousel-arrow.right { right: 0; }
 
- .saloncard{
+.saloncard {
   border-radius: 10px;
   box-shadow: 0 0 6px #ddd;
-  display:flex;
-  flex-direction:column;
-  height:100%;
- }
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ============================
+   SMARTLOCK SECTION (Updated)
+============================ */
+.smartlock-section {
+  position: relative;
+  background-image: url("http://localhost:5000/assets/smartlocks.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  height: 85vh;
+  display: flex;
+  align-items: center;
+  padding:80px;
+  overflow: hidden;
+}
+
+/* Text on left */
+.smartlock-text {
+   position: relative;
+  z-index: 2;
+  max-width: 500px;
+  color: #fff;
+  padding: 30px;
+  border-radius: 12px;
+  backdrop-filter: blur(5px);
+}
+
+.smartlock-text h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.smartlock-text p {
+  font-size: 1.1rem;
+  margin-bottom: 24px;
+  color: #f0f0f0;
+  line-height: 1.6;
+}
+
+/* Button */
+.smart-btn {
+  background-color: #ffffff;
+  color: #0b5ed7;
+  font-weight: 600;
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.smart-btn:hover {
+  background-color: #e0e0e0;
+}
+
+/* Floating image */
+.smart-float-img {
+  position: absolute;
+  right: 60px;
+  bottom: 0;
+  width: 380px;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  z-index: 1;
+  color: white !important;
+}
+
+
 
 /* ============================
    RESPONSIVE
@@ -245,6 +319,26 @@
 @media (max-width: 768px) {
   .first-row, .second-row { flex-direction: column; }
   .first-row-item, .second-row-item { width: 100%; }
+
+  .smartlock-section {
+    flex-direction: column;
+    height: auto;
+    text-align: center;
+    padding: 30px;
+  }
+
+  .smartlock-text {
+    width: 100%;
+  }
+
+  .smart-float-img {
+    position: relative;
+    right: 0;
+    top: 0;
+    transform: none;
+    margin-top: 20px;
+    width: 200px;
+  }
 }
 
 /* MOBILE (≤425px) */
@@ -256,21 +350,20 @@
   .mobile-only { display: block !important; width: 100%; }
   .navbar-toggler,.home,.img-fluid,.banner-img { display: none; }
   .service-box{border: none !important;}
-.search-container {
-  width: 100%;
-  padding: 0 ; 
-  margin: 10px 0;
-}
-.search-container input {
-  width: 100%;
-  height: 35px;
-  padding-left: 35px;
-  padding-right: 15px;
-  font-size: 14px;
-  border-radius: 5px;
-  border: 1px solid #ccc;
-}
-
+  .search-container {
+    width: 100%;
+    padding: 0; 
+    margin: 10px 0;
+  }
+  .search-container input {
+    width: 100%;
+    height: 35px;
+    padding-left: 35px;
+    padding-right: 15px;
+    font-size: 14px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+  }
 }
 
 /* TABLET (426px–991px) */
@@ -290,6 +383,7 @@
 
 .desktop-only { display: flex; }
 .mobile-only { display: none; }
+
 @media (max-width: 992px) {
   .service-box {
     width: 100%;
@@ -304,21 +398,25 @@
   .first-row-item, .second-row-item {
     width: 50%;
   }
-  .banner-img{
+
+  .banner-img {
     height: 400px !important;
   }
-  .font{
-    font-size:12px;
+
+  .font {
+    font-size: 12px;
   }
-  .contain{
+
+  .contain {
     margin-top: 0px !important;
   }
-} 
-/* EXTRA-SMALL MOBILE (≤320px) */
+}
+
+/* EXTRA-SMALL MOBILE (≤378px) */
 @media (max-width: 378px) {
   .location-line {
     display: flex;
-    flex-direction: row; /* stack vertically */
+    flex-direction: row;
     width: 100%;
     gap: 0px !important;
     padding: 0 5px;
@@ -331,7 +429,7 @@
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    flex-wrap: wrap; /* allow wrapping */
+    flex-wrap: wrap;
     gap: 5px;
   }
 
@@ -339,12 +437,12 @@
     display: flex;
     align-items: center;
     gap: 5px;
-    flex: 1 1 100%; /* wrap to full width if needed */
+    flex: 1 1 100%;
   }
 
   .location-text, .dropdown-toggle {
     font-size: 12px;
-    flex: 1 1 auto; /* shrink to fit */
+    flex: 1 1 auto;
     word-wrap: break-word;
   }
 

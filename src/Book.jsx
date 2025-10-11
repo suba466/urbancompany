@@ -5,7 +5,6 @@ import { FaStar } from "react-icons/fa";
 function Book() {
   const [carouselItems, setCarouselItems] = useState([]);
   const [salonItems, setSalonItems] = useState([]);
-  const [smartItems, setSmartItems]=useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -14,23 +13,20 @@ function Book() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch both book & salon data
-        const [bookRes, salonRes,smartlockRes] = await Promise.all([
+        // Fetch only book & salon data
+        const [bookRes, salonRes] = await Promise.all([
           fetch("http://localhost:5000/api/book"),
           fetch("http://localhost:5000/api/salon"),
-          fetch("http://localhost:5000/api/smartlock")
         ]);
 
-        if (!bookRes.ok || !salonRes.ok ||!smartlockRes)
+        if (!bookRes.ok || !salonRes.ok)
           throw new Error("Failed to fetch data");
 
         const bookData = await bookRes.json();
         const salonData = await salonRes.json();
-        const smartlockData=await smartlockRes.json();
 
         setCarouselItems(bookData.book);
         setSalonItems(salonData.salon);
-        setSmartItems(smartlockData.smartlock)
       } catch (err) {
         console.error(err);
         setError("Failed to fetch service data");
@@ -90,24 +86,44 @@ function Book() {
               key={idx}
               md={12 / cardsPerSlide}
               className="mb-3"
-              style={{flex: `0 0 ${100 / cardsPerSlide}%`,maxWidth: `${100 / cardsPerSlide}%`,
-                transition: "transform 0.4s ease",}}>
+              style={{
+                flex: `0 0 ${100 / cardsPerSlide}%`,
+                maxWidth: `${100 / cardsPerSlide}%`,
+                transition: "transform 0.4s ease",
+              }}
+            >
               <img
                 src={`http://localhost:5000${item.img}`}
                 alt={item.name}
-                style={{width: "101%",height: "230px",objectFit: "cover",borderRadius: "8px", }}/>
-              <p className="mt-2"
-                style={{ fontSize: "11px", fontWeight: "bold" }}>
+                style={{
+                  width: "101%",
+                  height: "230px",
+                  objectFit: "cover",
+                  borderRadius: "8px",
+                }}
+              />
+              <p
+                className="mt-2"
+                style={{ fontSize: "11px", fontWeight: "bold" }}
+              >
                 {item.name}
               </p>
               <p style={{ fontSize: "13px" }}>
                 <FaStar
                   style={{
-                    marginBottom: "5px",marginRight: "5px", color: "#656464ff",fontSize: "12px",
-                  }}/>
+                    marginBottom: "5px",
+                    marginRight: "5px",
+                    color: "#656464ff",
+                    fontSize: "12px",
+                  }}
+                />
                 {item.title} <br /> {item.value}{" "}
                 <span
-                  style={{textDecoration: "line-through", color: "#656464ff",}}>
+                  style={{
+                    textDecoration: "line-through",
+                    color: "#656464ff",
+                  }}
+                >
                   {item.option}
                 </span>
               </p>
@@ -131,32 +147,56 @@ function Book() {
       {/* Salon Section */}
       <div className="container mt-5 position-relative">
         <h2 className="fw-semibold mb-4">Salon for women</h2>
-        {cardsPerSlide==1 ?(
-        <Row className="justify-content-center">
-          {salonItems .slice(currentIndex, currentIndex+cardsPerSlide)
-            .map((item,idx)=>(
-              <Col key={idx} xs={12} className="mb-3" style={{flex:`0 0 100%`,maxWidth:"100%",transition:"transform 0.4s ease"}}>
-              <Card className="saloncard">
-              <Card.Body style={{flex:1}}>
-               <Card.Title
-                    style={{ fontSize: "15px", fontWeight: "600" ,padding:"28px"}}>
-                    {item.key.charAt(0).toUpperCase() + item.key.slice(1)}
-                  </Card.Title></Card.Body>
-                <Card.Img
-                  variant="bottom"
-                  src={`http://localhost:5000${item.img}`}
-                  alt={item.key}
-                  style={{ height: "200px",objectFit: "cover" }} />
-              </Card></Col>
-            ))}
-            </Row>) :(
-              <Row className="g-4">
+        {cardsPerSlide === 1 ? (
+          <Row className="justify-content-center">
+            {salonItems
+              .slice(currentIndex, currentIndex + cardsPerSlide)
+              .map((item, idx) => (
+                <Col
+                  key={idx}
+                  xs={12}
+                  className="mb-3"
+                  style={{
+                    flex: `0 0 100%`,
+                    maxWidth: "100%",
+                    transition: "transform 0.4s ease",
+                  }}
+                >
+                  <Card className="saloncard">
+                    <Card.Body style={{ flex: 1 }}>
+                      <Card.Title
+                        style={{
+                          fontSize: "15px",
+                          fontWeight: "600",
+                          padding: "28px",
+                        }}
+                      >
+                        {item.key.charAt(0).toUpperCase() + item.key.slice(1)}
+                      </Card.Title>
+                    </Card.Body>
+                    <Card.Img
+                      variant="bottom"
+                      src={`http://localhost:5000${item.img}`}
+                      alt={item.key}
+                      style={{ height: "200px", objectFit: "cover" }}
+                    />
+                  </Card>
+                </Col>
+              ))}
+          </Row>
+        ) : (
+          <Row className="g-4">
             {salonItems.map((item, idx) => (
               <Col key={idx} xs={12} sm={6} md={4} lg={3}>
                 <Card className="saloncard">
                   <Card.Body style={{ flex: 1 }}>
                     <Card.Title
-                      style={{ fontSize: "15px", fontWeight: "600", padding: "28px" }}>
+                      style={{
+                        fontSize: "15px",
+                        fontWeight: "600",
+                        padding: "28px",
+                      }}
+                    >
                       {item.key.charAt(0).toUpperCase() + item.key.slice(1)}
                     </Card.Title>
                   </Card.Body>
@@ -178,24 +218,23 @@ function Book() {
 
         {/* Carousel arrows for mobile */}
         {cardsPerSlide === 1 && currentIndex > 0 && (
-          <div className="carousel-arrow left" onClick={() => setCurrentIndex(prev => prev - 1)}>
+          <div
+            className="carousel-arrow left"
+            onClick={() => setCurrentIndex((prev) => prev - 1)}
+          >
             &#10094;
           </div>
         )}
-        {cardsPerSlide === 1 && currentIndex + cardsPerSlide < salonItems.length && (
-          <div className="carousel-arrow right" onClick={() => setCurrentIndex(prev => prev + 1)}>
-            &#10095;
-          </div>
-        )}
-      </div> 
-
-      {/* smart lock banner */}
-
-    <div >
-      {smartItems && smartItems.img &&(
-        <img src={`http://localhost:5000${smartItems.img}`} className="smartlock" />
-      )}
-    </div>
+        {cardsPerSlide === 1 &&
+          currentIndex + cardsPerSlide < salonItems.length && (
+            <div
+              className="carousel-arrow right"
+              onClick={() => setCurrentIndex((prev) => prev + 1)}
+            >
+              &#10095;
+            </div>
+          )}
+      </div>
     </>
   );
 }
