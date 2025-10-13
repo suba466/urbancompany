@@ -1,11 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Navbar, Container, Nav, FormControl, Modal, Button } from "react-bootstrap";
+import {
+  Navbar,
+  Container,
+  Nav,
+  FormControl,
+  Modal,
+  Button,
+} from "react-bootstrap";
 import { CiLocationOn, CiShoppingCart, CiSearch } from "react-icons/ci";
 import { IoIosArrowDown } from "react-icons/io";
 import { BiLeftArrowAlt } from "react-icons/bi";
 import { LuNotepadText } from "react-icons/lu";
 import { CgProfile } from "react-icons/cg";
 import { IoMdLocate } from "react-icons/io";
+import { useLocation } from "react-router-dom";
 import Searchdropdown from "./Searchdropdown.jsx";
 import "./Urbancom.css";
 
@@ -15,8 +23,8 @@ function Urbanav() {
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const [placeholder, setPlaceholder] = useState("Search for ");
   const [showDropdown, setShowDropdown] = useState(false);
-
   const dropdownRef = useRef(null);
+  const location = useLocation(); // ✅ Detects current route
 
   const fixedText = "Search for ";
   const words = ["'AC Service'", "'Facial'", "'Kitchen Cleaning'"];
@@ -24,7 +32,7 @@ function Urbanav() {
   const erasingSpeed = 80;
   const delayBetweenWords = 1200;
 
-  // Typing effect
+  // Typing animation for placeholder
   useEffect(() => {
     let wordIndex = 0;
     let charIndex = 0;
@@ -54,17 +62,17 @@ function Urbanav() {
     type();
   }, []);
 
-  // Fetch logo
+  // Fetch logo from backend (development mode)
   useEffect(() => {
     if (process.env.NODE_ENV === "development") {
       fetch("http://localhost:5000/api/logo")
         .then((res) => res.json())
         .then((data) => setLogo(`http://localhost:5000${data.logo}`))
-        .catch((err) => console.log(err));
+        .catch((err) => console.error("Error fetching logo:", err));
     }
   }, []);
 
-  // Close dropdown
+  // Close dropdown when clicked outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -79,18 +87,24 @@ function Urbanav() {
     <>
       <Navbar sticky="top" expand="md" className="urban-nav display">
         <Container fluid className="d-flex justify-content-between align-items-center">
-          {/* Brand */}
+          {/* ✅ Show logo always, hide only 'Native' on /salon */}
           <Navbar.Brand className="d-flex align-items-center left display">
             {logo && <img src={logo} alt="UC Logo" className="logo" />}
-            <span className="native-text"style={{color:"#545454ff", fontSize:"16px"}}>Native</span>
+            {!location.pathname.startsWith("/salon") && (
+              <span
+                className="native-text"
+                style={{ color: "#545454ff", fontSize: "16px" }}
+              >
+                Native
+              </span>
+            )}
           </Navbar.Brand>
 
-          {/* Toggle (tablet only) */}
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
 
-          {/* Navbar collapse */}
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="d-flex gap-2 right-menu left display">
+              {/* 📍 Location input */}
               <div className="location-input-container display desktop-only">
                 <CiLocationOn className="location-icon-inside left1 display" />
                 <FormControl
@@ -99,9 +113,10 @@ function Urbanav() {
                   readOnly
                   className="location-input"
                 />
-                <IoIosArrowDown className="location-icon-inside right"  />
+                <IoIosArrowDown className="location-icon-inside right" />
               </div>
 
+              {/* 🔍 Search bar */}
               <div className="search-container desktop-only" ref={dropdownRef}>
                 <CiSearch className="location-icon-inside display left" />
                 <FormControl
@@ -123,21 +138,26 @@ function Urbanav() {
                 )}
               </div>
 
-              <div className="icons display desktop-only">
-                <LuNotepadText size={20} />
-                <CiShoppingCart size={20} />
-                <CgProfile size={20} />
-              </div>
+              {/* 🧾 Icons (hide only on /salon) */}
+              {!location.pathname.startsWith("/salon") && (
+                <div className="icons display desktop-only">
+                  <LuNotepadText size={20} />
+                  <CiShoppingCart size={20} />
+                  <CgProfile size={20} />
+                </div>
+              )}
             </Nav>
           </Navbar.Collapse>
 
-          {/* Mobile view <426px */}
+          {/* 📱 Mobile View */}
           <div className="mobile-only w-100">
             <div className="location-line display">
               <div className="location-container">
                 <div className="location-top display">
                   <CiLocationOn style={{ fontWeight: "bold" }} />
-                  <span className="location-text" style={{ fontWeight: "bold" }}>184</span>
+                  <span className="location-text" style={{ fontWeight: "bold" }}>
+                    184
+                  </span>
                 </div>
                 <span
                   className="dropdown-toggle"
@@ -146,7 +166,10 @@ function Urbanav() {
                   Balaji Nagar-New Siddhapudur-Coimbatore-...
                 </span>
               </div>
-              <CiShoppingCart className="cart-icon" />
+
+              {!location.pathname.startsWith("/salon") && (
+                <CiShoppingCart className="cart-icon" />
+              )}
             </div>
 
             <div className="search-line">
@@ -174,14 +197,19 @@ function Urbanav() {
         </Container>
       </Navbar>
 
-      {/* Location Modal */}
+      {/* 📍 Location Modal */}
       <Modal
         show={showLocationPopup}
         onHide={() => setShowLocationPopup(false)}
         centered
         dialogClassName="location-modal"
       >
-        <Button onClick={() => setShowLocationPopup(false)} className="display closebtn">✕</Button>
+        <Button
+          onClick={() => setShowLocationPopup(false)}
+          className="display closebtn"
+        >
+          ✕
+        </Button>
         <Modal.Body className="p-4">
           <div className="modal-search-container">
             <BiLeftArrowAlt
@@ -195,7 +223,7 @@ function Urbanav() {
               className="popup-search-input"
             />
           </div>
-          <div className=" mt-3">
+          <div className="mt-3">
             <a
               href="#"
               onClick={(e) => {

@@ -243,7 +243,7 @@
 
 /* ============================
    SMARTLOCK SECTION (Updated)
-============================ */
+============================ 
 .smartlock-section {
   position: relative;
   background-image: url("http://localhost:5000/assets/smartlocks.png");
@@ -253,13 +253,13 @@
   height: 85vh;
   display: flex;
   align-items: center;
-  padding:80px;
+  padding: 80px;
   overflow: hidden;
 }
 
-/* Text on left */
+/* Text on left 
 .smartlock-text {
-   position: relative;
+  position: relative;
   z-index: 2;
   max-width: 500px;
   color: #fff;
@@ -281,7 +281,7 @@
   line-height: 1.6;
 }
 
-/* Button */
+/* Button 
 .smart-btn {
   background-color: #ffffff;
   color: #0b5ed7;
@@ -297,21 +297,26 @@
   background-color: #e0e0e0;
 }
 
-/* Floating image */
+/* ✅ Floating image (center-right, bright & smooth blend) 
 .smart-float-img {
   position: absolute;
   right: 60px;
-  bottom: 0;
+  top: 50%;
+  transform: translateY(-50%);
   width: 380px;
   height: auto;
   object-fit: contain;
   pointer-events: none;
-  mix-blend-mode: multiply;
   z-index: 1;
-  color: white !important;
+  mix-blend-mode: multiply;
+  filter: brightness(1.65) contrast(1.15) saturate(1.1);
+  transition: transform 0.6s ease, filter 0.6s ease;
 }
 
-
+.smart-float-img:hover {
+  transform: translateY(-50%) scale(1.05);
+  filter: brightness(1.8) contrast(1.2);
+}*/
 
 /* ============================
    RESPONSIVE
@@ -320,7 +325,7 @@
   .first-row, .second-row { flex-direction: column; }
   .first-row-item, .second-row-item { width: 100%; }
 
-  .smartlock-section {
+ /* .smartlock-section {
     flex-direction: column;
     height: auto;
     text-align: center;
@@ -338,7 +343,7 @@
     transform: none;
     margin-top: 20px;
     width: 200px;
-  }
+  }*/
 }
 
 /* MOBILE (≤425px) */
