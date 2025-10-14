@@ -6,7 +6,6 @@ import { useNavigate } from "react-router-dom";
 function Salon() {
   const [salon, setSalon] = useState([]);
   const [advanced,setAdvanced]=useState([]);
-  const [currentIndex,setCurrentIndex]=useState(null);
  const navigate = useNavigate();
 
   useEffect(() => {
@@ -70,41 +69,71 @@ function Salon() {
               src={`http://localhost:5000${a.img}`}
               alt={a.key}
               className="extra"/>
-            <Carousel.Caption
-              style={{left: "20px",top:"10px", textAlign: "left",color: "#424141",}}>
-              {/* Price Label */}
-              {a.pri && (
-                <h3>
-                  <span
-                    className="fw-semibold"
-                    style={{
-                      backgroundColor: "#424141",
-                      color: "#fff",
-                      padding: "15px 15px",
-                      fontSize: "18px", 
-                      borderRadius: "4px",}}>
-                    {a.pri}
-                  </span>
-                </h3>
-              )} <br />
-              {/* Price + original value */}
-              <p>
-                <span style={{ fontSize: "50px", color: "#0a8c17ff" }}>{a.price}</span>{" "}
-                <span style={{ fontSize: "30px", textDecoration: "line-through" }}>
-                  {a.value}
-                </span>
-              </p>
-              {/* Titles */}
-              <h1  style={{fontSize:"45px"}}>{a.title || ""}</h1>
-             <h1 style={{fontSize:"45px"}}>{a.tit}</h1> <br />
-              {/* Description */}
-              <p style={{fontSize:"20px"}}>{a.text ||" " }</p>
-            </Carousel.Caption>
-          </Carousel.Item>
-        ))}
-         
-</Carousel>
+            {/* Vertically centered caption (no top used) */}
+                <Carousel.Caption
+                  style={{
+                    position: "absolute",
+                    inset: 0, // replaces top, right, bottom, left
+                    display: "flex",
+                    alignItems: "center", // vertically center
+                    justifyContent: "flex-start", // keep text left
+                    textAlign: "left",
+                    color: "#424141",
+                    padding: "40px",
+                    borderRadius: "10px",
+                  }}
+                >
+                  <div>
+                    {/* Price Label */}
+                    {a.pri && (
+                      <h3>
+                        <span
+                          className="fw-semibold"
+                          style={{
+                            backgroundColor: "#424141",
+                            color: "#fff",
+                            padding: "15px 15px",
+                            fontSize: "18px",
+                            borderRadius: "4px",
+                          }}
+                        >
+                          {a.pri}
+                        </span>
+                      </h3>
+                    )}
+                    <br />
 
+                    {/* Price + original value */}
+                    <p>
+                      <span
+                        style={{
+                          fontSize: "50px",
+                          color: "#0a8c17ff",
+                        }}
+                      >
+                        {a.price}
+                      </span>{" "}
+                      <span
+                        style={{
+                          fontSize: "30px",
+                          textDecoration: "line-through",
+                        }}
+                      >
+                        {a.value}
+                      </span>
+                    </p>
+
+                    {/* Titles */}
+                    <h3 className="fw-semibold">{a.title || ""}</h3>
+                    <h3 className="fw-semibold">{a.tit}</h3>
+
+                    {/* Description */}
+                    <p style={{ fontSize: "20px" }}>{a.text || " "}</p>
+                  </div>
+                </Carousel.Caption>
+              </Carousel.Item>
+            ))}
+          </Carousel>
         </Col>
       </Row>
     </div>
