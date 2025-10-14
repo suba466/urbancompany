@@ -135,17 +135,9 @@
 
 .first-row-item:hover { opacity: 0.7; }
 
-.first-row-text { font-size: 11px; margin-right: 10px; }
+.first-row-text { font-size: 11.5px;  text-align: center;}
 
 .first-row-img { width: 60px; height: 30px; object-fit: contain; }
-
-/* ============================
-   SECOND ROW (3 items)
-============================ */
-.second-row {
-  display: flex;
-  gap: 15px;
-}
 
 .second-row-item {
   display: flex;
@@ -186,9 +178,6 @@
   align-items: center;
   margin-bottom: 8px;
 }
-
-.second-row-img { width: 60px; height: 30px; object-fit: contain; }
-.second-row-text { font-size: 13px; margin: 0; text-align: center; }
 
 .carousel-control-prev-icon,
 .carousel-control-next-icon {
@@ -240,7 +229,21 @@
   flex-direction: column;
   height: 100%;
 }
-
+.hr{
+    display: flex;
+    align-items: center;
+    border: 1px solid rgba(192, 192, 195, 1);
+    border-radius: 5px;
+    padding: 10px 15px;
+    gap: 10px;
+  
+}
+.extra{
+    width: 100%;
+    height: 500px;
+    object-fit: cover;
+    border-radius: 10px;            
+}
 /* ============================
    SMARTLOCK SECTION (Updated)
 ============================ 
@@ -321,6 +324,12 @@
 /* ============================
    RESPONSIVE
 ============================ */
+@media(max-width:1090px) and (min-width:791px){
+  .extra{
+    height: 600px !important;
+  }
+}
+
 @media (max-width: 768px) {
   .first-row, .second-row { flex-direction: column; }
   .first-row-item, .second-row-item { width: 100%; }

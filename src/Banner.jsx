@@ -50,20 +50,18 @@ function Banner() {
                       navigate("/salon");
                     }
                   }}
-                  style={{ cursor: "pointer" }}
-                >
+                  style={{ cursor: "pointer" }}>
                   <p className="first-row-text">{s.name}</p>
                   <img
                     src={`http://localhost:5000${s.img}`}
                     alt={s.name}
-                    className="first-row-img"
-                  />
+                    className="first-row-img"/>
                 </div>
               ))}
             </div>
 
             {/* Second Row */}
-            <div className="second-row">
+            <div className="first-row">
               {secondRow.map((s, index) => (
                 <div
                   key={index}
@@ -79,10 +77,10 @@ function Banner() {
                     <img
                       src={`http://localhost:5000${s.img}`}
                       alt={s.name}
-                      className="second-row-img"
+                      className="first-row-img"
                     />
                   </div>
-                  <p className="second-row-text">{s.name}</p>
+                  <p className="first-row-text">{s.name}</p>
                 </div>
               ))}
             </div>

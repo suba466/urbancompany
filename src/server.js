@@ -53,7 +53,19 @@ const apiData = {
     {key:"haircare", img:"/assets/haircare.png"}
   ],
   smartlock:{key:"smartlocks", img:"/assets/smartlocks.png"},
-  images:{key:"images",img:"/assets/images.png"}
+  images:{key:"images",img:"/assets/images.png"},
+  salonforwomen:[
+    {name:"Super saver packages",key:"super",img:"/assets/super.webp"},
+    {name:"Waxing & threading",key:"thread",img:"/assets/thread.webp"},
+    {name:"Signature facial",key:"signature",img:"/assets/signature.webp"},
+    {name:"Cleanup",key:"cleanup",img:"/assets/cleanup.webp"},
+    {name:"Pedicure & manicure",key:"cure",img:"/assets/cure.webp"},
+    {name:"Hair, bleach & detan",key:"hairbleach",img:"/assets/hairbleach.webp"},
+  ],
+  advanced:[
+    {price:"₹799",value:"₹1,098",title:"Roll-on waxing",tit:"Full arms, legs & underarms",text:"EXtra 25% off for new users*",key:"facial",img:"/assets/facial.jpg"},
+    {pri:"Just launched",title:"Advanced tools",tit:"& ingredients",text:"Facial & clea",key:"advanced",img:"/assets/advanced.jpg"}
+  ],
 };
 
 // Endpoints
@@ -64,7 +76,9 @@ app.get("/api/carousel", (req, res) => res.json({ carousel: apiData.carousel }))
 app.get("/api/book", (req, res) => res.json({ book: apiData.book })); 
 app.get("/api/salon",(req,res)=>res.json({salon:apiData.salon}))
 app.get("/api/smartlock",(req,res)=>res.json({smartlock:apiData.smartlock}));
-app.get("/api/images",(req,res)=>res.json({images:apiData.images}))
+app.get("/api/images",(req,res)=>res.json({images:apiData.images}));
+app.get("/api/salonforwomen",(req,res)=>res.json({salonforwomen:apiData.salonforwomen}));
+app.get("/api/advanced",(req,res)=>res.json({advanced:apiData.advanced}));
 // Start server
 app.listen(PORT, () =>
   console.log(`Server running on http://localhost:${PORT}`)
