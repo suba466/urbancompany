@@ -2,11 +2,12 @@ import { Row, Col ,Carousel} from "react-bootstrap";
 import { MdStars } from "react-icons/md";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import Salon1 from './Salon1.jsx';
 function Salon() {
   const [salon, setSalon] = useState([]);
   const [advanced,setAdvanced]=useState([]);
  const navigate = useNavigate();
+ const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
     fetch("http://localhost:5000/api/salonforwomen")
@@ -20,11 +21,14 @@ function Salon() {
       .then((data) => setAdvanced(data.advanced))
       .catch((err) => console.error("Error fetching salon: ", err));
   }, []);
+const handleSelect = (selectedIndex) => {
+    setActiveIndex(selectedIndex);
+  };
 
   return (
     <div style={{ padding: "40px" }}>
       <Row className="g-4">
-        <Col xs={12} md={4}>
+        <Col xs={12} md={4} className="row1">
           <h4 className="fw-semibold" style={{ fontSize: "30px" }}>Salon for women</h4>
           <p>
             <MdStars style={{ fontSize: "23px", color: "#6800faff" }} />{" "}
@@ -32,7 +36,7 @@ function Salon() {
               4.85 (15.4 bookings)</span></p>
           {/* Bordered box containing text, line, and services */}
           <div
-            className="mt-4"style={{border: "1px solid rgba(192, 192, 195, 1)",borderRadius: "5px",padding: "15px",}}>
+            className="mt-4 super">
             {/* Select a service with line on right */}
             <div style={{display: "flex",alignItems: "center",gap: "10px",marginBottom: "15px",}}>
               <span
@@ -61,8 +65,10 @@ function Salon() {
             </div>
           </div>
         </Col>
-        <Col xs={12} md={8}>
-         <Carousel indicators={true}>
+        <Col xs={12} md={8} className="row2">
+         <Carousel activeIndex={activeIndex}onSelect={handleSelect}
+            controls={true} // we'll make custom arrows
+            indicators={true}wrap={false} >
         {advanced?.map((a, index) => (
           <Carousel.Item key={index}>
             <img
@@ -71,62 +77,32 @@ function Salon() {
               className="extra"/>
             {/* Vertically centered caption (no top used) */}
                 <Carousel.Caption
-                  style={{
-                    position: "absolute",
-                    inset: 0, // replaces top, right, bottom, left
+                  style={{position: "absolute",inset: 0, // replaces top, right, bottom, left
                     display: "flex",
-                    alignItems: "center", // vertically center
-                    justifyContent: "flex-start", // keep text left
-                    textAlign: "left",
-                    color: "#424141",
-                    padding: "40px",
-                    borderRadius: "10px",
-                  }}
-                >
-                  <div>
+                    alignItems: "center", justifyContent: "flex-start", // keep text left
+                   textAlign: "left",color: "#424141",padding: "40px",borderRadius: "10px",
+                  }}><div>
                     {/* Price Label */}
                     {a.pri && (
                       <h3>
-                        <span
-                          className="fw-semibold"
-                          style={{
-                            backgroundColor: "#424141",
-                            color: "#fff",
-                            padding: "15px 15px",
-                            fontSize: "18px",
-                            borderRadius: "4px",
-                          }}
-                        >
-                          {a.pri}
-                        </span>
-                      </h3>
-                    )}
+                        <span className="fw-semibold"style={{backgroundColor: "#424141",color: "#fff",padding: "15px 15px",fontSize: "18px",borderRadius: "4px",
+                          }}>{a.pri}</span>
+                      </h3>)}
                     <br />
-
                     {/* Price + original value */}
                     <p>
-                      <span
-                        style={{
-                          fontSize: "50px",
-                          color: "#0a8c17ff",
-                        }}
-                      >
-                        {a.price}
-                      </span>{" "}
+                      <span style={{fontSize: "50px",color: "#0a8c17ff",}}>{a.price}</span>{" "}
                       <span
                         style={{
                           fontSize: "30px",
                           textDecoration: "line-through",
-                        }}
-                      >
+                        }}>
                         {a.value}
                       </span>
                     </p>
-
                     {/* Titles */}
                     <h3 className="fw-semibold">{a.title || ""}</h3>
                     <h3 className="fw-semibold">{a.tit}</h3>
-
                     {/* Description */}
                     <p style={{ fontSize: "20px" }}>{a.text || " "}</p>
                   </div>
@@ -134,6 +110,7 @@ function Salon() {
               </Carousel.Item>
             ))}
           </Carousel>
+          <Salon1/>
         </Col>
       </Row>
     </div>

@@ -112,6 +112,7 @@ function Urbanav() {
                   placeholder="184, Balaji Nagar-New..."
                   readOnly
                   className="location-input"
+                  onClick={() => setShowLocationPopup(true)}
                 />
                 <IoIosArrowDown className="location-icon-inside right" />
               </div>
@@ -202,12 +203,10 @@ function Urbanav() {
         show={showLocationPopup}
         onHide={() => setShowLocationPopup(false)}
         centered
-        dialogClassName="location-modal"
-      >
+        dialogClassName="location-modal">
         <Button
           onClick={() => setShowLocationPopup(false)}
-          className="display closebtn"
-        >
+          className="display closebtn">
           ✕
         </Button>
         <Modal.Body className="p-4">

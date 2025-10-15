@@ -63,9 +63,12 @@ const apiData = {
     {name:"Hair, bleach & detan",key:"hairbleach",img:"/assets/hairbleach.webp"},
   ],
   advanced:[
-    {price:"₹799",value:"₹1,098",title:"Roll-on waxing",tit:"Full arms, legs & underarms",text:"EXtra 25% off for new users*",key:"facial",img:"/assets/facial.jpg"},
-    {pri:"Just launched",title:"Advanced tools",tit:"& ingredients",text:"Facial & clea",key:"advanced",img:"/assets/advanced.jpg"}
+    {price:"₹799",value:"₹1,098",title:"Roll-on waxing",tit:"Full arms, legs & underarms",text:"Extra 25% off for new users*",key:"facial",img:"/assets/facial.jpg"},
+    {pri:"Just launched",title:"Advanced tools",tit:"& ingredients",text:"Facial & clean",key:"advanced",img:"/assets/advanced.jpg"}
   ],
+  super:[
+    {key:"super",img:"/assets/super.jpg",title:"Festive ready package", price:"25% off",text:"Pick from mani-pedi,",tex:"facials & more",content:"Extra 25% off for",con:"new users with NEW 25*"}
+  ]
 };
 
 // Endpoints
@@ -79,6 +82,7 @@ app.get("/api/smartlock",(req,res)=>res.json({smartlock:apiData.smartlock}));
 app.get("/api/images",(req,res)=>res.json({images:apiData.images}));
 app.get("/api/salonforwomen",(req,res)=>res.json({salonforwomen:apiData.salonforwomen}));
 app.get("/api/advanced",(req,res)=>res.json({advanced:apiData.advanced}));
+app.get("/api/super",(req,res)=>res.json({super:apiData.super}));
 // Start server
 app.listen(PORT, () =>
   console.log(`Server running on http://localhost:${PORT}`)

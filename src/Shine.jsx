@@ -67,8 +67,7 @@ function Shine() {
 
                 return (
                   <Col key={idx} md={12 / cardsPerSlide} className="d-flex justify-content-center mb-3" 
-                  style={{flex: `0 0 ${100 / cardsPerSlide}%`, maxWidth: `${100 / cardsPerSlide}%`
-  }}>
+                  style={{flex: `0 0 ${100 / cardsPerSlide}%`, maxWidth: `${100 / cardsPerSlide}%`}}>
                     <Card
                       className="shine d-flex flex-row"
                       style={{ backgroundColor: bgColor, color: textColor, height: "200px" }} >
