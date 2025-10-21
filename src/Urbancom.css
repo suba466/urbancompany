@@ -181,18 +181,15 @@
 }
 
 .banner-img { width: 100%; border-radius: 10px; }
-.superpack{
-  transition: 0.3s ease;
-}
-.superpack:hover{
-  transform: scale(1.01);
-}
 .sptext{
   position: absolute;
- bottom: 0px;
-  left: 10px;
-  color: #fff;
-  padding: 10px ;
+  bottom: 0px;
+  left: 15px;
+  color: white;
+  font-weight: 600;
+  font-size: 18px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.7);
+  z-index: 1;
 }
 .shine {
   display: flex;
@@ -269,26 +266,28 @@
 .superpackcard{
   position: relative;
   overflow: hidden;
-  transition: transform 0.3s ease;
+  border-radius: 10px;
+  transition: transform 0.3s ease, filter 0.3s ease;
 }
 .superpackcard:hover {
-  transform: scale(1.01);
+ transform: scale(1.02);
+  
 }
 .button1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  border:1px solid rgb(92, 18, 176);
+  border-radius: 5px;
 }
 
 .button {
   background-color: rgb(255, 255, 255);
   color: rgb(0, 0, 0);
   border: none;
-  width: 30px;
+  width: 0px;
   height: 30px;
   font-size: 18px;
-  border-radius: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
