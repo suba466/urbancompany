@@ -18,8 +18,8 @@ app.use("/assets", express.static(path.join(__dirname, "assets")));
 
 // --- MongoDB Connection ---
 mongoose.connect("mongodb://localhost:27017/suba")
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch(err => console.error("❌ MongoDB connection error:", err));
+  .then(() => console.log(" MongoDB connected"))
+  .catch(err => console.error(" MongoDB connection error:", err));
 
 // --- SCHEMAS ---
 const packageSchema = new mongoose.Schema({
@@ -30,7 +30,8 @@ const packageSchema = new mongoose.Schema({
   originalPrice: String,
   duration: String,
   description: String,
-  items: [{ text: String, description: String }]
+  items: [{ text: String, description: String }],
+  content:[{value: String, details: String}]
 });
 const Package = mongoose.model("Package", packageSchema);
 
@@ -39,7 +40,7 @@ const cartSchema = new mongoose.Schema({
   price: String,
   originalPrice: String,
   count: { type: Number, default: 1 },
-  items: [{ text: String, description: String }],
+  content:[{value: String, details: String}],
   createdAt: { type: Date, default: Date.now }
 });
 const Cart = mongoose.model("Cart", cartSchema);
@@ -149,16 +150,25 @@ app.post("/api/addcarts", async (req, res) => {
     const existing = await Cart.findOne({ title: req.body.title });
     if (existing) {
       existing.count += 1;
+
+      // Update content only if it exists in request
+      if (req.body.content && req.body.content.length > 0) {
+        existing.content = req.body.content;
+      }
+
       await existing.save();
       return res.json({ message: "Quantity increased", cart: existing });
     }
+
     const newItem = new Cart(req.body);
     await newItem.save();
     res.status(201).json({ message: "Item added", cart: newItem });
-  } catch {
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Failed to add to cart" });
   }
 });
+
 
 app.put("/api/carts/:id", async (req, res) => {
   try {
@@ -179,4 +189,4 @@ app.delete("/api/carts/:id", async (req, res) => {
 });
 
 // --- START SERVER ---
-app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(` Server running on http://localhost:${PORT}`));

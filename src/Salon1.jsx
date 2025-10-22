@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { Button } from 'react-bootstrap';
 import { MdBackpack, MdStars } from "react-icons/md";
 import { GoDotFill } from "react-icons/go";
+import { MdLocalOffer } from "react-icons/md";
 
 function Salon1() {
   const [superPack, setSuperPack] = useState([]);
@@ -56,7 +57,7 @@ function Salon1() {
         title: pkg.title,
         price: pkg.price,
         originalPrice: pkg.originalPrice,
-        items: pkg.items || []
+        content: pkg.content || []
       })
     });
     await fetchCarts(); // refresh cart from server
@@ -190,6 +191,7 @@ const handleDecrease = async (cartItem) => {
                     </p>
                   ))}
                 </div>
+                <Button style={{backgroundColor:"white",color:"black",border:"1px solid black"}}>Edit your package</Button>
               </div>
             );
           })}
@@ -197,11 +199,12 @@ const handleDecrease = async (cartItem) => {
 
         {/* Right Column - Cart */}
         <Col xs={12} md={5} className="mt-4 mt-md-0">
-          <div style={{ border: "1px solid rgba(192,192,195,1)", borderRadius: "8px", padding: "10px" }}>
+          <div style={{flex: 1,height: "1px",backgroundColor: "rgba(192,192,195,1)",}}></div>
+          <div className='mt-4' style={{ boxShadow: "0 4px 8px rgba(0,0,0,0.2)",border: "1px solid rgba(192,192,195,1)", borderRadius: "8px", padding: "10px" }}>
             {carts.length === 0 ? (
               <div className="text-center">
                 <img
-                  src="http://localhost:5000/assets/cart.jpg"
+                  src="http://localhost:5000/assets/cart.png"
                   alt="cart-placeholder"
                   style={{ width: "50%", padding: "10px" }}
                 />
@@ -210,11 +213,11 @@ const handleDecrease = async (cartItem) => {
             ) : (
               carts.map((c) => (
                 <div key={c._id}>
-                  <h6 className='fw-semibold mb-2'>Cart</h6>
+                  <h5 className='fw-semibold mb-2'>Cart</h5>
                   <Row className="align-items-center">
-                    <Col><p style={{ fontSize: "11px", fontWeight: "bold" }}>{c.title}</p></Col>
+                    <Col><p style={{ fontSize: "12px" }}>{c.title}</p></Col>
                     <Col xs={8} className="d-flex justify-content-between gap-2">
-                      <div className='button1' style={{ height: "31px" }}>
+                      <div className='button1' style={{ height: "33px" }}>
                         <Button onClick={() => handleDecrease(c)}className='button'>−</Button>
                         <span className="count-box">{c.count}</span>
                         <Button onClick={() => handleIncrease(c)} className='button'>+</Button>
@@ -227,17 +230,19 @@ const handleDecrease = async (cartItem) => {
                   </Row>
 
                   <div style={{ marginTop: "10px", fontSize: "12px" }}>
-                    {c.items?.map((item, i) => (
+                    {c.content?.map((item, i) => (
                       <p key={i}><GoDotFill style={{ fontSize: "10px", color: "#5a5959ff" }} />{" "}
-                      {item.text ? `${item.text} : ${item.description}` : item.description}</p>
+                      {item.value ? `${item.value} : ${item.details}` : item.details}</p>
                     ))}
                   </div>
-
-                  <hr style={{ borderTop: "1px dashed #bbb6b6ff" }} />
+                  <Button className='fw-semibold' style={{backgroundColor:"white",color:"#4d35ebff",border:"0px",fontSize:"16px"}}>Edit</Button>
+                  <div style={{ width:"100%",backgroundColor: "#117b13ff", display: "flex",justifyContent: "center",alignItems: "center",     height: "30px",}}><p className='fw-semibold mb-0' style={{color:"white",fontSize:"13px"}}> <MdLocalOffer />Congratulations! ₹974 saved so far! </p></div> <br />
+                  <Button><span className='fw-semibold'>₹2,920</span> <span style={{textDecoration:"line-through"}}>₹3,894</span> <span style={{textAlign:"right"}}>View cart</span></Button>
                 </div>
               ))
             )}
           </div>
+          
         </Col>
       </Row>
 
