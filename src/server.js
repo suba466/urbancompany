@@ -98,7 +98,7 @@ const apiData = {
   ],
   smartlock: { key:"smartlocks", img:"/assets/smartlocks.png" },
   images: { key:"images", img:"/assets/images.png" },
-  cart: [{ key:"cart", img:"/assets/cart.jpg" }]
+  cart: [{ key:"cart", img:"/assets/cart.ppg" }]
 };
 
 // --- STATIC JSON ROUTES ---

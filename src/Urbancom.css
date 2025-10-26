@@ -90,6 +90,11 @@
   justify-content: center; 
   z-index: 10;
 }
+.closebtn:hover{
+  background-color: white !important;
+  color: black;
+}
+
 .navbar-collapse { flex-grow: 0 !important; }
 
 /*  SERVICE BOX */
@@ -260,15 +265,25 @@
   z-index: 1200;
   transition: all 0.2s ease;
 }
-
-.btn:hover{
-  background-color: black !important;
-}
 .custom-modal{
   border-radius: 20px;
   overflow: visible;
   position: relative;
   padding: 0;
+}
+.drop{ 
+  cursor: pointer;
+  width: 30%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 4px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+                          
 }
 @keyframes float {
   0% { transform: translateY(0px) translateX(0px); }
