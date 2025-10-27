@@ -9,6 +9,7 @@ import { GoDotFill } from "react-icons/go";
 import { IoTime } from "react-icons/io5";
 import Form from 'react-bootstrap/Form';
 function Salon1() {
+  const [loading,setLoading]=useState(false);
   const [superPack, setSuperPack] = useState([]);
   const [packages, setPackages] = useState([]);
   const [carts, setCarts] = useState([]);
@@ -16,93 +17,170 @@ function Salon1() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
   const [salon, setSalon] = useState([]);
-  const [dropdownModal, setDropdownModal] = useState({
-    show: false,
-    label: "",
-    options: [],
-    selected: ""
-  });
-    const waxingOptions = [
+  const [dropdownModal, setDropdownModal] = useState({show: false,label: "",options: [],selected: ""});
+  const waxingOptions = [
     {
       label: "Full arms (including underarms)",
       options: [
         { name: "RICA White Chocolate Wax", price: 499 },
         { name: "Chocolate Roll on", price: 599 },
         { name: "Honey Wax", price: 319 },
-        { name: "RICA Roll on", price: 679 }
-      ]
-    },
+        { name: "RICA Roll on", price: 679 }]},
     {
       label: "Full legs",
       options: [
         { name: "Honey Wax", price: 319 },
         { name: "RICA White Chocolate Wax", price: 549 },
         { name: "Chocolate Roll on", price: 499 },
-        { name: "RICA Roll on", price: 629 }
-      ]
-    },
+        { name: "RICA Roll on", price: 629 }]},
     {
       label: "Underarms",
       options: [
         { name: "Honey Wax", price: 49 },
-        { name: "RICA peel-off", price: 149 }
-      ]
-    },
+        { name: "RICA peel-off", price: 149 }]},
     {
       label: "Bikini line",
       options: [
         { name: "Honey Premium Wax", price: 249 },
-        { name: "RICA peel-off", price: 249 }
-      ]
-    },
+        { name: "RICA peel-off", price: 249 }]},
     {
       label: "Half arms",
       options: [
         { name: "Honey Wax", price: 219 },
-        { name: "RICA White Chocolate Wax", price: 319 }
-      ]
-    },
+        { name: "RICA White Chocolate Wax", price: 319 }]},
     {
       label: "Half legs",
       options: [
         { name: "RICA White Chocolate Wax", price: 369 },
-        { name: "Honey Wax", price: 219 }
-      ]
-    },
+        { name: "Honey Wax", price: 219 }] },
     {
       label: "Stomach",
       options: [
         { name: "Chocolate Roll on", price: 569 },
         { name: "Honey Wax", price: 319 },
         { name: "RICA White Chocolate Wax", price: 469 },
-        { name: "RICA Roll on", price: 619 }
-      ]
-    },
+        { name: "RICA Roll on", price: 619 }]},
     {
       label: "Back",
       options: [
         { name: "RICA Roll on", price: 669 },
         { name: "RICA White Chocolate Wax", price: 519 },
         { name: "Chocolate Roll on", price: 619 },
-        { name: "Honey Wax", price: 469 }
-      ]
-    },
+        { name: "Honey Wax", price: 469 }]},
     {
       label: "Bikini",
       options: [
         { name: "RICA peel-off", price: 1299 },
-        { name: "Honey Premium Wax", price: 949 }
-      ]
-    },
+        { name: "Honey Premium Wax", price: 949 }] },
     {
       label: "Full body",
       options: [
         { name: "Honey Wax", price: 1369 },
         { name: "RICA White Chocolate Wax", price: 1919 },
         { name: "RICA Roll on", price: 2019 },
-        { name: "Chocolate Roll on", price: 1619 }
-      ]
-    },
+        { name: "Chocolate Roll on", price: 1619 }]},
+    { label: "I don't need anything", options: [] }
+  ];
+ const facial=[{
+  label:"Sara Lightening glow facial",price:"949"},{
+  label:"Elysian firming wine glow facial",price:"1049"},{
+  label:"O3+ shine & glow facial",price:"1699"},{
+  label:"O3+ power brightening facial",price:"1999"},{
+  label:"Sara fruit cleanup",price:"699"},{
+  label:"O3+ tan clear cleanup",price:"849"},
+  { label: "I don't need anything"}
+]
+const pedicure=[{
+  label:"Elysian Chocolate & Vanilla pedicure (without heel peel)",price:"849"},{
+  label:"Elysian Candle Spa pedicure",price:"999"},{
+  label:"Elysian British Rose pedicure (without heel peel)",price:"759"},
+  { label: "I don't need anything"}
+];
+const manicure=[{
+  label:"Cut,file & polish - Hands",price:"149"},{
+  label:"Elysian British Rose manicure",price:"649"},{
+  label:"Elysian Chocolate & Vanilla manicure",price:"699"},{
+  label:"Elysian Candle Spa manicure",price:"899"},
+  { label: "I don't need anything"}
+];
+const bleach=[{
+      label: "Face & neck",
+      options: [
+        { name: "Bleach", price:299 },
+        {name:"Detan",price:349}]},
+    {
+      label: "Full legs",
+      options: [
+        {name:"Detan",price:499},
+        { name: "Bleach", price:499 },]},
+    {
+      label: "Full body",
+      options: [
+        {name:"Detan",price:1499},
+        { name: "Bleach", price:1499 },]},
+    {
+      label: "Full arms",
+      options: [
+        {name:"Detan",price:349},
+        { name: "Bleach", price:349 },]},
+    {
+      label: "Chest",
+      options: [
+        {name:"Detan",price:399},
+        { name: "Bleach", price:399 },]},
+    {
+      label: "Back",
+      options: [
+      {name:"Detan",price:399},
+        { name: "Bleach", price:399 },]},
+    { label: "I don't need anything", options: [] }
+  ];;const hair=[{
+  label:"Hair color application",price:"249"},{
+  label:"Henna mehendi application",price:"399"},{
+  label:"Head massage (10 mins)",price:"199"},{
+  label:"Head massage (20 mins)",price:"349"},
+  { label: "I don't need anything"}
+];
+const facialHair = [
+    {
+      label: "Eyebrow",
+      options: [
+        { name: "Threading", price: 49 },]},
+    {
+      label: "Forehead",
+      options: [
+       { name: "Threading", price: 59 },
+       {name:"Face waxing",price:99}]},
+    {
+      label: "Face",
+      options: [
+        {name:"Face waxing",price:399},
+        { name: "Threading", price: 149 },]},
+    {
+      label: "Sidelocks",
+      options: [
+        { name: "Threading", price: 49 },
+       {name:"Face waxing",price:99}]},
+    {
+      label: "Upper lip",
+      options: [
+        {name:"Face waxing",price:69},
+        { name: "Threading", price:49 },]},
+    {
+      label: "Neck",
+      options: [
+       { name: "Threading", price: 149 },
+       {name:"Face waxing",price:199}]},
+    {
+      label: "Jawline",
+      options: [
+        {name:"Face waxing",price:99},
+        { name: "Threading", price:99 },]},
+    {
+      label: "Chin",
+      options: [
+       { name: "Threading", price: 29 },
+       {name:"Face waxing",price:99}]},
     { label: "I don't need anything", options: [] }
   ];
   // Fetch Data
@@ -405,8 +483,6 @@ function Salon1() {
         </Container>
       </ModalBody>
     </Modal>
-
-
       {carts.length > 0 && (
         <div className="mobile-cart-footer-wrapper d-lg-none">
           {/* Green box */}
@@ -450,84 +526,376 @@ function Salon1() {
       show={showModal}
       onHide={handleCloseModal}
       centered
-      size="lg"
       contentClassName="custom-modal">
       <Button onClick={handleCloseModal} className="closebtn" style={{padding:"0px"}}>X</Button>
-      
       {selectedItem && (<>
         <div className="p-3" style={{ backgroundColor: "#ede1d4ff", borderRadius: "10px" }}>
           <h4 className='fw-semibold'>{selectedItem.title || ""}</h4>
           <p><IoTime /> service time:3 hrs 50 mins</p>
         </div>
-        <div className='p-3'>
-          <h5 className='fw-semibold'>Waxing</h5>
+        <div className='p-3 scroll'>
+        <h5 className='fw-semibold'>Waxing</h5>
+        <Form className='fw-semibold'>
+          {waxingOptions.map((item, idx) => (
+            <Row key={idx} className='mb-3 align-items-center'>
+              {/* Left side — label and price */}
+              <Col xs={7}>
+                <Form.Check
+                  type='checkbox'
+                  label={item.label}
+                  id={`check-${idx}`}
+                  style={{ fontSize: "15px" }}
+                />
+                {item.options.length > 0 && (
+                  <div
+                    style={{
+                      fontSize: "10px",
+                      color: "#726f6fff",
+                      fontWeight: "lighter",
+                      marginLeft: "25px",
+                      marginTop: "2px",}}>
+                    ₹{item.options[0].price}
+                  </div>
+                )}
+              </Col>
+
+              {/* Right side — dropdown box */}
+              <Col xs={5} className='d-flex justify-content-end' >
+                {item.options.length > 0 && (
+                  <div
+                    onClick={() => {
+                      // Open the dropdown modal immediately
+                      setDropdownModal({
+                        show: true,
+                        label: item.label,
+                        options: item.options,
+                        selected: dropdownModal.selected || "",
+                      });
+                      setLoading(true);
+                    }}
+                    className='drop'
+                    style={{backgroundColor:loading && dropdownModal.label === item.label ? "#ccc" : "#fff",}}>
+                    {loading && dropdownModal.label === item.label ? (
+                      <div className="spinner"></div>
+                    ) : (
+                      <>
+                        <span
+                          style={{
+                            flex: 1,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            fontSize: "12px",
+                          }}>
+                          {dropdownModal.selected && dropdownModal.label === item.label
+                            ? dropdownModal.selected
+                            : item.options[0].name}
+                        </span>
+                        <span style={{ fontSize: "14px", color: "#777" }}>⌄</span>
+                      </>
+                    )}
+                  </div>
+                )}
+              </Col>
+            </Row>
+          ))}
+        </Form>
+        <div style={{borderBottom:"5px solid #e0e0e0ff"}}></div>
+        <div className='mt-4'>
+          <h5 className='fw-semibold'>Facial & cleanup</h5>
           <Form className='fw-semibold'>
-            {waxingOptions.map((item, idx) => (
-              <Row key={idx} className='mb-2 align-items-center'>
-                <Col xs={6}>
-                  <Form.Check type='checkbox' label={item.label} id={`check-${idx}`} />
+            {facial.map((item,idx)=>(
+              <Row key={idx} className='mb-3'>
+                <Col xs={12}>
+                <Form.Check type='checkbox' label={item.label} id={`facial-${idx}`} style={{fontSize:"15px"}}></Form.Check>
+                {item.price &&(
+                   <div style={{fontSize: "10px",color: "#726f6fff",fontWeight: "lighter",marginLeft: "25px",marginTop: "2px",}}>
+                    ₹{item.price}
+                  </div>
+                )}
+                </Col>
+              </Row>
+            ))}
+          </Form>
+        </div>
+        <div style={{borderBottom:"5px solid #e0e0e0ff"}}></div>
+        <div className='mt-4'>
+          <h5 className='fw-semibold'>Pedicure</h5>
+          <Form className='fw-semibold'>
+            {pedicure.map((item,idx)=>(
+              <Row key={idx} className='mb-3'>
+                <Col xs={12}>
+                <Form.Check type='checkbox' label={item.label} id={`facial-${idx}`} style={{fontSize:"15px"}}></Form.Check>
+                {item.price &&(
+                   <div style={{fontSize: "10px",color: "#726f6fff",fontWeight: "lighter",marginLeft: "25px",marginTop: "2px",}}>
+                    ₹{item.price}
+                  </div>
+                )}
+                </Col>
+              </Row>
+            ))}
+          </Form>
+        </div>
+        <div style={{borderBottom:"5px solid #e0e0e0ff"}}></div>
+        <div className="mt-4">
+          <h5 className="fw-semibold">Facial Hair removal</h5>
+          <Form className="fw-semibold">
+            {facialHair.map((item, idx) => (
+              <Row key={idx} className="mb-3 align-items-center">
+                {/* Checkbox and price */}
+                <Col xs={7}>
+                  <Form.Check
+                    type="checkbox"
+                    label={item.label}
+                    id={`facialHair-${idx}`}
+                    style={{ fontSize: "15px" }}
+                  />
                   {item.options.length > 0 && (
-                    <div style={{ fontSize: "12px", marginLeft: "25px", marginTop: "2px" }}>
-                      ₹{item.options[0].price} {/* Show only the first option's price */}
+                    <div
+                      style={{
+                        fontSize: "10px",
+                        color: "#726f6fff",
+                        fontWeight: "lighter",
+                        marginLeft: "25px",
+                        marginTop: "2px",
+                      }}
+                    >
+                      ₹{item.options[0].price}
                     </div>
                   )}
                 </Col>
-                <Col xs={6} className='text-end'>
+
+                {/* Dropdown trigger */}
+                <Col xs={5} className="d-flex justify-content-end">
                   {item.options.length > 0 && (
                     <div
-                      onClick={() =>
+                      onClick={() => {
                         setDropdownModal({
                           show: true,
                           label: item.label,
                           options: item.options,
-                          selected: ""
-                        })
-                      }
-                      className='drop'
+                          selected: dropdownModal.selected || "",
+                          type: "facialHair", 
+                        });
+                        setLoading(true);
+                      }}
+                      className="drop"
+                      style={{
+                        backgroundColor:
+                          loading && dropdownModal.label === item.label ? "#ccc" : "#fff",
+                      }}
                     >
-                      <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {dropdownModal.selected && dropdownModal.label === item.label
-                          ? dropdownModal.selected
-                          : item.options[0].name}
-                      </span>
-                      <span style={{ marginLeft: "5px", fontSize: "12px", color: "#777" }}>▾</span>
+                      {loading && dropdownModal.label === item.label ? (
+                        <div className="spinner"></div>
+                      ) : (
+                        <>
+                          <span
+                            style={{
+                              flex: 1,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              fontSize: "12px",
+                            }}
+                          >
+                            {dropdownModal.selected && dropdownModal.label === item.label
+                              ? dropdownModal.selected
+                              : item.options[0].name}
+                          </span>
+                          <span style={{ fontSize: "14px", color: "#777" }}>⌄</span>
+                        </>
+                      )}
                     </div>
                   )}
                 </Col>
               </Row>
             ))}
           </Form>
+        </div>
+        <div style={{borderBottom:"5px solid #e0e0e0ff"}}></div>
+        <div className='mt-4'>
+          <h5 className='fw-semibold'>Manicure</h5>
+          <Form className='fw-semibold'>
+            {manicure.map((item,idx)=>(
+              <Row key={idx} className='mb-3'>
+                <Col xs={12}>
+                <Form.Check type='checkbox' label={item.label} id={`facial-${idx}`} style={{fontSize:"15px"}}></Form.Check>
+                {item.price &&(
+                   <div style={{fontSize: "10px",color: "#726f6fff",fontWeight: "lighter",marginLeft: "25px",marginTop: "2px",}}>
+                    ₹{item.price}
+                  </div>
+                )}
+                </Col>
+              </Row>
+            ))}
+          </Form>
+        </div>
+        <div style={{borderBottom:"5px solid #e0e0e0ff"}}></div>
+        <div className="mt-4">
+          <h5 className="fw-semibold">Bleach & detan</h5>
+          <Form className="fw-semibold">
+            {bleach.map((item, idx) => (
+              <Row key={idx} className="mb-3 align-items-center">
+                {/* Checkbox and price */}
+                <Col xs={7}>
+                  <Form.Check
+                    type="checkbox"
+                    label={item.label}
+                    id={`facialHair-${idx}`}
+                    style={{ fontSize: "15px" }}
+                  />
+                  {item.options.length > 0 && (
+                    <div
+                      style={{
+                        fontSize: "10px",
+                        color: "#726f6fff",
+                        fontWeight: "lighter",
+                        marginLeft: "25px",
+                        marginTop: "2px",
+                      }}
+                    >
+                      ₹{item.options[0].price}
+                    </div>
+                  )}
+                </Col>
 
-            </div>
+                {/* Dropdown trigger */}
+                <Col xs={5} className="d-flex justify-content-end">
+                  {item.options.length > 0 && (
+                    <div
+                      onClick={() => {
+                        setDropdownModal({
+                          show: true,
+                          label: item.label,
+                          options: item.options,
+                          selected: dropdownModal.selected || "",
+                          type: "facialHair", 
+                        });
+                        setLoading(true);
+                      }}
+                      className="drop"
+                      style={{
+                        backgroundColor:
+                          loading && dropdownModal.label === item.label ? "#ccc" : "#fff",
+                      }}>
+                      {loading && dropdownModal.label === item.label ? (
+                        <div className="spinner"></div>
+                      ) : (
+                        <>
+                          <span
+                            style={{
+                              flex: 1,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              fontSize: "12px",
+                            }}>
+                            {dropdownModal.selected && dropdownModal.label === item.label
+                              ? dropdownModal.selected
+                              : item.options[0].name}
+                          </span>
+                          <span style={{ fontSize: "14px", color: "#777" }}>⌄</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </Col>
+              </Row>
+            ))}
+          </Form>
+        </div>
+        <div style={{borderBottom:"5px solid #e0e0e0ff"}}></div>
+        <div className='mt-4'>
+          <h5 className='fw-semibold'>Hair care</h5>
+          <Form className='fw-semibold'>
+            {hair.map((item,idx)=>(
+              <Row key={idx} className='mb-3'>
+                <Col xs={12}>
+                <Form.Check type='checkbox' label={item.label} id={`facial-${idx}`} style={{fontSize:"15px"}}></Form.Check>
+                {item.price &&(
+                   <div style={{fontSize: "10px",color: "#726f6fff",fontWeight: "lighter",marginLeft: "25px",marginTop: "2px",}}>
+                    ₹{item.price}
+                  </div>
+                )}
+                </Col>
+              </Row>
+            ))}
+          </Form>
+        </div>
+        
+      </div>
           </>
         )}
       </Modal>
 
       {/* Dropdown Modal */}
      <Modal
-        show={dropdownModal.show}
-        onHide={() => setDropdownModal({ ...dropdownModal, show: false })}
-        centered>
-        <Modal.Header >
-          <Button onClick={()=>setDropdownModal({...dropdownModal,show:false})} className="closebtn" style={{padding:"0px"}}>X</Button>
-          <Modal.Title>Choose the type of waxing</Modal.Title>
-        </Modal.Header>
-        <Modal.Body >
-          <Form>
-            {dropdownModal.options.map((opt, idx) => (
-              <div key={idx} className='d-flex justify-content-between align-items-center  py-2'
-                   style={{fontSize:"14px",backgroundColor:dropdownModal.selected==opt.name?"#f4edff":"transparent",
-                   paddingLeft:"8px",paddingRight:"8px"}}>
-                <Form.Check type='radio'name='dropdownOptions' id={`radio-${idx}`}
-                  checked={dropdownModal.selected==opt.name} onChange={()=>setDropdownModal({...dropdownModal,selected:opt.name,show:false})}
-                  label={opt.name} style={{flex:1,marginBottom:0}}>
-                </Form.Check>
-                <span style={{fontWeight:"500"}}>₹{opt.price}</span>
-                   </div>
-            ))}
-          </Form>
-        </Modal.Body>
-      </Modal>
+      show={dropdownModal.show}
+      onHide={() => {
+        setDropdownModal({ ...dropdownModal, show: false });
+        setLoading(false);
+      }}
+      centered
+      backdrop="true"
+      animation={true}
+      dialogClassName="rica-modal">
+      <Modal.Header>
+        <Button
+          onClick={() => {
+            setDropdownModal({ ...dropdownModal, show: false });
+            setLoading(false);
+          }}
+          className="closebtn"
+          style={{ padding: "0px" }}
+        >
+          X
+        </Button>
+        <Modal.Title>
+      {dropdownModal.type === "facialHair"
+        ? "Choose the type of facial hair removal"
+        : dropdownModal.type === "bleach"
+        ? "Choose the type of bleach & detan"
+        : "Choose the type of waxing"}
+    </Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <Form>
+          {dropdownModal.options.map((opt, idx) => (
+            <div
+              key={idx}
+              className="d-flex justify-content-between align-items-center py-2"
+              style={{
+                fontSize: "14px",
+                backgroundColor:
+                  dropdownModal.selected === opt.name ? "#f4edff" : "transparent",
+                paddingLeft: "8px",
+                paddingRight: "8px",
+              }}
+            >
+              <Form.Check
+                type="radio"
+                name="dropdownOptions"
+                id={`radio-${idx}`}
+                checked={dropdownModal.selected === opt.name}
+                onChange={() => {
+                  setDropdownModal({
+                    ...dropdownModal,
+                    selected: opt.name,
+                    show: false,
+                  });
+                  setLoading(false);
+                }}
+                label={opt.name}
+                style={{ flex: 1, marginBottom: 0 }}
+              />
+              <span style={{ fontWeight: "500" }}>₹{opt.price}</span>
+            </div>
+          ))}
+        </Form>
+      </Modal.Body>
+    </Modal>
+
+
 
     </Container>
   );

@@ -1,12 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
-  Navbar,
-  Container,
-  Nav,
-  FormControl,
-  Modal,
-  Button,
-} from "react-bootstrap";
+import {Navbar,Container,Nav,FormControl,Modal,Button} from "react-bootstrap";
 import { CiLocationOn, CiShoppingCart, CiSearch } from "react-icons/ci";
 import { IoIosArrowDown } from "react-icons/io";
 import { BiLeftArrowAlt } from "react-icons/bi";
@@ -24,8 +17,7 @@ function Urbanav() {
   const [placeholder, setPlaceholder] = useState("Search for ");
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
-  const location = useLocation(); // ✅ Detects current route
-
+  const location = useLocation(); //Detects current route
   const fixedText = "Search for ";
   const words = ["'AC Service'", "'Facial'", "'Kitchen Cleaning'"];
   const typingSpeed = 120;
