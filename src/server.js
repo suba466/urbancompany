@@ -155,7 +155,8 @@ app.post("/api/addcarts", async (req, res) => {
       if (req.body.content && req.body.content.length > 0) {
         existing.content = req.body.content;
       }
-
+      if (req.body.price) existing.price = req.body.price;
+      if (req.body.originalPrice) existing.originalPrice = req.body.originalPrice;
       await existing.save();
       return res.json({ message: "Quantity increased", cart: existing });
     }
