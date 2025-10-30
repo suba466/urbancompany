@@ -16,8 +16,6 @@ function Salon1() {
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
 
-
-
   // Fetch Data
   useEffect(() => {
     fetch("http://localhost:5000/api/super")
@@ -65,7 +63,6 @@ function Salon1() {
         body: JSON.stringify({
           title: pkg.title || "",
           price: pkg.price || "0",
-          originalPrice: pkg.originalPrice || "0",
           content: pkg.content || []
         })
       });
@@ -161,12 +158,11 @@ function Salon1() {
                     <p style={{ color: "#5a5959ff" }}>
                       <MdStars style={{ fontSize: "13px", color: "#6800faff" }} />{" "}
                       <span style={{ textDecoration: "underline dashed", textUnderlineOffset: "7px", fontSize: "12px" }}>
-                        {pkg.rating || 0} ({pkg.bookings || 0} bookings)
+                        {pkg.rating || 0} 
                       </span>
                     </p>
                     <p style={{ fontSize: "12px" }}>
                       <span className="fw-semibold">₹{pkg.price || 0}</span>{" "}
-                      <span style={{ textDecoration: "line-through", color: "#5a5959ff" }}>₹{pkg.originalPrice || 0}</span>{" "}
                       <span style={{ color: "#5a5959ff" }}><GoDotFill /> {pkg.duration || "N/A"}</span>
                     </p>
                   </Col>
@@ -194,10 +190,8 @@ function Salon1() {
                     )}
                   </Col>
                 </Row>
-
                 <div style={{ borderBottom: "1px dashed #bbb6b6ff" }}></div>
                 <br />
-
                 <div style={{ fontSize: "12px" }}>
                   {(Array.isArray(pkg.items) ? pkg.items : []).map((item, idx) => (
                     <p key={idx} style={{ margin: "2px 0" }}>
@@ -209,7 +203,16 @@ function Salon1() {
                   ))}
                 </div>
                 <br />
-                <Button style={{ backgroundColor: "white", color: "black", border: "1px solid black" }}>Edit your package</Button>
+                <Button
+                onClick={() => handleOpenModal(pkg)}
+                style={{
+                  backgroundColor: "white",
+                  color: "black",
+                  border: "1px solid black",
+                }}>
+                Edit your package
+              </Button>
+
               </div>
             )
           })}
@@ -222,7 +225,7 @@ function Salon1() {
             {carts.length === 0 ? (
               <div className="text-center">
                 <img
-                  src="http://localhost:5000/assets/cart.jpg"
+                  src="http://localhost:5000/assets/cart.png"
                   alt="cart-placeholder"
                   style={{ width: "50%", padding: "10px" }}
                 />
@@ -231,7 +234,6 @@ function Salon1() {
             ) : (
               (Array.isArray(carts) ? carts : []).map((c) => {
                 const price = safePrice(c.price) * (c.count || 1);
-                const originalPrice = safePrice(c.originalPrice) * (c.count || 1);
                 return (
                   <div key={c._id}>
                     <h5 className='fw-semibold mb-2'>Cart</h5>
@@ -245,7 +247,6 @@ function Salon1() {
                         </div>
                         <div style={{ textAlign: "right" }}>
                           <p style={{ fontSize: "13px", margin: 0 }}>{formatPrice(price)}</p>
-                          <p style={{ fontSize: "12px", textDecoration: "line-through", color: "#5a5959ff", margin: 0 }}>{formatPrice(originalPrice)}</p>
                         </div>
                       </Col>
                     </Row>
@@ -257,17 +258,11 @@ function Salon1() {
                       ))}
                     </div>
                     <Button className='fw-semibold' style={{backgroundColor:"white",color:"#7330deff",border:"0px",fontSize:"16px"}}>Edit</Button>
-                    <div style={{ width:"100%",backgroundColor: "#0e670fff", display: "flex",justifyContent: "center",alignItems: "center"}}>
-                      <p className='fw-semibold mb-0' style={{color:"white",fontSize:"13px"}}>
-                        <MdLocalOffer /> Congratulations! <span>{formatPrice(originalPrice - price)}</span> saved so far!
-                      </p>
-                    </div>
                     <br />
                     <Button style={{backgroundColor:"#7330deff",width:"100%"}}>
                       <Row style={{fontSize:"13px"}}>
-                        <Col>
+                        <Col className='text-start'>
                           <span className='fw-semibold'>{formatPrice(price)}</span>
-                          <span style={{textDecoration:"line-through"}}>{formatPrice(originalPrice)}</span>
                         </Col>
                         <Col><span style={{marginLeft:"35px"}}>View cart</span></Col>
                       </Row>
@@ -320,17 +315,7 @@ function Salon1() {
     </Modal>
       {carts.length > 0 && (
         <div className="mobile-cart-footer-wrapper d-lg-none">
-          {/* Green box */}
-          <div className="mobile-cart-footer">
-            <MdLocalOffer /> Congratulations!{"  "}
-            <span>
-              {formatPrice(
-                carts.reduce((acc, c) => acc + (Number(c.originalPrice.replace(/[₹,]/g, "")) - Number(c.price.replace(/[₹,]/g, ""))) * c.count, 0
-              ))}
-            </span> saved so far!
-          </div>
-
-          <div className='mobile-cart-footer-button-row'>
+            <div className='mobile-cart-footer-button-row'>
             <div className='mobile-cart-footer-total'>
               {carts.reduce((acc, c) => acc + Number(c.price.replace(/[₹,]/g, "")) * c.count, 0) === 0 ? null : (
           <>
@@ -339,13 +324,6 @@ function Salon1() {
                 carts.reduce((acc, c) => acc + Number(c.price.replace(/[₹,]/g, "")) * c.count, 0)
               )}
             </span>{" "}
-            <span style={{color:"#504e4eff"}}>
-              <s>
-                {formatPrice(
-                  carts.reduce((acc, c) => acc + Number(c.originalPrice.replace(/[₹,]/g, "")) * c.count, 0)
-                )}
-              </s>
-            </span>
           </>
         )}
         <Button className='mobile-cart-footer-button mobile-cart-footer-total'>View cart</Button>

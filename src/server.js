@@ -3,6 +3,7 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
+import { error } from "console";
 
 const app = express();
 const PORT = 5000;
@@ -98,7 +99,7 @@ const apiData = {
   ],
   smartlock: { key:"smartlocks", img:"/assets/smartlocks.png" },
   images: { key:"images", img:"/assets/images.png" },
-  cart: [{ key:"cart", img:"/assets/cart.ppg" }]
+  cart: [{ key:"cart", img:"/assets/cart.png" }]
 };
 
 // --- STATIC JSON ROUTES ---
@@ -132,6 +133,32 @@ app.post("/api/addpackages", async (req, res) => {
     res.status(201).json({ message: "Package added", package: newPackage });
   } catch {
     res.status(500).json({ error: "Failed to add package" });
+  }
+});
+app.put("/api/packages/:id", async (req, res) => {
+  try {
+    console.log("Updating package:", req.params.id, req.body); 
+    const updatedPackage = await Package.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!updatedPackage) {
+      return res.status(404).json({ error: "Package not found" });
+    }
+    res.json({ message: "Package updated successfully", package: updatedPackage });
+  } catch (err) {
+    console.error("Error during update:", err); 
+    res.status(500).json({ error: "Failed to update package" });
+  }
+});
+
+app.delete("/api/packages/:id", async (req, res) => {
+  try {
+    const deletedPackage = await Package.findByIdAndDelete(req.params.id);
+    if (!deletedPackage) {
+      return res.status(404).json({ error: "Package not found" });
+    }
+    res.json({ message: "Package deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to delete package" });
   }
 });
 
