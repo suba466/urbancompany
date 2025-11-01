@@ -339,6 +339,7 @@ function Salon1() {
       show={showModal} 
       onHide={handleCloseModal} 
       selectedItem={selectedItem}
+      refreshCarts={fetchCarts}
       />
 
 

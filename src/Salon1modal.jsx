@@ -4,7 +4,7 @@ import { Button, ModalBody, Form, Row, Col } from "react-bootstrap";
 import { IoTime } from "react-icons/io5";
 import { TbCirclePercentageFilled } from "react-icons/tb";
 
-function Salon1modal({ show, onHide, selectedItem }) {
+function Salon1modal({ show, onHide, selectedItem, refreshCarts}) {
   const [loadingDropdownKey, setLoadingDropdownKey] = useState(null);
   const [dropdownModal, setDropdownModal] = useState({
     show: false,
@@ -339,34 +339,40 @@ function Salon1modal({ show, onHide, selectedItem }) {
     });
   };
 
-  // Add to cart
-  const handleAdd = async () => {
-    const content = Object.entries(selectedServices).map(([key, item]) => ({
-      section: key.split(":")[0],
-      title: item.title,
-      price: item.price,
-      count: item.count,
-      content: item.content,
-    }));
+const handleAdd = async () => {
+  const content = Object.entries(selectedServices).map(([key, item]) => ({
+    section: key.split(":")[0],
+    title: item.title,
+    price: item.price,
+    count: item.count,
+    content: item.content,
+  }));
 
-    const payload = {
-      title: selectedItem?.title,
-      price: discountedPrice || totalPrice,
-      content,
-    };
-
-    try {
-      await fetch("http://localhost:5000/api/addcarts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      alert("Added to cart!");
-      onHide();
-    } catch (error) {
-      console.error("Error adding to cart:", error);
-    }
+  const payload = {
+    title: selectedItem?.title,
+    price: discountedPrice || totalPrice,
+    content,
   };
+
+  try {
+    const response = await fetch("http://localhost:5000/api/addcarts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      alert("Added to cart!");
+      if (typeof refreshCarts === "function") refreshCarts(); // 👈 refresh parent cart
+      onHide();
+    } else {
+      console.error("Failed to add to cart");
+    }
+  } catch (error) {
+    console.error("Error adding to cart:", error);
+  }
+};
+
 
   // Render service sections
   const renderSection = (sectionName, items, displayName) => (

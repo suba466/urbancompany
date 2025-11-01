@@ -452,8 +452,13 @@
     transform: translateY(0);
   }
 }
-
-
+.form-check-input:checked{
+  background-color: black !important;
+  border-color: black !important;
+}
+.form-check-input:focus{
+  box-shadow: none !important;
+}
 
 /* ============================
    SMARTLOCK SECTION (Updated)
