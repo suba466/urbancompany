@@ -35,6 +35,11 @@ function Salon1() {
       .then(data => setSalon(data.salonforwomen))
       .catch(err => console.error("Error fetching salon:", err));
   }, []);
+  useEffect(() => {
+  window.updateCartInstantly = (title) => {
+    fetchCarts();
+  };
+}, []);
 
   const fetchCarts = () => {
     fetch("http://localhost:5000/api/carts")
@@ -44,47 +49,114 @@ function Salon1() {
   };
 
   // Modal handlers
-const handleShowModal = async (item) => {
-  try {
-    const res = await fetch(`http://localhost:5000/api/packages`);
-    const data = await res.json();
+  const handleShowModal = async (item) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/packages`);
+      const data = await res.json();
+      const matched = data.packages.find(pkg => pkg.title === item.title);
+      setSelectedItem(matched || item);
+      setShowModal(true);
+    } catch (err) {
+      console.error("Error loading modal data:", err);
+    }
+  };
 
-    // Find matching package by title
-    const matched = data.packages.find(pkg => pkg.title === item.title);
-
-    // Set the selected item (with DB content if found)
-    setSelectedItem(matched || item);
-    setShowModal(true);
-  } catch (err) {
-    console.error("Error loading modal data:", err);
-  }
-};
- const handleCloseModal = () => {
+  const handleCloseModal = () => {
     setShowModal(false);
     setSelectedItem(null);
   };
 
   const handleAddToCart = async (pkg) => {
   try {
-    const payload = {
-      title: pkg.title || "",
-      price: pkg.price || "0",
-      content: Array.isArray(pkg.content) ? pkg.content : []
+    // 1️⃣ Default prechecked selections (same as initialServices in Salon1modal)
+    const initialServices = {
+      "waxingOptions:Full arms (including underarms)": {
+        title: "Full arms (including underarms)",
+        price: 599,
+        count: 1,
+        content: "Chocolate Roll on",
+      },
+      "waxingOptions:Full legs": {
+        title: "Full legs",
+        price: 499,
+        count: 1,
+        content: "Chocolate Roll on",
+      },
+      "facialOptions:O3+ shine & glow facial": {
+        title: "O3+ shine & glow facial",
+        price: 1699,
+        count: 1,
+        content: "Facial",
+      },
+      "facialHairOptions:Eyebrow": {
+        title: "Eyebrow",
+        price: 49,
+        count: 1,
+        content: "Threading",
+      },
+      "facialHairOptions:Upper lip": {
+        title: "Upper lip",
+        price: 49,
+        count: 1,
+        content: "Threading",
+      },
     };
-    console.log("🟢 Payload sent to backend:", payload);
 
-    await fetch("http://localhost:5000/api/addcarts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+    // 2️⃣ Build cart content structure
+    const selectedOnly = Object.values(initialServices).map((item) => {
+      const isThreading = item.content?.toLowerCase() === "threading";
+      const detailText = isThreading
+        ? item.title
+        : `${item.title}${item.content ? ` (${item.content})` : ""}`;
+      return {
+        value: isThreading ? "Threading" : "",
+        details: detailText,
+      };
     });
+
+    const uniqueServices = selectedOnly.filter(
+      (obj, index, arr) =>
+        index === arr.findIndex((t) => t.details === obj.details)
+    );
+
+    const payload = {
+      title: pkg.title,
+      price: 2195, // your base price
+      count: 1,
+      content: uniqueServices,
+    };
+
+    // 3️⃣ Check if item already exists in cart
+    const res = await fetch("http://localhost:5000/api/carts");
+    const data = await res.json();
+    const existing = data.carts?.find((c) => c.title === pkg.title);
+
+    if (existing) {
+      // update instead of adding new
+      await fetch(`http://localhost:5000/api/carts/${existing._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } else {
+      // add new
+      await fetch("http://localhost:5000/api/addcarts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    }
+
+    // 4️⃣ Refresh cart instantly
+    if (typeof window.updateCartInstantly === "function") {
+      window.updateCartInstantly(pkg.title);
+    }
 
     fetchCarts();
   } catch (err) {
-    console.error("❌ Error in handleAddToCart:", err);
+    console.error("Error adding default cart:", err);
   }
 };
-
 
   const handleIncrease = async (cartItem) => {
     try {
@@ -115,12 +187,10 @@ const handleShowModal = async (item) => {
       console.error(err);
     }
   };
-  
+
   const formatPrice = (amount) => `₹${amount.toLocaleString("en-IN")}`;
-
   const safePrice = (price) => Number((price || "0").toString().replace(/[₹,]/g, ""));
-
-  return (
+    return (
     <Container className="mt-5">
       <Row>
         {/* Left Column */}
@@ -184,7 +254,7 @@ const handleShowModal = async (item) => {
                   <Col xs={4} className="d-flex justify-content-end align-items-center">
                     {!inCart ? (
                       <Button
-                        onClick={() => handleAddToCart(pkg)}
+                        onClick={() => handleAddToCart(pkg)} // 🔧 same logic auto-updates
                         style={{
                           backgroundColor: "white",
                           color: "#aa2ce0ff",
@@ -218,14 +288,14 @@ const handleShowModal = async (item) => {
                 </div>
                 <br />
                 <Button
-                onClick={() =>  handleShowModal(pkg)}
-                style={{
-                  backgroundColor: "white",
-                  color: "black",
-                  border: "1px solid black",
-                }}>
-                Edit your package
-              </Button>
+                  onClick={() => handleShowModal(pkg)}
+                  style={{
+                    backgroundColor: "white",
+                    color: "black",
+                    border: "1px solid black",
+                  }}>
+                  Edit your package
+                </Button>
 
               </div>
             )
@@ -348,22 +418,20 @@ const handleShowModal = async (item) => {
         </div>
       )}
 
-      {/* Modal for Super Pack */}
-     <Salon1modal
-  show={showModal}
-  onHide={handleCloseModal}
-  selectedItem={selectedItem}
-  refreshCarts={fetchCarts}
-  onUpdatePackage={(updatedPkg) => {
-    // Update the specific package with user-selected content
-    setPackages(prev =>
-      prev.map(pkg =>
-        pkg.title === updatedPkg.title ? { ...pkg, content: updatedPkg.content } : pkg
-      )
-    );
-  }}
-/>
-
+      <Salon1modal
+        show={showModal}
+        onHide={handleCloseModal}
+        selectedItem={selectedItem}
+        refreshCarts={fetchCarts}
+        handleAddToCart={handleAddToCart} //  added
+        onUpdatePackage={(updatedPkg) => {
+          setPackages(prev =>
+            prev.map(pkg =>
+              pkg.title === updatedPkg.title ? { ...pkg, content: updatedPkg.content } : pkg
+            )
+          );
+        }}
+      />
     </Container>
   );
 }

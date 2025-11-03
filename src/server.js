@@ -3,25 +3,19 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
-import { error } from "console";
-
 const app = express();
 const PORT = 5000;
-
 // Middleware
 app.use(cors());
 app.use(express.json());
-
 // __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use("/assets", express.static(path.join(__dirname, "assets")));
-
 // --- MongoDB Connection ---
 mongoose.connect("mongodb://localhost:27017/suba")
   .then(() => console.log(" MongoDB connected"))
   .catch(err => console.error(" MongoDB connection error:", err));
-
 // --- SCHEMAS ---
 const packageSchema = new mongoose.Schema({
   title: String,
@@ -35,7 +29,6 @@ const packageSchema = new mongoose.Schema({
   content:[{value: String, details: String}]
 });
 const Package = mongoose.model("Package", packageSchema);
-
 const cartSchema = new mongoose.Schema({
   title: String,
   price: String,
@@ -45,7 +38,6 @@ const cartSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 const Cart = mongoose.model("Cart", cartSchema);
-
 // --- STATIC JSON DATA ---
 const apiData = {
   logo: "/assets/Uc.png",
@@ -102,26 +94,17 @@ const apiData = {
   cart: [{ key:"cart", img:"/assets/cart.png" }]
 };
 
-// --- STATIC JSON ROUTES ---
-app.get("/api/logo", (req, res) => res.json({ logo: apiData.logo }));
-app.get("/api/services", (req, res) => res.json({ services: apiData.services }));
-app.get("/api/banner", (req, res) => res.json({ banner: apiData.banner }));
-app.get("/api/carousel", (req, res) => res.json({ carousel: apiData.carousel }));
-app.get("/api/book", (req, res) => res.json({ book: apiData.book }));
-app.get("/api/salon", (req, res) => res.json({ salon: apiData.salon }));
-app.get("/api/salonforwomen", (req, res) => res.json({ salonforwomen: apiData.salonforwomen }));
-app.get("/api/advanced", (req, res) => res.json({ advanced: apiData.advanced }));
-app.get("/api/super", (req, res) => res.json({ super: apiData.super }));
-app.get("/api/smartlock", (req, res) => res.json({ smartlock: apiData.smartlock }));
-app.get("/api/images", (req, res) => res.json({ images: apiData.images }));
-app.get("/api/cart", (req, res) => res.json({ cart: apiData.cart }));
+// ---------- Static API Routes ----------
+for (const key in apiData) {
+  app.get(`/api/${key}`, (req, res) => res.json({ [key]: apiData[key] }));
+}
 
-// --- DYNAMIC MONGO ROUTES ---
+// ---------- Package Routes ----------
 app.get("/api/packages", async (req, res) => {
   try {
     const packages = await Package.find();
     res.json({ packages });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to fetch packages" });
   }
 });
@@ -135,49 +118,28 @@ app.post("/api/addpackages", async (req, res) => {
     res.status(500).json({ error: "Failed to add package" });
   }
 });
+
 app.put("/api/packages/:id", async (req, res) => {
   try {
-    console.log("Updating package:", req.params.id, req.body); 
     const updatedPackage = await Package.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!updatedPackage) {
-      return res.status(404).json({ error: "Package not found" });
-    }
+    if (!updatedPackage) return res.status(404).json({ error: "Package not found" });
     res.json({ message: "Package updated successfully", package: updatedPackage });
-  } catch (err) {
-    console.error("Error during update:", err); 
+  } catch {
     res.status(500).json({ error: "Failed to update package" });
-  }
-});
-app.put("/api/updatePackageContent", async (req, res) => {
-  try {
-    const { title, content } = req.body;
-
-    const result = await Package.updateOne(
-      { title },
-      { $set: { content } }
-    );
-
-    res.json({ message: "Package content updated", result });
-  } catch (error) {
-    console.error("Error updating package content:", error);
-    res.status(500).json({ error: "Failed to update package content" });
   }
 });
 
 app.delete("/api/packages/:id", async (req, res) => {
   try {
-    const deletedPackage = await Package.findByIdAndDelete(req.params.id);
-    if (!deletedPackage) {
-      return res.status(404).json({ error: "Package not found" });
-    }
-    res.json({ message: "Package deleted successfully" });
-  } catch (err) {
-    console.error(err);
+    const deleted = await Package.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Package not found" });
+    res.json({ message: "Package deleted" });
+  } catch {
     res.status(500).json({ error: "Failed to delete package" });
   }
 });
 
-// --- CART ROUTES ---
+// ---------- Cart Routes ----------
 app.get("/api/carts", async (req, res) => {
   try {
     const carts = await Cart.find();
@@ -187,45 +149,31 @@ app.get("/api/carts", async (req, res) => {
   }
 });
 
+// ✅ Add or Update Cart (Prevents Duplicates)
 app.post("/api/addcarts", async (req, res) => {
   try {
-    console.log("Incoming Add-to-Cart payload:", JSON.stringify(req.body, null, 2));
-
     const { title, price, originalPrice, content } = req.body;
-    const serializedContent = JSON.stringify(content || []);
 
-    const carts = await Cart.find({ title });
-    console.log(" Found carts with same title:", carts.length);
-
-    const existing = carts.find(
-      (c) => JSON.stringify(c.content || []) === serializedContent
-    );
+    const existing = await Cart.findOne({ title });
 
     if (existing) {
-      existing.count += 1;
-      if (price) existing.price = price;
-      if (originalPrice) existing.originalPrice = originalPrice;
+      // Replace content & update details (edit existing)
+      existing.content = content || [];
+      existing.price = price;
+      existing.originalPrice = originalPrice;
+      existing.count = 1;
       await existing.save();
-      console.log(" Quantity increased:", existing.title);
-      return res.json({ message: "Quantity increased", cart: existing });
+      return res.json({ message: "Cart updated", cart: existing });
     }
 
-    const newItem = new Cart({
-      title,
-      price,
-      originalPrice,
-      content,
-      count: 1
-    });
+    // Create new cart
+    const newCart = new Cart({ title, price, originalPrice, content, count: 1 });
+    await newCart.save();
+    res.status(201).json({ message: "Cart added", cart: newCart });
 
-    await newItem.save();
-    console.log("🆕 New item added:", newItem.title);
-
-    res.status(201).json({ message: "Item added", cart: newItem });
   } catch (err) {
-    console.error(" Error in /api/addcarts:", err.message);
-    console.error(err.stack); // <-- add this
-    res.status(500).json({ error: "Failed to add to cart", details: err.message });
+    console.error("Error in /api/addcarts:", err);
+    res.status(500).json({ error: "Failed to add/update cart" });
   }
 });
 
@@ -247,5 +195,5 @@ app.delete("/api/carts/:id", async (req, res) => {
   }
 });
 
-// --- START SERVER ---
-app.listen(PORT, () => console.log(` Server running on http://localhost:${PORT}`));
+// ---------- Start Server ----------
+app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));

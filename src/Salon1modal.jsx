@@ -277,22 +277,26 @@ function Salon1modal({ show, onHide, selectedItem, refreshCarts}) {
     { label: "I don't need anything" },
   ];
 
-  // Reset when modal opens
   useEffect(() => {
-    if (show) {
-      setSelectedServices(initialServices);
-      setTotalPrice(2195);
-      setDiscountedPrice(null);
-      setLoadingDropdownKey(null);
-      setDropdownModal({
-        show: false,
-        label: "",
-        options: [],
-        selected: "",
-        type: "",
-      });
-    }
-  }, [show]);
+  if (show && selectedItem?.savedSelections) {
+    // Keep previous checked options if available
+    setSelectedServices(selectedItem.savedSelections);
+  } else if (show) {
+    // Only reset when there's nothing saved
+    setSelectedServices(initialServices);
+  }
+  setTotalPrice(2195);
+  setDiscountedPrice(null);
+  setLoadingDropdownKey(null);
+  setDropdownModal({
+    show: false,
+    label: "",
+    options: [],
+    selected: "",
+    type: "",
+  });
+}, [show, selectedItem]);
+
 
   // Calculate total and discount
   useEffect(() => {
@@ -316,67 +320,10 @@ function Salon1modal({ show, onHide, selectedItem, refreshCarts}) {
       setDiscountedPrice(null);
     }
   }, [selectedServices]);
-// 🔹 Update the selected services in the DB
-const updatePackageContentInDB = async (updatedServices) => {
-  try {
-    const payload = {
-      title: selectedItem?.title || "",
-      content: Object.values(updatedServices).map(item => ({
-        value: item.content || "",
-        details: item.title || "",
-      })),
-    };
-
-    const response = await fetch("http://localhost:5000/api/updatePackageContent", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      console.error(" Failed to update package content:", await response.text());
-    } else {
-      console.log("Package content updated successfully");
-    }
-  } catch (err) {
-    console.error(" Error updating package content:", err);
-  }
-};
-// 🔹 Automatically sync cart when checkboxes change
-const updateCartInstantly = async (updatedServices) => {
-  try {
-    const payload = {
-      title: selectedItem?.title || "",
-      price: selectedItem?.price || "0",
-      count: 1,
-      content: Object.values(updatedServices).map((item) => ({
-        value: item.title?.toLowerCase().includes("threading") ? "Threading" : "",
-        details: item.content || "",
-      })),
-    };
-
-    console.log("🟣 Auto Add-to-Cart Payload:", payload);
-
-    const response = await fetch("http://localhost:5000/api/addcarts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      console.error("❌ Failed to auto-add cart:", await response.text());
-    } else {
-      console.log("✅ Cart auto-updated from modal");
-      refreshCarts(); // 🟢 Immediately refresh your right-side cart in UI
-    }
-  } catch (err) {
-    console.error("❌ Error auto-adding to cart:", err);
-  }
-};
 
   // Checkbox handler — normalize price to Number
-  const handleCheckboxChange = async (section, label, option, isChecked) => {
-  setSelectedServices((prev) => {
+  const handleCheckboxChange = (section, label, option, isChecked) => {
+  setSelectedServices(prev => {
     const updated = { ...prev };
     const key = `${section}:${label}`;
 
@@ -392,71 +339,70 @@ const updateCartInstantly = async (updatedServices) => {
       delete updated[key];
     }
 
-    // 🔹 Immediately push to backend after state update
-    setTimeout(() => {
-  updatePackageContentInDB(updated);
-  updateCartInstantly(updated);
-}, 0);
-
-
     return updated;
   });
 };
 
 const handleAdd = async () => {
   try {
-    //  Step 1: Get package’s existing default content
-    const defaultContent = Array.isArray(selectedItem?.content)
-      ? selectedItem.content.map(item => ({
-          value: item.value || "",
-          details: item.details || "",
-        }))
-      : [];
-
-    //  Step 2: Get only checked services from modal
-    const selectedOnly = Object.values(selectedServices || {}).map(item => {
+    const selectedOnly = Object.values(selectedServices || {}).map((item) => {
       const isThreading = item.content?.toLowerCase() === "threading";
-
+      const detailText = isThreading
+        ? item.title
+        : `${item.title}${item.content ? ` (${item.content})` : ""}`;
       return {
         value: isThreading ? "Threading" : "",
-        details: isThreading
-          ? item.title // only title for threading
-          : `${item.title}${item.content ? ` (${item.content})` : ""}`,
+        details: detailText,
       };
     });
 
-    // Step 3: Merge both (default + selected)
-    const finalContent = [...defaultContent, ...selectedOnly].filter(
-      item => item.details && item.details.trim() !== ""
+    const uniqueServices = selectedOnly.filter(
+      (obj, index, arr) =>
+        index === arr.findIndex((t) => t.details === obj.details)
     );
 
-    //  Step 4: Create final payload
     const payload = {
       title: selectedItem.title,
       price: discountedPrice || totalPrice,
-      originalPrice: totalPrice,
       count: 1,
-      content: finalContent,
+      content: uniqueServices,
     };
 
-    console.log(" Final payload sent to backend:", payload);
+    // Check if same item exists
+    const existingRes = await fetch("http://localhost:5000/api/carts");
+    const existingData = await existingRes.json();
+    const existing = existingData.carts?.find(c => c.title === selectedItem.title);
 
-    //  Step 5: Send to backend
-    const response = await fetch("http://localhost:5000/api/addcarts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Server error: ${text}`);
+    if (existing) {
+      // Update existing (not add duplicate)
+      await fetch(`http://localhost:5000/api/carts/${existing._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+    } else {
+      //  Add new if doesn’t exist
+      await fetch("http://localhost:5000/api/addcarts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
     }
 
-    onHide();        // close modal
-    refreshCarts();  // refresh cart view
+    //  Save selections for reopening modal later
+    selectedItem.savedSelections = { ...selectedServices };
+
+    // Refresh instantly
+    await refreshCarts();
+    if (typeof window.updateCartInstantly === "function") {
+      window.updateCartInstantly(selectedItem.title);
+    }
+
+    //  Close modal after adding/updating
+    onHide();
+
   } catch (err) {
-    console.error("Error adding to cart:", err);
+    console.error("❌ Error adding/updating cart:", err);
   }
 };
 
