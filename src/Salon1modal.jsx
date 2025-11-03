@@ -316,63 +316,149 @@ function Salon1modal({ show, onHide, selectedItem, refreshCarts}) {
       setDiscountedPrice(null);
     }
   }, [selectedServices]);
-
-  // Checkbox handler — normalize price to Number
-  const handleCheckboxChange = (section, label, option, isChecked) => {
-    setSelectedServices((prev) => {
-      const updated = { ...prev };
-      const key = `${section}:${label}`;
-      if (isChecked) {
-        // option may be an {name,price} or the item itself with price property
-        const rawPrice = option?.price ?? option?.price === 0 ? option.price : option?.price ?? option;
-        const price = Number(rawPrice ?? 0);
-        updated[key] = {
-          title: label,
-          price: isNaN(price) ? 0 : price,
-          count: 1,
-          content: option?.name ?? option?.label ?? option ?? "No option",
-        };
-      } else {
-        delete updated[key];
-      }
-      return updated;
-    });
-  };
-
-const handleAdd = async () => {
-  const content = Object.entries(selectedServices).map(([key, item]) => ({
-    section: key.split(":")[0],
-    title: item.title,
-    price: item.price,
-    count: item.count,
-    content: item.content,
-  }));
-
-  const payload = {
-    title: selectedItem?.title,
-    price: discountedPrice || totalPrice,
-    content,
-  };
-
+// 🔹 Update the selected services in the DB
+const updatePackageContentInDB = async (updatedServices) => {
   try {
+    const payload = {
+      title: selectedItem?.title || "",
+      content: Object.values(updatedServices).map(item => ({
+        value: item.content || "",
+        details: item.title || "",
+      })),
+    };
+
+    const response = await fetch("http://localhost:5000/api/updatePackageContent", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      console.error(" Failed to update package content:", await response.text());
+    } else {
+      console.log("Package content updated successfully");
+    }
+  } catch (err) {
+    console.error(" Error updating package content:", err);
+  }
+};
+// 🔹 Automatically sync cart when checkboxes change
+const updateCartInstantly = async (updatedServices) => {
+  try {
+    const payload = {
+      title: selectedItem?.title || "",
+      price: selectedItem?.price || "0",
+      count: 1,
+      content: Object.values(updatedServices).map((item) => ({
+        value: item.title?.toLowerCase().includes("threading") ? "Threading" : "",
+        details: item.content || "",
+      })),
+    };
+
+    console.log("🟣 Auto Add-to-Cart Payload:", payload);
+
     const response = await fetch("http://localhost:5000/api/addcarts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
-    if (response.ok) {
-      alert("Added to cart!");
-      if (typeof refreshCarts === "function") refreshCarts(); // 👈 refresh parent cart
-      onHide();
+    if (!response.ok) {
+      console.error("❌ Failed to auto-add cart:", await response.text());
     } else {
-      console.error("Failed to add to cart");
+      console.log("✅ Cart auto-updated from modal");
+      refreshCarts(); // 🟢 Immediately refresh your right-side cart in UI
     }
-  } catch (error) {
-    console.error("Error adding to cart:", error);
+  } catch (err) {
+    console.error("❌ Error auto-adding to cart:", err);
   }
 };
 
+  // Checkbox handler — normalize price to Number
+  const handleCheckboxChange = async (section, label, option, isChecked) => {
+  setSelectedServices((prev) => {
+    const updated = { ...prev };
+    const key = `${section}:${label}`;
+
+    if (isChecked) {
+      const price = Number(option?.price ?? 0);
+      updated[key] = {
+        title: label,
+        price: isNaN(price) ? 0 : price,
+        count: 1,
+        content: option?.name ?? option?.label ?? option ?? "No option",
+      };
+    } else {
+      delete updated[key];
+    }
+
+    // 🔹 Immediately push to backend after state update
+    setTimeout(() => {
+  updatePackageContentInDB(updated);
+  updateCartInstantly(updated);
+}, 0);
+
+
+    return updated;
+  });
+};
+
+const handleAdd = async () => {
+  try {
+    //  Step 1: Get package’s existing default content
+    const defaultContent = Array.isArray(selectedItem?.content)
+      ? selectedItem.content.map(item => ({
+          value: item.value || "",
+          details: item.details || "",
+        }))
+      : [];
+
+    //  Step 2: Get only checked services from modal
+    const selectedOnly = Object.values(selectedServices || {}).map(item => {
+      const isThreading = item.content?.toLowerCase() === "threading";
+
+      return {
+        value: isThreading ? "Threading" : "",
+        details: isThreading
+          ? item.title // only title for threading
+          : `${item.title}${item.content ? ` (${item.content})` : ""}`,
+      };
+    });
+
+    // Step 3: Merge both (default + selected)
+    const finalContent = [...defaultContent, ...selectedOnly].filter(
+      item => item.details && item.details.trim() !== ""
+    );
+
+    //  Step 4: Create final payload
+    const payload = {
+      title: selectedItem.title,
+      price: discountedPrice || totalPrice,
+      originalPrice: totalPrice,
+      count: 1,
+      content: finalContent,
+    };
+
+    console.log(" Final payload sent to backend:", payload);
+
+    //  Step 5: Send to backend
+    const response = await fetch("http://localhost:5000/api/addcarts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Server error: ${text}`);
+    }
+
+    onHide();        // close modal
+    refreshCarts();  // refresh cart view
+  } catch (err) {
+    console.error("Error adding to cart:", err);
+  }
+};
 
   // Render service sections
   const renderSection = (sectionName, items, displayName) => (

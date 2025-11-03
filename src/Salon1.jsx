@@ -44,33 +44,47 @@ function Salon1() {
   };
 
   // Modal handlers
-  const handleOpenModal = (item) => {
-    setSelectedItem(item);
-    setShowModal(true);
-  };
+const handleShowModal = async (item) => {
+  try {
+    const res = await fetch(`http://localhost:5000/api/packages`);
+    const data = await res.json();
 
-  const handleCloseModal = () => {
+    // Find matching package by title
+    const matched = data.packages.find(pkg => pkg.title === item.title);
+
+    // Set the selected item (with DB content if found)
+    setSelectedItem(matched || item);
+    setShowModal(true);
+  } catch (err) {
+    console.error("Error loading modal data:", err);
+  }
+};
+ const handleCloseModal = () => {
     setShowModal(false);
     setSelectedItem(null);
   };
 
-  // Cart handlers
   const handleAddToCart = async (pkg) => {
-    try {
-      await fetch("http://localhost:5000/api/addcarts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: pkg.title || "",
-          price: pkg.price || "0",
-          content: pkg.content || []
-        })
-      });
-      fetchCarts();
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  try {
+    const payload = {
+      title: pkg.title || "",
+      price: pkg.price || "0",
+      content: Array.isArray(pkg.content) ? pkg.content : []
+    };
+    console.log("🟢 Payload sent to backend:", payload);
+
+    await fetch("http://localhost:5000/api/addcarts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    fetchCarts();
+  } catch (err) {
+    console.error("❌ Error in handleAddToCart:", err);
+  }
+};
+
 
   const handleIncrease = async (cartItem) => {
     try {
@@ -124,7 +138,7 @@ function Salon1() {
               <div
                 key={index}
                 className="superpackcard mb-3"
-                onClick={() => handleOpenModal(sp)}
+                onClick={() => handleShowModal(sp)}
                 style={{
                   backgroundImage: `url(${imgUrl})`,
                   backgroundSize: "cover",
@@ -204,7 +218,7 @@ function Salon1() {
                 </div>
                 <br />
                 <Button
-                onClick={() => handleOpenModal(pkg)}
+                onClick={() =>  handleShowModal(pkg)}
                 style={{
                   backgroundColor: "white",
                   color: "black",
@@ -335,14 +349,20 @@ function Salon1() {
       )}
 
       {/* Modal for Super Pack */}
-      <Salon1modal
-      show={showModal} 
-      onHide={handleCloseModal} 
-      selectedItem={selectedItem}
-      refreshCarts={fetchCarts}
-      />
-
-
+     <Salon1modal
+  show={showModal}
+  onHide={handleCloseModal}
+  selectedItem={selectedItem}
+  refreshCarts={fetchCarts}
+  onUpdatePackage={(updatedPkg) => {
+    // Update the specific package with user-selected content
+    setPackages(prev =>
+      prev.map(pkg =>
+        pkg.title === updatedPkg.title ? { ...pkg, content: updatedPkg.content } : pkg
+      )
+    );
+  }}
+/>
 
     </Container>
   );

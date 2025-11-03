@@ -148,6 +148,21 @@ app.put("/api/packages/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to update package" });
   }
 });
+app.put("/api/updatePackageContent", async (req, res) => {
+  try {
+    const { title, content } = req.body;
+
+    const result = await Package.updateOne(
+      { title },
+      { $set: { content } }
+    );
+
+    res.json({ message: "Package content updated", result });
+  } catch (error) {
+    console.error("Error updating package content:", error);
+    res.status(500).json({ error: "Failed to update package content" });
+  }
+});
 
 app.delete("/api/packages/:id", async (req, res) => {
   try {
@@ -174,29 +189,45 @@ app.get("/api/carts", async (req, res) => {
 
 app.post("/api/addcarts", async (req, res) => {
   try {
-    const existing = await Cart.findOne({ title: req.body.title });
+    console.log("Incoming Add-to-Cart payload:", JSON.stringify(req.body, null, 2));
+
+    const { title, price, originalPrice, content } = req.body;
+    const serializedContent = JSON.stringify(content || []);
+
+    const carts = await Cart.find({ title });
+    console.log(" Found carts with same title:", carts.length);
+
+    const existing = carts.find(
+      (c) => JSON.stringify(c.content || []) === serializedContent
+    );
+
     if (existing) {
       existing.count += 1;
-
-      // Update content only if it exists in request
-      if (req.body.content && req.body.content.length > 0) {
-        existing.content = req.body.content;
-      }
-      if (req.body.price) existing.price = req.body.price;
-      if (req.body.originalPrice) existing.originalPrice = req.body.originalPrice;
+      if (price) existing.price = price;
+      if (originalPrice) existing.originalPrice = originalPrice;
       await existing.save();
+      console.log(" Quantity increased:", existing.title);
       return res.json({ message: "Quantity increased", cart: existing });
     }
 
-    const newItem = new Cart(req.body);
+    const newItem = new Cart({
+      title,
+      price,
+      originalPrice,
+      content,
+      count: 1
+    });
+
     await newItem.save();
+    console.log("🆕 New item added:", newItem.title);
+
     res.status(201).json({ message: "Item added", cart: newItem });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to add to cart" });
+    console.error(" Error in /api/addcarts:", err.message);
+    console.error(err.stack); // <-- add this
+    res.status(500).json({ error: "Failed to add to cart", details: err.message });
   }
 });
-
 
 app.put("/api/carts/:id", async (req, res) => {
   try {
