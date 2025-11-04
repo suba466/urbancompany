@@ -66,9 +66,8 @@ function Salon1() {
     setSelectedItem(null);
   };
 
-  const handleAddToCart = async (pkg) => {
+ const handleAddToCart = async (pkg, extraOptions = []) => {
   try {
-    // 1️⃣ Default prechecked selections (same as initialServices in Salon1modal)
     const initialServices = {
       "waxingOptions:Full arms (including underarms)": {
         title: "Full arms (including underarms)",
@@ -102,44 +101,40 @@ function Salon1() {
       },
     };
 
-    // 2️⃣ Build cart content structure
-    const selectedOnly = Object.values(initialServices).map((item) => {
-      const isThreading = item.content?.toLowerCase() === "threading";
-      const detailText = isThreading
-        ? item.title
-        : `${item.title}${item.content ? ` (${item.content})` : ""}`;
-      return {
-        value: isThreading ? "Threading" : "",
-        details: detailText,
-      };
-    });
+    const baseServices = Object.values(initialServices).map((item) => ({
+      value: item.content?.toLowerCase() === "threading" ? "Threading" : "",
+      details:
+        item.content?.toLowerCase() === "threading"
+          ? item.title
+          : `${item.title}${item.content ? ` (${item.content})` : ""}`,
+      price: item.price,
+    }));
 
-    const uniqueServices = selectedOnly.filter(
-      (obj, index, arr) =>
-        index === arr.findIndex((t) => t.details === obj.details)
-    );
+    // 🧮 Merge default + extra options (if modal sends them)
+    const mergedServices = [...baseServices, ...extraOptions];
+
+    const totalPrice = mergedServices.reduce((sum, s) => sum + (s.price || 0), 0);
 
     const payload = {
       title: pkg.title,
-      price: 2195, // your base price
+      price: totalPrice,
       count: 1,
-      content: uniqueServices,
+      content: mergedServices.map(({ value, details }) => ({ value, details })),
     };
 
-    // 3️⃣ Check if item already exists in cart
     const res = await fetch("http://localhost:5000/api/carts");
     const data = await res.json();
     const existing = data.carts?.find((c) => c.title === pkg.title);
 
     if (existing) {
-      // update instead of adding new
+      // 🔄 Update if already in cart
       await fetch(`http://localhost:5000/api/carts/${existing._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
     } else {
-      // add new
+      // 🆕 Add new
       await fetch("http://localhost:5000/api/addcarts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -147,14 +142,9 @@ function Salon1() {
       });
     }
 
-    // 4️⃣ Refresh cart instantly
-    if (typeof window.updateCartInstantly === "function") {
-      window.updateCartInstantly(pkg.title);
-    }
-
     fetchCarts();
   } catch (err) {
-    console.error("Error adding default cart:", err);
+    console.error("Error adding to cart:", err);
   }
 };
 
@@ -398,26 +388,28 @@ function Salon1() {
       </ModalBody>
     </Modal>
       {carts.length > 0 && (
-        <div className="mobile-cart-footer-wrapper d-lg-none">
-            <div className='mobile-cart-footer-button-row'>
-            <div className='mobile-cart-footer-total'>
-              {carts.reduce((acc, c) => acc + Number(c.price.replace(/[₹,]/g, "")) * c.count, 0) === 0 ? null : (
-          <>
-            <span >
-              {formatPrice(
-                carts.reduce((acc, c) => acc + Number(c.price.replace(/[₹,]/g, "")) * c.count, 0)
-              )}
-            </span>{" "}
-          </>
-        )}
-        <Button className='mobile-cart-footer-button mobile-cart-footer-total'>View cart</Button>
-            </div>
-            
-          </div>
-          
-        </div>
-      )}
-
+  <div className="mobile-cart-footer-wrapper d-lg-none">
+    <div className="mobile-cart-footer-button-row">
+      <div className="mobile-cart-footer-total">
+        {(() => {
+          const total = (Array.isArray(carts) ? carts : []).reduce(
+            (acc, c) => acc + safePrice(c.price) * (c.count || 1),
+            0
+          );
+          if (total === 0) return null;
+          return (
+            <>
+              <span>{formatPrice(total)}</span>{" "}
+            </>
+          );
+        })()}
+        <Button className="mobile-cart-footer-button mobile-cart-footer-total">
+          View cart
+        </Button>
+      </div>
+    </div>
+  </div>
+)}
       <Salon1modal
         show={showModal}
         onHide={handleCloseModal}

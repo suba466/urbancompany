@@ -30,6 +30,7 @@ const packageSchema = new mongoose.Schema({
 });
 const Package = mongoose.model("Package", packageSchema);
 const cartSchema = new mongoose.Schema({
+  productId:{type:String},
   title: String,
   price: String,
   originalPrice: String,
@@ -149,25 +150,21 @@ app.get("/api/carts", async (req, res) => {
   }
 });
 
-// ✅ Add or Update Cart (Prevents Duplicates)
+//  Add or Update Cart (Prevents Duplicates)
 app.post("/api/addcarts", async (req, res) => {
   try {
-    const { title, price, originalPrice, content } = req.body;
-
-    const existing = await Cart.findOne({ title });
-
+    const {productId, title, price, originalPrice, content } = req.body;
+    const existing = await Cart.findOne({ productId }) || await Cart.findOne({ title });
     if (existing) {
-      // Replace content & update details (edit existing)
-      existing.content = content || [];
-      existing.price = price;
-      existing.originalPrice = originalPrice;
-      existing.count = 1;
-      await existing.save();
-      return res.json({ message: "Cart updated", cart: existing });
-    }
-
+    existing.content = content;
+    existing.price = price;
+    existing.originalPrice = originalPrice;
+    existing.count = existing.count || 1; // preserve count
+    await existing.save();
+    return res.json({ message: "Cart updated", cart: existing });
+  }
     // Create new cart
-    const newCart = new Cart({ title, price, originalPrice, content, count: 1 });
+    const newCart = new Cart({ productId,title, price, originalPrice, content, count: 1 });
     await newCart.save();
     res.status(201).json({ message: "Cart added", cart: newCart });
 
@@ -196,4 +193,4 @@ app.delete("/api/carts/:id", async (req, res) => {
 });
 
 // ---------- Start Server ----------
-app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(` Server running on http://localhost:${PORT}`));

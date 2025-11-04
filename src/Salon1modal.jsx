@@ -4,7 +4,7 @@ import { Button, ModalBody, Form, Row, Col } from "react-bootstrap";
 import { IoTime } from "react-icons/io5";
 import { TbCirclePercentageFilled } from "react-icons/tb";
 
-function Salon1modal({ show, onHide, selectedItem, refreshCarts}) {
+function Salon1modal({ show, onHide, selectedItem, refreshCarts,handleAddToCart}) {
   const [loadingDropdownKey, setLoadingDropdownKey] = useState(null);
   const [dropdownModal, setDropdownModal] = useState({
     show: false,
@@ -402,7 +402,7 @@ const handleAdd = async () => {
     onHide();
 
   } catch (err) {
-    console.error("❌ Error adding/updating cart:", err);
+    console.error(" Error adding/updating cart:", err);
   }
 };
 
