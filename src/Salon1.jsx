@@ -36,8 +36,9 @@ function Salon1() {
       .catch(err => console.error("Error fetching salon:", err));
   }, []);
   useEffect(() => {
-  window.updateCartInstantly = (title) => {
-    fetchCarts();
+  window.updateCartInstantly = async(title) => {
+   await fetchCarts();
+   setCarts(prev=>[...prev]);
   };
 }, []);
 
@@ -110,9 +111,7 @@ function Salon1() {
       price: item.price,
     }));
 
-    // 🧮 Merge default + extra options (if modal sends them)
     const mergedServices = [...baseServices, ...extraOptions];
-
     const totalPrice = mergedServices.reduce((sum, s) => sum + (s.price || 0), 0);
 
     const payload = {
@@ -121,20 +120,18 @@ function Salon1() {
       count: 1,
       content: mergedServices.map(({ value, details }) => ({ value, details })),
     };
-
+    
     const res = await fetch("http://localhost:5000/api/carts");
     const data = await res.json();
     const existing = data.carts?.find((c) => c.title === pkg.title);
 
     if (existing) {
-      // 🔄 Update if already in cart
       await fetch(`http://localhost:5000/api/carts/${existing._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
     } else {
-      // 🆕 Add new
       await fetch("http://localhost:5000/api/addcarts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -142,12 +139,11 @@ function Salon1() {
       });
     }
 
-    fetchCarts();
+    await fetchCarts(); //  make sure this line has `await`
   } catch (err) {
     console.error("Error adding to cart:", err);
   }
 };
-
   const handleIncrease = async (cartItem) => {
     try {
       await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
@@ -414,15 +410,9 @@ function Salon1() {
         show={showModal}
         onHide={handleCloseModal}
         selectedItem={selectedItem}
-        refreshCarts={fetchCarts}
         handleAddToCart={handleAddToCart} //  added
-        onUpdatePackage={(updatedPkg) => {
-          setPackages(prev =>
-            prev.map(pkg =>
-              pkg.title === updatedPkg.title ? { ...pkg, content: updatedPkg.content } : pkg
-            )
-          );
-        }}
+        refreshCarts={fetchCarts}  // 👈 ADD THIS LINE
+        carts={carts}
       />
     </Container>
   );

@@ -4,7 +4,7 @@ import { Button, ModalBody, Form, Row, Col } from "react-bootstrap";
 import { IoTime } from "react-icons/io5";
 import { TbCirclePercentageFilled } from "react-icons/tb";
 
-function Salon1modal({ show, onHide, selectedItem, refreshCarts,handleAddToCart}) {
+function Salon1modal({ show, onHide, selectedItem,handleAdd}) {
   const [loadingDropdownKey, setLoadingDropdownKey] = useState(null);
   const [dropdownModal, setDropdownModal] = useState({
     show: false,
@@ -343,68 +343,6 @@ function Salon1modal({ show, onHide, selectedItem, refreshCarts,handleAddToCart}
   });
 };
 
-const handleAdd = async () => {
-  try {
-    const selectedOnly = Object.values(selectedServices || {}).map((item) => {
-      const isThreading = item.content?.toLowerCase() === "threading";
-      const detailText = isThreading
-        ? item.title
-        : `${item.title}${item.content ? ` (${item.content})` : ""}`;
-      return {
-        value: isThreading ? "Threading" : "",
-        details: detailText,
-      };
-    });
-
-    const uniqueServices = selectedOnly.filter(
-      (obj, index, arr) =>
-        index === arr.findIndex((t) => t.details === obj.details)
-    );
-
-    const payload = {
-      title: selectedItem.title,
-      price: discountedPrice || totalPrice,
-      count: 1,
-      content: uniqueServices,
-    };
-
-    // Check if same item exists
-    const existingRes = await fetch("http://localhost:5000/api/carts");
-    const existingData = await existingRes.json();
-    const existing = existingData.carts?.find(c => c.title === selectedItem.title);
-
-    if (existing) {
-      // Update existing (not add duplicate)
-      await fetch(`http://localhost:5000/api/carts/${existing._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-    } else {
-      //  Add new if doesn’t exist
-      await fetch("http://localhost:5000/api/addcarts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-    }
-
-    //  Save selections for reopening modal later
-    selectedItem.savedSelections = { ...selectedServices };
-
-    // Refresh instantly
-    await refreshCarts();
-    if (typeof window.updateCartInstantly === "function") {
-      window.updateCartInstantly(selectedItem.title);
-    }
-
-    //  Close modal after adding/updating
-    onHide();
-
-  } catch (err) {
-    console.error(" Error adding/updating cart:", err);
-  }
-};
 
   // Render service sections
   const renderSection = (sectionName, items, displayName) => (
@@ -562,9 +500,7 @@ const handleAdd = async () => {
               <Col className="p-3 fw-semibold">
                 <Button
                   className="fw-semibold"
-                  style={{ width: "100%", height: "50px", backgroundColor: "#7330deff" }}
-                  onClick={handleAdd}
-                >
+                  style={{ width: "100%", height: "50px", backgroundColor: "#7330deff" }} >
                   Add to cart
                 </Button>
               </Col>
