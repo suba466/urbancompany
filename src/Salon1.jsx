@@ -2,7 +2,7 @@ import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Modal from 'react-bootstrap/Modal';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button, ModalBody} from 'react-bootstrap';
 import { MdBackpack, MdStars, MdLocalOffer } from "react-icons/md";
 import { GoDotFill } from "react-icons/go";
@@ -15,7 +15,9 @@ function Salon1() {
   const [salon, setSalon] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-
+  const addButtonRefs=useRef({});
+  const normalizeKey = (str) => str.toLowerCase().trim().replace(/\s+/g, "-");
+  const roundPrice = (price) => Math.round(Number(price) || 0);
   // Fetch Data
   useEffect(() => {
     fetch("http://localhost:5000/api/super")
@@ -48,82 +50,80 @@ function Salon1() {
       .then(data => setCarts(data.carts || []))
       .catch(err => console.error("Error fetching carts:", err));
   };
-
   // Modal handlers
   const handleShowModal = async (item) => {
-    try {
-      const res = await fetch(`http://localhost:5000/api/packages`);
-      const data = await res.json();
-      const matched = data.packages.find(pkg => pkg.title === item.title);
-      setSelectedItem(matched || item);
-      setShowModal(true);
-    } catch (err) {
-      console.error("Error loading modal data:", err);
-    }
-  };
+  try {
+    // Fetch package details
+    const res = await fetch(`http://localhost:5000/api/packages`);
+    const data = await res.json();
+    const matched = data.packages.find(pkg => pkg.title === item.title);
+
+    // Get saved cart entry if exists
+    const cartsRes = await fetch("http://localhost:5000/api/carts");
+    const cartsData = await cartsRes.json();
+    const existingCartItem = cartsData.carts?.find(c => c.title === item.title);
+
+    // Merge both to preserve saved selections
+    const mergedItem = {
+      ...(matched || item),
+      savedSelections: existingCartItem?.savedSelections || []
+    };
+
+    setSelectedItem(mergedItem);
+    setShowModal(true);
+  } catch (err) {
+    console.error("Error loading modal data:", err);
+  }
+};
 
   const handleCloseModal = () => {
     setShowModal(false);
     setSelectedItem(null);
   };
-
- const handleAddToCart = async (pkg, extraOptions = []) => {
+const baseServices=[
+  { title: "Full arms (including underarms)", price: 599, content: "Chocolate Roll on" },
+  { title: "Full legs", price: 499, content: "Chocolate Roll on" },
+  { title: "O3+ shine & glow facial", price: 1699, content: "Facial" },
+  { title: "Eyebrow", price: 49, content: "Threading" },
+  { title: "Upper lip", price: 49, content: "Threading" },
+];
+const basePrice = 2195;
+ const handleAddToCart = async (pkg, selectedServices = [],overridePrice=null) => {
   try {
-    const initialServices = {
-      "waxingOptions:Full arms (including underarms)": {
-        title: "Full arms (including underarms)",
-        price: 599,
-        count: 1,
-        content: "Chocolate Roll on",
-      },
-      "waxingOptions:Full legs": {
-        title: "Full legs",
-        price: 499,
-        count: 1,
-        content: "Chocolate Roll on",
-      },
-      "facialOptions:O3+ shine & glow facial": {
-        title: "O3+ shine & glow facial",
-        price: 1699,
-        count: 1,
-        content: "Facial",
-      },
-      "facialHairOptions:Eyebrow": {
-        title: "Eyebrow",
-        price: 49,
-        count: 1,
-        content: "Threading",
-      },
-      "facialHairOptions:Upper lip": {
-        title: "Upper lip",
-        price: 49,
-        count: 1,
-        content: "Threading",
-      },
-    };
+    const res = await fetch("http://localhost:5000/api/carts");
+    const data = await res.json();
+    const existing = data.carts?.find(c => c.title === pkg.title);
 
-    const baseServices = Object.values(initialServices).map((item) => ({
-      value: item.content?.toLowerCase() === "threading" ? "Threading" : "",
-      details:
-        item.content?.toLowerCase() === "threading"
-          ? item.title
-          : `${item.title}${item.content ? ` (${item.content})` : ""}`,
-      price: item.price,
-    }));
+    // Merge base + extra services
+    const existingExtras = existing?.savedSelections || [];
+    const mergedExtras = [
+      ...existingExtras,
+      ...selectedServices.filter(
+        s => !existingExtras.some(e => e.title === s.title && e.content === s.content)
+      )
+    ];
 
-    const mergedServices = [...baseServices, ...extraOptions];
-    const totalPrice = mergedServices.reduce((sum, s) => sum + (s.price || 0), 0);
+    const extraPrice = mergedExtras.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
+    const totalPrice = overridePrice?overridePrice:basePrice+extraPrice;
 
     const payload = {
       title: pkg.title,
       price: totalPrice,
-      count: 1,
-      content: mergedServices.map(({ value, details }) => ({ value, details })),
+      count: existing ? existing.count : 1,
+      content: [
+        ...baseServices.map(s => ({
+          value: s.content === "Threading" ? "Threading" : "",
+          details: s.content && s.content !==s.title ?`${s.title} (${s.content})`:s.title,
+          price: s.price,
+        })),
+        ...mergedExtras.map(s => ({
+          value: s.content === "Threading" ? "Threading" : "",
+          details: s.content && s.content !== s.title ? `${s.title} (${s.content})` : s.title,
+          price: s.price,
+        })),
+      ],
+      savedSelections: mergedExtras,
     };
-    
-    const res = await fetch("http://localhost:5000/api/carts");
-    const data = await res.json();
-    const existing = data.carts?.find((c) => c.title === pkg.title);
 
     if (existing) {
       await fetch(`http://localhost:5000/api/carts/${existing._id}`, {
@@ -138,12 +138,12 @@ function Salon1() {
         body: JSON.stringify(payload),
       });
     }
-
-    await fetchCarts(); //  make sure this line has `await`
+    await fetchCarts();
   } catch (err) {
     console.error("Error adding to cart:", err);
   }
 };
+
   const handleIncrease = async (cartItem) => {
     try {
       await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
@@ -173,7 +173,6 @@ function Salon1() {
       console.error(err);
     }
   };
-
   const formatPrice = (amount) => `₹${amount.toLocaleString("en-IN")}`;
   const safePrice = (price) => Number((price || "0").toString().replace(/[₹,]/g, ""));
     return (
@@ -181,109 +180,90 @@ function Salon1() {
       <Row>
         {/* Left Column */}
         <Col xs={12} md={7} style={{ border: "1px solid rgba(192,192,195,1)", padding: "15px" }} className='suppad'>
-          <h4 className="fw-semibold mt-4">Super Saver Packages</h4>
-
-          {/* SUPER PACKS */}
-          {(Array.isArray(superPack) ? superPack : []).map((sp, index) => {
-            const imgUrl = sp.img && typeof sp.img === "string" 
-              ? sp.img.startsWith("http") 
-                ? sp.img 
-                : `http://localhost:5000${sp.img}`
-              : "";
-            return (
-              <div
-                key={index}
-                className="superpackcard mb-3"
-                onClick={() => handleShowModal(sp)}
-                style={{
-                  backgroundImage: `url(${imgUrl})`,
-                  backgroundSize: "cover",
-                  backgroundRepeat: "no-repeat",
-                  aspectRatio: "16/9",
-                  position: "relative",
-                  cursor: "pointer",
-                  overflow: "hidden"
-                }}>
-                <div className='sptext'>
-                  <p>{sp.title} <br /> <span style={{ fontSize: "25px", fontWeight: "bold" }}>{sp.price}</span></p>
-                  <p style={{ fontSize: "12px" }}>{sp.text} <br /><span>{sp.tex}</span></p>
-                  <p style={{ fontSize: "12px" }}>{sp.content} <br /><span>{sp.con}</span></p>
-                </div>
-              </div>
-            )
-          })}
-
+          <h4 className="fw-semibold mt-4">Wedding essentials</h4>
           {/* PACKAGES */}
           {(Array.isArray(packages) ? packages : []).map((pkg) => {
             const inCart = carts.find(c => c.title === pkg.title);
             return (
-              <div key={pkg._id || pkg.title}>
-                <Row className="align-items-center mt-3">
-                  <Col xs={8}>
-                    <p style={{ color: "#095819ff" }}>
-                      <MdBackpack />{" "}
-                      <span style={{ fontSize: "13px", fontWeight: "bold" }}>PACKAGE</span>
-                    </p>
-                    <h6 className="fw-semibold">{pkg.title}</h6>
-                    <p style={{ color: "#5a5959ff" }}>
-                      <MdStars style={{ fontSize: "13px", color: "#6800faff" }} />{" "}
-                      <span style={{ textDecoration: "underline dashed", textUnderlineOffset: "7px", fontSize: "12px" }}>
-                        {pkg.rating || 0} 
-                      </span>
-                    </p>
-                    <p style={{ fontSize: "12px" }}>
-                      <span className="fw-semibold">₹{pkg.price || 0}</span>{" "}
-                      <span style={{ color: "#5a5959ff" }}><GoDotFill /> {pkg.duration || "N/A"}</span>
-                    </p>
-                  </Col>
+              <div 
+              key={pkg._id || pkg.title} 
+              style={{ position: "relative", marginBottom: "50px" }} >
+              <Row className="align-items-center mt-3">
+                <Col xs={8}>
+                  <p style={{ color: "#095819ff" }}>
+                    <MdBackpack />{" "}
+                    <span style={{ fontSize: "13px", fontWeight: "bold" }}>PACKAGE</span>
+                  </p>
+                  <h6 
+                    className="fw-semibold" 
+                    style={{ cursor: "pointer" }}
+                    onClick={() => handleShowModal(pkg)}>
+                    {pkg.title}
+                  </h6>
+                  <p style={{ color: "#5a5959ff" }}>
+                    <MdStars style={{ fontSize: "13px", color: "#6800faff" }} />{" "}
+                    <span style={{ textDecoration: "underline dashed", textUnderlineOffset: "7px", fontSize: "12px" }}>
+                      {pkg.rating || 0} 
+                    </span>
+                  </p>
+                  <p style={{ fontSize: "12px" }}>
+                    <span className="fw-semibold"><span className="fw-semibold">{formatPrice(roundPrice(pkg.price))}</span></span>{" "}
+                    <span style={{ color: "#5a5959ff" }}><GoDotFill /> {pkg.duration || "N/A"}</span>
+                  </p>
+                </Col>
 
-                  <Col xs={4} className="d-flex justify-content-end align-items-center">
+                {/* Button Column */}
+                <Col xs={4} style={{ position: "relative", minHeight: "120px" }}> 
+                  <Button className="text-center button2 mb-2">
+                    <h3 style={{ fontWeight: "bold" }}>
+                      <span style={{ fontSize: "37px" }}>25%</span> OFF
+                    </h3>
+                  </Button>
+
+                  {/* ABSOLUTE BUTTON AT BOTTOM */}
+                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, textAlign: "center" }}>
                     {!inCart ? (
                       <Button
-                        onClick={() => handleAddToCart(pkg)} // 🔧 same logic auto-updates
+                        ref={(el) => (addButtonRefs.current[normalizeKey(pkg.title)] = el)}
+                        onClick={() => handleAddToCart(pkg)}
                         style={{
                           backgroundColor: "white",
-                          color: "#aa2ce0ff",
-                          border: "1px solid #aa2ce0ff",
+                          color: "rgb(110, 66, 229)",
+                          backgroundColor:"rgb(245, 241, 255)",
+                          border: "1px solid rgb(110, 66, 229)",
                           padding: "5px 18px",
-                          fontWeight: "500"
-                        }}
-                      >
-                        Add
+                          zIndex: "2"}}>Add
                       </Button>
                     ) : (
-                      <div className="d-flex align-items-center gap-2">
+                      <div 
+                        className="d-flex align-items-center gap-2" 
+                        style={{border:"1px solid rgb(110, 66, 229)", borderRadius:"6px", justifyContent: "center",backgroundColor:"rgb(245, 241, 255)",width:"50%",marginLeft:"36px"}}>
                         <Button onClick={() => handleDecrease(inCart)} className='button'>−</Button>
                         <span className="count-box">{inCart.count || 1}</span>
                         <Button onClick={() => handleIncrease(inCart)} className='button'>+</Button>
                       </div>
                     )}
-                  </Col>
-                </Row>
-                <div style={{ borderBottom: "1px dashed #bbb6b6ff" }}></div>
-                <br />
-                <div style={{ fontSize: "12px" }}>
-                  {(Array.isArray(pkg.items) ? pkg.items : []).map((item, idx) => (
-                    <p key={idx} style={{ margin: "2px 0" }}>
-                      <GoDotFill style={{ fontSize: "10px", color: "#5a5959ff" }} />{" "}
-                      {item.text && <span style={{ fontWeight: "bold" }}>{item.text}</span>}
-                      {item.text && <span> : </span>}
-                      <span>{item.description}</span>
-                    </p>
-                  ))}
-                </div>
-                <br />
-                <Button
-                  onClick={() => handleShowModal(pkg)}
-                  style={{
-                    backgroundColor: "white",
-                    color: "black",
-                    border: "1px solid black",
-                  }}>
-                  Edit your package
-                </Button>
+                  </div>
+                </Col>
+              </Row>
 
+              <div style={{ borderBottom: "1px dashed #bbb6b6ff" }}></div>
+              <br />
+              <div style={{ fontSize: "12px" }}>
+                {(Array.isArray(pkg.items) ? pkg.items : []).map((item, idx) => (
+                  <p key={idx} style={{ margin: "2px 0" }}>
+                    <GoDotFill style={{ fontSize: "10px", color: "#5a5959ff" }} />{" "}
+                    {item.text && <span style={{ fontWeight: "bold" }}>{item.text}</span>}
+                    {item.text && <span> : </span>}
+                    <span>{item.description}</span>
+                  </p>
+                ))}
               </div>
+              <br />
+              <Button className='edit' onClick={() => handleShowModal(pkg)}> 
+                Edit your package
+              </Button>
+            </div>
             )
           })}
         </Col>
@@ -303,16 +283,16 @@ function Salon1() {
               </div>
             ) : (
               (Array.isArray(carts) ? carts : []).map((c) => {
-                const price = safePrice(c.price) * (c.count || 1);
+                const price =roundPrice (safePrice(c.price) * (c.count || 1));
                 return (
                   <div key={c._id}>
                     <h5 className='fw-semibold mb-2'>Cart</h5>
                     <Row className="align-items-center">
                       <Col><p style={{ fontSize: "12px" }}>{c.title}</p></Col>
                       <Col xs={8} className="d-flex justify-content-between gap-2">
-                        <div className='button1' style={{ height: "33px" }}>
+                        <div className='button1' style={{ height: "33px" ,backgroundColor:"rgb(245, 241, 255)"}}>
                           <Button onClick={() => handleDecrease(c)} className='button'>−</Button>
-                          <span className="count-box">{c.count || 1}</span>
+                          <span className="count-box"style={{padding:"2px 10px"}}>{c.count || 1}</span>
                           <Button onClick={() => handleIncrease(c)} className='button'>+</Button>
                         </div>
                         <div style={{ textAlign: "right" }}>
@@ -344,7 +324,6 @@ function Salon1() {
           </div>
         </Col>
       </Row>
-
       {/* Mobile Menu */}
     <Button 
       className='menu-float d-md-none ' 
@@ -352,7 +331,6 @@ function Salon1() {
       onClick={() => setShowMenu(!showMenu)}>
       {showMenu ? "X" :"Menu"}
     </Button>
-
     <Modal show={showMenu} onHide={() => setShowMenu(false)} centered size='sm'>
       <ModalBody>
         <Container>
@@ -411,8 +389,12 @@ function Salon1() {
         onHide={handleCloseModal}
         selectedItem={selectedItem}
         handleAddToCart={handleAddToCart} //  added
-        refreshCarts={fetchCarts}  // 👈 ADD THIS LINE
+        refreshCarts={fetchCarts}  //  ADD THIS LINE
         carts={carts}
+        addButtonRefs={addButtonRefs}
+        basePrice={basePrice}
+        baseServices={baseServices}
+        roundPrice={roundPrice}
       />
     </Container>
   );

@@ -4,7 +4,7 @@ import { Button, ModalBody, Form, Row, Col } from "react-bootstrap";
 import { IoTime } from "react-icons/io5";
 import { TbCirclePercentageFilled } from "react-icons/tb";
 
-function Salon1modal({ show, onHide, selectedItem,handleAdd}) {
+function Salon1modal({ show, onHide, selectedItem,addButtonRefs,handleAddToCart,basePrice,baseServices,roundPrice}) {
   const [loadingDropdownKey, setLoadingDropdownKey] = useState(null);
   const [dropdownModal, setDropdownModal] = useState({
     show: false,
@@ -15,7 +15,7 @@ function Salon1modal({ show, onHide, selectedItem,handleAdd}) {
   });
   const [totalPrice, setTotalPrice] = useState(2195);
   const [discountedPrice, setDiscountedPrice] = useState(null);
-
+  const normalizeKey = (str) => str.toLowerCase().trim().replace(/\s+/g, "-");
   const initialServices = {
     "waxingOptions:Full arms (including underarms)": {
       title: "Full arms (including underarms)",
@@ -276,53 +276,40 @@ function Salon1modal({ show, onHide, selectedItem,handleAdd}) {
     { label: "Head massage (20 mins)", price: 349 },
     { label: "I don't need anything" },
   ];
-
-  useEffect(() => {
-  if (show && selectedItem?.savedSelections) {
-    // Keep previous checked options if available
-    setSelectedServices(selectedItem.savedSelections);
-  } else if (show) {
-    // Only reset when there's nothing saved
-    setSelectedServices(initialServices);
+useEffect(() => {
+  if (show && selectedItem) {
+    // Step 1: Fetch latest cart data for this item
+    fetch("http://localhost:5000/api/carts")
+      .then(res => res.json())
+      .then(async data => {
+        const found = data.carts.find(c => c.title === selectedItem.title);
+        if (found?.savedSelections?.length > 0) {
+          // Step 2: Add or update this item in the cart immediately
+          const extraSelected = found.savedSelections;
+          await handleAddToCart(selectedItem, extraSelected);
+          console.log(" Existing saved selections instantly added to cart.");
+        }
+      })
+      .catch(err => console.error("Error syncing cart with saved selections:", err));
   }
-  setTotalPrice(2195);
-  setDiscountedPrice(null);
-  setLoadingDropdownKey(null);
-  setDropdownModal({
-    show: false,
-    label: "",
-    options: [],
-    selected: "",
-    type: "",
-  });
 }, [show, selectedItem]);
 
+useEffect(() => {
+  const extraPrice = Object.values(selectedServices).reduce((sum, s) => {
+    const isBase = baseServices.some(bs => bs.title === s.title && bs.content === s.content);
+    return sum + (isBase ? 0 : Number(s.price || 0));
+  }, 0);
+  const total = basePrice + extraPrice;
+  setTotalPrice(roundPrice(total));
 
-  // Calculate total and discount
-  useEffect(() => {
-    const basePrice = 2195;
-    const extraPrice = Object.entries(selectedServices)
-      .filter(([key]) => !initialServices[key])
-      .reduce((sum, [, item]) => {
-        // ensure numeric
-        const p = Number(item?.price || 0);
-        return sum + (isNaN(p) ? 0 : p);
-      }, 0);
+  if (total >= basePrice + 905) {
+    setDiscountedPrice(roundPrice(total * 0.75));
+  } else {
+    setDiscountedPrice(null);
+  }
+}, [selectedServices]);
 
-    const total = basePrice + extraPrice;
-    setTotalPrice(total);
-
-    const threshold = basePrice + 905;
-    if (total >= threshold) {
-      const discount = total * 0.25;
-      setDiscountedPrice(total - discount);
-    } else {
-      setDiscountedPrice(null);
-    }
-  }, [selectedServices]);
-
-  // Checkbox handler — normalize price to Number
-  const handleCheckboxChange = (section, label, option, isChecked) => {
+const handleCheckboxChange = (section, label, option, isChecked) => {
   setSelectedServices(prev => {
     const updated = { ...prev };
     const key = `${section}:${label}`;
@@ -331,7 +318,7 @@ function Salon1modal({ show, onHide, selectedItem,handleAdd}) {
       const price = Number(option?.price ?? 0);
       updated[key] = {
         title: label,
-        price: isNaN(price) ? 0 : price,
+        price: roundPrice(price),
         count: 1,
         content: option?.name ?? option?.label ?? option ?? "No option",
       };
@@ -341,9 +328,8 @@ function Salon1modal({ show, onHide, selectedItem,handleAdd}) {
 
     return updated;
   });
-};
-
-
+};const formatPrice = (amount) => `₹${amount.toLocaleString("en-IN")}`;
+  const safePrice = (price) => Number((price || "0").toString().replace(/[₹,]/g, ""));
   // Render service sections
   const renderSection = (sectionName, items, displayName) => (
     <>
@@ -380,8 +366,7 @@ function Salon1modal({ show, onHide, selectedItem,handleAdd}) {
                       fontSize: "12px",
                       marginLeft: "25px",
                       color: "#7d7c7cff",
-                    }}
-                  >
+                    }}>
                     ₹
                     {selectedServices[key]
                       ? selectedServices[key].price
@@ -407,17 +392,16 @@ function Salon1modal({ show, onHide, selectedItem,handleAdd}) {
                         type: sectionName,
                       });
                     }}
-                    style={{ cursor: "pointer" }}
-                  >
+                    style={{ cursor: "pointer" }}>
                     {loadingDropdownKey === key ? (
                       <div
                         className="spinner-border spinner-border-sm text-secondary"
-                        role="status"
-                      >
+                        role="status">
                         <span className="visually-hidden">Loading...</span>
                       </div>
                     ) : (
-                      selectedOption || item.options[0].name
+                      isChecked ? `${item.label} (${selectedOption || item.options[0].name})`
+                                : item.options[0].name
                     )}
                   </div>
                 )}
@@ -442,14 +426,12 @@ function Salon1modal({ show, onHide, selectedItem,handleAdd}) {
           <>
             <div
               className="p-3"
-              style={{ backgroundColor: "#ede1d4", borderRadius: "10px" }}
-            >
+              style={{ backgroundColor: "#ede1d4", borderRadius: "10px" }}>
               <h4 className="fw-semibold">{selectedItem.title}</h4>
               <p>
                 <IoTime /> Service time: 3 hrs 50 mins
               </p>
             </div>
-
             <div className="p-3 scroll">
               {renderSection("waxingOptions", waxingOptions, "Waxing")}
               {renderSection("facialOptions", facial, "Facial & cleanup")}
@@ -459,16 +441,13 @@ function Salon1modal({ show, onHide, selectedItem,handleAdd}) {
               {renderSection("bleachOptions", bleach, "Bleach & detan")}
               {renderSection("hairOptions", hair, "Hair Care")}
             </div>
-
             {/* DISCOUNT BOX */}
             <div
               style={{
                 backgroundColor: "#b3d5b8ff",
                 color: "#37503bff",
-                fontSize: "12px",
-              }}
-              className="text-center p-2 fw-semibold"
-            >
+                fontSize: "12px",}}
+              className="text-center p-2 fw-semibold">
               {discountedPrice ? (
                 <>You saved ₹{(totalPrice - discountedPrice).toFixed(0)}! in this package</>
               ) : (
@@ -478,31 +457,46 @@ function Salon1modal({ show, onHide, selectedItem,handleAdd}) {
                 </>
               )}
             </div>
-
             {/* PRICE + BUTTON */}
             <Row>
               <Col className="p-4 d-flex align-items-center">
                 {discountedPrice ? (
                   <>
                     <span className="fw-semibold" style={{ fontSize: "18px" }}>
-                      ₹{discountedPrice.toFixed(0)}
+                     {formatPrice(roundPrice(discountedPrice))}
                     </span>
                     <span className="text-muted ms-2" style={{ textDecoration: "line-through", fontSize: "14px" }}>
-                      ₹{totalPrice}
+                      {formatPrice(roundPrice(totalPrice))}
                     </span>
                   </>
                 ) : (
                   <span className="fw-semibold" style={{ fontSize: "18px" }}>
-                    ₹{totalPrice}
+                   {formatPrice(roundPrice(totalPrice))}
                   </span>
                 )}
               </Col>
-              <Col className="p-3 fw-semibold">
-                <Button
-                  className="fw-semibold"
-                  style={{ width: "100%", height: "50px", backgroundColor: "#7330deff" }} >
-                  Add to cart
-                </Button>
+              <Col className="p-3 ">
+               <Button
+              className="butn"
+              onClick={async () => {
+                const key = normalizeKey(selectedItem.title);
+                const refBtn = addButtonRefs.current?.[key];
+                const extraSelected = Object.values(selectedServices).filter(
+                  s => !baseServices.some(bs => bs.title === s.title && bs.content === s.content)
+                );
+                if (typeof handleAddToCart === "function") {
+                  await handleAddToCart(
+                    selectedItem,
+                    extraSelected,
+                    discountedPrice ? discountedPrice : totalPrice.toFixed(0)
+                  );
+                }
+                if (typeof window.updateCartInstantly === "function") {
+                  // Immediately refresh parent cart
+                  window.updateCartInstantly(selectedItem.title);
+                }onHide();}}>
+              Add to Cart
+            </Button>
               </Col>
             </Row>
           </>
@@ -516,23 +510,16 @@ function Salon1modal({ show, onHide, selectedItem,handleAdd}) {
           setDropdownModal({ ...dropdownModal, show: false });
           setLoadingDropdownKey(null);
         }}
-        centered
-      >
+        centered>
         <Button
           onClick={() => {
             setDropdownModal({ ...dropdownModal, show: false });
-            setLoadingDropdownKey(null);
-          }}
+            setLoadingDropdownKey(null);}}
           className="closebtn"
-          style={{ padding: "0px" }}
-        >
-          X
-        </Button>
-
+          style={{ padding: "0px" }}>X</Button>
         <Modal.Header>
           <Modal.Title className="fw-semibold">{dropdownModal.label}</Modal.Title>
         </Modal.Header>
-
         <ModalBody>
           <Form>
             {dropdownModal.options?.map((opt, i) => {
@@ -548,29 +535,30 @@ function Salon1modal({ show, onHide, selectedItem,handleAdd}) {
                     onChange={() => {
                       const currentKey = `${dropdownModal.type}:${dropdownModal.label}`;
                       setDropdownModal({ ...dropdownModal, selected: opt.name, show: false });
-                      setLoadingDropdownKey(null);
-                      setSelectedServices((prev) => {
-                        const updated = { ...prev };
-                        if (updated[currentKey]) {
-                          updated[currentKey] = {
-                            ...updated[currentKey],
-                            content: opt.name,
-                            price: Number(opt.price || 0),
-                          };
-                        }
-                        return updated;
-                      });
-                    }}
-                  />
+                    setLoadingDropdownKey(null);
+                    setSelectedServices((prev) => {
+                      const updated = { ...prev };
+                      if (updated[currentKey]) {
+                        updated[currentKey] = {
+                          ...updated[currentKey],
+                          content: opt.name,
+                          price: Number(opt.price || 0),
+                        };
+                      } else {
+                        updated[currentKey] = {
+                          title: dropdownModal.label,
+                          price:roundPrice( Number(opt.price || 0)),
+                          count: 1,
+                          content: opt.name,
+                        };
+                      }
+                      return updated;
+                    });
+                    }}/>
                   <div className="fw-semibold" style={{ fontSize: "12px" }}>₹{Number(opt.price || 0)}</div>
                 </div>
-              );
-            })}
+              );})}
           </Form>
         </ModalBody>
-      </Modal>
-    </>
-  );
-}
-
+      </Modal></>)}
 export default Salon1modal;

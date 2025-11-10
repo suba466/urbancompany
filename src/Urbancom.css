@@ -355,15 +355,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border:1px solid rgb(92, 18, 176);
+  border:1px solid rgb(110, 66, 229);
   border-radius: 5px;
 }
 
 .button {
-  background-color: rgb(255, 255, 255);
-  color: rgb(0, 0, 0);
+  background-color: rgb(245, 241, 255);
+  color: rgb(110, 66, 229);
   border: none;
-  width: 0px;
+  width: 26px;
   height: 30px;
   font-size: 18px;
   display: flex;
@@ -372,16 +372,31 @@
   transition: all 0.2s ease;
   cursor: pointer;
 }
-
-.button:hover {
-  background-color: #f5f1f9;
-  color: #4b0082;
+.button:hover, .button:active {
+  background-color: #f2e7fc !important;
+  color: rgb(97, 54, 215) !important;
 }
-
 .count-box {
-  padding: 3px 10px;
   font-weight: bold;
-  color: #4b0082;
+  color: rgb(110, 66, 229);
+}
+.button2{
+  position: absolute;
+  top: -20px;
+  left: 10%;
+  background-color: #edededff;
+  color: #3b651bff;
+  height:120px;
+  width:120px;
+  padding: 2px 5px;
+  border-radius: 6px;
+  border:none;
+  transition: transform 0.3s ease-out;
+}
+.button2:hover, .button2:active{
+  background-color: #edededff !important;
+  color: #3b651bff !important;
+  transform: scale(1.05);
 }
 /* Mobile footer wrapper (green box) */
 .mobile-cart-footer-wrapper {
@@ -440,8 +455,6 @@
   border-radius: 12px;
   animation: fadeUp 0.3s ease-in-out;
 }
-
-
 @keyframes fadeUp {
   from {
     opacity: 0;
@@ -459,7 +472,33 @@
 .form-check-input:focus{
   box-shadow: none !important;
 }
+.butn{
+  width: 100%;
+  height: 50px;font-weight:bold;
+  background-color: #843ff5ff;
+  transition: transform 0.3s ease, ;
+}
+.butn:hover,.butn:active{
+  background-color: rgb(112, 61, 194);
+  transform: scale(0.9);
+}
+.edit{
+  background-color: white;
+  color: black;
+  border: 1px solid black;
+   transition: transform 0.3s ease, filter 0.3s ease;
+}
+.edit:hover,
+.edit:active {
+  background-color: #ededed !important;
+  border: 1px solid black !important;
+  color: black !important;
+  transform: scale(0.9);
+}
 
+/*.btn:active{
+  background-color: transparent !important;
+}
 /* ============================
    SMARTLOCK SECTION (Updated)
 ============================ 
