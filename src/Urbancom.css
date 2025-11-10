@@ -751,4 +751,36 @@
     width: 100%;
   }
 }
+/* Force desktop layout for 1107px - 991px */
+@media (max-width: 1108px) and (min-width: 992px) {
+  .suppad, .sticky-cart {
+    flex: 0 0 50% !important;  /* Make left and right columns same as 1440px */
+    max-width: 50% !important;
+  }
+  .sticky-cart.d-none.d-md-block {
+    display: block !important;  /* Ensure sticky cart is visible */
+  }
+  .mt-md-0 {
+    margin-top: 0 !important;
+  }
+   .button2{
+    height: 100px;
+    width: 100px;
+    left: 0%; 
+    top: -5px;
+  }
+  .bn {
+  margin-left: 10px !important;
+  }
+  .mobile-cart-footer-wrapper {
+    box-sizing: border-box; /* include padding in width */
+    padding-right: 10px;
+  }
+   /* Make the service grid 3 items per row */
+  .super .second-row-item {
+    flex: 0 0 42%;   /* roughly 3 items per row with gap */
+    margin-bottom: 15px; /* spacing between rows */
+  }
+
+}
 

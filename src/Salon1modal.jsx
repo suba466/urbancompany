@@ -479,8 +479,6 @@ const handleCheckboxChange = (section, label, option, isChecked) => {
                <Button
               className="butn"
               onClick={async () => {
-                const key = normalizeKey(selectedItem.title);
-                const refBtn = addButtonRefs.current?.[key];
                 const extraSelected = Object.values(selectedServices).filter(
                   s => !baseServices.some(bs => bs.title === s.title && bs.content === s.content)
                 );

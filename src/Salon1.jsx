@@ -7,7 +7,10 @@ import { Button, ModalBody} from 'react-bootstrap';
 import { MdBackpack, MdStars, MdLocalOffer } from "react-icons/md";
 import { GoDotFill } from "react-icons/go";
 import Salon1modal from './Salon1modal';
+import Salon2modal from './Salon2modal';
 function Salon1() {
+  const [showSalon1Modal, setShowSalon1Modal] = useState(false);
+const [showSalon2Modal, setShowSalon2Modal] = useState(false);
   const [superPack, setSuperPack] = useState([]);
   const [packages, setPackages] = useState([]);
   const [carts, setCarts] = useState([]);
@@ -214,12 +217,17 @@ const basePrice = 2195;
 
                 {/* Button Column */}
                 <Col xs={4} style={{ position: "relative", minHeight: "120px" }}> 
-                  <Button className="text-center button2 mb-2">
-                    <h3 style={{ fontWeight: "bold" }}>
-                      <span style={{ fontSize: "37px" }}>25%</span> OFF
-                    </h3>
-                  </Button>
-
+                 <Button
+                  className="text-center button2 mb-2"
+                  onClick={() => {
+                    setSelectedItem(pkg);      // pass the package details
+                    setShowSalon2Modal(true);  // open Salon2modal
+                  }}
+                >
+                  <h3 style={{ fontWeight: "bold" }}>
+                    <span style={{ fontSize: "37px" }}>25%</span> OFF
+                  </h3>
+                </Button>
                   {/* ABSOLUTE BUTTON AT BOTTOM */}
                   <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, textAlign: "center" }}>
                     {!inCart ? (
@@ -227,7 +235,6 @@ const basePrice = 2195;
                         ref={(el) => (addButtonRefs.current[normalizeKey(pkg.title)] = el)}
                         onClick={() => handleAddToCart(pkg)}
                         style={{
-                          backgroundColor: "white",
                           color: "rgb(110, 66, 229)",
                           backgroundColor:"rgb(245, 241, 255)",
                           border: "1px solid rgb(110, 66, 229)",
@@ -236,9 +243,9 @@ const basePrice = 2195;
                       </Button>
                     ) : (
                       <div 
-                        className="d-flex align-items-center gap-2" 
-                        style={{border:"1px solid rgb(110, 66, 229)", borderRadius:"6px", justifyContent: "center",backgroundColor:"rgb(245, 241, 255)",width:"50%",marginLeft:"36px"}}>
-                        <Button onClick={() => handleDecrease(inCart)} className='button'>−</Button>
+                        className="d-flex align-items-center gap-2 bn" 
+                        style={{border:"1px solid rgb(110, 66, 229)", borderRadius:"6px", justifyContent: "center",backgroundColor:"rgb(245, 241, 255)",width:"80%",marginLeft:"36px"}}>
+                        <Button onClick={() => handleDecrease(inCart)} className='button '>−</Button>
                         <span className="count-box">{inCart.count || 1}</span>
                         <Button onClick={() => handleIncrease(inCart)} className='button'>+</Button>
                       </div>
@@ -307,7 +314,8 @@ const basePrice = 2195;
                         {item.value ? `${item.value} : ${item.details}` : item.details}</p>
                       ))}
                     </div>
-                    <Button className='fw-semibold' style={{backgroundColor:"white",color:"#7330deff",border:"0px",fontSize:"16px"}}>Edit</Button>
+                    <Button className='fw-semibold' style={{backgroundColor:"white",color:"#7330deff",border:"0px",fontSize:"16px"}}
+                   onClick={() => handleShowModal(c)} >Edit</Button>
                     <br />
                     <Button style={{backgroundColor:"#7330deff",width:"100%"}}>
                       <Row style={{fontSize:"13px"}}>
@@ -394,8 +402,19 @@ const basePrice = 2195;
         addButtonRefs={addButtonRefs}
         basePrice={basePrice}
         baseServices={baseServices}
-        roundPrice={roundPrice}
-      />
+        roundPrice={roundPrice}/>
+      <Salon2modal
+  show={showSalon2Modal}
+  onHide={() => setShowSalon2Modal(false)}
+  selectedItem={selectedItem}   // <-- add this
+  handleAddToCart={handleAddToCart}
+  basePrice={basePrice}
+  baseServices={baseServices}
+  roundPrice={roundPrice}
+/>
+
+
+
     </Container>
   );
 }
