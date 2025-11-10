@@ -116,9 +116,8 @@ const handleSelect = (selectedIndex) => {
         {salon?.map((s, index) => (
           <div
             key={index}
-            className="second-row-item"
-            onClick={() => navigate("/salon")}
-          >
+            className="second-row-item select"
+            onClick={() => navigate("/salon")}>
             <div className="img-box" style={{ backgroundColor: "white" }}>
               <img
                 src={`http://localhost:5000${s.img}`}
