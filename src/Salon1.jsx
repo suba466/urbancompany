@@ -9,8 +9,8 @@ import { GoDotFill } from "react-icons/go";
 import Salon1modal from './Salon1modal';
 import Salon2modal from './Salon2modal';
 function Salon1() {
-  const [showSalon1Modal, setShowSalon1Modal] = useState(false);
-const [showSalon2Modal, setShowSalon2Modal] = useState(false);
+  const [savedExtras, setSavedExtras] = useState({});
+  const [showSalon2Modal, setShowSalon2Modal] = useState(false);
   const [superPack, setSuperPack] = useState([]);
   const [packages, setPackages] = useState([]);
   const [carts, setCarts] = useState([]);
@@ -91,8 +91,15 @@ const baseServices=[
   { title: "Upper lip", price: 49, content: "Threading" },
 ];
 const basePrice = 2195;
- const handleAddToCart = async (pkg, selectedServices = [],overridePrice=null) => {
+const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null) => {
   try {
+    // Save the extras for this package
+    setSavedExtras(prev => ({
+      ...prev,
+      [pkg.title]: selectedServices
+    }));
+
+    // Fetch existing cart item
     const res = await fetch("http://localhost:5000/api/carts");
     const data = await res.json();
     const existing = data.carts?.find(c => c.title === pkg.title);
@@ -107,7 +114,7 @@ const basePrice = 2195;
     ];
 
     const extraPrice = mergedExtras.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
-    const totalPrice = overridePrice?overridePrice:basePrice+extraPrice;
+    const totalPrice = overridePrice ? overridePrice : basePrice + extraPrice;
 
     const payload = {
       title: pkg.title,
@@ -116,7 +123,7 @@ const basePrice = 2195;
       content: [
         ...baseServices.map(s => ({
           value: s.content === "Threading" ? "Threading" : "",
-          details: s.content && s.content !==s.title ?`${s.title} (${s.content})`:s.title,
+          details: s.content && s.content !== s.title ? `${s.title} (${s.content})` : s.title,
           price: s.price,
         })),
         ...mergedExtras.map(s => ({
@@ -141,6 +148,7 @@ const basePrice = 2195;
         body: JSON.stringify(payload),
       });
     }
+
     await fetchCarts();
   } catch (err) {
     console.error("Error adding to cart:", err);
@@ -231,15 +239,23 @@ const basePrice = 2195;
                   <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, textAlign: "center" }}>
                     {!inCart ? (
                       <Button
-                        ref={(el) => (addButtonRefs.current[normalizeKey(pkg.title)] = el)}
-                        onClick={() => handleAddToCart(pkg)}
-                        style={{
-                          color: "rgb(110, 66, 229)",
-                          backgroundColor:"rgb(245, 241, 255)",
-                          border: "1px solid rgb(110, 66, 229)",
-                          padding: "5px 18px",
-                          zIndex: "2"}}>Add
-                      </Button>
+                      ref={(el) => (addButtonRefs.current[normalizeKey(pkg.title)] = el)}
+                      onClick={() => {
+                        // Use saved extras from state if cart is empty
+                        const extras = savedExtras[pkg.title] || [];
+                        handleAddToCart(pkg, extras);
+                      }}
+                      style={{
+                        color: "rgb(110, 66, 229)",
+                        backgroundColor: "rgb(245, 241, 255)",
+                        border: "1px solid rgb(110, 66, 229)",
+                        padding: "5px 18px",
+                        zIndex: "2"
+                      }}
+                    >
+                      Add
+                    </Button>
+
                     ) : (
                       <div 
                         className="d-flex align-items-center gap-2 bn" 
