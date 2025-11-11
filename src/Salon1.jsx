@@ -222,8 +222,7 @@ const basePrice = 2195;
                   onClick={() => {
                     setSelectedItem(pkg);      // pass the package details
                     setShowSalon2Modal(true);  // open Salon2modal
-                  }}
-                >
+                  }}>
                   <h3 style={{ fontWeight: "bold" }}>
                     <span style={{ fontSize: "37px" }}>25%</span> OFF
                   </h3>
@@ -244,7 +243,7 @@ const basePrice = 2195;
                     ) : (
                       <div 
                         className="d-flex align-items-center gap-2 bn" 
-                        style={{border:"1px solid rgb(110, 66, 229)", borderRadius:"6px", justifyContent: "center",backgroundColor:"rgb(245, 241, 255)",width:"80%",marginLeft:"36px"}}>
+                        style={{border:"1px solid rgb(110, 66, 229)", borderRadius:"6px", justifyContent: "center",backgroundColor:"rgb(245, 241, 255)",width:"50%",marginLeft:"36px"}}>
                         <Button onClick={() => handleDecrease(inCart)} className='button '>−</Button>
                         <span className="count-box">{inCart.count || 1}</span>
                         <Button onClick={() => handleIncrease(inCart)} className='button'>+</Button>
@@ -404,13 +403,14 @@ const basePrice = 2195;
         baseServices={baseServices}
         roundPrice={roundPrice}/>
       <Salon2modal
-  show={showSalon2Modal}
-  onHide={() => setShowSalon2Modal(false)}
-  selectedItem={selectedItem}   // <-- add this
-  handleAddToCart={handleAddToCart}
-  basePrice={basePrice}
-  baseServices={baseServices}
-  roundPrice={roundPrice}
+      show={showSalon2Modal}
+      onHide={() => setShowSalon2Modal(false)}
+      selectedItem={selectedItem}   // add this
+      handleAddToCart={handleAddToCart}
+      basePrice={basePrice}
+      baseServices={baseServices}
+      roundPrice={roundPrice}
+      
 />
 
 

@@ -4,7 +4,7 @@ import { Button, ModalBody, Form, Row, Col } from "react-bootstrap";
 import { IoTime } from "react-icons/io5";
 import { TbCirclePercentageFilled } from "react-icons/tb";
 
-function Salon1modal({ show, onHide, selectedItem,addButtonRefs,handleAddToCart,basePrice,baseServices,roundPrice}) {
+function Salon1modal({ show, onHide, selectedItem,handleAddToCart,basePrice,baseServices,roundPrice}) {
   const [loadingDropdownKey, setLoadingDropdownKey] = useState(null);
   const [dropdownModal, setDropdownModal] = useState({
     show: false,
@@ -15,7 +15,6 @@ function Salon1modal({ show, onHide, selectedItem,addButtonRefs,handleAddToCart,
   });
   const [totalPrice, setTotalPrice] = useState(2195);
   const [discountedPrice, setDiscountedPrice] = useState(null);
-  const normalizeKey = (str) => str.toLowerCase().trim().replace(/\s+/g, "-");
   const initialServices = {
     "waxingOptions:Full arms (including underarms)": {
       title: "Full arms (including underarms)",
@@ -442,19 +441,20 @@ const handleCheckboxChange = (section, label, option, isChecked) => {
               {renderSection("hairOptions", hair, "Hair Care")}
             </div>
             {/* DISCOUNT BOX */}
-            <div
-              style={{
-                backgroundColor: "#b3d5b8ff",
-                color: "#37503bff",
-                fontSize: "12px",}}
-              className="text-center p-2 fw-semibold">
+            <div 
+              className="text-center p-2 ">
               {discountedPrice ? (
-                <>You saved ₹{(totalPrice - discountedPrice).toFixed(0)}! in this package</>
+                <div style={{backgroundColor: "#166c34ff",color: "#ffffffff",fontSize: "12px",}}>
+                  <span className="fw-semibold"style={{fontSize:"14px",}}>
+                    <TbCirclePercentageFilled  /> </span>You saved ₹{(totalPrice - discountedPrice).toFixed(0)}! in this package</div>
               ) : (
-                <>
+                < div style={{
+                backgroundColor: "#dce4ddff",
+                color: "#37503bff",
+                fontSize: "14px",}}>
                   <TbCirclePercentageFilled /> Add ₹
                   {Math.max(0, 3100 - totalPrice)} more to get 25% discount
-                </>
+                </div>
               )}
             </div>
             {/* PRICE + BUTTON */}
@@ -484,10 +484,11 @@ const handleCheckboxChange = (section, label, option, isChecked) => {
                 );
                 if (typeof handleAddToCart === "function") {
                   await handleAddToCart(
-                    selectedItem,
-                    extraSelected,
-                    discountedPrice ? discountedPrice : totalPrice.toFixed(0)
-                  );
+                  selectedItem,
+                  extraSelected,
+                  discountedPrice ? discountedPrice : totalPrice,
+                  discountedPrice ? totalPrice - discountedPrice : 0
+                );
                 }
                 if (typeof window.updateCartInstantly === "function") {
                   // Immediately refresh parent cart

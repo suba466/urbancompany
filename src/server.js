@@ -25,6 +25,7 @@ const packageSchema = new mongoose.Schema({
   originalPrice: String,
   duration: String,
   description: String,
+  savedAmount:String,
   items: [{ text: String, description: String }],
   content:[{value: String, details: String}]
 });
@@ -34,6 +35,7 @@ const cartSchema = new mongoose.Schema({
   title: String,
   price: String,
   originalPrice: String,
+  savedAmount:String,
   count: { type: Number, default: 1 },
   content:[{value: String, details: String}],
   createdAt: { type: Date, default: Date.now }
@@ -153,7 +155,7 @@ app.get("/api/carts", async (req, res) => {
 //  Add or Update Cart (Prevents Duplicates)
 app.post("/api/addcarts", async (req, res) => {
   try {
-    const {productId, title, price, originalPrice, content } = req.body;
+    const {productId, title, price,savedAmount, originalPrice, content } = req.body;
     const existing = await Cart.findOne({ productId }) || await Cart.findOne({ title });
     if (existing) {
     existing.content = content;
