@@ -7,10 +7,8 @@ import { Button, ModalBody} from 'react-bootstrap';
 import { MdBackpack, MdStars, MdLocalOffer } from "react-icons/md";
 import { GoDotFill } from "react-icons/go";
 import Salon1modal from './Salon1modal';
-import Salon2modal from './Salon2modal';
 function Salon1() {
   const [savedExtras, setSavedExtras] = useState({});
-  const [showSalon2Modal, setShowSalon2Modal] = useState(false);
   const [superPack, setSuperPack] = useState([]);
   const [packages, setPackages] = useState([]);
   const [carts, setCarts] = useState([]);
@@ -19,6 +17,7 @@ function Salon1() {
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const addButtonRefs=useRef({});
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
   const normalizeKey = (str) => str.toLowerCase().trim().replace(/\s+/g, "-");
   const roundPrice = (price) => Math.round(Number(price) || 0);
   // Fetch Data
@@ -225,16 +224,13 @@ const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null)
 
                 {/* Button Column */}
                 <Col xs={4} style={{ position: "relative", minHeight: "120px" }}> 
-                 <Button
-                  className="text-center button2 mb-2"
-                  onClick={() => {
-                    setSelectedItem(pkg);      // pass the package details
-                    setShowSalon2Modal(true);  // open Salon2modal
-                  }}>
-                  <h3 style={{ fontWeight: "bold" }}>
-                    <span style={{ fontSize: "37px" }}>25%</span> OFF
-                  </h3>
-                </Button>
+                <Button
+                variant="outline-success"
+                size="sm"
+                className='button2'
+                onClick={() => setShowDiscountModal(true)}
+              ><h2 className='fw-semibold text-center' style={{fontSize:"33px"}}>25% OFF</h2>
+              </Button>
                   {/* ABSOLUTE BUTTON AT BOTTOM */}
                   <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, textAlign: "center" }}>
                     {!inCart ? (
@@ -251,9 +247,7 @@ const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null)
                         border: "1px solid rgb(110, 66, 229)",
                         padding: "5px 18px",
                         zIndex: "2"
-                      }}
-                    >
-                      Add
+                      }}>Add
                     </Button>
 
                     ) : (
@@ -417,20 +411,9 @@ const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null)
         addButtonRefs={addButtonRefs}
         basePrice={basePrice}
         baseServices={baseServices}
-        roundPrice={roundPrice}/>
-      <Salon2modal
-      show={showSalon2Modal}
-      onHide={() => setShowSalon2Modal(false)}
-      selectedItem={selectedItem}   // add this
-      handleAddToCart={handleAddToCart}
-      basePrice={basePrice}
-      baseServices={baseServices}
-      roundPrice={roundPrice}
-      
-/>
-
-
-
+        roundPrice={roundPrice}
+        showDiscountModal={showDiscountModal}
+      setShowDiscountModal={setShowDiscountModal}/>
     </Container>
   );
 }

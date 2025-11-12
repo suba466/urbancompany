@@ -3,8 +3,10 @@ import Modal from "react-bootstrap/Modal";
 import { Button, ModalBody, Form, Row, Col } from "react-bootstrap";
 import { IoTime } from "react-icons/io5";
 import { TbCirclePercentageFilled } from "react-icons/tb";
-
-function Salon1modal({ show, onHide, selectedItem,handleAddToCart,basePrice,baseServices,roundPrice}) {
+import { FaStar } from "react-icons/fa";
+import { GoDotFill } from "react-icons/go";
+import { FaTag } from "react-icons/fa6";
+function Salon1modal({ show, onHide, selectedItem,handleAddToCart,basePrice,baseServices,roundPrice,showDiscountModal,setShowDiscountModal}) {
   const [loadingDropdownKey, setLoadingDropdownKey] = useState(null);
   const [dropdownModal, setDropdownModal] = useState({
     show: false,
@@ -275,6 +277,7 @@ function Salon1modal({ show, onHide, selectedItem,handleAddToCart,basePrice,base
     { label: "Head massage (20 mins)", price: 349 },
     { label: "I don't need anything" },
   ];
+  
 useEffect(() => {
   if (show && selectedItem) {
     // Step 1: Fetch latest cart data for this item
@@ -559,5 +562,107 @@ const handleCheckboxChange = (section, label, option, isChecked) => {
               );})}
           </Form>
         </ModalBody>
-      </Modal></>)}
+      </Modal>
+
+    {/* 25% DISCOUNT MODAL */}
+    <Modal
+      show={showDiscountModal}
+      onHide={() => setShowDiscountModal(false)}
+      centered
+    >
+      <Button
+        onClick={() => setShowDiscountModal(false)}
+        className="closebtn"
+        style={{ padding: "0px" }}>X
+      </Button>
+      <ModalBody>
+        <div className="p-3">
+          <Row>
+            <Col xs={9}>
+              <h5 className="fw-semibold">Wedding glow package</h5>
+              <p style={{ color: "#676767ff", fontSize: "14px", marginBottom: "4px" }}>
+                <FaStar /> 4.85 (7M reviews)
+              </p>
+              <p style={{ fontSize: "16px", marginBottom: "4px" }}>
+                <span>{formatPrice(discountedPrice || totalPrice)}</span>
+                {discountedPrice && (
+                  <span style={{ textDecoration: "line-through", color: "#888", fontSize: "14px", marginLeft: "8px" }}>
+                    {formatPrice(totalPrice)}
+                  </span>
+                )}
+                <span style={{ color: "#555", fontSize: "14px", marginLeft: "6px" }}>
+                  <GoDotFill /> 4 hrs 40 mins
+                </span>
+              </p>
+              {discountedPrice ? (
+                <div style={{ color: "rgb(7, 121, 76)", fontSize: "13px" }}>
+                  <FaTag /> ₹{(totalPrice - discountedPrice).toFixed(0)} off applied!
+                </div>
+              ) : (
+                <div style={{ color: "rgb(7, 121, 76)" }}>
+                  <p style={{ fontSize: "14px" }}>
+                    <FaTag style={{ marginRight: "4px" }} />
+                    Add ₹{Math.max(0, 3100 - totalPrice)} more
+                  </p>
+                </div>
+              )}
+            </Col>
+            <Col xs={3} className="d-flex justify-content-end align-items-center">
+  {itemInCart ? (
+    <div
+      className="d-flex align-items-center gap-2"
+      style={{
+        border: "1px solid rgb(110, 66, 229)",
+        borderRadius: "6px",
+        backgroundColor: "rgb(245, 241, 255)",
+        width: "85px",
+        justifyContent: "center",
+      }}
+    >
+      <Button onClick={() => handleDecrease(selectedItem)} className="button">−</Button>
+      <span className="count-box">{itemInCart.count || 1}</span>
+      <Button onClick={() => handleIncrease(selectedItem)} className="button">+</Button>
+    </div>
+  ) : (
+    <Button
+      style={{
+        color: "rgb(110, 66, 229)",
+        backgroundColor: "rgb(245, 241, 255)",
+        border: "1px solid rgb(110, 66, 229)",
+        padding: "5px 18px",
+        zIndex: "2",
+      }}
+      onClick={async () => {
+        if (!selectedItem) return;
+        const extraSelected = Object.values(selectedServices).filter(
+          s => !baseServices.some(bs => bs.title === s.title && bs.content === s.content)
+        );
+
+        await handleAddToCart(
+          selectedItem,
+          extraSelected,
+          discountedPrice ? discountedPrice : totalPrice,
+          discountedPrice ? totalPrice - discountedPrice : 0
+        );
+
+        if (typeof window.updateCartInstantly === "function") {
+          window.updateCartInstantly(selectedItem.title);
+        }
+
+      }}
+    >
+      Add
+    </Button>
+  )}
+</Col>
+
+          </Row>
+        </div>
+      </ModalBody>
+    </Modal>
+
+
+
+      
+    </>);}
 export default Salon1modal;

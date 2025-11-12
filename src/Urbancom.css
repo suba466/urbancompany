@@ -385,17 +385,18 @@
   top: -20px;
   left: 10%;
   background-color: #edededff;
-  color: #3b651bff;
+  color: rgb(71, 120, 33);
   height:120px;
   width:120px;
   padding: 2px 5px;
+  border:1px solid #edededff;
   border-radius: 6px;
-  border:none;
   transition: transform 0.3s ease-out;
 }
 .button2:hover, .button2:active{
   background-color: #edededff !important;
   color: #3b651bff !important;
+  border:1px solid #edededff !important;
   transform: scale(1.05);
 }
 /* Mobile footer wrapper (green box) */
@@ -486,14 +487,15 @@
   background-color: white;
   color: black;
   border: 1px solid black;
-   transition: transform 0.3s ease, filter 0.3s ease;
+  transition: transform 0.3s ease, filter 0.3s ease;
 }
-.edit:hover,
-.edit:active {
+.edit:hover {
   background-color: #ededed !important;
   border: 1px solid black !important;
   color: black !important;
-  transform: scale(0.9);
+}
+.edit:active{
+  transform: scale(1.09);
 }
 
 /*.btn:active{
@@ -763,12 +765,12 @@
   .mt-md-0 {
     margin-top: 0 !important;
   }
-   .button2{
-    height: 100px;
-    width: 100px;
-    left: 0%; 
-    top: -5px;
-  }
+    .button2{
+      height: 100px;
+      width: 100px;
+      left: 0%; 
+      top: -5px;
+    }
   .bn {
   margin-left: 10px !important;
   }
