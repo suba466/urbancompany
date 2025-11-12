@@ -20,6 +20,7 @@ function Salon1() {
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const normalizeKey = (str) => str.toLowerCase().trim().replace(/\s+/g, "-");
   const roundPrice = (price) => Math.round(Number(price) || 0);
+  
   // Fetch Data
   useEffect(() => {
     fetch("http://localhost:5000/api/super")
@@ -114,7 +115,7 @@ const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null)
 
     const extraPrice = mergedExtras.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
     const totalPrice = overridePrice ? overridePrice : basePrice + extraPrice;
-
+    
     const payload = {
       title: pkg.title,
       price: totalPrice,
@@ -228,7 +229,7 @@ const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null)
                 variant="outline-success"
                 size="sm"
                 className='button2'
-                onClick={() => setShowDiscountModal(true)}
+              onClick={() =>{setSelectedItem(pkg); setShowDiscountModal(true)}}
               ><h2 className='fw-semibold text-center' style={{fontSize:"33px"}}>25% OFF</h2>
               </Button>
                   {/* ABSOLUTE BUTTON AT BOTTOM */}
@@ -241,15 +242,8 @@ const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null)
                         const extras = savedExtras[pkg.title] || [];
                         handleAddToCart(pkg, extras);
                       }}
-                      style={{
-                        color: "rgb(110, 66, 229)",
-                        backgroundColor: "rgb(245, 241, 255)",
-                        border: "1px solid rgb(110, 66, 229)",
-                        padding: "5px 18px",
-                        zIndex: "2"
-                      }}>Add
+                      style={{color: "rgb(110, 66, 229)",backgroundColor: "rgb(245, 241, 255)",border: "1px solid rgb(110, 66, 229)",padding: "5px 18px",zIndex: "2"}}>Add
                     </Button>
-
                     ) : (
                       <div 
                         className="d-flex align-items-center gap-2 bn" 
@@ -406,7 +400,7 @@ const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null)
         onHide={handleCloseModal}
         selectedItem={selectedItem}
         handleAddToCart={handleAddToCart} //  added
-        refreshCarts={fetchCarts}  //  ADD THIS LINE
+        fetchCarts={fetchCarts}  //  ADD THIS LINE
         carts={carts}
         addButtonRefs={addButtonRefs}
         basePrice={basePrice}
