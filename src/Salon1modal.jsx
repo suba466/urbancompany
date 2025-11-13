@@ -2,13 +2,15 @@ import { useState, useEffect } from "react";
 import Modal from "react-bootstrap/Modal";
 import { Button, ModalBody, Form, Row, Col } from "react-bootstrap";
 import { IoTime } from "react-icons/io5";
-import { TbCirclePercentageFilled } from "react-icons/tb";
+import { TbCirclePercentageFilled, TbClockHour4 } from "react-icons/tb";
 import { FaStar } from "react-icons/fa";
 import { GoDotFill } from "react-icons/go";
 import { FaTag } from "react-icons/fa6";
-function Salon1modal({ show, onHide, selectedItem,handleAddToCart,basePrice,baseServices,roundPrice,showDiscountModal,setShowDiscountModal,handleDecrease,handleIncrease}) {
+function Salon1modal({ show,totalItems,carts,setCarts, onHide, selectedItem,handleAddToCart,basePrice,baseServices,roundPrice,showDiscountModal,setShowDiscountModal,handleDecrease,handleIncrease}) {
   const [loadingDropdownKey, setLoadingDropdownKey] = useState(null);
   const [cartCount, setCartCount] = useState(0);
+  const [hasChange,setHasChange]=useState(false);
+  const [added, setAdded]=useState({});
   const [dropdownModal, setDropdownModal] = useState({
     show: false,
     label: "",
@@ -18,7 +20,6 @@ function Salon1modal({ show, onHide, selectedItem,handleAddToCart,basePrice,base
   });
   const [totalPrice, setTotalPrice] = useState(2195);
   const [discountedPrice, setDiscountedPrice] = useState(null);
-  
   const initialServices = {
     "waxingOptions:Full arms (including underarms)": {
       title: "Full arms (including underarms)",
@@ -279,6 +280,12 @@ function Salon1modal({ show, onHide, selectedItem,handleAddToCart,basePrice,base
     { label: "Head massage (20 mins)", price: 349 },
     { label: "I don't need anything" },
   ];
+   useEffect(() => {
+    if (selectedItem) {
+      const cartItem = carts.find(c => c.title === selectedItem.title);
+      setCartCount(cartItem?.count || 0);
+    }
+  }, [carts, selectedItem]);
   useEffect(() => {
   if (selectedItem && window.cart) {
     const itemInCart = window.cart.find(item => item.title === selectedItem.title);
@@ -363,12 +370,7 @@ const handleCheckboxChange = (section, label, option, isChecked) => {
                       item.label,
                       item.options ? item.options[0] : item,
                       e.target.checked
-                    )
-                  }
-                  className="fw-semibold"
-                  style={{ fontSize: "14px" }}
-                />
-
+                    )}className="fw-semibold"style={{ fontSize: "14px" }}/>
                 {/* don't show price for "I don't need anything" */}
                 {item.label !== "I don't need anything" && (
                   <div
@@ -488,37 +490,45 @@ const handleCheckboxChange = (section, label, option, isChecked) => {
               </Col>
               <Col className="p-3 ">
                <Button
-              className="butn"
-              onClick={async () => {
-                const extraSelected = Object.values(selectedServices).filter(
-                  s => !baseServices.some(bs => bs.title === s.title && bs.content === s.content)
-                );
-                if (typeof handleAddToCart === "function") {
+                className="butn"
+                onClick={async () => {
+                  const extraSelected = Object.values(selectedServices).filter(
+                    s => !baseServices.some(bs => bs.title === s.title && bs.content === s.content)
+                  );
+
+                  // Step 1: Add to cart
                   await handleAddToCart(
-                  selectedItem,
-                  extraSelected,
-                  discountedPrice ? discountedPrice : totalPrice,
-                  discountedPrice ? totalPrice - discountedPrice : 0
-                );
-                }
-                if (typeof window.updateCartInstantly === "function") {
-                  // Immediately refresh parent cart
-                  window.updateCartInstantly(selectedItem.title);
-                }onHide();}}>
-              Add to Cart
-            </Button>
+                    selectedItem,
+                    extraSelected,
+                    discountedPrice ? discountedPrice : totalPrice,
+                    discountedPrice ? totalPrice - discountedPrice : 0
+                  );
+
+                  // Step 2: Refresh global cart instantly
+                  await fetch("http://localhost:5000/api/carts")
+                    .then(res => res.json())
+                    .then(data => setCarts(data.carts || []));
+
+                  // Optional: If you have a window sync
+                  if (typeof window.updateCartInstantly === "function") {
+                    window.updateCartInstantly(selectedItem.title);
+                  }
+                 // Close modal
+                  onHide();
+                }}>Add to Cart</Button>
               </Col>
             </Row>
           </>
         )}
       </Modal>
-
       {/* DROPDOWN MODAL */}
       <Modal
         show={dropdownModal.show}
         onHide={() => {
           setDropdownModal({ ...dropdownModal, show: false });
           setLoadingDropdownKey(null);
+          setShowDiscountModal(false);
+          setHasChange(false);
         }}
         centered>
         <Button
@@ -571,88 +581,150 @@ const handleCheckboxChange = (section, label, option, isChecked) => {
           </Form>
         </ModalBody>
       </Modal>
+    
+      <Modal
+          show={showDiscountModal}
+          onHide={() => setShowDiscountModal(false)}
+          centered>
+          <Button
+            onClick={() => setShowDiscountModal(false)}
+            className="closebtn"
+            style={{ padding: "0px" }}>X
+          </Button>
+          <ModalBody>
+            <div className="p-3">
+              <Row>{selectedItem && (
+                <Col xs={9}>
+                  <h5 className="fw-semibold">{selectedItem.title}</h5>
+                  <p style={{ color: "#676767ff", fontSize: "14px", marginBottom: "4px" }}>
+                    <FaStar /> {selectedItem.rating}
+                  </p>
+                  <p style={{ fontSize: "13px", marginBottom: "4px" }} >
+                    <span className="fw-semibold">{formatPrice(discountedPrice || totalPrice)}</span>
+                    {discountedPrice && (
+                      <span style={{ textDecoration: "line-through", color: "#888", fontSize: "14px", marginLeft: "8px" }}>
+                        {formatPrice(totalPrice)}
+                      </span>
+                    )}  <span style={{fontSize:"13px" ,color:"#676767ff"}}><GoDotFill style={{fontSize:"10px"}}/>{selectedItem.duration}</span>
+                  </p>
+                  {discountedPrice ? (
+                    <div style={{ color: "rgb(7, 121, 76)", fontSize: "13px" }}>
+                      <FaTag /> ₹{(totalPrice - discountedPrice).toFixed(0)} off applied!
+                    </div>
+                  ) : (
+                    <div style={{ color: "rgb(7, 121, 76)" }}>
+                      <p style={{ fontSize: "14px" }}>
+                        <FaTag style={{ marginRight: "4px" }} />
+                        Add ₹{Math.max(0, 3100 - totalPrice)} more
+                      </p>
+                    </div>
+                  )}
+                </Col>)}
+                <Col xs={3} className="d-flex align-items-center justify-content-end">
+                  {cartCount === 0 ? (
+                    <Button
+                    disabled={totalItems >= 3}
+                    style={{
+                      color: "rgb(110, 66, 229)",
+                      backgroundColor: "rgb(245, 241, 255)",
+                      border: "1px solid rgb(110, 66, 229)",
+                      padding: "5px 18px",
+                      zIndex: "2"
+                    }}
+                    onClick={() => {
+                      if (totalItems >= 3) {
+                        alert("You can only add up to 3 products.");
+                        return;
+                      }
+                      setCartCount(1);
+                      setHasChange(true);
+                    }}
+                  >
+                    Add
+                  </Button>
+                  ) : (
+                    <div className='d-flex align-items-center gap-2 bn' style={{border:"1px solid rgb(110, 66, 229)",backgroundColor:"rgb(245, 241, 255)", borderRadius:"6px", justifyContent: "center"}}>
+                      <Button
+                      onClick={() => {
+                        setCartCount(prev => Math.max(0, prev - 1));
+                        setHasChange(true); // mark pending update
+                      }}
+                      className='button'>−</Button>
+                    <span className="count-box">{cartCount}</span>
+                 <Button
+                  onClick={() => {
+                    if (cartCount >= 3) {
+                      alert("You can’t add more than 3 products.");
+                      return;
+                    }
+                    setCartCount(prev => prev + 1);
+                    setHasChange(true);
+                  }}
+                  className='button'
+                  style={{
+                    opacity: cartCount >= 3 ? "0.6" : "1",              
+                  }}>+</Button>
+                    </div>
+                  )}
+                </Col>
+              </Row>
+            </div>
+            <hr style={{border:"3px solid #676767ff"}}/>
+            <div>
+              <h3 className="fw-semibold">Frequently added together</h3>
+            </div>
+          </ModalBody>
+          {hasChange && (
+          <div className="p-3 pt-0">
+            <Button
+        variant="success" className="butn"
+        onClick={async () => {
+          if (hasChange) {
+            const extraSelected = Object.values(selectedServices).filter(
+              s => !baseServices.some(bs => bs.title === s.title && bs.content === s.content)
+            );
+          //Ensure item exists in cart (if not already)
+            await handleAddToCart(
+              selectedItem,
+              extraSelected,
+              discountedPrice ? discountedPrice : totalPrice,
+              discountedPrice ? totalPrice - discountedPrice : 0
+            );
+            //Update quantity correctly
+            const updatedCart = await fetch("http://localhost:5000/api/carts")
+              .then(res => res.json())
+              .then(data => data.carts || []);
+            const existingItem = updatedCart.find(c => c.title === selectedItem.title);
+            if (existingItem) {
+              // Compare current count in DB vs. modal
+              const diff = cartCount - existingItem.count;
+              if (diff > 0) {
+                // user increased quantity
+                for (let i = 0; i < diff; i++) {
+                  await handleIncrease(existingItem);
+                }
+              } else if (diff < 0) {
+                // user decreased quantity
+                for (let i = 0; i < Math.abs(diff); i++) {
+                  await handleDecrease(existingItem);
+                }
+              }
+            }
+            //Refresh global cart
+            await fetch("http://localhost:5000/api/carts")
+              .then(res => res.json())
+              .then(data => setCarts(data.carts || []));
 
-{selectedItem && (
-  <Modal
-    show={showDiscountModal}
-    onHide={() => setShowDiscountModal(false)}
-    centered
-  >
-    <Button
-      onClick={() => setShowDiscountModal(false)}
-      className="closebtn"
-      style={{ padding: "0px" }}>X
-    </Button>
-    <ModalBody>
-      <div className="p-3">
-        <Row>
-          <Col xs={9}>
-            <h5 className="fw-semibold">{selectedItem.title}</h5>
-            <p style={{ color: "#676767ff", fontSize: "14px", marginBottom: "4px" }}>
-              <FaStar /> {selectedItem.rating}
-            </p>
-            <p style={{ fontSize: "16px", marginBottom: "4px" }}>
-              <span>{formatPrice(discountedPrice || totalPrice)}</span>
-              {discountedPrice && (
-                <span style={{ textDecoration: "line-through", color: "#888", fontSize: "14px", marginLeft: "8px" }}>
-                  {formatPrice(totalPrice)}
-                </span>
-              )}
-            </p>
-            {discountedPrice ? (
-              <div style={{ color: "rgb(7, 121, 76)", fontSize: "13px" }}>
-                <FaTag /> ₹{(totalPrice - discountedPrice).toFixed(0)} off applied!
-              </div>
-            ) : (
-              <div style={{ color: "rgb(7, 121, 76)" }}>
-                <p style={{ fontSize: "14px" }}>
-                  <FaTag style={{ marginRight: "4px" }} />
-                  Add ₹{Math.max(0, 3100 - totalPrice)} more
-                </p>
-              </div>
-            )}
-          </Col>
-          <Col xs={3} className="d-flex align-items-center justify-content-end">
-            {cartCount === 0 ? (
-              <Button
-                style={{color: "rgb(110, 66, 229)",backgroundColor: "rgb(245, 241, 255)",border: "1px solid rgb(110, 66, 229)",padding: "5px 18px",zIndex: "2"}}
-                onClick={async () => {
-                  const extraSelected = Object.values(selectedServices).filter(
-                    s => !baseServices.some(bs => bs.title === s.title && bs.content === s.content)
-                  );
-
-                  await handleAddToCart(
-                    selectedItem,
-                    extraSelected,
-                    discountedPrice ? discountedPrice : totalPrice,
-                    discountedPrice ? totalPrice - discountedPrice : 0
-                  );
-                  setCartCount(1);
-                  if (typeof window.updateCartInstantly === "function") {
-                    window.updateCartInstantly(selectedItem.title);
-                  }
-                }}
-              >
-                Add
-              </Button>
-            ) : (
-              <div className='d-flex align-items-center gap-2 bn' style={{border:"1px solid rgb(110, 66, 229)", borderRadius:"6px", justifyContent: "center"}}>
-                <Button onClick={async () => {
-                  await handleDecrease({ title: selectedItem.title });
-                  setCartCount(prev => Math.max(0, prev - 1));
-                }} className='button'>−</Button>
-                <span className="count-box">{cartCount}</span>
-                <Button onClick={async () => {
-                  await handleIncrease({ title: selectedItem.title });
-                  setCartCount(prev => prev + 1);
-                }} className='button'>+</Button>
-              </div>
-            )}
-          </Col>
-        </Row>
-      </div>
-    </ModalBody>
-  </Modal>
-)}      
+            if (typeof window.updateCartInstantly === "function") {
+              window.updateCartInstantly(selectedItem.title);
+            }
+          }
+          setShowDiscountModal(false);
+        }}>Done</Button>
+          </div>
+        )}
+        </Modal>
+            
     </>);}
+    
 export default Salon1modal;

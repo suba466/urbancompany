@@ -20,7 +20,7 @@ function Salon1() {
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const normalizeKey = (str) => str.toLowerCase().trim().replace(/\s+/g, "-");
   const roundPrice = (price) => Math.round(Number(price) || 0);
-  
+  const totalItems=carts.reduce((sum,item)=>sum+(item.count || 0),0);
   // Fetch Data
   useEffect(() => {
     fetch("http://localhost:5000/api/super")
@@ -93,6 +93,11 @@ const baseServices=[
 const basePrice = 2195;
 const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null) => {
   try {
+    const totalItems = carts.reduce((sum, item) => sum + (item.count || 0), 0);
+    if (totalItems >= 3) {
+      alert("You can only add up to 3 products to your cart.");
+      return;
+    }
     // Save the extras for this package
     setSavedExtras(prev => ({
       ...prev,
@@ -157,6 +162,10 @@ const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null)
 
   const handleIncrease = async (cartItem) => {
     try {
+      const totalItems=carts.reduce((sum,item)=>sum+(item.count||0),0);
+      if(totalItems>=3){
+        alert("You can't add anymore in this item");return;
+      }
       await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -250,13 +259,13 @@ const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null)
                         style={{border:"1px solid rgb(110, 66, 229)", borderRadius:"6px", justifyContent: "center",backgroundColor:"rgb(245, 241, 255)",width:"50%",marginLeft:"36px"}}>
                         <Button onClick={() => handleDecrease(inCart)} className='button '>−</Button>
                         <span className="count-box">{inCart.count || 1}</span>
-                        <Button onClick={() => handleIncrease(inCart)} className='button'>+</Button>
+                        <Button onClick={() => handleIncrease(inCart)} className='button'  style={{
+                    opacity: totalItems >= 3 ? "0.6" : "1",}}>+</Button>
                       </div>
                     )}
                   </div>
                 </Col>
               </Row>
-
               <div style={{ borderBottom: "1px dashed #bbb6b6ff" }}></div>
               <br />
               <div style={{ fontSize: "12px" }}>
@@ -303,7 +312,8 @@ const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null)
                         <div className='button1' style={{ height: "33px" ,backgroundColor:"rgb(245, 241, 255)"}}>
                           <Button onClick={() => handleDecrease(c)} className='button'>−</Button>
                           <span className="count-box"style={{padding:"2px 10px"}}>{c.count || 1}</span>
-                          <Button onClick={() => handleIncrease(c)} className='button'>+</Button>
+                          <Button onClick={() => handleIncrease(c)} className='button' style={{
+                    opacity: totalItems >= 3 ? "0.6" : "1",}}>+</Button>
                         </div>
                         <div style={{ textAlign: "right" }}>
                           <p style={{ fontSize: "13px", margin: 0 }}>{formatPrice(price)}</p>
@@ -396,18 +406,19 @@ const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null)
   </div>
 )}
       <Salon1modal
-        show={showModal}
+        show={showModal} totalItems={totalItems}
         onHide={handleCloseModal}
         selectedItem={selectedItem}
-        handleAddToCart={handleAddToCart} //  added
-        fetchCarts={fetchCarts}  //  ADD THIS LINE
-        carts={carts}
+        handleAddToCart={handleAddToCart} 
+        fetchCarts={fetchCarts}  
+        carts={carts} setCarts={setCarts}
         addButtonRefs={addButtonRefs}
         basePrice={basePrice}
         baseServices={baseServices}
         roundPrice={roundPrice}
         showDiscountModal={showDiscountModal}
-      setShowDiscountModal={setShowDiscountModal}/>
+      setShowDiscountModal={setShowDiscountModal}
+      handleDecrease={handleDecrease} handleIncrease={handleIncrease}/>
     </Container>
   );
 }
