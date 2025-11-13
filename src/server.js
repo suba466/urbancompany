@@ -92,7 +92,14 @@ const apiData = {
   ],
   smartlock: { key:"smartlocks", img:"/assets/smartlocks.png" },
   images: { key:"images", img:"/assets/images.png" },
-  cart: [{ key:"cart", img:"/assets/cart.png" }]
+  cart: [{ key:"cart", img:"/assets/cart.png" }],
+  added:[{key:"foot",img:"assets/foot.webp"},
+         {key:"sara",img:"assets/sara.webp"},
+         {key:"hair",img:"assets/hair.webp"},
+         {key:"o3",img:"assets/o3.webp"},
+         {key:"o3 shine",img:"assets/o3 shine.webp"},
+         {key:"british",img:"assets/british.webp"},
+  ]
 };
 
 // ---------- Static API Routes ----------
