@@ -6,11 +6,27 @@ import { TbCirclePercentageFilled, TbClockHour4 } from "react-icons/tb";
 import { FaStar } from "react-icons/fa";
 import { GoDotFill } from "react-icons/go";
 import { FaTag } from "react-icons/fa6";
-function Salon1modal({ show,totalItems,carts,setCarts, onHide, selectedItem,handleAddToCart,basePrice,baseServices,roundPrice,showDiscountModal,setShowDiscountModal,handleDecrease,handleIncrease}) {
+function Salon1modal({ show,totalItems,showFrequentlyAdded, setShowFrequentlyAdded,carts,setCarts, onHide, selectedItem,handleAddToCart,basePrice,baseServices,roundPrice,showDiscountModal,setShowDiscountModal,handleDecrease,handleIncrease}) {
   const [loadingDropdownKey, setLoadingDropdownKey] = useState(null);
+ 
   const [cartCount, setCartCount] = useState(0);
   const [hasChange,setHasChange]=useState(false);
-  const [added, setAdded]=useState({});
+  const [index, setIndex] = useState(0);
+
+  const visibleCount = 3.5; // Show 3 full + half of next
+
+  const handleNext = () => {
+    if (index < addedImgs.length - visibleCount) {
+      setIndex(index + 1);
+    }
+  };
+
+  const handlePrev = () => {
+    if (index > 0) {
+      setIndex(index - 1);
+    }
+  };
+
   const [dropdownModal, setDropdownModal] = useState({
     show: false,
     label: "",
@@ -51,10 +67,9 @@ function Salon1modal({ show,totalItems,carts,setCarts, onHide, selectedItem,hand
       count: 1,
       content: "Threading",
     },
-  };
-
+  }
   const [selectedServices, setSelectedServices] = useState(initialServices);
-
+  const [addedImgs, setAddedImgs] = useState([]);     
   const waxingOptions = [
     {
       label: "Full arms (including underarms)",
@@ -280,6 +295,15 @@ function Salon1modal({ show,totalItems,carts,setCarts, onHide, selectedItem,hand
     { label: "Head massage (20 mins)", price: 349 },
     { label: "I don't need anything" },
   ];
+  
+
+useEffect(() => {
+  fetch("http://localhost:5000/api/added")
+    .then(res => res.json())
+    .then(data => setAddedImgs(data.added || []))
+    .catch(err => console.error("Failed to load added images:", err));
+}, []);
+
    useEffect(() => {
     if (selectedItem) {
       const cartItem = carts.find(c => c.title === selectedItem.title);
@@ -515,6 +539,7 @@ const handleCheckboxChange = (section, label, option, isChecked) => {
                   }
                  // Close modal
                   onHide();
+                  setShowFrequentlyAdded(true);
                 }}>Add to Cart</Button>
               </Col>
             </Row>
@@ -584,7 +609,7 @@ const handleCheckboxChange = (section, label, option, isChecked) => {
     
       <Modal
           show={showDiscountModal}
-          onHide={() => setShowDiscountModal(false)}
+          onHide={() =>{ setShowDiscountModal(false);setShowFrequentlyAdded(false);}}
           centered>
           <Button
             onClick={() => setShowDiscountModal(false)}
@@ -638,6 +663,7 @@ const handleCheckboxChange = (section, label, option, isChecked) => {
                       }
                       setCartCount(1);
                       setHasChange(true);
+                      setShowFrequentlyAdded(true);
                     }}
                   >
                     Add
@@ -670,9 +696,61 @@ const handleCheckboxChange = (section, label, option, isChecked) => {
               </Row>
             </div>
             <hr style={{border:"3px solid #676767ff"}}/>
-            <div>
-              <h3 className="fw-semibold">Frequently added together</h3>
+            {showFrequentlyAdded && (
+            <div className="mt-4">
+            <h4 className="fw-bold mb-3">Frequently added together</h4>
+          <div className="position-relative overflow-hidden" style={{ width: "100%" }}>
+            {/* Left Arrow */}
+            {index > 0 && (
+              <div
+                onClick={handlePrev}
+                className="carousel-arrow left">
+                &#10094;
+              </div>
+            )}
+            {/* Images */}
+            <div
+              className="d-flex transition"
+              style={{
+                transform: `translateX(-${index * 160}px)`,
+                transition: "transform 0.5s ease",
+                gap: "20px",
+              }}
+            >
+              {addedImgs.map((img, i) => (
+                <div key={i} style={{ minWidth: "140px" }}>
+                  <img
+                    src={`http://localhost:5000/${img.img}`}
+                    alt={img.key}
+                    style={{
+                      width: "140px",
+                      height: "140px",
+                      borderRadius: "10px",
+                      objectFit: "cover",
+                    }}
+                  />
+                  <p style={{ fontSize: "13px" }}>{img.name}</p>
+                  <Row><Col><p className="fw-semibold mb-2" style={{fontSize:"12px"}}>₹{img.price }</p></Col>
+                  <Col ><button className="fw-semibold" style={{width:"50px",border:"1px solid #d4d4d4ff",borderRadius:"6px",backgroundColor:"#ffffffff", color:"rgb(110, 66, 229)",fontSize:"12px" }}>
+                    Add
+                  </button></Col>
+                  </Row>
+                  
+                </div>
+              ))}
             </div>
+
+            {/* Right Arrow */}
+            {index < addedImgs.length - 1 && (
+              <div
+                onClick={handleNext}
+                className="carousel-arrow right"
+              >
+                &#10095;
+              </div>
+            )}
+          </div>
+          </div>)}
           </ModalBody>
           {hasChange && (
           <div className="p-3 pt-0">

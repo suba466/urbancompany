@@ -21,6 +21,7 @@ function Salon1() {
   const normalizeKey = (str) => str.toLowerCase().trim().replace(/\s+/g, "-");
   const roundPrice = (price) => Math.round(Number(price) || 0);
   const totalItems=carts.reduce((sum,item)=>sum+(item.count || 0),0);
+   const [showFrequentlyAdded, setShowFrequentlyAdded] = useState(false);
   // Fetch Data
   useEffect(() => {
     fetch("http://localhost:5000/api/super")
@@ -250,6 +251,7 @@ const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null)
                         // Use saved extras from state if cart is empty
                         const extras = savedExtras[pkg.title] || [];
                         handleAddToCart(pkg, extras);
+                         setShowFrequentlyAdded(true);
                       }}
                       style={{color: "rgb(110, 66, 229)",backgroundColor: "rgb(245, 241, 255)",border: "1px solid rgb(110, 66, 229)",padding: "5px 18px",zIndex: "2"}}>Add
                     </Button>
@@ -406,6 +408,7 @@ const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null)
   </div>
 )}
       <Salon1modal
+      showFrequentlyAdded={showFrequentlyAdded} setShowFrequentlyAdded={setShowFrequentlyAdded}
         show={showModal} totalItems={totalItems}
         onHide={handleCloseModal}
         selectedItem={selectedItem}
