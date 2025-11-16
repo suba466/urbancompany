@@ -24,8 +24,7 @@ function Urbanav() {
   const [placeholder, setPlaceholder] = useState("Search for ");
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
-  const location = useLocation(); // ✅ Detects current route
-
+  const location = useLocation(); //  Detects current route
   const fixedText = "Search for ";
   const words = ["'AC Service'", "'Facial'", "'Kitchen Cleaning'"];
   const typingSpeed = 120;
@@ -86,8 +85,19 @@ function Urbanav() {
   return (
     <>
       <Navbar sticky="top" expand="md" className="urban-nav display">
+         {location.pathname === "/cart" ? (
+        <Container fluid className=" py-2">
+          <span>
+            <img 
+            src={logo} 
+            alt="UC Logo" 
+            style={{ height: "34px", marginLeft: "10px" }} /> <span className="fw-semibold" style={{fontSize:"20px"}}>Checkout</span>
+          </span>
+          
+        </Container>
+      ) : (       
         <Container fluid className="d-flex justify-content-between align-items-center">
-          {/* ✅ Show logo always, hide only 'Native' on /salon */}
+          {/*  Show logo always, hide only 'Native' on /salon */}
           <Navbar.Brand className="d-flex align-items-center left display">
             {logo && <img src={logo} alt="UC Logo" className="logo" />}
             {!location.pathname.startsWith("/salon") && (
@@ -194,7 +204,7 @@ function Urbanav() {
               </div>
             </div>
           </div>
-        </Container>
+        </Container>)}
       </Navbar>
 
       {/* 📍 Location Modal */}

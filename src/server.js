@@ -26,7 +26,8 @@ const packageSchema = new mongoose.Schema({
   duration: String,
   description: String,
   items: [{ text: String, description: String }],
-  content:[{value: String, details: String}]
+  content:[{value: String, details: String}],
+  ratingBreak:[{stars:Number,value:Number,count:String}]
 });
 const Package = mongoose.model("Package", packageSchema);
 const cartSchema = new mongoose.Schema({
@@ -93,12 +94,12 @@ const apiData = {
   smartlock: { key:"smartlocks", img:"/assets/smartlocks.png" },
   images: { key:"images", img:"/assets/images.png" },
   cart: [{ key:"cart", img:"/assets/cart.png" }],
-  added:[{key:"foot",img:"assets/foot.webp"},
-         {key:"sara",img:"assets/sara.webp"},
-         {key:"hair",img:"assets/hair.webp"},
-         {key:"o3",img:"assets/o3.webp"},
-         {key:"o3 shine",img:"assets/o3 shine.webp"},
-         {key:"british",img:"assets/british.webp"},
+  added:[{name:"Foot massage",key:"foot",img:"assets/foot.webp",price:"199"},
+         {name:"Sara fruit cleanup",key:"sara",img:"assets/sara.webp",price:"699"},
+         {name:"Hair color/mehandi (only application)",key:"hair",img:"assets/hair.webp",price:"399"},
+         {name:"O3+tan clear cleanup",key:"o3",img:"assets/o3.webp",price:"849"},
+         {name:"O3+shine & glow facial ",key:"o3 shine",img:"assets/o3 shine.webp",price:"1,699"},
+         {name:"Elysian British rose manicure",key:"british",img:"assets/british.webp",price:"649"},
   ]
 };
 

@@ -206,7 +206,11 @@
   height: 200px;
 }
 
-.carousel-container { position: relative; }
+.carousel-container { position: relative;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+  width: 100%; }
 
 .carousel-arrow {
   position: absolute;
@@ -501,25 +505,9 @@
 .edit:active{
   transform: scale(1.09);
 }
-.carousel-container {
-  display: flex;
-  overflow: hidden;
-  position: relative;
-  width: 100%;
-}
 
-.carousel-track {
-  display: flex;
-  gap: 16px; /* Gap between images */
-  transition: transform 0.5s ease;
-}
 
-.carousel-item {
-  min-width: 140px; /* width of a single image */
-  flex-shrink: 0;
-  border-radius: 10px;
-  text-align: center;
-}
+
 
 /*.btn:active{
   background-color: transparent !important;

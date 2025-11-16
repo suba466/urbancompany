@@ -4,9 +4,11 @@ import Col from 'react-bootstrap/Col';
 import Modal from 'react-bootstrap/Modal';
 import { useState, useEffect, useRef } from 'react';
 import { Button, ModalBody} from 'react-bootstrap';
-import { MdBackpack, MdStars, MdLocalOffer } from "react-icons/md";
+import { MdBackpack, MdStars } from "react-icons/md";
 import { GoDotFill } from "react-icons/go";
 import Salon1modal from './Salon1modal';
+import { useNavigate } from 'react-router-dom';
+import CartBlock from './CartBlock';
 function Salon1() {
   const [savedExtras, setSavedExtras] = useState({});
   const [superPack, setSuperPack] = useState([]);
@@ -21,7 +23,8 @@ function Salon1() {
   const normalizeKey = (str) => str.toLowerCase().trim().replace(/\s+/g, "-");
   const roundPrice = (price) => Math.round(Number(price) || 0);
   const totalItems=carts.reduce((sum,item)=>sum+(item.count || 0),0);
-   const [showFrequentlyAdded, setShowFrequentlyAdded] = useState(false);
+  const [showFrequentlyAdded, setShowFrequentlyAdded] = useState(false);
+  const navigate=useNavigate();
   // Fetch Data
   useEffect(() => {
     fetch("http://localhost:5000/api/super")
@@ -80,10 +83,17 @@ function Salon1() {
   }
 };
 
+// Make edit button inside CartBlock open the same modal
+useEffect(() => {
+  window.openEditPackageFromCart = handleShowModal;
+}, [handleShowModal]);
+
+
   const handleCloseModal = () => {
     setShowModal(false);
     setSelectedItem(null);
   };
+  
 const baseServices=[
   { title: "Full arms (including underarms)", price: 599, content: "Chocolate Roll on" },
   { title: "Full legs", price: 499, content: "Chocolate Roll on" },
@@ -288,63 +298,16 @@ const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null)
             )
           })}
         </Col>
-
         {/* Right Column - Desktop Sticky Cart */}
         <Col xs={12} md={5} className="mt-4 mt-md-0 sticky-cart d-none d-md-block">
-          <div style={{flex: 1,height: "1px",backgroundColor: "rgba(192,192,195,1)"}}></div>
-          <div className='mt-4' style={{ boxShadow: "0 4px 8px rgba(0,0,0,0.2)",border: "1px solid rgba(192,192,195,1)", borderRadius: "8px", padding: "10px" }}>
-            {carts.length === 0 ? (
-              <div className="text-center">
-                <img
-                  src="http://localhost:5000/assets/cart.png"
-                  alt="cart-placeholder"
-                  style={{ width: "50%", padding: "10px" }}
-                />
-                <p>No items in your cart</p>
-              </div>
-            ) : (
-              (Array.isArray(carts) ? carts : []).map((c) => {
-                const price =roundPrice (safePrice(c.price) * (c.count || 1));
-                return (
-                  <div key={c._id}>
-                    <h5 className='fw-semibold mb-2'>Cart</h5>
-                    <Row className="align-items-center">
-                      <Col><p style={{ fontSize: "12px" }}>{c.title}</p></Col>
-                      <Col xs={8} className="d-flex justify-content-between gap-2">
-                        <div className='button1' style={{ height: "33px" ,backgroundColor:"rgb(245, 241, 255)"}}>
-                          <Button onClick={() => handleDecrease(c)} className='button'>−</Button>
-                          <span className="count-box"style={{padding:"2px 10px"}}>{c.count || 1}</span>
-                          <Button onClick={() => handleIncrease(c)} className='button' style={{
-                    opacity: totalItems >= 3 ? "0.6" : "1",}}>+</Button>
-                        </div>
-                        <div style={{ textAlign: "right" }}>
-                          <p style={{ fontSize: "13px", margin: 0 }}>{formatPrice(price)}</p>
-                        </div>
-                      </Col>
-                    </Row>
-
-                    <div style={{ marginTop: "10px", fontSize: "12px" }}>
-                      {(Array.isArray(c.content) ? c.content : []).map((item, i) => (
-                        <p key={i}><GoDotFill style={{ fontSize: "10px", color: "#5a5959ff" }} />{" "}
-                        {item.value ? `${item.value} : ${item.details}` : item.details}</p>
-                      ))}
-                    </div>
-                    <Button className='fw-semibold' style={{backgroundColor:"white",color:"#7330deff",border:"0px",fontSize:"16px"}}
-                   onClick={() => handleShowModal(c)} >Edit</Button>
-                    <br />
-                    <Button style={{backgroundColor:"#7330deff",width:"100%"}}>
-                      <Row style={{fontSize:"13px"}}>
-                        <Col className='text-start'>
-                          <span className='fw-semibold'>{formatPrice(price)}</span>
-                        </Col>
-                        <Col><span style={{marginLeft:"35px"}}>View cart</span></Col>
-                      </Row>
-                    </Button>
-                  </div>
-                )
-              })
-            )}
-          </div>
+          <div style={{flex: 1,height: "1px",backgroundColor: "rgba(192,192,195,1)"}}></div>     
+            <CartBlock
+            carts={carts}
+            formatPrice={formatPrice}
+            safePrice={safePrice}
+            handleIncrease={handleIncrease}
+            handleDecrease={handleDecrease}
+            navigate={navigate}/>       
         </Col>
       </Row>
       {/* Mobile Menu */}
@@ -385,28 +348,28 @@ const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null)
       </ModalBody>
     </Modal>
       {carts.length > 0 && (
-  <div className="mobile-cart-footer-wrapper d-lg-none">
-    <div className="mobile-cart-footer-button-row">
-      <div className="mobile-cart-footer-total">
-        {(() => {
-          const total = (Array.isArray(carts) ? carts : []).reduce(
-            (acc, c) => acc + safePrice(c.price) * (c.count || 1),
-            0
-          );
-          if (total === 0) return null;
-          return (
-            <>
-              <span>{formatPrice(total)}</span>{" "}
-            </>
-          );
-        })()}
-        <Button className="mobile-cart-footer-button mobile-cart-footer-total">
-          View cart
-        </Button>
+      <div className="mobile-cart-footer-wrapper d-lg-none">
+        <div className="mobile-cart-footer-button-row">
+          <div className="mobile-cart-footer-total">
+            {(() => {
+              const total = (Array.isArray(carts) ? carts : []).reduce(
+                (acc, c) => acc + safePrice(c.price) * (c.count || 1),
+                0
+              );
+              if (total === 0) return null;
+              return (
+                <>
+                  <span>{formatPrice(total)}</span>{" "}
+                </>
+              );
+            })()}
+            <Button className="mobile-cart-footer-button mobile-cart-footer-total" onClick={()=>navigate("/cart")}>
+              View cart
+            </Button>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-)}
+    )}
       <Salon1modal
       showFrequentlyAdded={showFrequentlyAdded} setShowFrequentlyAdded={setShowFrequentlyAdded}
         show={showModal} totalItems={totalItems}
