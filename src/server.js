@@ -3,6 +3,7 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
+import { title } from "process";
 const app = express();
 const PORT = 5000;
 // Middleware
@@ -40,6 +41,86 @@ const cartSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 const Cart = mongoose.model("Cart", cartSchema);
+const packageDetailsSchema = new mongoose.Schema({
+  packageId: { type: mongoose.Schema.Types.ObjectId, ref: "Package" },
+
+  basePrice: Number,
+
+  baseServices: [
+    {
+      title: String,
+      content: String,
+      price: Number
+    }
+  ],
+
+  serviceCategories: {
+    waxingOptions: [
+      {
+        label: String,
+        options: [
+          {
+            name: String,
+            price: Number,
+            description: String
+          }
+        ]
+      }
+    ],
+
+    facial: [
+      {
+        name: String,
+        price: Number,
+        description: String
+      }
+    ],
+
+    pedicure: [
+      {
+        name: String,
+        price: Number,
+        description: String
+      }
+    ],
+
+    manicure: [
+      {
+        name: String,
+        price: Number,
+        description: String
+      }
+    ],
+
+    bleach: [
+      {
+        name: String,
+        price: Number,
+        description: String
+      }
+    ],
+
+    hair: [
+      {
+        name: String,
+        price: Number,
+        description: String
+      }
+    ],
+
+    facialHair: [
+      {
+        name: String,
+        price: Number,
+        description: String
+      }
+    ]
+  },
+
+  defaultSelections: Object
+});
+
+const PackageDetails = mongoose.model("PackageDetails", packageDetailsSchema);
 // --- STATIC JSON DATA ---
 const apiData = {
   logo: "/assets/Uc.png",
@@ -158,21 +239,37 @@ app.get("/api/carts", async (req, res) => {
   }
 });
 
-//  Add or Update Cart (Prevents Duplicates)
 app.post("/api/addcarts", async (req, res) => {
   try {
-    const {productId, title, price, originalPrice, content } = req.body;
-    const existing = await Cart.findOne({ productId }) || await Cart.findOne({ title });
+    const { productId, title, price, originalPrice, content } = req.body;
+
+    let existing = null;
+
+    // Only match using productId to avoid overwriting other carts
+    if (productId) {
+      existing = await Cart.findOne({ productId });
+    }
+
+    // If exact product exists, update it
     if (existing) {
-    existing.content = content;
-    existing.price = price;
-    existing.originalPrice = originalPrice;
-    existing.count = existing.count || 1; // preserve count
-    await existing.save();
-    return res.json({ message: "Cart updated", cart: existing });
-  }
-    // Create new cart
-    const newCart = new Cart({ productId,title, price, originalPrice, content, count: 1 });
+      existing.content = content;
+      existing.price = price;
+      existing.originalPrice = originalPrice;
+      existing.count = existing.count || 1;
+      await existing.save();
+      return res.json({ message: "Cart updated", cart: existing });
+    }
+
+    // Otherwise create NEW cart item
+    const newCart = new Cart({
+      productId: productId || new mongoose.Types.ObjectId().toString(),
+      title,
+      price,
+      originalPrice,
+      content,
+      count: 1,
+    });
+
     await newCart.save();
     res.status(201).json({ message: "Cart added", cart: newCart });
 
@@ -181,6 +278,7 @@ app.post("/api/addcarts", async (req, res) => {
     res.status(500).json({ error: "Failed to add/update cart" });
   }
 });
+
 
 app.put("/api/carts/:id", async (req, res) => {
   try {
@@ -197,6 +295,36 @@ app.delete("/api/carts/:id", async (req, res) => {
     res.json({ message: "Cart item removed" });
   } catch {
     res.status(500).json({ error: "Failed to delete cart item" });
+  }
+});
+app.post("/api/package-details", async (req, res) => {
+  try {
+    const newDetails = new PackageDetails(req.body);
+    await newDetails.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Package details saved successfully",
+      data: newDetails
+    });
+  } catch (error) {
+    console.error("Error saving package details:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+
+app.get("/api/package-details/:id", async (req, res) => {
+  try {
+    const details = await PackageDetails.findOne({ packageId: req.params.id });
+
+    if (!details) {
+      return res.status(404).json({ error: "Package details not found" });
+    }
+
+    res.json({ details });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch package details" });
   }
 });
 

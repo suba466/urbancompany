@@ -25,7 +25,7 @@ function Salon1() {
   const totalItems=carts.reduce((sum,item)=>sum+(item.count || 0),0);
   const [showFrequentlyAdded, setShowFrequentlyAdded] = useState(false);
   const navigate=useNavigate();
-  // Fetch Data
+  // --- Fetch Data ---
   useEffect(() => {
     fetch("http://localhost:5000/api/super")
       .then(res => res.json())
@@ -44,12 +44,14 @@ function Salon1() {
       .then(data => setSalon(data.salonforwomen))
       .catch(err => console.error("Error fetching salon:", err));
   }, []);
+
   useEffect(() => {
-  window.updateCartInstantly = async(title) => {
-   await fetchCarts();
-   setCarts(prev=>[...prev]);
-  };
-}, []);
+    window.updateCartInstantly = async(title) => {
+      await fetchCarts();
+      setCarts(prev=>[...prev]);
+    };
+    window.openEditPackageFromCart = handleShowModal;
+  }, []);
 
   const fetchCarts = () => {
     fetch("http://localhost:5000/api/carts")
@@ -57,118 +59,91 @@ function Salon1() {
       .then(data => setCarts(data.carts || []))
       .catch(err => console.error("Error fetching carts:", err));
   };
-  // Modal handlers
+
+  // --- Modal handlers ---
   const handleShowModal = async (item) => {
-  try {
-    // Fetch package details
-    const res = await fetch(`http://localhost:5000/api/packages`);
-    const data = await res.json();
-    const matched = data.packages.find(pkg => pkg.title === item.title);
+    try {
+      const res = await fetch(`http://localhost:5000/api/packages`);
+      const data = await res.json();
+      const matched = data.packages.find(pkg => pkg.title === item.title);
 
-    // Get saved cart entry if exists
-    const cartsRes = await fetch("http://localhost:5000/api/carts");
-    const cartsData = await cartsRes.json();
-    const existingCartItem = cartsData.carts?.find(c => c.title === item.title);
+      const cartsRes = await fetch("http://localhost:5000/api/carts");
+      const cartsData = await cartsRes.json();
+      const existingCartItem = cartsData.carts?.find(c => c.title === item.title);
 
-    // Merge both to preserve saved selections
-    const mergedItem = {
-      ...(matched || item),
-      savedSelections: existingCartItem?.savedSelections || []
-    };
+      const mergedItem = {
+        ...(matched || item),
+        savedSelections: existingCartItem?.savedSelections || [],
+        productId: existingCartItem?.productId || matched?._id || Date.now().toString()
+      };
 
-    setSelectedItem(mergedItem);
-    setShowModal(true);
-  } catch (err) {
-    console.error("Error loading modal data:", err);
-  }
-};
-
-// Make edit button inside CartBlock open the same modal
-useEffect(() => {
-  window.openEditPackageFromCart = handleShowModal;
-}, [handleShowModal]);
-
+      setSelectedItem(mergedItem);
+      setShowModal(true);
+    } catch (err) {
+      console.error("Error loading modal data:", err);
+    }
+  };
 
   const handleCloseModal = () => {
     setShowModal(false);
     setSelectedItem(null);
   };
-  
-const baseServices=[
-  { title: "Full arms (including underarms)", price: 599, content: "Chocolate Roll on" },
-  { title: "Full legs", price: 499, content: "Chocolate Roll on" },
-  { title: "O3+ shine & glow facial", price: 1699, content: "Facial" },
-  { title: "Eyebrow", price: 49, content: "Threading" },
-  { title: "Upper lip", price: 49, content: "Threading" },
-];
-const basePrice = 2195;
-const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null) => {
-  try {
-    const totalItems = carts.reduce((sum, item) => sum + (item.count || 0), 0);
-    if (totalItems >= 3) {
-      alert("You can only add up to 3 products to your cart.");
-      return;
-    }
-    // Save the extras for this package
-    setSavedExtras(prev => ({
-      ...prev,
-      [pkg.title]: selectedServices
-    }));
 
-    // Fetch existing cart item
-    const res = await fetch("http://localhost:5000/api/carts");
-    const data = await res.json();
-    const existing = data.carts?.find(c => c.title === pkg.title);
+  const baseServices=[
+    { title: "Full arms (including underarms)", price: 599, content: "Chocolate Roll on" },
+    { title: "Full legs", price: 499, content: "Chocolate Roll on" },
+    { title: "O3+ shine & glow facial", price: 1699, content: "Facial" },
+    { title: "Eyebrow", price: 49, content: "Threading" },
+    { title: "Upper lip", price: 49, content: "Threading" },
+  ];
+  const basePrice = 2195;
+const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null, isExtraOnly = false) => {
+  const productId = pkg.productId || pkg._id || Date.now().toString();
+  const existing = carts.find(c => c.productId === productId);
 
-    // Merge base + extra services
-    const existingExtras = existing?.savedSelections || [];
-    const mergedExtras = [
-      ...existingExtras,
-      ...selectedServices.filter(
-        s => !existingExtras.some(e => e.title === s.title && e.content === s.content)
-      )
-    ];
-
-    const extraPrice = mergedExtras.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
-    const totalPrice = overridePrice ? overridePrice : basePrice + extraPrice;
-    
-    const payload = {
-      title: pkg.title,
-      price: totalPrice,
-      count: existing ? existing.count : 1,
-      content: [
-        ...baseServices.map(s => ({
-          value: s.content === "Threading" ? "Threading" : "",
+  // Only include base services if it's NOT extra-only
+  const content = isExtraOnly
+    ? selectedServices.map(s => ({
+        details: s.content && s.content !== s.title ? `${s.title} (${s.content})` : s.title,
+        price: s.price || 0,
+      }))
+    : [
+        ...(pkg.baseServices || baseServices).map(s => ({
           details: s.content && s.content !== s.title ? `${s.title} (${s.content})` : s.title,
-          price: s.price,
+          price: s.price || 0,
         })),
-        ...mergedExtras.map(s => ({
-          value: s.content === "Threading" ? "Threading" : "",
+        ...selectedServices.map(s => ({
           details: s.content && s.content !== s.title ? `${s.title} (${s.content})` : s.title,
-          price: s.price,
+          price: s.price || 0,
         })),
-      ],
-      savedSelections: mergedExtras,
-    };
+      ];
 
-    if (existing) {
-      await fetch(`http://localhost:5000/api/carts/${existing._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-    } else {
-      await fetch("http://localhost:5000/api/addcarts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-    }
+  const totalPrice = overridePrice || content.reduce((sum, s) => sum + s.price, 0);
 
-    await fetchCarts();
-  } catch (err) {
-    console.error("Error adding to cart:", err);
+  const payload = {
+    productId,
+    title: pkg.title,
+    price: totalPrice,
+    count: existing ? existing.count : 1,
+    content,
+    savedSelections: selectedServices,
+  };
+
+  if (existing) {
+    await fetch(`http://localhost:5000/api/carts/${existing._id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } else {
+    await fetch("http://localhost:5000/api/addcarts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
   }
+
+  await fetchCarts();
 };
 
   const handleIncrease = async (cartItem) => {
@@ -204,6 +179,7 @@ const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null)
       console.error(err);
     }
   };
+
   const formatPrice = (amount) => `₹${amount.toLocaleString("en-IN")}`;
   const safePrice = (price) => Number((price || "0").toString().replace(/[₹,]/g, ""));
     return (

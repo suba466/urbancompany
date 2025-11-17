@@ -112,7 +112,7 @@ const handleSelect = (selectedIndex) => {
         <div style={{ flex: 1, height: "1px", backgroundColor: "rgba(227,227,227,1)" }}></div>
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px",}}>
         {salon?.map((s, index) => (
           <div
             key={index}

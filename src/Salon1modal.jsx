@@ -5,7 +5,6 @@ import { IoTime } from "react-icons/io5";
 import { TbCirclePercentageFilled } from "react-icons/tb";
 import { FaStar, FaTag } from "react-icons/fa";
 import { GoDotFill } from "react-icons/go";
-import ProgressBar from 'react-bootstrap/ProgressBar';
 function Salon1modal({
   show,
   totalItems = 0,
@@ -35,7 +34,7 @@ function Salon1modal({
   const [dropdownModal, setDropdownModal] = useState({ show: false, label: "", options: [], selected: "", type: "" });
   const [totalPrice, setTotalPrice] = useState(basePrice || 0);
   const [discountedPrice, setDiscountedPrice] = useState(null);
-
+  
   // ---------- static data (kept from your original file) ----------
   const initialServices = {
     "waxingOptions:Full arms (including underarms)": { title: "Full arms (including underarms)", price: 599, count: 1, content: "Chocolate Roll on" },
@@ -48,7 +47,10 @@ function Salon1modal({
   const [selectedServices, setSelectedServices] = useState(initialServices);
 
   const [addedImgs, setAddedImgs] = useState([]);     
-
+  const visibleCarouselItems = addedImgs.filter(img => {
+  const inCart = carts.some(c => c.title === img.name);
+  return !inCart;
+});
   const waxingOptions = [
     { label: "Full arms (including underarms)", options: [ { name: "RICA White Chocolate Wax", price: 499 }, { name: "Chocolate Roll on", price: 599 }, { name: "Honey Wax", price: 319 }, { name: "RICA Roll on", price: 679 } ] },
     { label: "Full legs", options: [ { name: "Honey Wax", price: 319 }, { name: "RICA White Chocolate Wax", price: 549 }, { name: "Chocolate Roll on", price: 499 }, { name: "RICA Roll on", price: 629 } ] },
@@ -115,6 +117,14 @@ function Salon1modal({
         .catch(err => console.error("Error syncing cart saved selections:", err));
     }
   }, [show, selectedItem]);
+useEffect(() => {
+  const updatedCounts = {};
+  addedImgs.forEach(img => {
+    const cartItem = carts.find(c => c.title === img.name);
+    if (cartItem) updatedCounts[img.key] = cartItem.count;
+  });
+  setCarouselCounts(updatedCounts);
+}, [carts, addedImgs]);
 
   useEffect(() => {
     const extraPrice = Object.values(selectedServices).reduce((sum, s) => {
@@ -346,10 +356,10 @@ function Salon1modal({
       </Modal>
 
       {/* DISCOUNT / CART CHANGE MODAL */}
-      <Modal show={showDiscountModal} onHide={() => { setShowDiscountModal(false); setShowFrequentlyAdded(false); }} centered>
+      <Modal show={showDiscountModal} onHide={() => { setShowDiscountModal(false); setShowFrequentlyAdded(false); }} centered contentClassName="custom-modal">
         <Button type="button" onClick={() => setShowDiscountModal(false)} className="closebtn" style={{ padding: "0px" }}>X</Button>
         <ModalBody>
-          <div className="p-3">
+          <div className="p-3 scroll">
             <Row>
               {selectedItem && (
                 <Col xs={9}>
@@ -392,44 +402,129 @@ function Salon1modal({
                 )}
               </Col>
             </Row>
-            {showFrequentlyAdded && (  
-              <div className="mt-4">
-                <hr style={{ border: "3px solid #676767ff" }} />
-                <h4 className="fw-bold mb-3">Frequently added together</h4>
-                <div className="position-relative overflow-hidden" style={{ width: "100%" }}>
-                  {index > 0 && (<div onClick={handlePrev} className="carousel-arrow left">&#10094;</div>)}
-                  <div className="d-flex transition" style={{ transform: `translateX(-${index * 160}px)`, transition: "transform 0.5s ease", gap: "20px" }}>
-                    {addedImgs.map((img, i) => (
-                      <div key={i} style={{ minWidth: "140px" }}>
-                        <img src={`http://localhost:5000/${img.img}`} alt={img.key} style={{ width: "140px", height: "140px", borderRadius: "10px", objectFit: "cover" }} />
-                        <p className="fw-semibold" style={{ fontSize: "12px", minHeight: "32px", marginBottom: "6px" }}>{img.name}</p>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span className="fw-semibold" style={{ fontSize: "12px" }}>₹{img.price}</span>
-                          {(carouselCounts[img.key] || 0) > 0 ? (
-                            <div className="d-flex align-items-center" style={{ border: "1px solid rgb(110, 66, 229)", backgroundColor: "rgb(245, 241, 255)", borderRadius: "6px", width: "60px", height: "25px" }}>
-                              <Button type="button" style={{ width: "5px", height: "23px" }} className="button" onClick={() => setCarouselCounts(prev => ({ ...prev, [img.key]: Math.max(0, (prev[img.key] || 0) - 1) }))}>−</Button>
-                              <span className="count-box">{carouselCounts[img.key] || 0}</span>
-                              <Button type="button" style={{ width: "5px", height: "24px" }} className="button" onClick={() => setCarouselCounts(prev => ({ ...prev, [img.key]: (prev[img.key] || 0) + 1 }))}>+</Button>
-                            </div>
-                          ) : (
-                            <Button className="fw-semibold" style={{ width: "50px", border: "1px solid #d4d4d4ff", borderRadius: "6px", backgroundColor: "#fff", color: "rgb(110, 66, 229)", fontSize: "12px" }} onClick={async () => {
-                              setCarouselCounts(prev => ({ ...prev, [img.key]: 1 }));
-                              await handleAddToCart({ title: img.name, price: img.price }, [], img.price, 0);
-                              try { const refreshed = await fetch("http://localhost:5000/api/carts").then(r => r.json()).then(d => d.carts || []); setCarts(refreshed); } catch (err) { console.error(err); }
-                            }}>Add</Button>
-                          )}
-                        </div>
+            {showFrequentlyAdded && (
+            <div className="mt-4">
+              <hr style={{ border: "3px solid #676767ff" }} />
+              <h4 className="fw-bold mb-3">Frequently added together</h4>
+              <div className="position-relative overflow-hidden" style={{ width: "100%" }}>
+                {/* Left arrow */}
+                {index > 0 && (
+                  <div onClick={handlePrev} className="carousel-arrow left" style={{ cursor: "pointer" }}>&#10094;</div>
+                )}
+
+                {/* Carousel items */}
+                <div
+                  className="d-flex transition"
+                  style={{
+                    transform: `translateX(-${index * 170}px)`,
+                    transition: "transform 0.5s ease",
+                    gap: "20px",
+                  }}
+                >
+                  {visibleCarouselItems.map((img) => {
+                  const countInCart = carts.find(c => c.title === img.name)?.count || 0;
+                  const carouselCount = carouselCounts[img.key] || 0;
+                  const showCounter = countInCart > 0 || carouselCount > 0;
+                  return (
+                    <div key={img.key} style={{ minWidth: "140px" }}>
+                      <img
+                        src={`http://localhost:5000/${img.img}`}
+                        alt={img.key}
+                        style={{ width: "140px", height: "140px", borderRadius: "10px", objectFit: "cover" }}/>
+                      <p style={{ fontSize:"12px" }}>{img.name}</p>
+                      <Row><Col><span>₹{img.price}</span> </Col>
+                      <Col>{showCounter ? (
+                      <div style={{
+                        border: "1px solid rgb(110, 66, 229)",
+                        backgroundColor: "rgb(245, 241, 255)",
+                        borderRadius: "6px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",}}>
+                        {/* MINUS */}
+                        <Button
+                          className="button"
+                          style={{ fontSize: "14px" }}
+                          onClick={async () => {
+                            const cartItem = carts.find(c => c.title === img.name);
+                            if (cartItem) {
+                              if (cartItem.count === 1) {
+                                // Remove from cart → reset carousel back to "Add"
+                                setCarouselCounts(prev => ({ ...prev, [img.key]: 0 }));
+                              }
+                              await handleDecrease(cartItem);
+                            } else {
+                              setCarouselCounts(prev => ({
+                                ...prev,
+                                [img.key]: Math.max(0, carouselCount - 1)
+                              }));
+                            }
+                          }}
+                        >
+                          −
+                        </Button>
+
+                        {/* COUNT */}
+                        <span className="count-box" style={{ fontSize: "12px", margin: "0 6px" }}>
+                          {countInCart || carouselCount}
+                        </span>
+
+                        {/* PLUS */}
+                        <Button
+                          className="button"
+                          style={{ fontSize: "14px" }}
+                          onClick={async () => {
+                            const cartItem = carts.find(c => c.title === img.name);
+                            if (cartItem) {
+                              await handleIncrease(cartItem);
+                            } else {
+                              setCarouselCounts(prev => ({
+                                ...prev,
+                                [img.key]: carouselCount + 1
+                              }));
+                            }
+                          }}
+                        >
+                          +
+                        </Button>
                       </div>
-                    ))}
-                  </div>
-                  {index < Math.max(0, addedImgs.length - 1) && (<div onClick={handleNext} className="carousel-arrow right">&#10095;</div>)}
+                    ) : (
+                      <Button
+                        style={{
+                          width: "50px",
+                          border: "1px solid #d4d4d4ff",
+                          borderRadius: "6px",
+                          backgroundColor: "#fff",
+                          color: "rgb(110, 66, 229)",
+                          fontSize: "12px"
+                        }}
+                        onClick={() =>
+                          setCarouselCounts(prev => ({ ...prev, [img.key]: 1 }))
+                        }>Add
+                      </Button>
+                    )}
+                    </Col></Row>
+                  
+                    </div>
+                  );
+                })}
+
+
                 </div>
+
+                {/* Right arrow */}
+                {index < Math.max(0, visibleCarouselItems.length - 3.5) && (
+                  <div onClick={handleNext} className="carousel-arrow right" style={{ cursor: "pointer" }}>&#10095;</div>
+                )}
               </div>
-            )}
+            </div>
+          )}
             <hr style={{ border: "3px solid #676767ff" }} />
-            {/* Rating breakdown */}
+            
             {Array.isArray(selectedItem?.ratingBreak) && selectedItem.ratingBreak.length > 0 && (
-              <div style={{ marginTop: "10px" }}>
+              <div className="mt-5">
+                <h3><FaStar style={{marginBottom:"10px"}}/> <span className="fw-semibold" style={{fontSize:"37px"}}>4.85</span></h3>
+                <p style={{color:"#4c4c4cff",marginTop:"-5px"}}>  7.3M reviews</p>
                 {selectedItem.ratingBreak.map((rb, i) => (
                   <div
                     key={i}
@@ -441,7 +536,7 @@ function Salon1modal({
                     }}>
                     <div style={{ display: "flex", alignItems: "center", width: "45px" }}>
                       <FaStar style={{ fontSize: "12px", marginRight: "3px" }} />
-                      <span style={{ fontWeight: "600", fontSize: "14px" }}>{rb.stars}</span>
+                      <span style={{ fontWeight: "600", fontSize: "16px" }}>{rb.stars}</span>
                     </div>
                     {/* Progress bar */}
                     <div
@@ -452,8 +547,7 @@ function Salon1modal({
                         borderRadius: "3px",
                         overflow: "hidden",
                         margin: "0 12px",
-                      }}
-                    >
+                      }}>
                       <div
                         style={{
                           width: `${Math.min(100, Number(rb.value) || 0)}%`,
@@ -463,7 +557,7 @@ function Salon1modal({
                       ></div>
                     </div>
                     {/* Review count → 6.8M */}
-                    <div style={{ width: "50px", textAlign: "right", fontWeight: "600" }}>
+                    <div style={{ width: "50px", textAlign: "right" }}>
                       {rb.count}
                     </div>
                   </div>
@@ -475,34 +569,28 @@ function Salon1modal({
           {hasChange && (
             <div className="p-3 pt-0">
               <Button variant="success" className="butn" onClick={async () => {
-                if (!hasChange) return;
+              if (!hasChange) return;
 
-                const extraSelected = Object.values(selectedServices).filter(s => !Array.isArray(baseServices) || !baseServices.some(bs => bs.title === s.title && bs.content === s.content));
+              const extraSelected = Object.values(selectedServices).filter(s => !Array.isArray(baseServices) || !baseServices.some(bs => bs.title === s.title && bs.content === s.content));
 
-                await handleAddToCart(selectedItem, extraSelected, discountedPrice ? discountedPrice : totalPrice, discountedPrice ? totalPrice - discountedPrice : 0);
+              await handleAddToCart(selectedItem, extraSelected, discountedPrice ? discountedPrice : totalPrice, discountedPrice ? totalPrice - discountedPrice : 0);
 
-                // fetch updated cart and adjust counts
-                try {
-                  const updatedCart = await fetch("http://localhost:5000/api/carts").then(r => r.json()).then(d => d.carts || []);
-                  const existingItem = updatedCart.find(c => c.title === selectedItem.title);
-                  if (existingItem) {
-                    const diff = cartCount - existingItem.count;
-                    if (diff > 0) {
-                      for (let i = 0; i < diff; i++) await handleIncrease(existingItem);
-                    } else if (diff < 0) {
-                      for (let i = 0; i < Math.abs(diff); i++) await handleDecrease(existingItem);
-                    }
+              // Add carousel items
+              for (const key in carouselCounts) {
+                if (carouselCounts[key] > 0) {
+                  const img = addedImgs.find(i => i.key === key);
+                  if (img) {
+                    await handleAddToCart({ title: img.name, price: img.price }, [], img.price, true);
                   }
-
-                  const refreshed = await fetch("http://localhost:5000/api/carts").then(r => r.json()).then(d => d.carts || []);
-                  setCarts(refreshed);
-                } catch (err) {
-                  console.error("Error updating cart counts:", err);
                 }
+              }
+              const refreshed = await fetch("http://localhost:5000/api/carts").then(r => r.json()).then(d => d.carts || []);
+              setCarts(refreshed);
+              setShowDiscountModal(false);
+            }}>
+            Done
+          </Button>
 
-                if (typeof window.updateCartInstantly === "function") window.updateCartInstantly(selectedItem.title);
-                setShowDiscountModal(false);
-              }}>Done</Button>
             </div>
           )}
 
