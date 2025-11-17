@@ -41,86 +41,6 @@ const cartSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 const Cart = mongoose.model("Cart", cartSchema);
-const packageDetailsSchema = new mongoose.Schema({
-  packageId: { type: mongoose.Schema.Types.ObjectId, ref: "Package" },
-
-  basePrice: Number,
-
-  baseServices: [
-    {
-      title: String,
-      content: String,
-      price: Number
-    }
-  ],
-
-  serviceCategories: {
-    waxingOptions: [
-      {
-        label: String,
-        options: [
-          {
-            name: String,
-            price: Number,
-            description: String
-          }
-        ]
-      }
-    ],
-
-    facial: [
-      {
-        name: String,
-        price: Number,
-        description: String
-      }
-    ],
-
-    pedicure: [
-      {
-        name: String,
-        price: Number,
-        description: String
-      }
-    ],
-
-    manicure: [
-      {
-        name: String,
-        price: Number,
-        description: String
-      }
-    ],
-
-    bleach: [
-      {
-        name: String,
-        price: Number,
-        description: String
-      }
-    ],
-
-    hair: [
-      {
-        name: String,
-        price: Number,
-        description: String
-      }
-    ],
-
-    facialHair: [
-      {
-        name: String,
-        price: Number,
-        description: String
-      }
-    ]
-  },
-
-  defaultSelections: Object
-});
-
-const PackageDetails = mongoose.model("PackageDetails", packageDetailsSchema);
 // --- STATIC JSON DATA ---
 const apiData = {
   logo: "/assets/Uc.png",
@@ -297,36 +217,7 @@ app.delete("/api/carts/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to delete cart item" });
   }
 });
-app.post("/api/package-details", async (req, res) => {
-  try {
-    const newDetails = new PackageDetails(req.body);
-    await newDetails.save();
 
-    res.status(201).json({
-      success: true,
-      message: "Package details saved successfully",
-      data: newDetails
-    });
-  } catch (error) {
-    console.error("Error saving package details:", error);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
-
-app.get("/api/package-details/:id", async (req, res) => {
-  try {
-    const details = await PackageDetails.findOne({ packageId: req.params.id });
-
-    if (!details) {
-      return res.status(404).json({ error: "Package details not found" });
-    }
-
-    res.json({ details });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch package details" });
-  }
-});
 
 // ---------- Start Server ----------
 app.listen(PORT, () => console.log(` Server running on http://localhost:${PORT}`));
