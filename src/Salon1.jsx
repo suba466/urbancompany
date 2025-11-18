@@ -26,7 +26,9 @@ function Salon1() {
   const [showFrequentlyAdded, setShowFrequentlyAdded] = useState(false);
   const navigate=useNavigate();
   // --- Fetch Data ---
+  
   useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
     fetch("http://localhost:5000/api/super")
       .then(res => res.json())
       .then(data => setSuperPack(data.super ? [data.super[0]] : []))
@@ -43,7 +45,7 @@ function Salon1() {
       .then(res => res.json())
       .then(data => setSalon(data.salonforwomen))
       .catch(err => console.error("Error fetching salon:", err));
-  }, []);
+  }}, []);
 
   useEffect(() => {
     window.updateCartInstantly = async(title) => {
