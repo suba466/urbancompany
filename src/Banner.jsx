@@ -12,20 +12,18 @@ function Banner() {
   const navigate = useNavigate();
 
   useEffect(() => {
-     if (process.env.NODE_ENV === "development") {
     fetch("http://localhost:5000/api/banner")
       .then((res) => res.json())
       .then((data) => setBanner(data.banner))
       .catch((err) => console.error("Error fetching banner:", err));
-  }}, []);
+  }, []);
 
   useEffect(() => {
-     if (process.env.NODE_ENV === "development") {
     fetch("http://localhost:5000/api/services")
       .then((res) => res.json())
       .then((data) => setServices(data.services))
       .catch((err) => console.error("Error fetching services:", err));
-  }}, []);
+  }, []);
 
   const firstRow = services.slice(0, 2);
   const secondRow = services.slice(2, 5);

@@ -10,19 +10,17 @@ function Salon() {
  const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
     fetch("http://localhost:5000/api/salonforwomen")
       .then((res) => res.json())
       .then((data) => setSalon(data.salonforwomen))
       .catch((err) => console.error("Error fetching salon: ", err));
-  }}, []);
+  }, []);
   useEffect(() => {
-     if (process.env.NODE_ENV === "development") {
     fetch("http://localhost:5000/api/advanced")
       .then((res) => res.json())
       .then((data) => setAdvanced(data.advanced))
       .catch((err) => console.error("Error fetching salon: ", err));
-  }}, []);
+  }, []);
 const handleSelect = (selectedIndex) => {
     setActiveIndex(selectedIndex);
   };
