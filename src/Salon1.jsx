@@ -97,7 +97,8 @@ function Salon1() {
     { title: "Upper lip", price: 49, content: "Threading" },
   ];
   const basePrice = 2195;
-const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null, isExtraOnly = false) => {
+  
+  const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null, isExtraOnly = false) => {
   const productId = pkg.productId || pkg._id || Date.now().toString();
   const existing = carts.find(c => c.productId === productId);
 
@@ -118,7 +119,7 @@ const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null,
         })),
       ];
 
-  const totalPrice = overridePrice || content.reduce((sum, s) => sum + s.price, 0);
+  const totalPrice = overridePrice || (pkg.price ? Number(pkg.price): content.reduce((sum,s)=>sum+s.price,0));
 
   const payload = {
     productId,
@@ -277,13 +278,15 @@ const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null,
         {/* Right Column - Desktop Sticky Cart */}
         <Col xs={12} md={5} className="mt-4 mt-md-0 sticky-cart d-none d-md-block">
           <div style={{flex: 1,height: "1px",backgroundColor: "rgba(192,192,195,1)"}}></div>     
-            <CartBlock
+           <br />
+            <CartBlock 
             carts={carts}
             formatPrice={formatPrice}
             safePrice={safePrice}
             handleIncrease={handleIncrease}
             handleDecrease={handleDecrease}
-            navigate={navigate}/>       
+            navigate={navigate}
+            onEdit={handleShowModal}/>       
         </Col>
       </Row>
       {/* Mobile Menu */}

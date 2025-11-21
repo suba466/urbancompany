@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Modal from "react-bootstrap/Modal";
 import { Button, ModalBody, Form, Row, Col } from "react-bootstrap";
 import { IoTime } from "react-icons/io5";
@@ -32,8 +32,7 @@ function Salon1modal({
   const visibleCount = 3.5; // used for carousel boundary calculation
 
   const [dropdownModal, setDropdownModal] = useState({ show: false, label: "", options: [], selected: "", type: "" });
-  const [totalPrice, setTotalPrice] = useState(basePrice || 0);
-  const [discountedPrice, setDiscountedPrice] = useState(null);
+  
   
   // ---------- static data (kept from your original file) ----------
   const initialServices = {
@@ -64,21 +63,12 @@ function Salon1modal({
     { label: "Full body", options: [ { name: "Honey Wax", price: 1369 }, { name: "RICA White Chocolate Wax", price: 1919 }, { name: "RICA Roll on", price: 2019 }, { name: "Chocolate Roll on", price: 1619 } ] },
     { label: "I don't need anything", options: [] },
   ];
-
   const facial = [ { label: "Sara Lightening glow facial", price: 949 }, { label: "Elysian firming wine glow facial", price: 1049 }, { label: "O3+ shine & glow facial", price: 1699 }, { label: "O3+ power brightening facial", price: 1999 }, { label: "Sara fruit cleanup", price: 699 }, { label: "O3+ tan clear cleanup", price: 849 }, { label: "I don't need anything" } ];
-
   const pedicure = [ { label: "Elysian Chocolate & Vanilla pedicure", price: 849 }, { label: "Elysian Candle Spa pedicure", price: 999 }, { label: "Elysian British Rose pedicure", price: 759 }, { label: "I don't need anything" } ];
-
   const manicure = [ { label: "Cut,file & polish - Hands", price: 149 }, { label: "Elysian British Rose manicure", price: 649 }, { label: "Elysian Chocolate & Vanilla manicure", price: 699 }, { label: "Elysian Candle Spa manicure", price: 899 }, { label: "I don't need anything" } ];
-
   const bleach = [ { label: "Face & neck", options: [ { name: "Bleach", price: 299 }, { name: "Detan", price: 349 } ] }, { label: "Full legs", options: [ { name: "Detan", price: 499 }, { name: "Bleach", price: 499 } ] }, { label: "Full body", options: [ { name: "Detan", price: 1499 }, { name: "Bleach", price: 1499 } ] }, { label: "Full arms", options: [ { name: "Detan", price: 349 }, { name: "Bleach", price: 349 } ] }, { label: "Chest", options: [ { name: "Detan", price: 399 }, { name: "Bleach", price: 399 } ] }, { label: "Back", options: [ { name: "Detan", price: 399 }, { name: "Bleach", price: 399 } ] }, { label: "I don't need anything", options: [] } ];
-
   const facialHair = [ { label: "Eyebrow", options: [ { name: "Threading", price: 49 } ] }, { label: "Forehead", options: [ { name: "Threading", price: 59 }, { name: "Face waxing", price: 99 } ] }, { label: "Face", options: [ { name: "Face waxing", price: 399 }, { name: "Threading", price: 149 } ] }, { label: "Sidelocks", options: [ { name: "Threading", price: 49 }, { name: "Face waxing", price: 99 } ] }, { label: "Upper lip", options: [ { name: "Face waxing", price: 69 }, { name: "Threading", price: 49 } ] }, { label: "Neck", options: [ { name: "Threading", price: 149 }, { name: "Face waxing", price: 199 } ] }, { label: "Jawline", options: [ { name: "Face waxing", price: 99 }, { name: "Threading", price: 99 } ] }, { label: "Chin", options: [ { name: "Threading", price: 29 }, { name: "Face waxing", price: 99 } ] }, { label: "I don't need anything", options: [] } ];
-
   const hair = [ { label: "Hair color application", price: 249 }, { label: "Henna mehendi application", price: 399 }, { label: "Head massage (10 mins)", price: 199 }, { label: "Head massage (20 mins)", price: 349 }, { label: "I don't need anything" } ];
-
-  const isInCart = (itemTitle) => (Array.isArray(carts) ? carts.some(c => c.title === itemTitle) : false);
-
   // ---------- effects ----------
   useEffect(() => {
     if (cartCount === 0) setShowFrequentlyAdded(false);
@@ -126,44 +116,18 @@ useEffect(() => {
   setCarouselCounts(updatedCounts);
 }, [carts, addedImgs]);
 
-  useEffect(() => {
-    const extraPrice = Object.values(selectedServices).reduce((sum, s) => {
-      const isBase = Array.isArray(baseServices) && baseServices.some(bs => bs.title === s.title && bs.content === s.content);
-      return sum + (isBase ? 0 : Number(s.price || 0));
-    }, 0);
+ const extraPrice = useMemo(() => {
+  return Object.values(selectedServices).reduce((sum, s) => {
+    const isBase = baseServices?.some(bs => bs.title === s.title && bs.content === s.content);
+    return sum + (isBase ? 0 : Number(s.price || 0));
+  }, 0);
+}, [selectedServices, baseServices]);
 
-    const total = Number(basePrice || 0) + extraPrice;
-    setTotalPrice(roundPrice(total));
+const totalPrice = useMemo(() => roundPrice(Number(basePrice) + extraPrice), [basePrice, extraPrice]);
 
-    // If total exceeds base + 905, apply 25% off (your original logic used 0.75)
-    if (total >= (Number(basePrice || 0) + 905)) {
-      setDiscountedPrice(roundPrice(total * 0.75));
-    } else {
-      setDiscountedPrice(null);
-    }
-  }, [selectedServices, basePrice, baseServices, roundPrice]);
-
-  // ---------- helpers ----------
-  const handleCheckboxChange = (section, label, option, isChecked) => {
-    setSelectedServices(prev => {
-      const updated = { ...prev };
-      const key = `${section}:${label}`;
-
-      if (isChecked) {
-        const price = Number(option?.price ?? option?.price ?? 0);
-        updated[key] = {
-          title: label,
-          price: roundPrice(price),
-          count: 1,
-          content: option?.name ?? option?.label ?? option ?? "No option",
-        };
-      } else {
-        delete updated[key];
-      }
-
-      return updated;
-    });
-  };
+const discountedPrice = useMemo(() => {
+  return totalPrice >= Number(basePrice) + 905 ? roundPrice(totalPrice * 0.75) : null;
+}, [totalPrice, basePrice]);
 
   const formatPrice = (amount) => `₹${Number(amount || 0).toLocaleString("en-IN")}`;
 
@@ -225,13 +189,11 @@ useEffect(() => {
       <hr />
     </>
   );
-
   // carousel controls (safe with addedImgs declared above)
   const handleNext = () => {
     if (index < Math.max(0, addedImgs.length - visibleCount)) setIndex(i => i + 1);
   };
   const handlePrev = () => { if (index > 0) setIndex(i => i - 1); };
-
   // ---------- render ----------
   return (
     <>
@@ -312,8 +274,7 @@ useEffect(() => {
       <Modal
         show={dropdownModal.show}
         onHide={() => { setDropdownModal({ ...dropdownModal, show: false }); setLoadingDropdownKey(null); setShowDiscountModal(false); setHasChange(false); }}
-        centered
-      >
+        centered>
         <Button type="button" onClick={() => { setDropdownModal({ ...dropdownModal, show: false }); setLoadingDropdownKey(null); }} className="closebtn" style={{ padding: "0px" }}>X</Button>
         <Modal.Header>
           <Modal.Title className="fw-semibold">{dropdownModal.label}</Modal.Title>
@@ -395,9 +356,27 @@ useEffect(() => {
                   >Add</Button>
                 ) : (
                   <div className='d-flex align-items-center gap-2 bn' style={{ border: "1px solid rgb(110, 66, 229)", backgroundColor: "rgb(245, 241, 255)", borderRadius: "6px", justifyContent: "center" }}>
-                    <Button type="button" onClick={() => { setCartCount(prev => Math.max(0, prev - 1)); setHasChange(true); }} className='button'>−</Button>
+                    <Button type="button" 
+                    onClick={async () => {
+  const cartItem = carts.find(c => c.title === selectedItem.title);
+  if (cartItem) await handleDecrease(cartItem);
+
+  setCartCount(prev => Math.max(0, prev - 1));
+  setHasChange(true);
+}}
+
+                  className='button'>−</Button>
                     <span className="count-box">{cartCount}</span>
-                    <Button type="button" onClick={() => { if (cartCount >= 3) { alert("You can’t add more than 3 products."); return; } setCartCount(prev => prev + 1); setHasChange(true); }} className='button' style={{ opacity: cartCount >= 3 ? "0.6" : "1" }}>+</Button>
+                    <Button type="button" onClick={async () => {
+  if (cartCount >= 3) { alert("You can’t add more than 3 products."); return; }
+
+  const cartItem = carts.find(c => c.title === selectedItem.title);
+  if (cartItem) await handleIncrease(cartItem);
+
+  setCartCount(prev => prev + 1);
+  setHasChange(true);
+}}
+className='button' style={{ opacity: cartCount >= 3 ? "0.6" : "1" }}>+</Button>
                   </div>
                 )}
               </Col>
@@ -569,25 +548,19 @@ useEffect(() => {
           {hasChange && (
             <div className="p-3 pt-0">
               <Button variant="success" className="butn" onClick={async () => {
-              if (!hasChange) return;
+  const cartItem = carts.find(c => c.title === selectedItem.title);
 
-              const extraSelected = Object.values(selectedServices).filter(s => !Array.isArray(baseServices) || !baseServices.some(bs => bs.title === s.title && bs.content === s.content));
+  if (hasChange && cartItem) {
+    await handleUpdateCart(cartItem, cartCount); // Update backend cart
+    const refreshed = await fetch("http://localhost:5000/api/carts")
+      .then(r => r.json())
+      .then(d => d.carts || []);
+    setCarts(refreshed); // Update outside UI
+  }
 
-              await handleAddToCart(selectedItem, extraSelected, discountedPrice ? discountedPrice : totalPrice, discountedPrice ? totalPrice - discountedPrice : 0);
-
-              // Add carousel items
-              for (const key in carouselCounts) {
-                if (carouselCounts[key] > 0) {
-                  const img = addedImgs.find(i => i.key === key);
-                  if (img) {
-                    await handleAddToCart({ title: img.name, price: img.price }, [], img.price, true);
-                  }
-                }
-              }
-              const refreshed = await fetch("http://localhost:5000/api/carts").then(r => r.json()).then(d => d.carts || []);
-              setCarts(refreshed);
-              setShowDiscountModal(false);
-            }}>
+  setShowDiscountModal(false);
+}}
+>
             Done
           </Button>
 
