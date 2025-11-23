@@ -49,7 +49,7 @@ function Shine() {
   const handleNext = () => carouselRef.current && carouselRef.current.next();
 
   return (
-    <div className="container mt-4 position-relative carousel-container">
+    <div className="container mt-4 position-relative d-flex w-100 " style={{overflow:"hidden"}}>
       <Carousel ref={carouselRef} interval={null}indicators={false} nextIcon={null}
         prevIcon={null}activeIndex={currentIndex}
         onSelect={handleSelect}touch={true} >
@@ -70,10 +70,10 @@ function Shine() {
                   style={{flex: `0 0 ${100 / cardsPerSlide}%`, maxWidth: `${100 / cardsPerSlide}%`
   }}>
                     <Card
-                      className="shine d-flex flex-row"
+                      className="shine d-flex flex-row w-100 align-items-stretch"
                       style={{ backgroundColor: bgColor, color: textColor, height: "200px" }} >
                       {/* Text section */}
-                      <div style={{ flex: "1 1 50%", display: "flex", flexDirection: "column" }}>
+                      <div className="d-flex flex-column" style={{ flex: "1 1 50%"}}>
                         <Card.Body className="d-flex flex-column p-3" style={{ flex: 1 }}>
                           <Card.Title>
                             <h5 className="fw-semibold mb-2" style={{ fontSize: overallIndex === 0 ? "25px" : "20px" }}>
@@ -83,8 +83,8 @@ function Shine() {
                           <p className="mb-2" style={{ fontSize: "11px" }}>
                             {item.descriptions || " "}
                           </p>
-                          <Button style={{backgroundColor: buttonColor,
-                              color: buttonColor === "white" ? "black" : "white",border: "none",marginTop: "auto",width:"100px" }}
+                          <Button className="w-100 mt-auto border-0" style={{backgroundColor: buttonColor,
+                              color: buttonColor === "white" ? "black" : "white" }}
                             size="sm">{item.name.toLowerCase().includes("water") ? "Buy Now" : "Book Now"}
                           </Button>
                         </Card.Body>
@@ -92,9 +92,9 @@ function Shine() {
 
                       {/* Image section */}
                       <div style={{ flex: "1 1 50%" }}>
-                        <Card.Img
+                        <Card.Img className="w-100 h-100" 
                           src={`http://localhost:5000${item.img}`}
-                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          style={{  objectFit: "cover" }}
                         />
                       </div>
                     </Card>

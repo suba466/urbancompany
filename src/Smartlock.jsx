@@ -8,7 +8,7 @@ function Smartlock(){
           smart lock systems. Easy to install, secure to use, and designed
           perfectly for your modern lifestyle.
         </p>
-        <button className="smart-btn">Book Now</button>
+        <Button className="smart-btn">Book Now</Button>
       </div>
 
       {/* Floating image (images.png) */}

@@ -37,15 +37,10 @@ const handleSelect = (selectedIndex) => {
           <img
             src={`http://localhost:5000${a.img}`}
             alt={a.key}
-            className="extra"/>
-          <Carousel.Caption
+            className="extra w-100"/>
+          <Carousel.Caption className="position-absolute d-flex align-items-center text-start justify-content-start"
             style={{
-              position: "absolute",
               inset: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-start",
-              textAlign: "left",
               color: "#424141",
               padding: "40px",
               borderRadius: "10px",
@@ -71,7 +66,7 @@ const handleSelect = (selectedIndex) => {
                 <span style={{ fontSize: "50px", color: "#0a8c17ff" }}>
                   {a.price}
                 </span>{" "}
-                <span style={{ fontSize: "30px", textDecoration: "line-through" }}>
+                <span className="text-decoration-line-through" style={{ fontSize: "30px" }}>
                   {a.value}
                 </span>
               </p>
@@ -104,15 +99,15 @@ const handleSelect = (selectedIndex) => {
       </span>
     </p>
 
-    <div className="mt-4 super">
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "15px" }}>
-        <span style={{ fontSize: "14px", fontWeight: 600, color: "rgba(116,116,117,1)" }}>
+    <div className="mt-4 super position-sticky">
+      <div className="d-flex align-items-center left" style={{ marginBottom: "15px" }}>
+        <span className="fw-semibold" style={{ fontSize: "14px",color: "rgba(116,116,117,1)" }}>
           Select a service
         </span>
         <div style={{ flex: 1, height: "1px", backgroundColor: "rgba(227,227,227,1)" }}></div>
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px",}}>
+      <div className="d-flex flex-wrap left" >
         {salon?.map((s, index) => (
           <div
             key={index}
@@ -121,11 +116,11 @@ const handleSelect = (selectedIndex) => {
             <div className="img-box" style={{ backgroundColor: "white" }}>
               <img
                 src={`http://localhost:5000${s.img}`}
-                alt={s.key}
-                style={{ width: "60px", height: "60px", objectFit: "contain", borderRadius: "8px" }}
+                alt={s.key} className="object-fit-contain"
+                style={{ width: "60px", height: "60px", borderRadius: "8px" }}
               />
             </div>
-            <p style={{ fontSize: "13px", fontWeight: "450", textAlign: "center" }}>{s.name}</p>
+            <p className="text-center" style={{ fontSize: "13px", fontWeight: "450" }}>{s.name}</p>
           </div>
         ))}
       </div>

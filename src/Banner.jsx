@@ -12,12 +12,11 @@ function Banner() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
     fetch("http://localhost:5000/api/banner")
       .then((res) => res.json())
       .then((data) => setBanner(data.banner))
       .catch((err) => console.error("Error fetching banner:", err));
-  }}, []);
+  }, []);
 
   useEffect(() => {
     fetch("http://localhost:5000/api/services")
@@ -33,7 +32,7 @@ function Banner() {
     <Container className="contain" style={{ marginTop: "50px" }}>
       <Row>
         <Col md={6}>
-          <h3 className="home" style={{ fontWeight: "bold" }}>
+          <h3 className="home fw-bold" >
             Home services at your <br /> doorstep
           </h3>
 
@@ -41,18 +40,18 @@ function Banner() {
             <p className="service-heading home">What are you looking for?</p>
 
             {/* First Row */}
-            <div className="first-row">
+            <div className="first-row d-flex">
               {firstRow.map((s, index) => (
                 <div
                   key={index}
-                  className="services first-row-item"
+                  className="services first-row-item d-flex align-items-center  justify-content-between "
                   onClick={() => {
                     if (s.name.toLowerCase().includes("salon")) {
                       navigate("/salon");
                     }
                   }}
                   style={{ cursor: "pointer" }}>
-                  <p className="first-row-text">{s.name}</p>
+                  <p className="first-row-text text-centetr">{s.name}</p>
                   <img
                     src={`http://localhost:5000${s.img}`}
                     alt={s.name}
@@ -62,11 +61,11 @@ function Banner() {
             </div>
 
             {/* Second Row */}
-            <div className="first-row">
+            <div className="first-row d-flex">
               {secondRow.map((s, index) => (
                 <div
                   key={index}
-                  className="services second-row-item"
+                  className="services second-row-item d-flex flex-column align-items-center position-relative"
                   onClick={() => {
                     if (s.name.toLowerCase().includes("salon")) {
                       navigate("/salon");
@@ -74,14 +73,14 @@ function Banner() {
                   }}
                   style={{ cursor: "pointer" }}
                 >
-                  <div className="img-box">
+                  <div className="img-box w-100 d-flex justify-content-center align-items-center">
                     <img
                       src={`http://localhost:5000${s.img}`}
                       alt={s.name}
                       className="first-row-img"
                     />
                   </div>
-                  <p className="first-row-text">{s.name}</p>
+                  <p className="first-row-text text-center">{s.name}</p>
                 </div>
               ))}
             </div>
@@ -96,10 +95,9 @@ function Banner() {
                 </Col>
                 <Col className="font">
                   <p style={{ color: "rgb(84,84,84)" }}>
-                    <span
+                    <span className="fw-bold"
                       style={{
                         fontSize: "20px",
-                        fontWeight: "bold",
                         color: "black",
                       }}
                     >
@@ -118,10 +116,9 @@ function Banner() {
                 </Col>
                 <Col className="font">
                   <p style={{ color: "rgb(84,84,84)" }}>
-                    <span
+                    <span className="fw-bold"
                       style={{
                         fontSize: "20px",
-                        fontWeight: "bold",
                         color: "black",
                       }}
                     >
@@ -141,7 +138,7 @@ function Banner() {
             <img
               src={`http://localhost:5000${banner.img}`}
               alt="Banner"
-              className="banner-img"
+              className="banner-img w-100"
             />
           )}
         </Col>

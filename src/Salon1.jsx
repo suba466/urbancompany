@@ -194,13 +194,13 @@ function Salon1() {
             const inCart = carts.find(c => c.title === pkg.title);
             return (
               <div 
-              key={pkg._id || pkg.title} 
-              style={{ position: "relative", marginBottom: "50px" }} >
+              key={pkg._id || pkg.title} className='position-relative'
+              style={{  marginBottom: "50px" }} >
               <Row className="align-items-center mt-3">
                 <Col xs={8}>
                   <p style={{ color: "#095819ff" }}>
                     <MdBackpack />{" "}
-                    <span style={{ fontSize: "13px", fontWeight: "bold" }}>PACKAGE</span>
+                    <span className='fw-bold' style={{ fontSize: "13px" }}>PACKAGE</span>
                   </p>
                   <h6 
                     className="fw-semibold" 
@@ -221,16 +221,16 @@ function Salon1() {
                 </Col>
 
                 {/* Button Column */}
-                <Col xs={4} style={{ position: "relative", minHeight: "120px" }}> 
+                <Col xs={4}  className='position-relative' style={{  minHeight: "120px" }}> 
                 <Button
                 variant="outline-success"
                 size="sm"
-                className='button2'
+                className='button2 position-absolute'
               onClick={() =>{setSelectedItem(pkg); setShowDiscountModal(true)}}
               ><h2 className='fw-semibold text-center' style={{fontSize:"33px"}}>25% OFF</h2>
               </Button>
                   {/* ABSOLUTE BUTTON AT BOTTOM */}
-                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, textAlign: "center" }}>
+                  <div  className='position-absolute bottom-0 start-0 end-0 text-center' >
                     {!inCart ? (
                       <Button
                       ref={(el) => (addButtonRefs.current[normalizeKey(pkg.title)] = el)}
@@ -244,11 +244,11 @@ function Salon1() {
                     </Button>
                     ) : (
                       <div 
-                        className="d-flex align-items-center gap-2 bn" 
-                        style={{border:"1px solid rgb(110, 66, 229)", borderRadius:"6px", justifyContent: "center",backgroundColor:"rgb(245, 241, 255)",width:"50%",marginLeft:"36px"}}>
-                        <Button onClick={() => handleDecrease(inCart)} className='button '>−</Button>
-                        <span className="count-box">{inCart.count || 1}</span>
-                        <Button onClick={() => handleIncrease(inCart)} className='button'  style={{
+                        className="d-flex align-items-center gap-2 bn w-50 justify-content-center" 
+                        style={{border:"1px solid rgb(110, 66, 229)", borderRadius:"6px",backgroundColor:"rgb(245, 241, 255)",marginLeft:"36px"}}>
+                        <Button onClick={() => handleDecrease(inCart)} className='button b-0 d-flex align-items-center justify-content-center '>−</Button>
+                        <span className="count-box fw-bold">{inCart.count || 1}</span>
+                        <Button onClick={() => handleIncrease(inCart)} className='button b-0 d-flex align-items-center justify-content-center'  style={{
                     opacity: totalItems >= 3 ? "0.6" : "1",}}>+</Button>
                       </div>
                     )}
@@ -261,7 +261,7 @@ function Salon1() {
                 {(Array.isArray(pkg.items) ? pkg.items : []).map((item, idx) => (
                   <p key={idx} style={{ margin: "2px 0" }}>
                     <GoDotFill style={{ fontSize: "10px", color: "#5a5959ff" }} />{" "}
-                    {item.text && <span style={{ fontWeight: "bold" }}>{item.text}</span>}
+                    {item.text && <span className='fw-bold' >{item.text}</span>}
                     {item.text && <span> : </span>}
                     <span>{item.description}</span>
                   </p>
@@ -291,7 +291,7 @@ function Salon1() {
       </Row>
       {/* Mobile Menu */}
     <Button 
-      className='menu-float d-md-none ' 
+      className='menu-float position-fixed border-0 d-md-none ' 
       style={{bottom:carts.length > 0 ? "120px" : "20px"}} 
       onClick={() => setShowMenu(!showMenu)}>
       {showMenu ? "X" :"Menu"}
@@ -327,9 +327,9 @@ function Salon1() {
       </ModalBody>
     </Modal>
       {carts.length > 0 && (
-      <div className="mobile-cart-footer-wrapper d-lg-none">
-        <div className="mobile-cart-footer-button-row">
-          <div className="mobile-cart-footer-total">
+      <div className="mobile-cart-footer-wrapper position-fixed d-flex flex-column d-lg-none">
+        <div className=" d-flex justify-content-between align-items-center left">
+          <div className="mobile-cart-footer-total w-100 b-0">
             {(() => {
               const total = (Array.isArray(carts) ? carts : []).reduce(
                 (acc, c) => acc + safePrice(c.price) * (c.count || 1),
@@ -342,7 +342,7 @@ function Salon1() {
                 </>
               );
             })()}
-            <Button className="mobile-cart-footer-button mobile-cart-footer-total" onClick={()=>navigate("/cart")}>
+            <Button className="mobile-cart-footer-button mobile-cart-footer-total w-100 b-0" onClick={()=>navigate("/cart")}>
               View cart
             </Button>
           </div>

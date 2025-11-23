@@ -103,8 +103,8 @@ function Book() {
                 }}
               />
               <p
-                className="mt-2"
-                style={{ fontSize: "11px", fontWeight: "bold" }}
+                className="mt-2 fw-bold"
+                style={{ fontSize: "11px"}}
               >
                 {item.name}
               </p>
@@ -118,9 +118,8 @@ function Book() {
                   }}
                 />
                 {item.title} <br /> {item.value}{" "}
-                <span
+                <span className="text-decoration-line-through"
                   style={{
-                    textDecoration: "line-through",
                     color: "#656464ff",
                   }}
                 >
@@ -164,10 +163,9 @@ function Book() {
                 >
                   <Card className="saloncard">
                     <Card.Body style={{ flex: 1 }}>
-                      <Card.Title
+                      <Card.Title className="fw-semibold"
                         style={{
                           fontSize: "15px",
-                          fontWeight: "600",
                           padding: "28px",
                         }}
                       >
@@ -190,10 +188,9 @@ function Book() {
               <Col key={idx} xs={12} sm={6} md={4} lg={3}>
                 <Card className="saloncard">
                   <Card.Body style={{ flex: 1 }}>
-                    <Card.Title
+                    <Card.Title className="fw-semibold"
                       style={{
                         fontSize: "15px",
-                        fontWeight: "600",
                         padding: "28px",
                       }}
                     >

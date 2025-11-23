@@ -48,31 +48,27 @@ function CartPage() {
     border: "1px solid rgba(0,0,0,0.2)",
     borderRadius: "10px",
     padding: "15px",
-    width: "320px"
+    height:"150px"
   }}
 >
   <p className="fw-semibold mb-1">Account</p>
   <p style={{ fontSize: "13px", color: "#555" }}>
     To book the service, please login or sign up
   </p>
-  <Button className="butn" style={{ width: "100%", height: "40px" }}>
+  <Button className="butn w-100 fw-bold" style={{ height: "40px" }}>
     Login
   </Button>
 </Col>
-
-            <Col>
-            <CartBlock
+  <Col>
+    <CartBlock
         carts={carts}
         formatPrice={formatPrice}
         safePrice={safePrice}
         handleIncrease={handleIncrease}
         handleDecrease={handleDecrease}
-        hideViewButton={true}
-      /></Col>
+        hideViewButton={true}/></Col>
         </Row>
-      
     </div>
   );
 }
-
 export default CartPage;

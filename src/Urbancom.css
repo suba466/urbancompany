@@ -1,34 +1,15 @@
 /* STICKY NAVBAR */
 .urban-nav {
-  position: sticky;
-  top: 0;
   z-index: 200;
   padding: 10px 20px;
   background: #fff;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  justify-content: space-between;
   height: 70px;
 }
-
-.display {
-  display: flex;
-  align-items: center;
-}
-
 .left { gap: 10px; }
-
-.logo { 
-  width: 100px; 
-  height: auto; 
-  transition: 0.3s ease;
-}
-
+.logo { transition: 0.3s ease;}
 .logo:hover { transform: scale(1.1); }
-
-.right-menu { flex-direction: row !important; gap: 10px; flex-wrap: wrap; }
-
-.location-input-container { position: relative; cursor: pointer; }
-
+.location-input-container { cursor: pointer; }
 .location-input { 
   width: 200px; 
   font-size: 13px; 
@@ -38,65 +19,36 @@
   border-radius: 5px; 
   border: 1px solid #ccc; 
 }
-
 .location-icon-inside { 
-  position: absolute; 
-  top: 50%; 
   transform: translateY(-50%); 
   color: #4c4d4e; 
   font-size: 20px; 
   pointer-events: none; 
 }
-
 .left1 { left:10px; }
 .right { right: 10px; }
-
-.search-container { position: relative; }
 .search-container input { width: 220px; }
-
-.search-dropdown { 
-  position: absolute; 
-  top: 40px; 
-  left: 0; 
-  right: 0; 
-  background: #fff; 
-  border: 1px solid #ddd; 
-  border-radius: 5px; 
-  max-height: 300px; 
-  overflow-y: auto; 
-  z-index: 1000; 
-}
-
 .icons { gap: 15px; margin-left: 20px; }
+.modal-left-icon {  left: 10px; transform: translateY(-50%); font-size: 20px; pointer-events: none; }
+.popup-search-input { padding-left: 35px; height: 35px; border-radius: 5px; border: 1px solid #ccc; }
 
-.modal-search-container { position: relative; width: 100%; margin-bottom: 10px; }
-
-.modal-left-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 20px; pointer-events: none; }
-
-.popup-search-input { width: 100%; padding-left: 35px; height: 35px; border-radius: 5px; border: 1px solid #ccc; }
-
-.closebtn { 
-  position: absolute; 
+.closebtn {  
   top: -40px; 
   right: 5px; 
   color: black;
-  border:none; 
   background-color: white; 
   border-radius: 50%; 
   width: 28px; 
   height: 28px; 
   font-size: 14px; 
   cursor: pointer; 
-  justify-content: center; 
   z-index: 10;
 }
 .closebtn:hover{
   background-color: white !important;
   color: black;
 }
-
 .navbar-collapse { flex-grow: 0 !important; }
-
 /*  SERVICE BOX */
 .service-box {
   border: 1px solid #8a8888ff;
@@ -105,7 +57,6 @@
   width: 400px;
   padding: 13px;
 }
-
 .service-heading {
   font-size: 15px;
   font-weight: bold;
@@ -115,15 +66,10 @@
 
 /*FIRST ROW (2 items)*/
 .first-row {
-  display: flex;
   gap: 15px;
   margin-bottom: 15px;
 }
-
 .first-row-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   flex: 1;
   height: 60px;
   padding: 10px;
@@ -134,23 +80,14 @@
 }
 
 .first-row-item:hover { opacity: 0.7; }
-
-.first-row-text { font-size: 11.5px;  text-align: center;}
-
+.first-row-text { font-size: 11.5px; }
 .first-row-img { width: 60px; height: 30px; object-fit: contain; }
-
 .second-row-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   flex: 1;
   cursor: pointer;
   transition: opacity 0.3s;
-  position: relative;
 }
-
 .second-row-item:hover { opacity: 0.7; }
-
 .second-row-item::after {
   content: "";
   position: absolute;
@@ -162,56 +99,27 @@
   border-radius: 1px;
   transition: width 0.3s ease, left 0.3s ease;
 }
-
 .second-row-item:hover::after {
   width: 80%;
   left: 10%;
 }
-
 .img-box {
-  width: 100%;
   padding: 15px;
   border-radius: 8px;
   background: #f5f5f5;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   margin-bottom: 8px;
 }
-
 .carousel-control-prev-icon,
 .carousel-control-next-icon {
   background-color: rgba(0,0,0,0.5);
   border-radius: 50%;
 }
-
-.banner-img { width: 100%; border-radius: 10px; }
-.sptext{
-  position: absolute;
-  bottom: 0px;
-  left: 15px;
-  color: white;
-  font-weight: 600;
-  font-size: 18px;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.7);
-  z-index: 1;
-}
+.banner-img { border-radius: 10px; }
 .shine {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
   border-radius: 15px;
   overflow: hidden;
-  width: 100%;
   height: 200px;
 }
-
-.carousel-container { position: relative;
-  display: flex;
-  overflow: hidden;
-  position: relative;
-  width: 100%; }
-
 .carousel-arrow {
   position: absolute;
   top: 0;
@@ -227,43 +135,22 @@
   transition: opacity 0.3s;
   z-index: 10;
 }
-
 .carousel-arrow:hover { opacity: 1; }
 .carousel-arrow.left { left: 0; }
 .carousel-arrow.right { right: 0; }
-
-.saloncard {
-  border-radius: 10px;
-  box-shadow: 0 0 6px #ddd;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-.hr{
-    display: flex;
-    align-items: center;
-    border: 1px solid rgba(192, 192, 195, 1);
-    border-radius: 5px;
-    padding: 10px 15px;
-    gap: 10px;
-  
-}
 .super {
   border: 1px solid rgba(192, 192, 195, 1);
   border-radius: 5px;
   padding: 15px;
-  position: sticky;
   top: 90px ; 
   height: fit-content;z-index: 10;
 }
 .menu-float{
-  position: fixed;
   bottom: 20px;
   left: 50%;
   transform: translate(-50%);
   background-color: #000000;
   color: white;
-  border: none;
   border-radius: 60px;
   padding: 10px 10px;
   font-size: 12px;
@@ -280,7 +167,6 @@
   max-height: 80vh;
 }
 .scroll{
-  position: relative;
   max-height: 70vh;
   overflow-y: auto;
   scrollbar-width: none;
@@ -291,7 +177,6 @@
 }
 .drop { 
   display: inline-block;
-  position: relative;
   max-width: 90px;        /* controls visible letters */
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -342,7 +227,6 @@
   100% { transform: translateY(0px) translateX(0px); }
 }
 .extra{
-    width: 100%;
     height: 500px;
     object-fit: cover;
     border-radius: 10px;
@@ -359,9 +243,6 @@
   
 }
 .button1 {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   border:1px solid rgb(110, 66, 229);
   border-radius: 5px;
 }
@@ -369,13 +250,9 @@
 .button {
   background-color: rgb(245, 241, 255);
   color: rgb(110, 66, 229);
-  border: none;
   width: 26px;
   height: 30px;
   font-size: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   transition: all 0.2s ease;
   cursor: pointer;
 }
@@ -384,11 +261,9 @@
   color: rgb(97, 54, 215) !important;
 }
 .count-box {
-  font-weight: bold;
   color: rgb(110, 66, 229);
 }
 .button2{
-  position: absolute;
   top: -20px;
   left: 10%;
   background-color: #edededff;
@@ -408,37 +283,12 @@
 }
 /* Mobile footer wrapper (green box) */
 .mobile-cart-footer-wrapper {
-  position: fixed;
   bottom: 10px;
   left: 10px;
   right: 10px;
   z-index: 1050;
-  display: flex;
-  flex-direction: column;
   gap: 5px;
   animation: slideUp 0.3s ease-out;
-}
-
-/* Green box for savings message */
-.mobile-cart-footer {
-  background-color: #0e670fff;
-  color: white;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  padding: 12px 15px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 13px;
-  font-weight: 600;
-  text-align: center;
-}
-
-/* View Cart button outside green box */
-.mobile-cart-footer-button-row {
- display: flex;
- justify-content: space-between;
- align-items: center;
- gap: 10px;
 }
 .mobile-cart-footer-total {
   font-size: 14px;
@@ -446,8 +296,6 @@
   color: black;
   background-color: white;
   padding: 8px 15px;
-  width: 100%;
-  border: none;
 }
 .mobile-cart-footer-button {
   background-color: #7330deff;
@@ -481,8 +329,7 @@
   box-shadow: none !important;
 }
 .butn{
-  width: 100%;
-  height: 50px;font-weight:bold;
+  height: 50px;
   background-color: #843ff5ff;
   transition: transform 0.3s ease, ;
 }
@@ -506,10 +353,25 @@
   color: black !important;
 }
 .edit:active{
-  transform: scale(1.09);
+  transform: scale(0.9);
 }
-
-
+.editbtn{
+  height: 28px;
+  font-size: 12px;
+  background-color: white;
+  color:#5e33d3ff;
+  border:none;    
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+.editbtn:hover {
+  background-color: transparent;
+  border:none !important;
+  color: rgb(126, 90, 223) !important;
+}
+.editbtn:active{
+  transform: scale(0.9);
+  background-color: transparent  !important; 
+}
 
 
 /*.btn:active{

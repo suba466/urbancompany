@@ -34,12 +34,9 @@ function SearchDropdown({ searchValue, onSelect }) {
   };
 
   return (
-    <div
+    <div className="w-100 start-0 position-absolute overflow-y-auto"
       style={{
-        position: "absolute",
         top: "100%",
-        left: 0,
-        width: "100%",
         background: "#fff",
         border: "1px solid #ccc",
         borderRadius: "8px",
@@ -47,27 +44,25 @@ function SearchDropdown({ searchValue, onSelect }) {
         padding: "10px",
         boxShadow: "0 4px rgba(0,0,0,0.1)",
         zIndex: "1000",
-        maxHeight: "300px",
-        overflowY: "auto",
+        maxHeight: "300px"
       }}
     >
       {recent.length > 0 && (
         <>
-          <h6
+          <h6 className="fw-bold"
             style={{
               fontSize: "12px",
               color: "#000000",
-              fontWeight: "bold",
               marginBottom: "8px",
             }}
           >
             Recent searches
           </h6>
-          <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
+          <div className="d-flex flex-wrap" style={{ gap: "5px" }}>
             {recent.map((item, i) => (
               <span
                 key={i}
-                onClick={() => handleClick(item)}
+                onClick={() => handleClick(item)} className="d-flex align-items-center"
                 style={{
                   padding: "4px 10px",
                   background: "#fbfbfb",
@@ -75,8 +70,6 @@ function SearchDropdown({ searchValue, onSelect }) {
                   fontSize: "12px",
                   border: "1px solid #ddd",
                   cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
                   gap: "4px",
                 }}
               >
@@ -87,17 +80,16 @@ function SearchDropdown({ searchValue, onSelect }) {
         </>
       )}
 
-      <h6
+      <h6 className="fw-bold"
         style={{
           fontSize: "12px",
           color: "#070707",
           marginTop: "10px",
-          fontWeight: "bold",
         }}
       >
         Trending searches
       </h6>
-      <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
+      <div className="d-flex flex-wrap" style={{  gap: "5px"}}>
         {filtered.map((item, i) => (
           <span
             key={i}
@@ -109,10 +101,8 @@ function SearchDropdown({ searchValue, onSelect }) {
               borderRadius: "5px",
               fontSize: "12px",
               cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
               gap: "4px",
-            }}
+            }} className="d-flex align-items-center"
           >
             <FaArrowTrendUp size={12} /> {item}
           </span>

@@ -84,7 +84,7 @@ function Urbanav() {
 
   return (
     <>
-      <Navbar sticky="top" expand="md" className="urban-nav display">
+      <Navbar sticky="top" expand="md" className="urban-nav position-sticky top-0 d-flex justify-content-between">
          {location.pathname === "/cart" ? (
         <Container fluid className=" py-2">
           <span>
@@ -99,7 +99,7 @@ function Urbanav() {
         <Container fluid className="d-flex justify-content-between align-items-center">
           {/*  Show logo always, hide only 'Native' on /salon */}
           <Navbar.Brand className="d-flex align-items-center left display">
-            {logo && <img src={logo} alt="UC Logo" className="logo" />}
+            {logo && <img src={logo} alt="UC Logo" className="logo w-100 h-aut0" />}
             {!location.pathname.startsWith("/salon") && (
               <span
                 className="native-text"
@@ -113,22 +113,22 @@ function Urbanav() {
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
 
           <Navbar.Collapse id="basic-navbar-nav">
-            <Nav className="d-flex gap-2 right-menu left display">
-              {/* 📍 Location input */}
-              <div className="location-input-container display desktop-only">
-                <CiLocationOn className="location-icon-inside left1 display" />
+            <Nav className="d-flex gap-2 left flex-row flex-wrap">
+              {/*  Location input */}
+              <div className="location-input-container position-relative desktop-only">
+                <CiLocationOn className="location-icon-inside position-absolute top-50  left1 " />
                 <FormControl
                   type="text"
                   placeholder="184, Balaji Nagar-New..."
                   readOnly
                   className="location-input"
                 />
-                <IoIosArrowDown className="location-icon-inside right" />
+                <IoIosArrowDown className="location-icon-inside position-absolute top-50 right" />
               </div>
 
-              {/* 🔍 Search bar */}
-              <div className="search-container desktop-only" ref={dropdownRef}>
-                <CiSearch className="location-icon-inside display left" />
+              {/* Search bar */}
+              <div className="position-relative desktop-only" ref={dropdownRef}>
+                <CiSearch className="location-icon-inside position-absolute top-50 left" />
                 <FormControl
                   type="text"
                   placeholder={placeholder}
@@ -148,7 +148,7 @@ function Urbanav() {
                 )}
               </div>
 
-              {/* 🧾 Icons (hide only on /salon) */}
+              {/*  Icons (hide only on /salon) */}
               {!location.pathname.startsWith("/salon") && (
                 <div className="icons display desktop-only">
                   <LuNotepadText size={20} />
@@ -183,7 +183,7 @@ function Urbanav() {
             </div>
 
             <div className="search-line">
-              <div className="search-container" ref={dropdownRef}>
+              <div className="position-relative" ref={dropdownRef}>
                 <FormControl
                   type="text"
                   placeholder={placeholder}
@@ -207,7 +207,7 @@ function Urbanav() {
         </Container>)}
       </Navbar>
 
-      {/* 📍 Location Modal */}
+      {/*  Location Modal */}
       <Modal
         show={showLocationPopup}
         onHide={() => setShowLocationPopup(false)}
@@ -216,21 +216,21 @@ function Urbanav() {
       >
         <Button
           onClick={() => setShowLocationPopup(false)}
-          className="display closebtn"
+          className="d-flex align-items-center position-absolute border-0 justify-content-center closebtn"
         >
           ✕
         </Button>
         <Modal.Body className="p-4">
-          <div className="modal-search-container">
+          <div className=" position-relative w-100" style={{marginBottom:"10px"}}>
             <BiLeftArrowAlt
-              className="modal-left-icon"
+              className="modal-left-icon top-50 position-absolute "
               onClick={() => setShowLocationPopup(false)}
               style={{ cursor: "pointer" }}
             />
             <input
               type="text"
               placeholder="Search location/city/apartment..."
-              className="popup-search-input"
+              className="popup-search-input w-100 "
             />
           </div>
           <div className="mt-3">
