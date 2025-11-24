@@ -1,4 +1,3 @@
-import React from "react";
 import { Row, Col, Button } from "react-bootstrap";
 import { GoDotFill } from "react-icons/go";
 
@@ -38,8 +37,7 @@ function CartBlock({
         border: "1px solid rgba(192,192,195,1)",
         borderRadius: "8px",
         padding: "10px",
-      }}
-    >
+      }}>
       {carts.length === 0 ? (
         <div className="text-center">
           <img
@@ -68,14 +66,14 @@ function CartBlock({
                       className=" d-flex align-items-center justify-content-center"
                       style={{
                         height: "33px",
-                        backgroundColor: "rgb(245, 241, 255)",}}>
-                      <Button onClick={() => handleDecrease(c)} className="button b-0 d-flex align-items-center justify-content-center">
+                        backgroundColor: "rgb(245, 241, 255)",borderRadius:"8px"}}>
+                      <Button onClick={() => handleDecrease(c)} className="button border-0 d-flex align-items-center justify-content-center">
                         −
                       </Button>
                       <span className="count-box fw-bold" style={{ padding: "2px 10px" }}>
                         {c.count || 1}
                       </span>
-                      <Button onClick={() => handleIncrease(c)} className="button b-0 d-flex align-items-center justify-content-center">
+                      <Button onClick={() => handleIncrease(c)} className="button border-0 d-flex align-items-center justify-content-center">
                         +
                       </Button>
                     </div>

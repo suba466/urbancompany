@@ -5,6 +5,8 @@ import { IoTime } from "react-icons/io5";
 import { TbCirclePercentageFilled } from "react-icons/tb";
 import { FaStar, FaTag } from "react-icons/fa";
 import { GoDotFill } from "react-icons/go";
+import FrequentlyAddedCarousel from "./FrequentlyAddedCarousel";
+
 function Salon1modal({
   show,
   totalItems = 0,
@@ -394,8 +396,7 @@ const discountedPrice = useMemo(() => {
                   setCartCount(prev => Math.max(0, prev - 1));
                   setHasChange(true);
                 }}
-                className='button b-0 d-flex align-items-center justify-content-center'
-              >−</Button>
+                className='button border-0 d-flex align-items-center justify-content-center'>−</Button>
               <span className="count-box fw-bold">{cartCount}</span>
               <Button 
                 type="button" 
@@ -407,7 +408,7 @@ const discountedPrice = useMemo(() => {
                   setCartCount(prev => prev + 1);
                   setHasChange(true);
                 }}
-                className='button b-0 d-flex align-items-center justify-content-center' 
+                className='button border-0 d-flex align-items-center justify-content-center' 
                 style={{ opacity: cartCount >= 3 ? "0.6" : "1" }}
               >+</Button>
             </div>
@@ -416,119 +417,66 @@ const discountedPrice = useMemo(() => {
       </Row>
 
       {showFrequentlyAdded && (
-        <div className="mt-4">
-          <hr style={{ border: "3px solid #676767ff" }} />
-          <h4 className="fw-bold mb-3">Frequently added together</h4>
-          <div className="position-relative overflow-hidden w-100" >
-            {/* Left arrow */}
-            {index > 0 && (
-              <div onClick={handlePrev} className="carousel-arrow left" style={{ cursor: "pointer" }}>&#10094;</div>
-            )}
+  <div className="mt-4">
+    <hr style={{ border: "3px solid #676767ff" }} />
+    <h4 className="fw-bold mb-3">Frequently added together</h4>
+    
+    {/* Use your FrequentlyAddedCarousel component */}
+    <FrequentlyAddedCarousel
+      items={visibleCarouselItems}
+      carts={carts}
+      onAdd={async (item) => {
+        // Add to cart logic
+        const itemToAdd = {
+          title: item.name,
+          price: item.price,
+          count: 1,
+          savedSelections: []
+        };
 
-            {/* Carousel items */}
-            <div
-              className="d-flex transition"
-              style={{
-                transform: `translateX(-${index * 170}px)`,
-                transition: "transform 0.5s ease",
-                gap: "20px",
-              }}
-            >
-              {visibleCarouselItems.map((img) => {
-                const countInCart = carts.find(c => c.title === img.name)?.count || 0;
-                const carouselCount = carouselCounts[img.key] || 0;
-                const showCounter = countInCart > 0 || carouselCount > 0;
-                
-                return (
-                  <div key={img.key} style={{ minWidth: "140px" }}>
-                    <img
-                      src={`http://localhost:5000/${img.img}`}
-                      alt={img.key}
-                      style={{ width: "140px", height: "140px", borderRadius: "10px", objectFit: "cover" }}
-                    />
-                    <p style={{ fontSize: "12px" }}>{img.name}</p>
-                    <Row>
-                      <Col><span>₹{img.price}</span> </Col>
-                      <Col>
-                        {showCounter ? (
-                          <div style={{
-                            border: "1px solid rgb(110, 66, 229)",
-                            backgroundColor: "rgb(245, 241, 255)",
-                            borderRadius: "6px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}>
-                            {/* MINUS */}
-                            <Button
-                              className="button b-0 d-flex align-items-center justify-content-center"
-                              style={{ fontSize: "14px" }}
-                              onClick={() => {
-                                setCarouselCounts(prev => ({
-                                  ...prev,
-                                  [img.key]: Math.max(0, carouselCount - 1)
-                                }));
-                                setHasChange(true);
-                              }}
-                            >
-                              −
-                            </Button>
+        await handleAddToCart(itemToAdd, [], item.price, 0);
 
-                            {/* COUNT */}
-                            <span className="count-box fw-bold" style={{ fontSize: "12px", margin: "0 6px" }}>
-                              {carouselCount}
-                            </span>
+        // Refresh cart from server
+        const refreshed = await fetch("http://localhost:5000/api/carts")
+          .then(res => res.json())
+          .then(data => data.carts || []);
+        setCarts(refreshed);
 
-                            {/* PLUS */}
-                            <Button
-                              className="button b-0 d-flex align-items-center justify-content-center"
-                              style={{ fontSize: "14px" }}
-                              onClick={() => {
-                                if (carouselCount >= 3) {
-                                  alert("You can't add more than 3 products.");
-                                  return;
-                                }
-                                setCarouselCounts(prev => ({
-                                  ...prev,
-                                  [img.key]: carouselCount + 1
-                                }));
-                                setHasChange(true);
-                              }}
-                            >
-                              +
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button className="w-50"
-                            style={{
-                              border: "1px solid #d4d4d4ff",
-                              borderRadius: "6px",
-                              backgroundColor: "#fff",
-                              color: "rgb(110, 66, 229)",
-                              fontSize: "12px"
-                            }}
-                            onClick={() => {
-                              setCarouselCounts(prev => ({ ...prev, [img.key]: 1 }));
-                              setHasChange(true);
-                            }}
-                          >
-                            Add
-                          </Button>
-                        )}
-                      </Col>
-                    </Row>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Right arrow */}
-            {index < Math.max(0, visibleCarouselItems.length - 3.5) && (
-              <div onClick={handleNext} className="carousel-arrow right" style={{ cursor: "pointer" }}>&#10095;</div>
-            )}
-          </div>
-        </div>
-      )}
+        // Update carousel counts
+        setCarouselCounts(prev => ({
+          ...prev,
+          [item.key]: (prev[item.key] || 0) + 1
+        }));
+        
+        if (typeof window.updateCartInstantly === "function") {
+          window.updateCartInstantly(item.name);
+        }
+      }}
+      onRemove={async (item) => {
+        // Remove from cart logic
+        const cartItem = carts.find(c => c.title === item.name);
+        if (cartItem) {
+          if (cartItem.count > 1) {
+            await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ count: cartItem.count - 1 })
+            });
+          } else {
+            await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, { 
+              method: "DELETE" 
+            });
+          }
+          
+          // Refresh carts
+          const refreshed = await fetchCarts();
+          setCarts(refreshed);
+          setHasChange(true);
+        }
+      }}
+    />
+  </div>
+)}
       
       <hr style={{ border: "3px solid #676767ff" }} />
       

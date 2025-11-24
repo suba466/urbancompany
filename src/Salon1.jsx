@@ -221,14 +221,15 @@ function Salon1() {
                 </Col>
 
                 {/* Button Column */}
-                <Col xs={4}  className='position-relative' style={{  minHeight: "120px" }}> 
+                <Col xs={4}  className='position-relative' style={{  minHeight: "120px"}}> 
                 <Button
                 variant="outline-success"
                 size="sm"
                 className='button2 position-absolute'
-              onClick={() =>{setSelectedItem(pkg); setShowDiscountModal(true)}}
-              ><h2 className='fw-semibold text-center' style={{fontSize:"33px"}}>25% OFF</h2>
+                onClick={() => { setSelectedItem(pkg); setShowDiscountModal(true); }}>
+                <h2 className="fw-semibold text-center" style={{ fontSize: "20px", margin: 0 }}>25% OFF</h2>
               </Button>
+
                   {/* ABSOLUTE BUTTON AT BOTTOM */}
                   <div  className='position-absolute bottom-0 start-0 end-0 text-center' >
                     {!inCart ? (
@@ -246,9 +247,9 @@ function Salon1() {
                       <div 
                         className="d-flex align-items-center gap-2 bn w-50 justify-content-center" 
                         style={{border:"1px solid rgb(110, 66, 229)", borderRadius:"6px",backgroundColor:"rgb(245, 241, 255)",marginLeft:"36px"}}>
-                        <Button onClick={() => handleDecrease(inCart)} className='button b-0 d-flex align-items-center justify-content-center '>−</Button>
+                        <Button onClick={() => handleDecrease(inCart)} className='button border-0 d-flex align-items-center justify-content-center '>−</Button>
                         <span className="count-box fw-bold">{inCart.count || 1}</span>
-                        <Button onClick={() => handleIncrease(inCart)} className='button b-0 d-flex align-items-center justify-content-center'  style={{
+                        <Button onClick={() => handleIncrease(inCart)} className='button border-0 d-flex align-items-center justify-content-center'  style={{
                     opacity: totalItems >= 3 ? "0.6" : "1",}}>+</Button>
                       </div>
                     )}
@@ -329,7 +330,7 @@ function Salon1() {
       {carts.length > 0 && (
       <div className="mobile-cart-footer-wrapper position-fixed d-flex flex-column d-lg-none">
         <div className=" d-flex justify-content-between align-items-center left">
-          <div className="mobile-cart-footer-total w-100 b-0">
+          <div className="mobile-cart-footer-total w-100 border-0">
             {(() => {
               const total = (Array.isArray(carts) ? carts : []).reduce(
                 (acc, c) => acc + safePrice(c.price) * (c.count || 1),
@@ -342,7 +343,7 @@ function Salon1() {
                 </>
               );
             })()}
-            <Button className="mobile-cart-footer-button mobile-cart-footer-total w-100 b-0" onClick={()=>navigate("/cart")}>
+            <Button className="mobile-cart-footer-button mobile-cart-footer-total w-100 border-0" onClick={()=>navigate("/cart")}>
               View cart
             </Button>
           </div>
