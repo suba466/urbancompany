@@ -17,12 +17,33 @@ function Shine() {
   const [cardsPerSlide, setCardsPerSlide] = useState(3);
   const carouselRef = useRef(null);
 
+  // Fetch carousel data from server
   useEffect(() => {
-    fetch("http://localhost:5000/api/carousel")
-      .then((res) => res.json())
-      .then((data) => setCarouselItems(data.carousel))
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
+    const fetchCarouselData = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/carousel");
+        if (!response.ok) {
+          throw new Error('Failed to fetch carousel data');
+        }
+        const data = await response.json();
+        setCarouselItems(data.carousel || []);
+      } catch (error) {
+        console.error("Error fetching carousel:", error);
+        // Fallback: Try static data API
+        try {
+          const staticResponse = await fetch("http://localhost:5000/api/static-data");
+          const staticData = await staticResponse.json();
+          setCarouselItems(staticData.carousel || []);
+        } catch (staticError) {
+          console.error("Error fetching static data:", staticError);
+          setCarouselItems([]);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCarouselData();
 
     const updateCardsPerSlide = () => {
       const width = window.innerWidth;
@@ -38,6 +59,10 @@ function Shine() {
 
   if (loading) return <p>Loading carousel...</p>;
 
+  if (!carouselItems || carouselItems.length === 0) {
+    return <p>No carousel items found.</p>;
+  }
+
   const chunkedItems = [];
   for (let i = 0; i < carouselItems.length; i += cardsPerSlide) {
     chunkedItems.push(carouselItems.slice(i, i + cardsPerSlide));
@@ -49,10 +74,17 @@ function Shine() {
   const handleNext = () => carouselRef.current && carouselRef.current.next();
 
   return (
-    <div className="container mt-4 position-relative d-flex w-100 " style={{overflow:"hidden"}}>
-      <Carousel ref={carouselRef} interval={null}indicators={false} nextIcon={null}
-        prevIcon={null}activeIndex={currentIndex}
-        onSelect={handleSelect}touch={true} >
+    <div className="container mt-4 position-relative d-flex w-100" style={{overflow:"hidden"}}>
+      <Carousel 
+        ref={carouselRef} 
+        interval={null}
+        indicators={false} 
+        nextIcon={null}
+        prevIcon={null}
+        activeIndex={currentIndex}
+        onSelect={handleSelect}
+        touch={true} 
+      >
         {chunkedItems.map((group, groupIndex) => (
           <Carousel.Item key={groupIndex}>
             <Row className="justify-content-center">
@@ -66,35 +98,72 @@ function Shine() {
                     : darkenHexColor(bgColor, 40);
 
                 return (
-                  <Col key={idx} md={12 / cardsPerSlide} className="d-flex justify-content-center mb-3" 
-                  style={{flex: `0 0 ${100 / cardsPerSlide}%`, maxWidth: `${100 / cardsPerSlide}%`
-  }}>
+                  <Col 
+                    key={idx} 
+                    md={12 / cardsPerSlide} 
+                    className="d-flex justify-content-center mb-3" 
+                    style={{
+                      flex: `0 0 ${100 / cardsPerSlide}%`, 
+                      maxWidth: `${100 / cardsPerSlide}%`
+                    }}
+                  >
                     <Card
                       className="shine d-flex flex-row w-100 align-items-stretch"
-                      style={{ backgroundColor: bgColor, color: textColor, height: "200px" }} >
+                      style={{ 
+                        backgroundColor: bgColor, 
+                        color: textColor, 
+                        height: "200px" 
+                      }}
+                    >
                       {/* Text section */}
                       <div className="d-flex flex-column" style={{ flex: "1 1 50%"}}>
                         <Card.Body className="d-flex flex-column p-3" style={{ flex: 1 }}>
                           <Card.Title>
-                            <h5 className="fw-semibold mb-2" style={{ fontSize: overallIndex === 0 ? "25px" : "20px" }}>
+                            <h5 
+                              className="fw-semibold mb-2" 
+                              style={{ 
+                                fontSize: overallIndex === 0 ? "25px" : "20px",
+                                color: textColor 
+                              }}
+                            >
                               {item.name}
                             </h5>
                           </Card.Title>
-                          <p className="mb-2" style={{ fontSize: "11px" }}>
+                          <p 
+                            className="mb-2" 
+                            style={{ 
+                              fontSize: "11px",
+                              color: textColor 
+                            }}
+                          >
                             {item.descriptions || " "}
                           </p>
-                          <Button className="w-100 mt-auto border-0" style={{backgroundColor: buttonColor,
-                              color: buttonColor === "white" ? "black" : "white" }}
-                            size="sm">{item.name.toLowerCase().includes("water") ? "Buy Now" : "Book Now"}
+                          <Button 
+                            className="w-100 mt-auto border-0" 
+                            style={{
+                              backgroundColor: buttonColor,
+                              color: buttonColor === "white" ? "black" : "white",
+                              fontSize: "12px"
+                            }}
+                            size="sm"
+                          >
+                            {item.name.toLowerCase().includes("water") ? "Buy Now" : "Book Now"}
                           </Button>
                         </Card.Body>
                       </div>
 
                       {/* Image section */}
                       <div style={{ flex: "1 1 50%" }}>
-                        <Card.Img className="w-100 h-100" 
+                        <Card.Img 
+                          className="w-100 h-100" 
                           src={`http://localhost:5000${item.img}`}
-                          style={{  objectFit: "cover" }}
+                          alt={item.name}
+                          style={{ objectFit: "cover" }}
+                          onError={(e) => {
+                            // Fallback if image fails to load
+                            console.error(`Failed to load image: ${item.img}`);
+                            e.target.src = "/assets/placeholder.png"; // Add a placeholder image
+                          }}
                         />
                       </div>
                     </Card>
@@ -108,12 +177,20 @@ function Shine() {
 
       {/* Conditional arrows */}
       {currentIndex > 0 && (
-        <div className="carousel-arrow left" onClick={handlePrev}>
+        <div 
+          className="carousel-arrow left" 
+          onClick={handlePrev}
+         
+        >
           &#10094;
         </div>
       )}
       {currentIndex < chunkedItems.length - 1 && (
-        <div className="carousel-arrow right" onClick={handleNext}>
+        <div 
+          className="carousel-arrow right" 
+          onClick={handleNext}
+         
+        >
           &#10095;
         </div>
       )}

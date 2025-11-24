@@ -25,11 +25,20 @@ function Book() {
         const bookData = await bookRes.json();
         const salonData = await salonRes.json();
 
-        setCarouselItems(bookData.book);
-        setSalonItems(salonData.salon);
+        setCarouselItems(bookData.book || []);
+        setSalonItems(salonData.salon || []);
       } catch (err) {
         console.error(err);
         setError("Failed to fetch service data");
+        // Fallback to static data
+        try {
+          const staticRes = await fetch("http://localhost:5000/api/static-data");
+          const staticData = await staticRes.json();
+          setCarouselItems(staticData.book || []);
+          setSalonItems(staticData.salon || []);
+        } catch (staticError) {
+          console.error("Error fetching static data:", staticError);
+        }
       } finally {
         setLoading(false);
       }
@@ -101,6 +110,10 @@ function Book() {
                   objectFit: "cover",
                   borderRadius: "8px",
                 }}
+                onError={(e) => {
+                  // Fallback if image fails to load
+                  e.target.src = "http://localhost:5000/assets/placeholder.png";
+                }}
               />
               <p
                 className="mt-2 fw-bold"
@@ -132,12 +145,20 @@ function Book() {
 
         {/* Arrows */}
         {showLeftArrow && (
-          <div className="carousel-arrow left" onClick={handlePrev}>
+          <div 
+            className="carousel-arrow left" 
+            onClick={handlePrev}
+            
+          >
             &#10094;
           </div>
         )}
         {showRightArrow && (
-          <div className="carousel-arrow right" onClick={handleNext}>
+          <div 
+            className="carousel-arrow right" 
+            onClick={handleNext}
+            
+          >
             &#10095;
           </div>
         )}
@@ -177,6 +198,10 @@ function Book() {
                       src={`http://localhost:5000${item.img}`}
                       alt={item.key}
                       style={{ height: "200px", objectFit: "cover" }}
+                      onError={(e) => {
+                        // Fallback if image fails to load
+                        e.target.src = "http://localhost:5000/assets/placeholder.png";
+                      }}
                     />
                   </Card>
                 </Col>
@@ -206,6 +231,10 @@ function Book() {
                       objectFit: "cover",
                       borderRadius: "0 0 10px 10px",
                     }}
+                    onError={(e) => {
+                      // Fallback if image fails to load
+                      e.target.src = "http://localhost:5000/assets/placeholder.png";
+                    }}
                   />
                 </Card>
               </Col>
@@ -218,6 +247,7 @@ function Book() {
           <div
             className="carousel-arrow left"
             onClick={() => setCurrentIndex((prev) => prev - 1)}
+           
           >
             &#10094;
           </div>
@@ -227,6 +257,7 @@ function Book() {
             <div
               className="carousel-arrow right"
               onClick={() => setCurrentIndex((prev) => prev + 1)}
+              
             >
               &#10095;
             </div>

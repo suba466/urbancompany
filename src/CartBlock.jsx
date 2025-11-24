@@ -42,8 +42,13 @@ function CartBlock({
         <div className="text-center">
           <img
             src="http://localhost:5000/assets/cart.png"
-            alt="cart-placeholder" className="w-50"
-            style={{padding: "10px" }}
+            alt="cart-placeholder" 
+            className="w-50"
+            style={{ padding: "10px" }}
+            onError={(e) => {
+              // Fallback if cart image fails to load
+              e.target.src = "http://localhost:5000/assets/placeholder.png";
+            }}
           />
           <p>No items in your cart</p>
         </div>
@@ -59,21 +64,29 @@ function CartBlock({
               <div key={c._id} className="mb-3">
                 <Row className="align-items-center">
                   <Col>
-                    <p  className="m-0"style={{ fontSize: "12px", fontWeight: "500" }}>{c.title}</p>
+                    <p className="m-0" style={{ fontSize: "12px", fontWeight: "500" }}>{c.title}</p>
                   </Col>
                   <Col xs={8} className="d-flex align-items-center justify-content-between gap-2">
                     <div
-                      className=" d-flex align-items-center justify-content-center"
+                      className="d-flex align-items-center justify-content-center"
                       style={{
                         height: "33px",
-                        backgroundColor: "rgb(245, 241, 255)",borderRadius:"8px"}}>
-                      <Button onClick={() => handleDecrease(c)} className="button border-0 d-flex align-items-center justify-content-center">
+                        backgroundColor: "rgb(245, 241, 255)",
+                        borderRadius: "8px"
+                      }}>
+                      <Button 
+                        onClick={() => handleDecrease(c)} 
+                        className="button border-0 d-flex align-items-center justify-content-center"
+                      >
                         −
                       </Button>
                       <span className="count-box fw-bold" style={{ padding: "2px 10px" }}>
                         {c.count || 1}
                       </span>
-                      <Button onClick={() => handleIncrease(c)} className="button border-0 d-flex align-items-center justify-content-center">
+                      <Button 
+                        onClick={() => handleIncrease(c)} 
+                        className="button border-0 d-flex align-items-center justify-content-center"
+                      >
                         +
                       </Button>
                     </div>
@@ -100,7 +113,9 @@ function CartBlock({
                 {onEdit && isMainPackage && (
                   <Button
                     className="text-start fw-semibold mt-2 editbtn"
-                    onClick={() => onEdit(c)}>Edit
+                    onClick={() => onEdit(c)}
+                  >
+                    Edit
                   </Button>
                 )}
               </div>

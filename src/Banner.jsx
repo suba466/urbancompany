@@ -5,34 +5,79 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import { CiStar } from "react-icons/ci";
 import { TiGroup } from "react-icons/ti";
+import { Alert, Spinner } from "react-bootstrap";
 
 function Banner() {
   const [banner, setBanner] = useState(null);
   const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetch("http://localhost:5000/api/banner")
-      .then((res) => res.json())
-      .then((data) => setBanner(data.banner))
-      .catch((err) => console.error("Error fetching banner:", err));
-  }, []);
+  const fetchBanner = async () => {
+    try {
+      setError(null);
+      const res = await fetch("http://localhost:5000/api/banner");
+      if (!res.ok) throw new Error("Failed to fetch banner");
+      const data = await res.json();
+      setBanner(data.banner);
+    } catch (err) {
+      console.error("Error fetching banner:", err);
+      setError("Failed to load banner");
+    }
+  };
+
+  const fetchServices = async () => {
+    try {
+      setError(null);
+      const res = await fetch("http://localhost:5000/api/services");
+      if (!res.ok) throw new Error("Failed to fetch services");
+      const data = await res.json();
+      setServices(data.services || []);
+    } catch (err) {
+      console.error("Error fetching services:", err);
+      setError("Failed to load services");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/services")
-      .then((res) => res.json())
-      .then((data) => setServices(data.services))
-      .catch((err) => console.error("Error fetching services:", err));
+    fetchBanner();
+    fetchServices();
   }, []);
 
   const firstRow = services.slice(0, 2);
   const secondRow = services.slice(2, 5);
 
+  const handleServiceClick = (service) => {
+    if (service.name.toLowerCase().includes("salon")) {
+      navigate("/salon");
+    }
+    // Add more navigation logic for other services
+  };
+
+  if (loading) {
+    return (
+      <Container className="d-flex justify-content-center align-items-center" style={{ height: "50vh" }}>
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </Spinner>
+      </Container>
+    );
+  }
+
   return (
     <Container className="contain" style={{ marginTop: "50px" }}>
+      {error && (
+        <Alert variant="warning" className="mb-3">
+          {error}
+        </Alert>
+      )}
+      
       <Row>
         <Col md={6}>
-          <h3 className="home fw-bold" >
+          <h3 className="home fw-bold">
             Home services at your <br /> doorstep
           </h3>
 
@@ -43,19 +88,20 @@ function Banner() {
             <div className="first-row d-flex">
               {firstRow.map((s, index) => (
                 <div
-                  key={index}
-                  className="services first-row-item d-flex align-items-center  justify-content-between "
-                  onClick={() => {
-                    if (s.name.toLowerCase().includes("salon")) {
-                      navigate("/salon");
-                    }
-                  }}
-                  style={{ cursor: "pointer" }}>
-                  <p className="first-row-text text-centetr">{s.name}</p>
+                  key={s.key || index}
+                  className="services first-row-item d-flex align-items-center justify-content-between"
+                  onClick={() => handleServiceClick(s)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <p className="first-row-text text-center">{s.name}</p>
                   <img
                     src={`http://localhost:5000${s.img}`}
                     alt={s.name}
-                    className="first-row-img"/>
+                    className="first-row-img"
+                    onError={(e) => {
+                      e.target.src = 'http://localhost:5000/assets/default.png';
+                    }}
+                  />
                 </div>
               ))}
             </div>
@@ -64,13 +110,9 @@ function Banner() {
             <div className="first-row d-flex">
               {secondRow.map((s, index) => (
                 <div
-                  key={index}
+                  key={s.key || index}
                   className="services second-row-item d-flex flex-column align-items-center position-relative"
-                  onClick={() => {
-                    if (s.name.toLowerCase().includes("salon")) {
-                      navigate("/salon");
-                    }
-                  }}
+                  onClick={() => handleServiceClick(s)}
                   style={{ cursor: "pointer" }}
                 >
                   <div className="img-box w-100 d-flex justify-content-center align-items-center">
@@ -78,6 +120,9 @@ function Banner() {
                       src={`http://localhost:5000${s.img}`}
                       alt={s.name}
                       className="first-row-img"
+                      onError={(e) => {
+                        e.target.src = 'http://localhost:5000/assets/default.png';
+                      }}
                     />
                   </div>
                   <p className="first-row-text text-center">{s.name}</p>
@@ -95,7 +140,8 @@ function Banner() {
                 </Col>
                 <Col className="font">
                   <p style={{ color: "rgb(84,84,84)" }}>
-                    <span className="fw-bold"
+                    <span 
+                      className="fw-bold"
                       style={{
                         fontSize: "20px",
                         color: "black",
@@ -112,11 +158,12 @@ function Banner() {
             <Col xs={6}>
               <Row>
                 <Col xs={3} style={{ width: "40px", marginTop: "10px" }}>
-                  <TiGroup  style={{ fontSize: "32px" }} />
+                  <TiGroup style={{ fontSize: "32px" }} />
                 </Col>
                 <Col className="font">
                   <p style={{ color: "rgb(84,84,84)" }}>
-                    <span className="fw-bold"
+                    <span 
+                      className="fw-bold"
                       style={{
                         fontSize: "20px",
                         color: "black",
@@ -134,12 +181,17 @@ function Banner() {
 
         {/* Banner Image */}
         <Col md={6} className="text-center">
-          {banner && (
+          {banner ? (
             <img
               src={`http://localhost:5000${banner.img}`}
               alt="Banner"
               className="banner-img w-100"
+              onError={(e) => {
+                e.target.src = 'http://localhost:5000/assets/default.png';
+              }}
             />
+          ) : (
+            <div className="text-muted">No banner available</div>
           )}
         </Col>
       </Row>
