@@ -1,28 +1,85 @@
-import React, { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Modal, Button, Container, Row, Col, Form } from "react-bootstrap";
 import { CgProfile } from "react-icons/cg";
 import { LuNotepadText } from "react-icons/lu";
 import { IoMdHelpCircleOutline, IoMdLogOut } from "react-icons/io";
 import { MdAccountCircle, MdOutlineArrowForwardIos } from "react-icons/md";
 import { BiLeftArrowAlt } from "react-icons/bi";
-import { FaMobileAlt } from "react-icons/fa";
+import { PiNotepadLight } from "react-icons/pi";
 
 function AccountModal({ show, onHide }) {
-  const [currentView, setCurrentView] = useState("main"); // main, profile, login, about, bookings, help
+  const [logo, setLogo] = useState("/assets/Uc.png");
+  const [currentView, setCurrentView] = useState("main");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [otp, setOtp] = useState("");
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showCountryModal, setShowCountryModal] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState({ code: "+91", name: "India", flag: "🇮🇳" });
+  const [timer, setTimer] = useState(30);
+  const [canResend, setCanResend] = useState(false);
+  const [resendMethod, setResendMethod] = useState("");
+  const [selectedTitle, setSelectedTitle] = useState("Ms");
+
+  const otpInputRefs = useRef([]);
+  const countries = [
+    { code: "+91", name: "India (+91)" },
+    { code: "+65", name: "Singapore (+65)" },
+    { code: "+971", name: "UAE (+971)"},
+    { code: "+966", name: "KSA (+966)" },
+  ];
+
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/static-data");
+        if (!response.ok) {
+          throw new Error('Failed to fetch static data');
+        }
+        const data = await response.json();
+        
+        if (data && data.logo) {
+          if (data.logo.startsWith('http')) {
+            setLogo(data.logo);
+          } else {
+            setLogo(`http://localhost:5000${data.logo}`);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching logo:", error);
+        setLogo("/assets/Uc.png");
+      }
+    };
+
+    fetchLogo();
+  }, []);
+
+  // Timer effect
+  useEffect(() => {
+    let interval;
+    if (showOtpInput && timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prevTimer) => prevTimer - 1);
+      }, 1000);
+    } else if (timer === 0) {
+      setCanResend(true);
+    }
+    return () => clearInterval(interval);
+  }, [showOtpInput, timer]);
 
   const handleBack = () => {
-    if (currentView !== "main") {
+    if (currentView === "profile-details") {
       setCurrentView("main");
-      // Reset login state when going back to main
+    } else if (currentView !== "main") {
+      setCurrentView("main");
       setShowOtpInput(false);
       setPhoneNumber("");
-      setOtp("");
+      setOtp(["","","","","",""]);
+      setTimer(30);
+      setCanResend(false);
     } else {
       onHide();
     }
@@ -40,73 +97,141 @@ function AccountModal({ show, onHide }) {
     }
     
     setIsLoading(true);
-    // Simulate OTP sending
     setTimeout(() => {
       setIsLoading(false);
       setShowOtpInput(true);
+      setTimer(30);
+      setCanResend(false);
       alert(`OTP sent to ${phoneNumber}`);
     }, 1500);
   };
 
-  const handleOtpSubmit = async (e) => {
-    e.preventDefault();
-    if (otp.length !== 6) {
+  const handleOtpChange = (index, value) => {
+    if (value.length <= 1 && /^\d*$/.test(value)) {
+      const newOtp = [...otp];
+      newOtp[index] = value;
+      setOtp(newOtp);
+
+      if (value && index < 5) {
+        otpInputRefs.current[index + 1]?.focus();
+      }
+
+      if (newOtp.every(digit => digit !== "") && index === 5) {
+        handleOtpSubmit(newOtp.join(""));
+      }
+    }
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleOtpSubmit = async (enteredOtp = null) => {
+    const otpValue = enteredOtp || otp.join("");
+    
+    if (otpValue.length !== 6) {
       alert("Please enter a valid 6-digit OTP");
       return;
     }
     
     setIsLoading(true);
-    // Simulate OTP verification
     setTimeout(() => {
       setIsLoading(false);
       setIsLoggedIn(true);
-      setUserName("User"); // You can set actual user name from API response
+      setUserName("Suba shree");
       setCurrentView("main");
       setShowOtpInput(false);
-      setPhoneNumber("");
-      setOtp("");
+      setOtp(["","","","","",""]);
+      setTimer(30);
+      setCanResend(false);
     }, 1500);
+  };
+
+  const handleResendCode = (method) => {
+    if (canResend) {
+      setResendMethod(method);
+      setTimer(30);
+      setCanResend(false);
+      setOtp(["", "", "", "", "", ""]);
+      otpInputRefs.current[0]?.focus();
+      alert(`Code resent via ${method} to ${phoneNumber}`);
+    }
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
     setUserName("");
+    setEmail("");
+    setPhoneNumber("");
+    setSelectedTitle("Ms");
     setCurrentView("main");
   };
 
-  // Render login view - OTP based
+  const handleCountrySelect = (country) => {
+    setSelectedCountry(country);
+    setShowCountryModal(false);
+  };
+
+  // Render login view
   const renderLoginView = () => (
-    <div className="account-detail-view">
-      <div className="text-center mb-4">
-        <MdAccountCircle size={60} className="text-muted mb-2" />
-        <h5 className="fw-bold">Welcome to Urban Company</h5>
-        <p className="text-muted small">Login with your mobile number</p>
+    <div>
+      <div>
+        <img 
+          src={logo} 
+          alt="UC Logo" 
+          style={{ height: "30px", marginLeft: "10px" }} 
+          onError={(e) => {
+            e.target.src = "/assets/Uc.png";
+          }}
+        /> 
       </div>
+      <br />
 
       {!showOtpInput ? (
-        // Phone Number Input
         <Form onSubmit={handlePhoneSubmit}>
           <div className="mb-3">
-            <Form.Label className="fw-medium">Mobile Number</Form.Label>
-            <div className="input-group">
-              <span className="input-group-text">+91</span>
-              <Form.Control
-                type="tel"
-                placeholder="Enter 10-digit mobile number"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
-                maxLength={10}
-                required
-              />
+            <h5 className="fw-bold">Enter your phone number</h5>
+            <p style={{fontSize:"13px"}}>We'll send you a text with a verification code. Standard tariff may apply</p>
+            
+            <div className="d-flex">
+              <div>
+                <div 
+                  className="form-control d-flex justify-content-between align-items-center"
+                  style={{ 
+                    height: "45px", 
+                    cursor: "pointer",
+                    border: "1px solid #ced4da",
+                    backgroundColor: "#fff",
+                    width: "80px"
+                  }}
+                  onClick={() => setShowCountryModal(true)}
+                >
+                  <div>
+                    <span style={{ fontWeight: "500" }}>{selectedCountry.code}</span>
+                  </div>
+                  <span className="text-muted">▼</span>
+                </div>
+              </div>
+              
+              <div>
+                <Form.Control
+                  type="tel"
+                  placeholder="Phone number"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
+                  required
+                  style={{ height: "45px", width: "290px" }}
+                />
+              </div>
             </div>
-            <Form.Text className="text-muted">
-              We'll send an OTP to this number
-            </Form.Text>
           </div>
           
           <Button 
             type="submit" 
-            className="butn fw-bold py-2 w-100"
+            style={{height: "40px"}}
+            className={`butn fw-semibold w-100 ${(isLoading || phoneNumber.length !== 10) ? 'btn-secondary' : ''}`}
             disabled={isLoading || phoneNumber.length !== 10}
           >
             {isLoading ? (
@@ -115,54 +240,105 @@ function AccountModal({ show, onHide }) {
                 Sending OTP...
               </>
             ) : (
-              "Send OTP"
+              "Continue"
             )}
           </Button>
         </Form>
       ) : (
-        // OTP Input
-        <Form onSubmit={handleOtpSubmit}>
-          <div className="mb-3">
-            <Form.Label className="fw-medium">Enter OTP</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Enter 6-digit OTP"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-              maxLength={6}
-              required
-            />
-            <Form.Text className="text-muted">
-              OTP sent to +91 {phoneNumber}
-            </Form.Text>
+        <div className="verification-view">
+          <h5 className="fw-bold mb-3">Enter verification code</h5>
+          <p className="text-muted mb-4" style={{ fontSize: "14px" }}>
+            A 6-digit code has been sent to<br />
+            <span className="fw-semibold">{selectedCountry.code} {phoneNumber}</span>
+          </p>
+
+          <div className="d-flex justify-content-between mb-4">
+            {[0, 1, 2, 3, 4, 5].map((index) => (
+              <Form.Control
+                key={index}
+                ref={(el) => (otpInputRefs.current[index] = el)}
+                type="text"
+                maxLength={1}
+                value={otp[index]}
+                onChange={(e) => handleOtpChange(index, e.target.value)}
+                onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                className="text-center fw-bold"
+                style={{
+                  width: "45px",
+                  height: "50px",
+                  fontSize: "18px",
+                  border: "2px solid #dee2e6",
+                  borderRadius: "8px"
+                }}
+              />
+            ))}
           </div>
-          
-          <div className="d-grid gap-2">
-            <Button 
-              type="submit" 
-              className="butn fw-bold py-2"
-              disabled={isLoading || otp.length !== 6}
-            >
-              {isLoading ? (
-                <>
-                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                  Verifying...
-                </>
+
+          <div className="text-center mb-4">
+            <p className="text-muted" style={{ fontSize: "14px" }}>
+              {canResend ? (
+                "Didn't receive the code?"
               ) : (
-                "Verify OTP"
+                `Resend code in ${timer} seconds`
               )}
-            </Button>
-            
-            <Button 
-              variant="link" 
-              className="text-muted"
-              onClick={() => setShowOtpInput(false)}
-              disabled={isLoading}
-            >
-              Change Number
-            </Button>
+            </p>
           </div>
-        </Form>
+
+          {canResend && (
+            <div className="text-center mb-4">
+              <p className="fw-semibold mb-2" style={{ fontSize: "14px" }}>Resend via:</p>
+              <div className="d-flex justify-content-center gap-3">
+                <Button
+                  variant="outline-primary"
+                  size="sm"
+                  onClick={() => handleResendCode("SMS")}
+                  style={{ fontSize: "12px", padding: "6px 12px" }}
+                >
+                  SMS
+                </Button>
+                <Button
+                  variant="outline-success"
+                  size="sm"
+                  onClick={() => handleResendCode("WhatsApp")}
+                  style={{ fontSize: "12px", padding: "6px 12px" }}
+                >
+                  WhatsApp
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <Button 
+            onClick={() => handleOtpSubmit()}
+            className={`butn fw-semibold w-100 ${(isLoading || otp.join("").length !== 6) ? 'btn-secondary' : ''}`}
+            disabled={isLoading || otp.join("").length !== 6}
+          >
+            {isLoading ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Verifying...
+              </>
+            ) : (
+              "Verify"
+            )}
+          </Button>
+
+          <div className="text-center">
+            <button 
+              type="button" 
+              className="btn btn-link text-decoration-none p-0"
+              onClick={() => {
+                setShowOtpInput(false);
+                setTimer(30);
+                setCanResend(false);
+                setOtp(["","","","","",""]);
+              }}
+              style={{ fontSize: "14px" }}
+            >
+              Change phone number
+            </button>
+          </div>
+        </div>
       )}
 
       <div className="text-center mt-4 pt-3 border-top">
@@ -173,26 +349,34 @@ function AccountModal({ show, onHide }) {
     </div>
   );
 
-  // Render main view after login
+  // Render main view after login - UPDATED: Clickable profile section
   const renderMainViewAfterLogin = () => (
-    <div className="account-main-view">
-      {/* Header with user info */}
-      <div className="text-center mb-4">
-        <MdAccountCircle size={60} className="text-primary mb-2" />
-        <h5 className="fw-bold">Welcome, {userName}!</h5>
-        <p className="text-muted small">+91 {phoneNumber}</p>
+    <div>
+      {/* Make the profile section clickable to open profile details */}
+      <div 
+        className="mb-4 p-3"
+        style={{ 
+          cursor: "pointer",
+        }}
+        onClick={() => handleNavigation("profile-details")}
+      >
+        <div className="d-flex justify-content-between align-items-center">
+          <div>
+            <h5 className="fw-semibold mb-1">{userName || "User"}</h5>
+            <p className="small text-muted mb-0">{selectedCountry.code} {phoneNumber}</p>
+          </div>
+        </div>
       </div>
 
-      {/* Account Menu Items */}
-      <div className="account-menu">
+      <div>
         {[
-          { icon: <CgProfile size={20} />, label: "Profile", view: "profile" },
+          { icon: <PiNotepadLight size={20} />, label: "My plans", view: "My plans" },
           { icon: <LuNotepadText size={20} />, label: "Bookings", view: "bookings" },
           { icon: <IoMdHelpCircleOutline size={20} />, label: "Help Center", view: "help" },
         ].map((item, index) => (
           <div 
             key={index}
-            className="account-menu-item d-flex justify-content-between align-items-center py-3 border-bottom"
+            className="d-flex justify-content-between align-items-center py-3 border-bottom"
             onClick={() => handleNavigation(item.view)}
             style={{ cursor: "pointer" }}
           >
@@ -204,9 +388,8 @@ function AccountModal({ show, onHide }) {
           </div>
         ))}
         
-        {/* About UC */}
         <div 
-          className="account-menu-item d-flex justify-content-between align-items-center py-3 border-bottom"
+          className="d-flex justify-content-between align-items-center py-3 border-bottom"
           onClick={() => handleNavigation("about")}
           style={{ cursor: "pointer" }}
         >
@@ -223,9 +406,8 @@ function AccountModal({ show, onHide }) {
           <MdOutlineArrowForwardIos size={14} className="text-muted" />
         </div>
 
-        {/* Logout Option */}
         <div 
-          className="account-menu-item d-flex justify-content-between align-items-center py-3 text-danger"
+          className="d-flex justify-content-between align-items-center py-3 text-danger"
           onClick={handleLogout}
           style={{ cursor: "pointer" }}
         >
@@ -240,94 +422,150 @@ function AccountModal({ show, onHide }) {
     </div>
   );
 
-  const renderProfileView = () => (
-    <div className="account-detail-view">
-      <h6 className="fw-bold mb-4">Profile</h6>
-      <div className="account-menu">
-        {[
-          { label: "Personal Information", description: "Name, phone number, email" },
-          { label: "Addresses", description: "Saved addresses for services" },
-          { label: "Payment Methods", description: "Cards, UPI, wallets" },
-          { label: "Notifications", description: "Push & email notifications" },
-        ].map((item, index) => (
-          <div key={index} className="account-menu-item py-3 border-bottom">
-            <div className="fw-medium">{item.label}</div>
-            <div className="text-muted small">{item.description}</div>
+  // Fixed renderProfileDetailsView with floating labels inside input boxes
+  const renderProfileDetailsView = () => (
+    <div>
+      <h5 className="fw-bold mb-4">My Profile</h5>
+      <Form>
+        {/* Name field with capsule and floating label */}
+        <Form.Group className="mb-4 position-relative">
+          <div className="position-absolute top-0 start-0 mt-1 ms-3" style={{ zIndex: 5 }}>
+            <span className="small text-muted bg-white " style={{marginLeft:"82px"}}>Name</span>
           </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderAboutView = () => (
-    <div className="account-detail-view">
-      <h6 className="fw-bold mb-4">About Urban Company</h6>
-      <div className="account-menu">
-        {[
-          { label: "About Us", description: "Learn about our mission and values" },
-          { label: "Careers", description: "Join our team" },
-          { label: "Press", description: "Latest news and media kit" },
-          { label: "Blog", description: "Stories and updates" },
-          { label: "Contact Us", description: "Get in touch with us" },
-        ].map((item, index) => (
-          <div key={index} className="account-menu-item py-3 border-bottom">
-            <div className="fw-medium">{item.label}</div>
-            <div className="text-muted small">{item.description}</div>
+          <div className="d-flex gap-2 align-items-center border rounded p-2" style={{ height: "55px", marginTop: "8px" }}>
+            <div 
+              className="d-flex border rounded-pill overflow-hidden"
+              style={{ 
+                width: "80px",
+                height: "35px",
+                cursor: "pointer",
+                flexShrink: 0
+              }}
+            >
+              <div
+                className={`flex-fill d-flex align-items-center justify-content-center ${
+                  selectedTitle === "Mr" 
+                    ? 'bg-dark text-white' 
+                    : 'bg-light text-dark'
+                }`}
+                onClick={() => setSelectedTitle("Mr")}
+                style={{
+                  transition: "all 0.2s ease",
+                  borderRight: "1px solid #dee2e6"
+                }}
+              >
+                <span className="fw-medium">Mr</span>
+              </div>
+              <div
+                className={`flex-fill d-flex align-items-center justify-content-center ${
+                  selectedTitle === "Ms" 
+                    ? 'bg-dark text-white' 
+                    : 'bg-light text-dark'
+                }`}
+                onClick={() => setSelectedTitle("Ms")}
+                style={{
+                  transition: "all 0.2s ease"
+                }}
+              >
+                <span className="fw-medium">Ms</span>
+              </div>
+            </div>
+            <Form.Control 
+              type="text" 
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              placeholder=""
+              style={{ 
+                height: "40px", 
+                flex: 1, 
+                border: "none", 
+                boxShadow: "none",
+                paddingLeft: "0",marginTop:"12px"
+              }}
+              className="border-0"
+            />
           </div>
-        ))}
-      </div>
-    </div>
-  );
+        </Form.Group>
 
-  const renderBookingsView = () => (
-    <div className="account-detail-view">
-      <h6 className="fw-bold mb-4">My Bookings</h6>
-      <div className="text-center py-5">
-        <LuNotepadText size={48} className="text-muted mb-3" />
-        <p className="text-muted">No bookings yet</p>
-        <Button className="butn fw-bold mt-2">
-          Book a Service
+        {/* Email Address with floating label */}
+        <Form.Group className="mb-4 position-relative">
+          <div className="position-absolute top-0 start-0 mt-1 ms-3" style={{ zIndex: 5 }}>
+            <span className="small text-muted bg-white px-1">Email</span>
+          </div>
+          <Form.Control 
+            type="email" 
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder=""
+            style={{ 
+              height: "55px", 
+              paddingTop: "20px",
+              marginTop: "8px"
+            }}
+          />
+        </Form.Group>
+
+        {/* Phone Number with floating label */}
+        <Form.Group className="mb-4 position-relative">
+          <div className="position-absolute top-0 start-0 mt-1 ms-3" style={{ zIndex: 5 }}>
+            <span className="small text-muted bg-white px-1" style={{marginLeft:"90px"}}>Phone Number</span>
+          </div>
+          <div className="d-flex border rounded p-2" style={{ height: "55px", marginTop: "8px" }}>
+            <div>
+              <div 
+                className="form-control d-flex justify-content-between align-items-center"
+                style={{ 
+                  height: "40px", 
+                  cursor: "pointer",
+                  border: "1px solid #ced4da",
+                  backgroundColor: "#fff",
+                  width: "80px"
+                }}
+                onClick={() => setShowCountryModal(true)}
+              >
+                <div>
+                  <span style={{ fontWeight: "500" }}>{selectedCountry.code}</span>
+                </div>
+                <span className="text-muted">▼</span>
+              </div>
+            </div>
+            
+            <div className="flex-grow-1 ms-2">
+              <Form.Control
+                type="tel"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
+                placeholder=""
+                style={{ 
+                  height: "40px", 
+                  border: "none", 
+                  boxShadow: "none" ,marginTop:"5px"
+                }}
+                className="border-0"
+              />
+            </div>
+          </div>
+        </Form.Group>
+
+        <Button 
+          className="butn fw-semibold w-100"
+          style={{ height: "45px" }}
+          onClick={() => {
+            alert("Profile updated successfully!");
+            setCurrentView("main");
+          }}
+        >
+          Save Changes
         </Button>
-      </div>
-      
-      <div className="account-menu mt-4">
-        <div className="account-menu-item py-3 border-bottom">
-          <div className="fw-medium">Booking History</div>
-          <div className="text-muted small">View all your past bookings</div>
-        </div>
-        <div className="account-menu-item py-3">
-          <div className="fw-medium">Upcoming Bookings</div>
-          <div className="text-muted small">Manage your upcoming services</div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderHelpView = () => (
-    <div className="account-detail-view">
-      <h6 className="fw-bold mb-4">Help Center</h6>
-      <div className="account-menu">
-        {[
-          { label: "FAQs", description: "Frequently asked questions" },
-          { label: "Service Issues", description: "Problems with your service" },
-          { label: "Payment Help", description: "Billing and payment issues" },
-          { label: "Cancellation & Refunds", description: "Cancel services and get refunds" },
-          { label: "Contact Support", description: "24/7 customer support" },
-        ].map((item, index) => (
-          <div key={index} className="account-menu-item py-3 border-bottom">
-            <div className="fw-medium">{item.label}</div>
-            <div className="text-muted small">{item.description}</div>
-          </div>
-        ))}
-      </div>
+      </Form>
     </div>
   );
 
   const getViewTitle = () => {
     const titles = {
-      main: isLoggedIn ? "Account" : "Login",
-      profile: "Profile",
-      login: "Login with OTP",
+      main: isLoggedIn ? "Account" : "Profile",
+      "profile-details": "My Profile",
+      login: "Login",
       about: "About Urban Company",
       bookings: "My Bookings",
       help: "Help Center"
@@ -335,34 +573,26 @@ function AccountModal({ show, onHide }) {
     return titles[currentView] || "Account";
   };
 
-  // Determine what to show in main view based on login status
   const renderMainContent = () => {
     if (!isLoggedIn) {
       if (currentView === "login") {
         return renderLoginView();
       } else {
         return (
-          <div className="account-main-view">
-            {/* Simple Login Button View */}
-            <div className="text-center mb-4">
-              <MdAccountCircle size={60} className="text-muted mb-2" />
-              <h5 className="fw-bold">Welcome to Urban Company</h5>
-              <p className="text-muted small">Login to access your account</p>
-            </div>
-
-            <div className="d-grid gap-3">
+          <div>
+            <div className="d-grid">
+              <h5 className="fw-semibold">Profile</h5>
               <Button 
-                className="butn fw-bold py-2"
+                className="butn fw-bold" 
+                style={{width: "100px", height: "40px"}}
                 onClick={() => handleNavigation("login")}
               >
-                <FaMobileAlt className="me-2" />
-                Login with Mobile OTP
+                Login 
               </Button>
               
-              <div className="account-menu">
-                {/* About UC - Always visible */}
+              <div>
                 <div 
-                  className="account-menu-item d-flex justify-content-between align-items-center py-3"
+                  className="d-flex justify-content-between align-items-center py-3"
                   onClick={() => handleNavigation("about")}
                   style={{ cursor: "pointer" }}
                 >
@@ -384,49 +614,114 @@ function AccountModal({ show, onHide }) {
         );
       }
     } else {
-      return renderMainViewAfterLogin();
+      if (currentView === "main") {
+        return renderMainViewAfterLogin();
+      } else if (currentView === "profile-details") {
+        return renderProfileDetailsView();
+      } else {
+        return renderMainViewAfterLogin();
+      }
     }
   };
 
   return (
-    <Modal 
-      show={show} 
-      onHide={onHide}
-      centered
-      fullscreen="sm-down"
-      className="account-modal"
-    >
-      <Modal.Header className="border-bottom-0">
-        <Container fluid>
-          <Row className="align-items-center">
-            <Col xs={2}>
-              <Button 
-                variant="link" 
-                className="p-0 text-dark"
-                onClick={handleBack}
+    <>
+      {/* Main Account Modal */}
+      <Modal 
+        show={show} 
+        onHide={onHide}
+        centered
+        fullscreen="sm-down"
+      >
+        <Modal.Header className="border-bottom-0">
+          <Container fluid>
+            <Row className="align-items-center">
+              <Col xs={2}>
+                <Button 
+                  variant="link" 
+                  className="p-0 text-dark"
+                  onClick={handleBack}
+                >
+                  <BiLeftArrowAlt size={24} />
+                </Button>
+              </Col>
+              <Col xs={8} className="text-center">
+                <h5 className="fw-bold mb-0">{getViewTitle()}</h5>
+              </Col>
+              <Col xs={2}></Col>
+            </Row>
+          </Container>
+        </Modal.Header>
+        
+        <Modal.Body>
+          <Container fluid>
+            {currentView === "main" && renderMainContent()}
+            {currentView === "profile-details" && isLoggedIn && renderProfileDetailsView()}
+            {currentView === "login" && renderLoginView()}
+            {currentView === "about" && renderAboutView()}
+            {currentView === "bookings" && isLoggedIn && renderBookingsView()}
+            {currentView === "help" && renderHelpView()}
+          </Container>
+        </Modal.Body>
+      </Modal>
+
+      {/* Country Selection Modal */}
+      <Modal 
+        show={showCountryModal} 
+        onHide={() => setShowCountryModal(false)}
+        centered
+        size="sm"
+      >
+        <Modal.Header className="border-bottom-0 pb-0">
+          <Modal.Title className="w-100 ">
+            <h6 className="fw-bold mb-0">Select a Country</h6>
+          </Modal.Title>
+          <Button 
+            className="p-0 border-0 text-dark position-absolute end-0 me-3 closebtn"
+            onClick={() => setShowCountryModal(false)}
+          >
+            X
+          </Button>
+        </Modal.Header>
+        
+        <Modal.Body className="pt-0">
+          <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+            {countries.map((country, index) => (
+              <div
+                key={country.code}
+                className={`py-2  ${
+                  selectedCountry.code === country.code ? 'bg-light rounded' : ''
+                } ${index !== countries.length - 1 ? 'border-bottom' : ''}`}
+                style={{ 
+                  cursor: "pointer",
+                  transition: "background-color 0.2s ease"
+                }}
+                onClick={() => handleCountrySelect(country)}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#f8f9fa';
+                }}
+                onMouseLeave={(e) => {
+                  if (selectedCountry.code !== country.code) {
+                    e.target.style.backgroundColor = '#fff';
+                  }
+                }}
               >
-                <BiLeftArrowAlt size={24} />
-              </Button>
-            </Col>
-            <Col xs={8} className="text-center">
-              <h5 className="fw-bold mb-0">{getViewTitle()}</h5>
-            </Col>
-            <Col xs={2}></Col>
-          </Row>
-        </Container>
-      </Modal.Header>
-      
-      <Modal.Body>
-        <Container fluid>
-          {currentView === "main" && renderMainContent()}
-          {currentView === "profile" && isLoggedIn && renderProfileView()}
-          {currentView === "login" && renderLoginView()}
-          {currentView === "about" && renderAboutView()}
-          {currentView === "bookings" && isLoggedIn && renderBookingsView()}
-          {currentView === "help" && renderHelpView()}
-        </Container>
-      </Modal.Body>
-    </Modal>
+                <div className="d-flex align-items-center justify-content-between">
+                  <div className="d-flex align-items-center gap-3">
+                    <div>
+                      <div style={{ fontWeight: "500" }}>{country.name}</div>
+                    </div>
+                  </div>
+                  {selectedCountry.code === country.code && (
+                    <span className="text-primary">✓</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Modal.Body>
+      </Modal>
+    </>
   );
 }
 

@@ -5,6 +5,8 @@ import { Row, Col, Button, Container, Form } from "react-bootstrap";
 import FrequentlyAddedCarousel from "./FrequentlyAddedCarousel";
 import { TbCirclePercentageFilled } from "react-icons/tb";
 import { MdKeyboardArrowRight } from "react-icons/md";
+import AccountModal from "./AccountModal";
+import { CgProfile } from "react-icons/cg"; // Import profile icon
 
 function CartPage() {
   const [carts, setCarts] = useState([]);
@@ -15,7 +17,9 @@ function CartPage() {
   const [showCustomTip, setShowCustomTip] = useState(false);
   const [selectedTip, setSelectedTip] = useState(0);
   const [customTip, setCustomTip] = useState("");
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Add login state
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [userInfo, setUserInfo] = useState({ name: "", phone: "" }); // Store user info
 
   const fetchCarts = () => {
     fetch("http://localhost:5000/api/carts")
@@ -33,9 +37,15 @@ function CartPage() {
   useEffect(() => {
     fetchCarts();
     fetchAddedItems();
-    // Check if user is logged in (you'll need to implement this based on your auth system)
-    // For now, I'll set it to false to demonstrate the functionality
-    setIsLoggedIn(false);
+    // Check if user is logged in from localStorage or session
+    const loggedIn = localStorage.getItem('isLoggedIn');
+    const userName = localStorage.getItem('userName');
+    const userPhone = localStorage.getItem('userPhone');
+    
+    if (loggedIn === 'true' && userName) {
+      setIsLoggedIn(true);
+      setUserInfo({ name: userName, phone: userPhone || "" });
+    }
   }, []);
 
   const safePrice = (price) =>
@@ -196,10 +206,34 @@ function CartPage() {
   };
 
   const handleLogin = () => {
-    // Implement your login logic here
-    console.log("Login clicked");
-    // For demo purposes, just set isLoggedIn to true
+    setShowAccountModal(true);
+  };
+
+  // Handle login success from AccountModal
+  const handleLoginSuccess = (userData) => {
     setIsLoggedIn(true);
+    setUserInfo({
+      name: userData.name || "User",
+      phone: userData.phone || ""
+    });
+    setShowAccountModal(false);
+    
+    // Store in localStorage for persistence
+    localStorage.setItem('isLoggedIn', 'true');
+    localStorage.setItem('userName', userData.name || "User");
+    localStorage.setItem('userPhone', userData.phone || "");
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setUserInfo({ name: "", phone: "" });
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userPhone');
+  };
+
+  const handleEditProfile = () => {
+    setShowAccountModal(true);
   };
 
   const itemTotal = calculateItemTotal();
@@ -238,7 +272,7 @@ function CartPage() {
   return (
     <div className="container mt-4">
       <Row>
-        {/* Account/Login Column (hidden on mobile) */}
+        {/* Account Column - Shows different content based on login status */}
         <Col md={6} className="d-none d-md-block"
           style={{
             position:"sticky",
@@ -246,16 +280,60 @@ function CartPage() {
             border: "1px solid rgba(0,0,0,0.2)",
             borderRadius: "10px",
             padding: "15px",
-            height: "150px",
+            height: isLoggedIn ? "180px" : "150px",
           }}
         >
-          <p className="fw-semibold mb-1">Account</p>
-          <p style={{ fontSize: "13px", color: "#555" }}>
-            To book the service, please login or sign up
-          </p>
-          <Button className="butn w-100 fw-bold" style={{ height: "40px" }} onClick={handleLogin}>
-            Login
-          </Button>
+          {isLoggedIn ? (
+            // User Profile Section when logged in
+            <div>
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <p className="fw-semibold mb-0">Account</p>
+                <Button 
+                  variant="link" 
+                  className="p-0 text-primary fw-semibold"
+                  style={{ fontSize: "13px" }}
+                  onClick={handleEditProfile}
+                >
+                  Edit
+                </Button>
+              </div>
+              
+              <div className="d-flex align-items-center gap-3 mb-3">
+                <div className="bg-light rounded-circle d-flex align-items-center justify-content-center"
+                  style={{ width: "50px", height: "50px" }}>
+                  <CgProfile size={24} className="text-muted" />
+                </div>
+                <div>
+                  <h6 className="fw-semibold mb-1">{userInfo.name}</h6>
+                  <p className="text-muted small mb-0">{userInfo.phone}</p>
+                </div>
+              </div>
+              
+              <Button 
+                variant="outline-danger" 
+                className="w-100 fw-semibold" 
+                style={{ height: "35px", fontSize: "13px" }}
+                onClick={handleLogout}
+              >
+                Logout
+              </Button>
+            </div>
+          ) : (
+            // Login Section when not logged in
+            <div>
+              <p className="fw-semibold mb-1">Account</p>
+              <p style={{ fontSize: "13px", color: "#555" }}>
+                To book the service, please login or sign up
+              </p>
+              <Button 
+                className="butn w-100 fw-bold" 
+                style={{ height: "40px" }} 
+                onClick={handleLogin}
+              >
+                Login
+              </Button>
+            </div>
+          )}
         </Col>
 
         {/* Cart Column (full-width on mobile) */}
@@ -396,7 +474,7 @@ function CartPage() {
             </div>
           </div>
 
-          {/* Conditional Footer - Show Login button instead of Amount to Pay when not logged in on mobile */}
+          {/* Footer Section */}
           <div className="mt-4 p-3 position-sticky bottom-0 bg-white border-top" style={{height:"100px"}}>
             {isLoggedIn ? (
               // Show Amount to Pay when logged in
@@ -410,35 +488,21 @@ function CartPage() {
               </Row>
             ) : (
               // Show Login button when not logged in (visible on mobile)
-              <>
-                {/* Hidden on desktop, visible on mobile */}
-                <div className="d-md-none">
-                  
-                  <Button 
-                    className="butn w-100 fw-bold" 
-                    style={{ height: "45px" }} 
-                    onClick={handleLogin}
-                  >
-                    Login
-                  </Button>
-                </div>
-                {/* Hidden on mobile, visible on desktop */}
-                <div className="d-none d-md-block">
-                  <Row className="align-items-center h-100">
-                    <Col>
-                      <h5 className="fw-bold mb-0">Amount to Pay</h5>
-                    </Col>
-                    <Col className="text-end">
-                      <h5 className="fw-bold mb-0">{formatPrice(totalPrice)}</h5>
-                    </Col>
-                  </Row>
-                </div>
-              </>
+              <div className="d-md-none">
+                <Button 
+                  className="butn w-100 fw-bold" 
+                  style={{ height: "45px" }} 
+                  onClick={handleLogin}
+                >
+                  Login
+                </Button>
+              </div>
             )}
           </div>
         </Col>
       </Row>
 
+      {/* Salon Modal */}
       {showModal && (
         <Salon1modal
           show={showModal}
@@ -447,6 +511,13 @@ function CartPage() {
           refresh={fetchCarts}
         />
       )}
+
+      {/* Account Modal for Login/Profile */}
+      <AccountModal
+        show={showAccountModal}
+        onHide={() => setShowAccountModal(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
     </div>
   );
 }

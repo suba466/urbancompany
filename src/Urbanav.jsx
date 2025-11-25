@@ -118,7 +118,7 @@ function Urbanav() {
                 alt="UC Logo" 
                 style={{ height: "34px", marginLeft: "10px" }} 
                 onError={(e) => {
-                  e.target.src = "/assets/Uc.png";
+                  e.target.src = "/assets/uc.png";
                 }}
               /> 
               <span className="fw-semibold" style={{fontSize:"20px"}}>Checkout</span>
@@ -250,7 +250,7 @@ function Urbanav() {
         )}
       </Navbar>
 
-      {/* 📱 Mobile Bottom Navigation Bar - Visible only at 425px and below */}
+      {/*  Mobile Bottom Navigation Bar - Visible only at 425px and below */}
       <div className="d-block d-sm-none">
         <nav className="mobile-bottom-nav fixed-bottom bg-white border-top shadow-sm">
           <div className="container-fluid">
