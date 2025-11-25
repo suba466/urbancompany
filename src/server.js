@@ -21,7 +21,6 @@ app.use("/assets", express.static(path.join(__dirname, "assets")));
 // --- Multer Configuration ---
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // Create assets directory if it doesn't exist
     const assetsDir = path.join(__dirname, "assets");
     if (!fs.existsSync(assetsDir)) {
       fs.mkdirSync(assetsDir, { recursive: true });
@@ -54,7 +53,6 @@ mongoose.connect("mongodb://localhost:27017/suba")
   .catch(err => console.error(" MongoDB connection error:", err));
 
 // --- SCHEMAS ---
-// Banner Schema for dynamic banner management
 const bannerSchema = new mongoose.Schema({
   title: String,
   subtitle: String,
@@ -95,7 +93,6 @@ const cartSchema = new mongoose.Schema({
 
 const Cart = mongoose.model("Cart", cartSchema);
 
-// Service Schema
 const serviceSchema = new mongoose.Schema({
   name: String,
   key: String,
@@ -109,10 +106,146 @@ const serviceSchema = new mongoose.Schema({
 
 const Service = mongoose.model("Service", serviceSchema);
 
+// --- MOCK OTP IMPLEMENTATION ---
+const mockUsers = [
+  {
+    phoneNumber: "+919876543210",
+    name: "Suba shree",
+    email: "suba@example.com",
+    countryCode: "+91"
+  }
+];
+
+const mockOtpStore = new Map();
+
+// Mock send OTP endpoint
+app.post("/api/send-otp", async (req, res) => {
+  try {
+    const { phoneNumber, countryCode } = req.body;
+    
+    if (!phoneNumber || !countryCode) {
+      return res.status(400).json({ error: "Phone number and country code are required" });
+    }
+
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(phoneNumber)) {
+      return res.status(400).json({ error: "Please enter a valid 10-digit phone number" });
+    }
+
+    const fullPhoneNumber = `${countryCode}${phoneNumber}`;
+    
+    // Store OTP request with timestamp
+    mockOtpStore.set(fullPhoneNumber, {
+      timestamp: Date.now(),
+      verified: false
+    });
+
+    // Simulate API delay
+    setTimeout(() => {
+      res.json({ 
+        success: true, 
+        message: "OTP sent successfully"
+      });
+    }, 1000);
+
+  } catch (error) {
+    console.error("Error in send OTP:", error);
+    res.status(500).json({ error: "Failed to send OTP" });
+  }
+});
+
+// Mock verify OTP endpoint - ACCEPTS ANY 6-DIGIT OTP
+app.post("/api/verify-otp", async (req, res) => {
+  try {
+    const { phoneNumber, countryCode, otp } = req.body;
+    
+    if (!phoneNumber || !countryCode || !otp) {
+      return res.status(400).json({ error: "Phone number, country code and OTP are required" });
+    }
+
+    const fullPhoneNumber = `${countryCode}${phoneNumber}`;
+
+    // ACCEPT ANY 6-DIGIT OTP (not just 123456)
+    const otpRegex = /^\d{6}$/;
+    if (otpRegex.test(otp)) {
+      // Mark as verified
+      mockOtpStore.set(fullPhoneNumber, {
+        timestamp: Date.now(),
+        verified: true
+      });
+
+      // Find or create user
+      let user = mockUsers.find(u => u.phoneNumber === fullPhoneNumber);
+      
+      if (!user) {
+        // Create new user with phone number as name
+        user = {
+          phoneNumber: fullPhoneNumber,
+          name: `User${phoneNumber}`, // Create name from phone number
+          email: "",
+          countryCode: countryCode
+        };
+        mockUsers.push(user);
+      }
+
+      res.json({
+        success: true,
+        message: "OTP verified successfully",
+        user: {
+          id: fullPhoneNumber,
+          name: user.name,
+          phoneNumber: user.phoneNumber,
+          email: user.email,
+          countryCode: user.countryCode
+        },
+        token: "mock-jwt-token"
+      });
+    } else {
+      res.status(400).json({ error: "Please enter a valid 6-digit OTP" });
+    }
+
+  } catch (error) {
+    console.error("Error in verify OTP:", error);
+    res.status(500).json({ error: "Failed to verify OTP" });
+  }
+});
+
+// Mock resend OTP endpoint
+app.post("/api/resend-otp", async (req, res) => {
+  try {
+    const { phoneNumber, countryCode, method = "SMS" } = req.body;
+    
+    if (!phoneNumber || !countryCode) {
+      return res.status(400).json({ error: "Phone number and country code are required" });
+    }
+
+    const fullPhoneNumber = `${countryCode}${phoneNumber}`;
+    
+    // Update timestamp
+    mockOtpStore.set(fullPhoneNumber, {
+      timestamp: Date.now(),
+      verified: false
+    });
+
+    let message = "OTP sent via SMS";
+    if (method === "WhatsApp") {
+      message = "OTP sent via WhatsApp";
+    }
+
+    res.json({
+      success: true,
+      message: message
+    });
+
+  } catch (error) {
+    console.error("Error in resend OTP:", error);
+    res.status(500).json({ error: "Failed to resend OTP" });
+  }
+});
+
 // --- STATIC JSON DATA FILE ---
 const STATIC_DATA_FILE = path.join(__dirname, 'static-data.json');
 
-// Initialize static data file
 const initializeStaticData = () => {
   if (!fs.existsSync(STATIC_DATA_FILE)) {
     const initialData = {
@@ -182,7 +315,6 @@ const initializeStaticData = () => {
   }
 };
 
-// Read static data from file
 const readStaticData = () => {
   try {
     if (fs.existsSync(STATIC_DATA_FILE)) {
@@ -196,7 +328,6 @@ const readStaticData = () => {
   }
 };
 
-// Write static data to file
 const writeStaticData = (data) => {
   try {
     fs.writeFileSync(STATIC_DATA_FILE, JSON.stringify(data, null, 2));
@@ -207,16 +338,12 @@ const writeStaticData = (data) => {
   }
 };
 
-// Initialize on server start
 initializeStaticData();
 
-// ---------- Banner API Routes ----------
-// Get active banner
+// ---------- Existing API Routes (unchanged) ----------
 app.get("/api/banner", async (req, res) => {
   try {
-    // Try to get from MongoDB first
     const banner = await Banner.findOne({ isActive: true }).sort({ order: 1 });
-    
     if (banner) {
       return res.json({ 
         banner: {
@@ -227,13 +354,10 @@ app.get("/api/banner", async (req, res) => {
         } 
       });
     }
-    
-    // Fallback to static data
     const staticData = readStaticData();
     if (staticData && staticData.banner) {
       return res.json({ banner: staticData.banner });
     }
-    
     res.status(404).json({ error: "No banner found" });
   } catch (error) {
     console.error("Error fetching banner:", error);
@@ -241,7 +365,6 @@ app.get("/api/banner", async (req, res) => {
   }
 });
 
-// Get all banners (for admin)
 app.get("/api/banners", async (req, res) => {
   try {
     const banners = await Banner.find().sort({ order: 1 });
@@ -251,15 +374,12 @@ app.get("/api/banners", async (req, res) => {
   }
 });
 
-// Create new banner
 app.post("/api/banners", upload.single('image'), async (req, res) => {
   try {
     const { title, subtitle, description, order } = req.body;
-    
     if (!req.file) {
       return res.status(400).json({ error: "Image is required" });
     }
-
     const banner = new Banner({
       title,
       subtitle,
@@ -268,7 +388,6 @@ app.post("/api/banners", upload.single('image'), async (req, res) => {
       order: order || 0,
       isActive: true
     });
-
     await banner.save();
     res.status(201).json({ message: "Banner created successfully", banner });
   } catch (error) {
@@ -277,7 +396,6 @@ app.post("/api/banners", upload.single('image'), async (req, res) => {
   }
 });
 
-// Update banner
 app.put("/api/banners/:id", upload.single('image'), async (req, res) => {
   try {
     const { title, subtitle, description, order, isActive } = req.body;
@@ -289,21 +407,13 @@ app.put("/api/banners/:id", upload.single('image'), async (req, res) => {
       isActive,
       updatedAt: new Date()
     };
-
     if (req.file) {
       updateData.img = `/assets/${req.file.filename}`;
     }
-
-    const banner = await Banner.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true }
-    );
-
+    const banner = await Banner.findByIdAndUpdate(req.params.id, updateData, { new: true });
     if (!banner) {
       return res.status(404).json({ error: "Banner not found" });
     }
-
     res.json({ message: "Banner updated successfully", banner });
   } catch (error) {
     console.error("Error updating banner:", error);
@@ -311,15 +421,12 @@ app.put("/api/banners/:id", upload.single('image'), async (req, res) => {
   }
 });
 
-// Delete banner
 app.delete("/api/banners/:id", async (req, res) => {
   try {
     const banner = await Banner.findByIdAndDelete(req.params.id);
-    
     if (!banner) {
       return res.status(404).json({ error: "Banner not found" });
     }
-
     res.json({ message: "Banner deleted successfully" });
   } catch (error) {
     console.error("Error deleting banner:", error);
@@ -327,23 +434,16 @@ app.delete("/api/banners/:id", async (req, res) => {
   }
 });
 
-// ---------- Services API Routes ----------
-// Get all active services
 app.get("/api/services", async (req, res) => {
   try {
-    // Try to get from MongoDB first
     const services = await Service.find({ isActive: true }).sort({ order: 1 });
-    
     if (services && services.length > 0) {
       return res.json({ services });
     }
-    
-    // Fallback to static data
     const staticData = readStaticData();
     if (staticData && staticData.services) {
       return res.json({ services: staticData.services });
     }
-    
     res.status(404).json({ error: "No services found" });
   } catch (error) {
     console.error("Error fetching services:", error);
@@ -351,7 +451,6 @@ app.get("/api/services", async (req, res) => {
   }
 });
 
-// Get all services (for admin)
 app.get("/api/all-services", async (req, res) => {
   try {
     const services = await Service.find().sort({ order: 1 });
@@ -361,15 +460,12 @@ app.get("/api/all-services", async (req, res) => {
   }
 });
 
-// Create new service
 app.post("/api/services", upload.single('image'), async (req, res) => {
   try {
     const { name, key, description, category, order } = req.body;
-    
     if (!req.file) {
       return res.status(400).json({ error: "Image is required" });
     }
-
     const service = new Service({
       name,
       key: key || name.toLowerCase().replace(/ /g, '-'),
@@ -379,7 +475,6 @@ app.post("/api/services", upload.single('image'), async (req, res) => {
       order: order || 0,
       isActive: true
     });
-
     await service.save();
     res.status(201).json({ message: "Service created successfully", service });
   } catch (error) {
@@ -388,33 +483,17 @@ app.post("/api/services", upload.single('image'), async (req, res) => {
   }
 });
 
-// Update service
 app.put("/api/services/:id", upload.single('image'), async (req, res) => {
   try {
     const { name, key, description, category, order, isActive } = req.body;
-    const updateData = {
-      name,
-      key,
-      description,
-      category,
-      order,
-      isActive
-    };
-
+    const updateData = { name, key, description, category, order, isActive };
     if (req.file) {
       updateData.img = `/assets/${req.file.filename}`;
     }
-
-    const service = await Service.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true }
-    );
-
+    const service = await Service.findByIdAndUpdate(req.params.id, updateData, { new: true });
     if (!service) {
       return res.status(404).json({ error: "Service not found" });
     }
-
     res.json({ message: "Service updated successfully", service });
   } catch (error) {
     console.error("Error updating service:", error);
@@ -422,15 +501,12 @@ app.put("/api/services/:id", upload.single('image'), async (req, res) => {
   }
 });
 
-// Delete service
 app.delete("/api/services/:id", async (req, res) => {
   try {
     const service = await Service.findByIdAndDelete(req.params.id);
-    
     if (!service) {
       return res.status(404).json({ error: "Service not found" });
     }
-
     res.json({ message: "Service deleted successfully" });
   } catch (error) {
     console.error("Error deleting service:", error);
@@ -438,9 +514,6 @@ app.delete("/api/services/:id", async (req, res) => {
   }
 });
 
-// ... (keep all your existing static data routes, package routes, and cart routes)
-
-// ---------- Static API Routes ----------
 app.get("/api/static-data", (req, res) => {
   const data = readStaticData();
   if (data) {
@@ -450,7 +523,6 @@ app.get("/api/static-data", (req, res) => {
   }
 });
 
-// Individual API routes for each section
 const staticRoutes = [
   'logo', 'services', 'banner', 'carousel', 'book', 'salon', 
   'salonforwomen', 'advanced', 'super', 'smartlock', 'images', 
@@ -468,15 +540,12 @@ staticRoutes.forEach(route => {
   });
 });
 
-// Upload image for static data
 app.post("/api/upload-static-image", upload.single('image'), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
-
     const imagePath = `/assets/${req.file.filename}`;
-    
     res.json({ 
       message: "Image uploaded successfully", 
       imageUrl: imagePath,
@@ -487,26 +556,18 @@ app.post("/api/upload-static-image", upload.single('image'), (req, res) => {
   }
 });
 
-// Update specific section with key
 app.put("/api/update-section/:section/:key", upload.single('image'), (req, res) => {
   try {
     const { section, key } = req.params;
     const data = readStaticData();
-    
     if (!data || !data[section]) {
       return res.status(404).json({ error: "Section not found" });
     }
-
     let imageUrl = req.body.existingImage;
-
-    // If new image uploaded, use the new one
     if (req.file) {
       imageUrl = `/assets/${req.file.filename}`;
     }
-
-    // Update logic based on section type
     if (Array.isArray(data[section])) {
-      // For array sections (services, carousel, book, etc.)
       const itemIndex = data[section].findIndex(item => item.key === key);
       if (itemIndex !== -1) {
         data[section][itemIndex] = {
@@ -514,7 +575,6 @@ app.put("/api/update-section/:section/:key", upload.single('image'), (req, res) 
           ...req.body,
           img: imageUrl || data[section][itemIndex].img
         };
-        
         if (writeStaticData(data)) {
           res.json({ 
             message: "Item updated successfully", 
@@ -527,13 +587,11 @@ app.put("/api/update-section/:section/:key", upload.single('image'), (req, res) 
         res.status(404).json({ error: "Item not found" });
       }
     } else {
-      // For object sections (banner, smartlock, etc.)
       data[section] = {
         ...data[section],
         ...req.body,
         img: imageUrl || data[section].img
       };
-
       if (writeStaticData(data)) {
         res.json({ 
           message: "Section updated successfully", 
@@ -549,30 +607,19 @@ app.put("/api/update-section/:section/:key", upload.single('image'), (req, res) 
   }
 });
 
-// Add new item to section
 app.post("/api/add-to-section/:section", upload.single('image'), (req, res) => {
   try {
     const { section } = req.params;
     const data = readStaticData();
-    
     if (!data || !data[section] || !Array.isArray(data[section])) {
       return res.status(404).json({ error: "Section not found or not an array" });
     }
-
-    let imageUrl = "/assets/default.png"; // Default image
-
-    // If new image uploaded, use the new one
+    let imageUrl = "/assets/default.png";
     if (req.file) {
       imageUrl = `/assets/${req.file.filename}`;
     }
-
-    const newItem = {
-      ...req.body,
-      img: imageUrl
-    };
-
+    const newItem = { ...req.body, img: imageUrl };
     data[section].push(newItem);
-    
     if (writeStaticData(data)) {
       res.status(201).json({ 
         message: "Item added successfully", 
@@ -587,15 +634,12 @@ app.post("/api/add-to-section/:section", upload.single('image'), (req, res) => {
   }
 });
 
-// Update logo
 app.put("/api/update-logo", upload.single('logo'), (req, res) => {
   try {
     const data = readStaticData();
-    
     if (req.file) {
       data.logo = `/assets/${req.file.filename}`;
     }
-    
     if (writeStaticData(data)) {
       res.json({ 
         message: "Logo updated successfully", 
@@ -609,18 +653,14 @@ app.put("/api/update-logo", upload.single('logo'), (req, res) => {
   }
 });
 
-// Delete item from section
 app.delete("/api/delete-section/:section/:key", (req, res) => {
   try {
     const { section, key } = req.params;
     const data = readStaticData();
-    
     if (!data || !data[section] || !Array.isArray(data[section])) {
       return res.status(404).json({ error: "Section not found or not an array" });
     }
-
     data[section] = data[section].filter(item => item.key !== key);
-    
     if (writeStaticData(data)) {
       res.json({ message: "Item deleted successfully" });
     } else {
@@ -631,7 +671,6 @@ app.delete("/api/delete-section/:section/:key", (req, res) => {
   }
 });
 
-// ---------- Package Routes ----------
 app.get("/api/packages", async (req, res) => {
   try {
     const packages = await Package.find();
@@ -671,7 +710,6 @@ app.delete("/api/packages/:id", async (req, res) => {
   }
 });
 
-// ---------- Cart Routes ----------
 app.get("/api/carts", async (req, res) => {
   try {
     const carts = await Cart.find();
@@ -684,13 +722,10 @@ app.get("/api/carts", async (req, res) => {
 app.post("/api/addcarts", async (req, res) => {
   try {
     const { productId, title, price, originalPrice, content } = req.body;
-
     let existing = null;
-
     if (productId) {
       existing = await Cart.findOne({ productId });
     }
-
     if (existing) {
       existing.content = content;
       existing.price = price;
@@ -699,7 +734,6 @@ app.post("/api/addcarts", async (req, res) => {
       await existing.save();
       return res.json({ message: "Cart updated", cart: existing });
     }
-
     const newCart = new Cart({
       productId: productId || new mongoose.Types.ObjectId().toString(),
       title,
@@ -708,10 +742,8 @@ app.post("/api/addcarts", async (req, res) => {
       content,
       count: 1,
     });
-
     await newCart.save();
     res.status(201).json({ message: "Cart added", cart: newCart });
-
   } catch (err) {
     console.error("Error in /api/addcarts:", err);
     res.status(500).json({ error: "Failed to add/update cart" });
@@ -736,7 +768,6 @@ app.delete("/api/carts/:id", async (req, res) => {
   }
 });
 
-// Error handling middleware
 app.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
@@ -746,5 +777,4 @@ app.use((error, req, res, next) => {
   res.status(500).json({ error: error.message });
 });
 
-// ---------- Start Server ----------
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

@@ -6,7 +6,8 @@ import FrequentlyAddedCarousel from "./FrequentlyAddedCarousel";
 import { TbCirclePercentageFilled } from "react-icons/tb";
 import { MdKeyboardArrowRight } from "react-icons/md";
 import AccountModal from "./AccountModal";
-import { CgProfile } from "react-icons/cg"; // Import profile icon
+import { CgProfile } from "react-icons/cg";
+import { useAuth } from "./AuthContext";
 
 function CartPage() {
   const [carts, setCarts] = useState([]);
@@ -17,9 +18,9 @@ function CartPage() {
   const [showCustomTip, setShowCustomTip] = useState(false);
   const [selectedTip, setSelectedTip] = useState(0);
   const [customTip, setCustomTip] = useState("");
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
-  const [userInfo, setUserInfo] = useState({ name: "", phone: "" }); // Store user info
+
+  const { isLoggedIn, userInfo, logout } = useAuth();
 
   const fetchCarts = () => {
     fetch("http://localhost:5000/api/carts")
@@ -37,15 +38,6 @@ function CartPage() {
   useEffect(() => {
     fetchCarts();
     fetchAddedItems();
-    // Check if user is logged in from localStorage or session
-    const loggedIn = localStorage.getItem('isLoggedIn');
-    const userName = localStorage.getItem('userName');
-    const userPhone = localStorage.getItem('userPhone');
-    
-    if (loggedIn === 'true' && userName) {
-      setIsLoggedIn(true);
-      setUserInfo({ name: userName, phone: userPhone || "" });
-    }
   }, []);
 
   const safePrice = (price) =>
@@ -209,27 +201,8 @@ function CartPage() {
     setShowAccountModal(true);
   };
 
-  // Handle login success from AccountModal
-  const handleLoginSuccess = (userData) => {
-    setIsLoggedIn(true);
-    setUserInfo({
-      name: userData.name || "User",
-      phone: userData.phone || ""
-    });
-    setShowAccountModal(false);
-    
-    // Store in localStorage for persistence
-    localStorage.setItem('isLoggedIn', 'true');
-    localStorage.setItem('userName', userData.name || "User");
-    localStorage.setItem('userPhone', userData.phone || "");
-  };
-
   const handleLogout = () => {
-    setIsLoggedIn(false);
-    setUserInfo({ name: "", phone: "" });
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userPhone');
+    logout();
   };
 
   const handleEditProfile = () => {
@@ -516,7 +489,6 @@ function CartPage() {
       <AccountModal
         show={showAccountModal}
         onHide={() => setShowAccountModal(false)}
-        onLoginSuccess={handleLoginSuccess}
       />
     </div>
   );

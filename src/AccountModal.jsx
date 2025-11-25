@@ -6,12 +6,11 @@ import { IoMdHelpCircleOutline, IoMdLogOut } from "react-icons/io";
 import { MdAccountCircle, MdOutlineArrowForwardIos } from "react-icons/md";
 import { BiLeftArrowAlt } from "react-icons/bi";
 import { PiNotepadLight } from "react-icons/pi";
+import { useAuth } from "./AuthContext";
 
 function AccountModal({ show, onHide }) {
   const [logo, setLogo] = useState("/assets/Uc.png");
   const [currentView, setCurrentView] = useState("main");
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userName, setUserName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -24,7 +23,9 @@ function AccountModal({ show, onHide }) {
   const [resendMethod, setResendMethod] = useState("");
   const [selectedTitle, setSelectedTitle] = useState("Ms");
 
+  const { isLoggedIn, userInfo, login, logout } = useAuth();
   const otpInputRefs = useRef([]);
+  
   const countries = [
     { code: "+91", name: "India (+91)" },
     { code: "+65", name: "Singapore (+65)" },
@@ -71,7 +72,7 @@ function AccountModal({ show, onHide }) {
   }, [showOtpInput, timer]);
 
   const handleBack = () => {
-    if (currentView === "profile-details") {
+    if (currentView === "profile-details" || currentView === "bookings" || currentView === "plans") {
       setCurrentView("main");
     } else if (currentView !== "main") {
       setCurrentView("main");
@@ -97,13 +98,34 @@ function AccountModal({ show, onHide }) {
     }
     
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const response = await fetch("http://localhost:5000/api/send-otp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phoneNumber: phoneNumber,
+          countryCode: selectedCountry.code
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send OTP");
+      }
+
       setShowOtpInput(true);
       setTimer(30);
       setCanResend(false);
-      alert(`OTP sent to ${phoneNumber}`);
-    }, 1500);
+      
+    } catch (error) {
+      console.error("Error sending OTP:", error);
+      alert(error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleOtpChange = (index, value) => {
@@ -137,42 +159,104 @@ function AccountModal({ show, onHide }) {
     }
     
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setIsLoggedIn(true);
-      setUserName("Suba shree");
+    try {
+      const response = await fetch("http://localhost:5000/api/verify-otp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phoneNumber: phoneNumber,
+          countryCode: selectedCountry.code,
+          otp: otpValue
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to verify OTP");
+      }
+
+      // Login successful - use global login function
+      login({
+        name: data.user.name,
+        phone: data.user.phoneNumber
+      });
+
       setCurrentView("main");
       setShowOtpInput(false);
       setOtp(["","","","","",""]);
       setTimer(30);
       setCanResend(false);
-    }, 1500);
+      
+      // Close modal after successful login
+      onHide();
+      
+    } catch (error) {
+      console.error("Error verifying OTP:", error);
+      alert(error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleResendCode = (method) => {
+  const handleResendCode = async (method) => {
     if (canResend) {
-      setResendMethod(method);
-      setTimer(30);
-      setCanResend(false);
-      setOtp(["", "", "", "", "", ""]);
-      otpInputRefs.current[0]?.focus();
-      alert(`Code resent via ${method} to ${phoneNumber}`);
+      try {
+        const response = await fetch("http://localhost:5000/api/resend-otp", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            phoneNumber: phoneNumber,
+            countryCode: selectedCountry.code,
+            method: method
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to resend OTP");
+        }
+
+        setResendMethod(method);
+        setTimer(30);
+        setCanResend(false);
+        setOtp(["", "", "", "", "", ""]);
+        otpInputRefs.current[0]?.focus();
+        
+      } catch (error) {
+        console.error("Error resending OTP:", error);
+        alert(error.message);
+      }
     }
   };
 
   const handleLogout = () => {
-    setIsLoggedIn(false);
-    setUserName("");
-    setEmail("");
-    setPhoneNumber("");
-    setSelectedTitle("Ms");
+    logout();
     setCurrentView("main");
+    onHide();
   };
 
   const handleCountrySelect = (country) => {
     setSelectedCountry(country);
     setShowCountryModal(false);
   };
+
+  // Reset state when modal opens
+  useEffect(() => {
+    if (show) {
+      setCurrentView("main");
+      setShowOtpInput(false);
+      setPhoneNumber("");
+      setOtp(["","","","","",""]);
+      setTimer(30);
+      setCanResend(false);
+    }
+  }, [show]);
 
   // Render login view
   const renderLoginView = () => (
@@ -349,10 +433,9 @@ function AccountModal({ show, onHide }) {
     </div>
   );
 
-  // Render main view after login - UPDATED: Clickable profile section
+  // Render main view after login
   const renderMainViewAfterLogin = () => (
     <div>
-      {/* Make the profile section clickable to open profile details */}
       <div 
         className="mb-4 p-3"
         style={{ 
@@ -362,15 +445,16 @@ function AccountModal({ show, onHide }) {
       >
         <div className="d-flex justify-content-between align-items-center">
           <div>
-            <h5 className="fw-semibold mb-1">{userName || "User"}</h5>
-            <p className="small text-muted mb-0">{selectedCountry.code} {phoneNumber}</p>
+            <h5 className="fw-semibold mb-1">{userInfo.name || "User"}</h5>
+            <p className="small text-muted mb-0">{userInfo.phone}</p>
           </div>
+          <MdOutlineArrowForwardIos size={14} className="text-muted" />
         </div>
       </div>
 
       <div>
         {[
-          { icon: <PiNotepadLight size={20} />, label: "My plans", view: "My plans" },
+          { icon: <PiNotepadLight size={20} />, label: "My plans", view: "plans" },
           { icon: <LuNotepadText size={20} />, label: "Bookings", view: "bookings" },
           { icon: <IoMdHelpCircleOutline size={20} />, label: "Help Center", view: "help" },
         ].map((item, index) => (
@@ -422,12 +506,11 @@ function AccountModal({ show, onHide }) {
     </div>
   );
 
-  // Fixed renderProfileDetailsView with floating labels inside input boxes
+  // Render profile details view
   const renderProfileDetailsView = () => (
     <div>
       <h5 className="fw-bold mb-4">My Profile</h5>
       <Form>
-        {/* Name field with capsule and floating label */}
         <Form.Group className="mb-4 position-relative">
           <div className="position-absolute top-0 start-0 mt-1 ms-3" style={{ zIndex: 5 }}>
             <span className="small text-muted bg-white " style={{marginLeft:"82px"}}>Name</span>
@@ -472,8 +555,8 @@ function AccountModal({ show, onHide }) {
             </div>
             <Form.Control 
               type="text" 
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
+              value={userInfo.name}
+              onChange={(e) => login({ ...userInfo, name: e.target.value })}
               placeholder=""
               style={{ 
                 height: "40px", 
@@ -487,7 +570,6 @@ function AccountModal({ show, onHide }) {
           </div>
         </Form.Group>
 
-        {/* Email Address with floating label */}
         <Form.Group className="mb-4 position-relative">
           <div className="position-absolute top-0 start-0 mt-1 ms-3" style={{ zIndex: 5 }}>
             <span className="small text-muted bg-white px-1">Email</span>
@@ -505,7 +587,6 @@ function AccountModal({ show, onHide }) {
           />
         </Form.Group>
 
-        {/* Phone Number with floating label */}
         <Form.Group className="mb-4 position-relative">
           <div className="position-absolute top-0 start-0 mt-1 ms-3" style={{ zIndex: 5 }}>
             <span className="small text-muted bg-white px-1" style={{marginLeft:"90px"}}>Phone Number</span>
@@ -533,8 +614,8 @@ function AccountModal({ show, onHide }) {
             <div className="flex-grow-1 ms-2">
               <Form.Control
                 type="tel"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
+                value={userInfo.phone}
+                onChange={(e) => login({ ...userInfo, phone: e.target.value.replace(/\D/g, "") })}
                 placeholder=""
                 style={{ 
                   height: "40px", 
@@ -561,6 +642,109 @@ function AccountModal({ show, onHide }) {
     </div>
   );
 
+  // Enhanced Bookings View
+  const renderBookingsView = () => (
+    <div>
+      <h5 className="fw-bold mb-4">My Bookings</h5>
+      <div className="text-center py-5">
+        <div className="mb-4">
+          <LuNotepadText size={60} className="text-muted" />
+        </div>
+        <h6 className="fw-semibold mb-2">No bookings yet</h6>
+        <p className="text-muted mb-4" style={{ fontSize: "14px" }}>
+          Your upcoming and past bookings will appear here
+        </p>
+        <Button 
+          className="butn fw-semibold"
+          onClick={() => window.location.href = "/salon"}
+        >
+          Book a Service
+        </Button>
+      </div>
+    </div>
+  );
+
+  // Enhanced Plans View
+  const renderPlansView = () => (
+    <div>
+      <h5 className="fw-bold mb-4">My Plans</h5>
+      <div className="text-center py-5">
+        <div className="mb-4">
+          <PiNotepadLight size={60} className="text-muted" />
+        </div>
+        <h6 className="fw-semibold mb-2">No active plans</h6>
+        <p className="text-muted mb-4" style={{ fontSize: "14px" }}>
+          Your subscription plans will appear here
+        </p>
+        <Button 
+          className="butn fw-semibold"
+          onClick={() => window.location.href = "/plans"}
+        >
+          Explore Plans
+        </Button>
+      </div>
+    </div>
+  );
+
+  // Enhanced Help View
+  const renderHelpView = () => (
+    <div>
+      <h5 className="fw-bold mb-4">Help Center</h5>
+      <div className="border rounded p-3 mb-3">
+        <h6 className="fw-semibold mb-3">Frequently Asked Questions</h6>
+        <div className="mb-3">
+          <p className="fw-medium mb-1">How do I reschedule my booking?</p>
+          <p className="text-muted small mb-0">You can reschedule from the bookings section up to 2 hours before the service.</p>
+        </div>
+        <div className="mb-3">
+          <p className="fw-medium mb-1">What is your cancellation policy?</p>
+          <p className="text-muted small mb-0">Free cancellation up to 2 hours before the scheduled service time.</p>
+        </div>
+        <div>
+          <p className="fw-medium mb-1">How can I contact customer support?</p>
+          <p className="text-muted small mb-0">Call us at 1800-123-4567 or email support@urbancompany.com</p>
+        </div>
+      </div>
+      <Button 
+        variant="outline-primary" 
+        className="w-100 fw-semibold"
+        onClick={() => window.location.href = "/contact"}
+      >
+        Contact Support
+      </Button>
+    </div>
+  );
+
+  // Enhanced About View
+  const renderAboutView = () => (
+    <div>
+      <h5 className="fw-bold mb-4">About Urban Company</h5>
+      <div className="text-center mb-4">
+        <img 
+          src="/assets/Uc.png" 
+          alt="Urban Company" 
+          style={{ width: "80px", height: "80px", objectFit: "contain" }}
+        />
+      </div>
+      <p className="mb-3" style={{ fontSize: "14px" }}>
+        Urban Company is a platform for home services, on a mission to empower millions of professionals worldwide.
+      </p>
+      <p className="mb-3" style={{ fontSize: "14px" }}>
+        We provide services in beauty and wellness, cleaning, repair, and more, ensuring quality and convenience for our customers.
+      </p>
+      <div className="border rounded p-3">
+        <h6 className="fw-semibold mb-2">Our Services</h6>
+        <ul className="mb-0" style={{ fontSize: "14px" }}>
+          <li>Salon & Spa Services</li>
+          <li>Home Cleaning</li>
+          <li>AC & Appliance Repair</li>
+          <li>Plumbing & Electrical</li>
+          <li>Painting & Carpentry</li>
+        </ul>
+      </div>
+    </div>
+  );
+
   const getViewTitle = () => {
     const titles = {
       main: isLoggedIn ? "Account" : "Profile",
@@ -568,6 +752,7 @@ function AccountModal({ show, onHide }) {
       login: "Login",
       about: "About Urban Company",
       bookings: "My Bookings",
+      plans: "My Plans",
       help: "Help Center"
     };
     return titles[currentView] || "Account";
@@ -614,19 +799,28 @@ function AccountModal({ show, onHide }) {
         );
       }
     } else {
-      if (currentView === "main") {
-        return renderMainViewAfterLogin();
-      } else if (currentView === "profile-details") {
-        return renderProfileDetailsView();
-      } else {
-        return renderMainViewAfterLogin();
+      // When logged in, show different views based on currentView
+      switch (currentView) {
+        case "main":
+          return renderMainViewAfterLogin();
+        case "profile-details":
+          return renderProfileDetailsView();
+        case "bookings":
+          return renderBookingsView();
+        case "plans":
+          return renderPlansView();
+        case "help":
+          return renderHelpView();
+        case "about":
+          return renderAboutView();
+        default:
+          return renderMainViewAfterLogin();
       }
     }
   };
 
   return (
     <>
-      {/* Main Account Modal */}
       <Modal 
         show={show} 
         onHide={onHide}
@@ -655,17 +849,11 @@ function AccountModal({ show, onHide }) {
         
         <Modal.Body>
           <Container fluid>
-            {currentView === "main" && renderMainContent()}
-            {currentView === "profile-details" && isLoggedIn && renderProfileDetailsView()}
-            {currentView === "login" && renderLoginView()}
-            {currentView === "about" && renderAboutView()}
-            {currentView === "bookings" && isLoggedIn && renderBookingsView()}
-            {currentView === "help" && renderHelpView()}
+            {renderMainContent()}
           </Container>
         </Modal.Body>
       </Modal>
 
-      {/* Country Selection Modal */}
       <Modal 
         show={showCountryModal} 
         onHide={() => setShowCountryModal(false)}
