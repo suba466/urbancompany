@@ -250,6 +250,7 @@ const initializeStaticData = () => {
   if (!fs.existsSync(STATIC_DATA_FILE)) {
     const initialData = {
       logo: "/assets/Uc.png",
+      logo1: "/assets/urban.png",
       services: [
         { name: "Salon for women", key: "salon", img: "/assets/salon.webp" },
         { name: "AC & Appliance Repair", key: "ac", img: "/assets/ac.webp" },
@@ -524,7 +525,7 @@ app.get("/api/static-data", (req, res) => {
 });
 
 const staticRoutes = [
-  'logo', 'services', 'banner', 'carousel', 'book', 'salon', 
+  'logo','logo1', 'services', 'banner', 'carousel', 'book', 'salon', 
   'salonforwomen', 'advanced', 'super', 'smartlock', 'images', 
   'cart', 'added'
 ];
@@ -633,7 +634,7 @@ app.post("/api/add-to-section/:section", upload.single('image'), (req, res) => {
     res.status(500).json({ error: "Failed to add item" });
   }
 });
-
+// Update logo
 app.put("/api/update-logo", upload.single('logo'), (req, res) => {
   try {
     const data = readStaticData();
@@ -653,6 +654,24 @@ app.put("/api/update-logo", upload.single('logo'), (req, res) => {
   }
 });
 
+app.put("/api/update-logo1", upload.single('logo'), (req, res) => {
+  try {
+    const data = readStaticData();
+    if (req.file) {
+      data.logo1 = `/assets/${req.file.filename}`;
+    }
+    if (writeStaticData(data)) {
+      res.json({ 
+        message: "Logo1 updated successfully", 
+        logo1: data.logo1 
+      });
+    } else {
+      res.status(500).json({ error: "Failed to update logo1" });
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update logo1" });
+  }
+});
 app.delete("/api/delete-section/:section/:key", (req, res) => {
   try {
     const { section, key } = req.params;
