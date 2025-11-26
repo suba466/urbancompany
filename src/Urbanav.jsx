@@ -224,28 +224,36 @@ function Urbanav() {
     }));
   };
 
-  const handleUseCurrentLocation = () => {
-    setCurrentLocationStatus("fetching");
-    setIsGettingLocation(true);
+ const handleUseCurrentLocation = () => {
+  setCurrentLocationStatus("fetching");
+  setIsGettingLocation(true);
+  
+  // Clear any previous search and suggestions
+  setLocationSearch("");
+  setSuggestedLocations([]);
+  
+  // Simulate getting current location with delay
+  setTimeout(() => {
+    const mockCurrentLocation = {
+      id: 7,
+      mainText: "Your Current Location",
+      subText: "Coimbatore, Tamil Nadu",
+      fullAddress: "Your current location in Coimbatore",
+      coordinates: { lat: 11.0168, lng: 76.9558 }
+    };
+    setSelectedLocation(mockCurrentLocation);
     
-    // Simulate getting current location with delay
-    setTimeout(() => {
-      const mockCurrentLocation = {
-        id: 7,
-        mainText: "Your Current Location",
-        subText: "Coimbatore, Tamil Nadu",
-        fullAddress: "Your current location in Coimbatore",
-        coordinates: { lat: 11.0168, lng: 76.9558 }
-      };
-      setSelectedLocation(mockCurrentLocation);
-      setShowAddressMap(true);
-      setAddressDetails(prev => ({
-        ...prev,
-        landmark: "Current Location"
-      }));
-      setCurrentLocationStatus("fetched");
-    }, 2000);
-  };
+    // IMPORTANT: Set showAddressMap to true to redirect to confirm address page
+    setShowAddressMap(true);
+    
+    setAddressDetails(prev => ({
+      ...prev,
+      landmark: "Current Location"
+    }));
+    setCurrentLocationStatus("fetched");
+    setIsGettingLocation(false);
+  }, 2000);
+};
 
   const handleAddressSubmit = () => {
     if (!addressDetails.doorNo.trim()) {
@@ -337,6 +345,7 @@ function Urbanav() {
     setLocationSearch("");
     setSuggestedLocations([]);
     setCurrentLocationStatus("idle");
+    setIsGettingLocation(false);
     setAddressDetails({
       doorNo: "",
       landmark: "",
@@ -566,274 +575,287 @@ function Urbanav() {
         
         <Modal.Body className="p-0" style={{ maxHeight: "80vh", overflowY: "auto" }}>
           {!showAddressMap ? (
-            // Location Search View
-            <>
-              <div className="p-4 border-bottom">
-                <div className="position-relative w-100">
-                  <CiSearch className="position-absolute top-50 start-3 translate-middle-y" size={20} />
-                  <input
-                    type="text"
-                    placeholder="Search for area, street, landmark..."
-                    className="popup-search-input w-100 ps-5"
-                    value={locationSearch}
-                    onChange={(e) => setLocationSearch(e.target.value)}
-                    autoFocus
-                  />
-                </div>
-                
-                <div className="mt-3">
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleUseCurrentLocation();
-                    }}
-                    style={{
-                      display: "inline-flex",
-                      gap: "8px",
-                      textDecoration: "none",
-                      color: "#033870ff",
-                      fontWeight: "500",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <IoMdLocate size={20} /> 
-                    {currentLocationStatus === "fetching" ? "Fetching your location..." : "Use my current location"}
-                  </a>
-                  {currentLocationStatus === "fetching" && (
-                    <div className="mt-2 text-muted small">
-                      <em>Location not fetched yet...</em>
-                    </div>
-                  )}
+  // Location Search View
+  <>
+    <div className="p-4 border-bottom">
+      <div className="position-relative w-100">
+        <CiSearch className="position-absolute top-50 start-3 translate-middle-y" size={20} />
+        <input
+          type="text"
+          placeholder="Search for area, street, landmark..."
+          className="popup-search-input w-100 ps-5"
+          value={locationSearch}
+          onChange={(e) => setLocationSearch(e.target.value)}
+          autoFocus
+        />
+      </div>
+      
+      <div className="mt-3">
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            handleUseCurrentLocation();
+          }}
+          style={{
+            display: "inline-flex",
+            gap: "8px",
+            textDecoration: "none",
+            color: "#033870ff",
+            fontWeight: "500",
+            cursor: "pointer",
+          }}
+        >
+          <IoMdLocate size={20} /> 
+          {currentLocationStatus === "fetching" ? "Fetching your location..." : "Use my current location"}
+        </a>
+      </div>
+    </div>
+
+    {/* Saved Addresses Section - Shows automatically when addresses exist */}
+    {savedAddresses.length > 0 && (
+      <div className="border-bottom">
+        <div className="p-4">
+          <h6 className="fw-semibold mb-3">Saved Addresses</h6>
+          <div className="d-grid gap-2">
+            {savedAddresses.map((address) => (
+              <div
+                key={address.id}
+                className="p-3 border rounded bg-white position-relative"
+                style={{ cursor: "pointer" }}
+                onClick={() => handleSelectSavedAddress(address)}
+              >
+                <div className="d-flex justify-content-between align-items-start">
+                  <div className="flex-grow-1">
+                    <h6 className="fw-semibold mb-1">
+                      {address.doorNo}, {address.mainText}
+                    </h6>
+                    <p className="text-muted small mb-1">
+                      {address.landmark && `Near ${address.landmark}, `}
+                      {address.subText}
+                    </p>
+                    <span className="badge bg-light text-dark border small">
+                      {address.addressType || 'Home'}
+                    </span>
+                  </div>
+                  <Dropdown>
+                    <Dropdown.Toggle 
+                      variant="light" 
+                      size="sm"
+                      className="border-0 p-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                    >
+                      <MdMoreVert size={16} />
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu>
+                      <Dropdown.Item 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteAddress(address.id, e);
+                        }}
+                        className="text-danger"
+                      >
+                        <MdDelete className="me-2" />
+                        Delete
+                      </Dropdown.Item>
+                    </Dropdown.Menu>
+                  </Dropdown>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )}
 
-              {/* Saved Addresses Section */}
-              {savedAddresses.length > 0 && (
-                <div className="border-bottom">
-                  <div className="p-4">
-                    <h6 className="fw-semibold mb-3">Saved Addresses</h6>
-                    <div className="d-grid gap-2">
-                      {savedAddresses.map((address) => (
-                        <div
-                          key={address.id}
-                          className="p-3 border rounded bg-white position-relative"
-                          style={{ cursor: "pointer" }}
-                          onClick={() => handleSelectSavedAddress(address)}
-                        >
-                          <div className="d-flex justify-content-between align-items-start">
-                            <div className="flex-grow-1">
-                              <h6 className="fw-semibold mb-1">
-                                {address.doorNo}, {address.mainText}
-                              </h6>
-                              <p className="text-muted small mb-1">
-                                {address.landmark && `Near ${address.landmark}, `}
-                                {address.subText}
-                              </p>
-                              <span className="badge bg-light text-dark border small">
-                                {address.addressType || 'Home'}
-                              </span>
-                            </div>
-                            <Dropdown>
-                            <Dropdown.Toggle 
-                              variant="light" 
-                              size="sm"
-                              className="border-0 p-1"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                e.preventDefault();
-                              }}
-                            >
-                              <MdMoreVert size={16} />
-                            </Dropdown.Toggle>
+    {/* Location Suggestions - ONLY show when searching */}
+    {suggestedLocations.length > 0 && (
+      <div>
+        <div className="p-3 bg-light border-bottom">
+          <h6 className="fw-semibold mb-2">Search Results</h6>
+        </div>
+        {suggestedLocations.map((location) => (
+          <div
+            key={location.id}
+            className="p-3 border-bottom"
+            style={{ cursor: "pointer" }}
+            onClick={() => handleLocationSelect(location)}
+          >
+            <div className="d-flex align-items-start">
+              <CiLocationOn size={20} className="text-muted mt-1 me-3" />
+              <div>
+                <h6 className="fw-semibold mb-1">{location.mainText}</h6>
+                <p className="text-muted mb-0 small">{location.subText}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
 
-                            <Dropdown.Menu>
-                              <Dropdown.Item 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteAddress(address.id, e);
-                                }}
-                                className="text-danger"
-                              >
-                                <MdDelete className="me-2" />
-                                Delete
-                              </Dropdown.Item>
-                            </Dropdown.Menu>
-                          </Dropdown>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
+    {/* Show message when no search results */}
+    {locationSearch.trim() && suggestedLocations.length === 0 && (
+      <div className="p-4 text-center text-muted">
+        <p>No locations found for "{locationSearch}"</p>
+        <p className="small">Try searching with different keywords</p>
+      </div>
+    )}
 
-              {/* Location Suggestions - ONLY show when searching */}
-              {suggestedLocations.length > 0 && (
-                <div>
-                  <div className="p-3 bg-light border-bottom">
-                    <h6 className="fw-semibold mb-2">Search Results</h6>
-                  </div>
-                  {suggestedLocations.map((location) => (
-                    <div
-                      key={location.id}
-                      className="p-3 border-bottom"
-                      style={{ cursor: "pointer" }}
-                      onClick={() => handleLocationSelect(location)}
-                    >
-                      <div className="d-flex align-items-start">
-                        <CiLocationOn size={20} className="text-muted mt-1 me-3" />
-                        <div>
-                          <h6 className="fw-semibold mb-1">{location.mainText}</h6>
-                          <p className="text-muted mb-0 small">{location.subText}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+    {/* Loading State - Show when fetching location */}
+    {currentLocationStatus === "fetching" && (
+      <div className="p-4 text-center">
+        <div className="spinner-border text-primary mb-3" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+        <p className="text-muted">Fetching your current location...</p>
+        <div className="border-top pt-3">
+          <span className="text-muted small">Location not fetched yet...</span>
+        </div>
+      </div>
+    )}
 
-              {/* Show message when no search results */}
-              {locationSearch.trim() && suggestedLocations.length === 0 && (
-                <div className="p-4 text-center text-muted">
-                  <p>No locations found for "{locationSearch}"</p>
-                  <p className="small">Try searching with different keywords</p>
-                </div>
-              )}
+    {/* Default State - Show when not fetching and no addresses/search */}
+    {currentLocationStatus !== "fetching" && savedAddresses.length === 0 && !locationSearch.trim() && (
+      <div className="p-4">
+        <div className="text-center text-muted mb-4">
+          <p>Search for a location or use current location to add an address</p>
+        </div>
+        <div className="border-top pt-3">
+          <div className="d-flex justify-content-between align-items-center">
+            <span className="text-muted small">Powered by Google</span>
+          </div>
+        </div>
+      </div>
+    )}
+  </>
+) : (
+  // Map & Address Details View - This is the confirm address page
+  <Row className="g-0">
+    {/* Left Side - Map */}
+    <Col md={7}>
+      <div 
+        className="position-relative bg-light"
+        style={{ height: "500px", backgroundColor: "#f8f9fa" }}
+      >
+        {/* Mock Map */}
+        <div 
+          className="w-100 h-100 d-flex align-items-center justify-content-center"
+          style={{ 
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            color: "white"
+          }}
+        >
+          <div className="text-center">
+            <CiLocationOn size={48} className="mb-3" />
+            <h5>Map View</h5>
+            <p className="mb-0">Interactive map would be displayed here</p>
+            <small>Google Maps/Mapbox integration</small>
+            <div className="mt-3">
+              <div className="bg-white text-dark p-2 rounded d-inline-block">
+                 {selectedLocation?.mainText}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Col>
 
-              {/* Show message when no addresses and no search */}
-              {savedAddresses.length === 0 && !locationSearch.trim() && (
-                <div className="p-4 text-center text-muted">
-                  <p>No saved addresses yet</p>
-                  <p className="small">Search for a location or use current location to add an address</p>
-                </div>
-              )}
-            </>
-          ) : (
-            // Map & Address Details View - Split layout
-            <Row className="g-0">
-              {/* Left Side - Map */}
-              <Col md={7}>
-                <div 
-                  className="position-relative bg-light"
-                  style={{ height: "500px", backgroundColor: "#f8f9fa" }}
-                >
-                  {/* Mock Map */}
-                  <div 
-                    className="w-100 h-100 d-flex align-items-center justify-content-center"
-                    style={{ 
-                      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                      color: "white"
-                    }}
-                  >
-                    <div className="text-center">
-                      <CiLocationOn size={48} className="mb-3" />
-                      <h5>Map View</h5>
-                      <p className="mb-0">Interactive map would be displayed here</p>
-                      <small>Google Maps/Mapbox integration</small>
-                      <div className="mt-3">
-                        <div className="bg-white text-dark p-2 rounded d-inline-block">
-                           {selectedLocation?.mainText}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Col>
+    {/* Right Side - Address Details */}
+    <Col md={5}>
+      <div className="p-4" style={{ height: "500px", overflowY: "auto" }}>
+        <h6 className="fw-semibold mb-3">Add Address Details</h6>
+        
+        {/* Selected Location Preview */}
+        <div className="bg-light p-3 rounded mb-4">
+          <h6 className="fw-semibold mb-1">Selected Location</h6>
+          <p className="text-muted mb-0 small">{selectedLocation?.fullAddress}</p>
+        </div>
 
-              {/* Right Side - Address Details */}
-              <Col md={5}>
-                <div className="p-4" style={{ height: "500px", overflowY: "auto" }}>
-                  <h6 className="fw-semibold mb-3">Add Address Details</h6>
-                  
-                  {/* Selected Location Preview */}
-                  <div className="bg-light p-3 rounded mb-4">
-                    <h6 className="fw-semibold mb-1">Selected Location</h6>
-                    <p className="text-muted mb-0 small">{selectedLocation?.fullAddress}</p>
-                  </div>
+        {/* Door Number */}
+        <div className="mb-3">
+          <label className="form-label fw-semibold">Door / Flat / House No. *</label>
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Enter door number, flat number, etc."
+            value={addressDetails.doorNo}
+            onChange={(e) => setAddressDetails(prev => ({ ...prev, doorNo: e.target.value }))}
+            autoFocus
+          />
+        </div>
 
-                  {/* Door Number */}
-                  <div className="mb-3">
-                    <label className="form-label fw-semibold">Door / Flat / House No. *</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="Enter door number, flat number, etc."
-                      value={addressDetails.doorNo}
-                      onChange={(e) => setAddressDetails(prev => ({ ...prev, doorNo: e.target.value }))}
-                      autoFocus
-                    />
-                  </div>
+        {/* Landmark */}
+        <div className="mb-3">
+          <label className="form-label fw-semibold">Landmark (Optional)</label>
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Nearby landmark, e.g., Near Central Mall"
+            value={addressDetails.landmark}
+            onChange={(e) => setAddressDetails(prev => ({ ...prev, landmark: e.target.value }))}
+          />
+        </div>
 
-                  {/* Landmark */}
-                  <div className="mb-3">
-                    <label className="form-label fw-semibold">Landmark (Optional)</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="Nearby landmark, e.g., Near Central Mall"
-                      value={addressDetails.landmark}
-                      onChange={(e) => setAddressDetails(prev => ({ ...prev, landmark: e.target.value }))}
-                    />
-                  </div>
+        {/* Address Type */}
+        <div className="mb-3">
+          <label className="form-label fw-semibold">Save as</label>
+          <div className="d-flex gap-2">
+            {[
+              { value: 'home', label: 'Home', icon: <MdHome /> },
+              { value: 'work', label: 'Work', icon: <MdBusinessCenter /> },
+              { value: 'other', label: 'Other', icon: <MdApartment /> }
+            ].map((type) => (
+              <Button
+                key={type.value}
+                variant={addressDetails.addressType === type.value ? "primary" : "outline-secondary"}
+                className="d-flex align-items-center gap-1 flex-grow-1"
+                onClick={() => setAddressDetails(prev => ({ ...prev, addressType: type.value }))}
+              >
+                {type.icon}
+                {type.label}
+              </Button>
+            ))}
+          </div>
+        </div>
 
-                  {/* Address Type */}
-                  <div className="mb-3">
-                    <label className="form-label fw-semibold">Save as</label>
-                    <div className="d-flex gap-2">
-                      {[
-                        { value: 'home', label: 'Home', icon: <MdHome /> },
-                        { value: 'work', label: 'Work', icon: <MdBusinessCenter /> },
-                        { value: 'other', label: 'Other', icon: <MdApartment /> }
-                      ].map((type) => (
-                        <Button
-                          key={type.value}
-                          variant={addressDetails.addressType === type.value ? "primary" : "outline-secondary"}
-                          className="d-flex align-items-center gap-1 flex-grow-1"
-                          onClick={() => setAddressDetails(prev => ({ ...prev, addressType: type.value }))}
-                        >
-                          {type.icon}
-                          {type.label}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
+        {/* Save Address Checkbox */}
+        <div className="form-check mb-4">
+          <input
+            className="form-check-input"
+            type="checkbox"
+            checked={addressDetails.saveAddress}
+            onChange={(e) => setAddressDetails(prev => ({ ...prev, saveAddress: e.target.checked }))}
+            id="saveAddress"
+          />
+          <label className="form-check-label" htmlFor="saveAddress">
+            Save this address for faster checkout
+          </label>
+        </div>
 
-                  {/* Save Address Checkbox */}
-                  <div className="form-check mb-4">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      checked={addressDetails.saveAddress}
-                      onChange={(e) => setAddressDetails(prev => ({ ...prev, saveAddress: e.target.checked }))}
-                      id="saveAddress"
-                    />
-                    <label className="form-check-label" htmlFor="saveAddress">
-                      Save this address for faster checkout
-                    </label>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="d-flex gap-2">
-                    <Button
-                      variant="outline-secondary"
-                      className="flex-grow-1"
-                      onClick={() => setShowAddressMap(false)}
-                    >
-                      Back
-                    </Button>
-                    <Button
-                      className="butn flex-grow-1"
-                      onClick={handleAddressSubmit}
-                      disabled={!addressDetails.doorNo.trim()}
-                    >
-                      Confirm Location
-                    </Button>
-                  </div>
-                </div>
-              </Col>
-            </Row>
-          )}
+        {/* Action Buttons */}
+        <div className="d-flex gap-2">
+          <Button
+            variant="outline-secondary"
+            className="flex-grow-1"
+            onClick={() => setShowAddressMap(false)}
+          >
+            Back
+          </Button>
+          <Button
+            className="butn flex-grow-1"
+            onClick={handleAddressSubmit}
+            disabled={!addressDetails.doorNo.trim()}
+          >
+            Confirm Location
+          </Button>
+        </div>
+      </div>
+    </Col>
+  </Row>
+)}
         </Modal.Body>
       </Modal>
     </>

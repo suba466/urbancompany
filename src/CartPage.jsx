@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from "react";
 import CartBlock from "./CartBlock";
 import Salon1modal from "./Salon1modal";
-import { Row, Col, Button, Container, Form, Modal, Card, Badge, Dropdown } from "react-bootstrap";
+import { Row, Col, Button, Container, Form, Modal, Card, Badge, Spinner } from "react-bootstrap";
 import FrequentlyAddedCarousel from "./FrequentlyAddedCarousel";
 import { TbCirclePercentageFilled } from "react-icons/tb";
-import { MdKeyboardArrowRight, MdEdit, MdMoreVert, MdDelete } from "react-icons/md";
+import { MdKeyboardArrowRight, MdPayments } from "react-icons/md";
 import AccountModal from "./AccountModal";
 import { ImLocation } from "react-icons/im";
 import { useAuth } from "./AuthContext";
 import { FaClock } from "react-icons/fa";
-import { MdPayments } from "react-icons/md";
 
 function CartPage() {
   const [carts, setCarts] = useState([]);
@@ -26,6 +25,8 @@ function CartPage() {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState([]);
 
   const { isLoggedIn, userInfo } = useAuth();
 
@@ -77,10 +78,34 @@ function CartPage() {
       .catch(err => console.error("Failed to load added images:", err));
   };
 
+  // Load saved addresses
+  const loadSavedAddresses = () => {
+    const saved = localStorage.getItem('savedAddresses');
+    if (saved) {
+      setSavedAddresses(JSON.parse(saved));
+    }
+  };
+
+  // Clear cart function
+  const clearCart = async () => {
+    try {
+      // Delete all cart items one by one
+      for (const item of carts) {
+        await fetch(`http://localhost:5000/api/carts/${item._id}`, {
+          method: "DELETE"
+        });
+      }
+      setCarts([]);
+    } catch (error) {
+      console.error("Error clearing cart:", error);
+    }
+  };
+
   // Check for saved address when component loads
   useEffect(() => {
     fetchCarts();
     fetchAddedItems();
+    loadSavedAddresses();
     
     // Check if address is saved in localStorage
     const savedAddress = localStorage.getItem('selectedAddress');
@@ -99,6 +124,8 @@ function CartPage() {
       if (savedAddress) {
         setSelectedAddress(JSON.parse(savedAddress));
       }
+      // Reload saved addresses when storage changes
+      loadSavedAddresses();
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -298,14 +325,86 @@ function CartPage() {
     setSelectedSlot(null); // Reset slot when date changes
   };
 
-  const handleProceedToPayment = () => {
-    if (!selectedSlot) {
-      alert("Please select a time slot");
+  // Handle Place Order with Database Integration
+  const handlePlaceOrder = async () => {
+    if (!isLoggedIn) {
+      alert("Please login to place order");
+      setShowAccountModal(true);
       return;
     }
-    // Navigate to payment page
-    alert(`Proceeding to payment for slot: ${selectedSlot.time}`);
-    // window.location.href = "/payment";
+
+    if (!selectedAddress) {
+      alert("Please select delivery address");
+      handleOpenLocationModal();
+      return;
+    }
+
+    if (!selectedSlot) {
+      alert("Please select a time slot");
+      setShowSlotModal(true);
+      return;
+    }
+
+    setIsPlacingOrder(true);
+
+    try {
+      // Create booking in database
+      const bookingData = {
+        userId: userInfo.userId || userInfo.phone,
+        userPhone: userInfo.phone,
+        userName: userInfo.name,
+        serviceName: carts.map(item => item.title).join(', '),
+        servicePrice: calculateTotalPrice().toString(),
+        originalPrice: calculateItemTotal().toString(),
+        address: selectedAddress,
+        scheduledDate: selectedDate,
+        scheduledTime: selectedSlot.time,
+        items: carts.map(item => ({
+          name: item.title,
+          quantity: item.count || 1,
+          price: item.price
+        })),
+        slotExtraCharge: selectedSlot.extraCharge,
+        tipAmount: calculateTip(),
+        taxAmount: calculateTax()
+      };
+
+      const response = await fetch("http://localhost:5000/api/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(bookingData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create booking");
+      }
+
+      const result = await response.json();
+
+      // Clear cart after successful booking
+      await clearCart();
+      
+      // Show success message
+      alert(`🎉 Order placed successfully!\n\nBooking ID: ${result.booking._id}\nService: ${bookingData.serviceName}\nDate: ${selectedDate.toLocaleDateString()}\nTime: ${selectedSlot.time}\nTotal: ${formatPrice(calculateTotalPrice())}`);
+      
+      // Reset form
+      setSelectedSlot(null);
+      setSelectedDate(new Date());
+      setSelectedTip(0);
+      setCustomTip("");
+      
+      // You can navigate to bookings page or home page here
+      // window.location.href = "/";
+
+    } catch (error) {
+      console.error("Error placing order:", error);
+      alert(`Failed to place order: ${error.message}`);
+    } finally {
+      setIsPlacingOrder(false);
+    }
   };
 
   // Function to open UrbanNav's location modal
@@ -313,6 +412,43 @@ function CartPage() {
     const event = new CustomEvent('openLocationModal');
     window.dispatchEvent(event);
     localStorage.setItem('openLocationModal', 'true');
+  };
+
+  // Function to handle address selection and automatically open slots modal
+  const handleAddressAndOpenSlots = () => {
+    handleOpenLocationModal();
+    
+    // Listen for address selection and then open slots modal
+    const handleAddressSelected = () => {
+      const savedAddress = localStorage.getItem('selectedAddress');
+      if (savedAddress) {
+        setSelectedAddress(JSON.parse(savedAddress));
+        // Open slots modal after a short delay to ensure address is set
+        setTimeout(() => {
+          setShowSlotModal(true);
+        }, 500);
+      }
+    };
+
+    // Add event listener for storage changes
+    window.addEventListener('storage', handleAddressSelected);
+    
+    // Also check periodically for address selection
+    const checkInterval = setInterval(() => {
+      const savedAddress = localStorage.getItem('selectedAddress');
+      if (savedAddress) {
+        setSelectedAddress(JSON.parse(savedAddress));
+        setShowSlotModal(true);
+        clearInterval(checkInterval);
+        window.removeEventListener('storage', handleAddressSelected);
+      }
+    }, 100);
+
+    // Cleanup after 10 seconds if no address is selected
+    setTimeout(() => {
+      clearInterval(checkInterval);
+      window.removeEventListener('storage', handleAddressSelected);
+    }, 10000);
   };
 
   // Format address for display
@@ -419,26 +555,28 @@ function CartPage() {
   return (
     <div className="container mt-4">
       <Row>
-        {/* Account Column - Shows different content based on login status */}
+        {/* Account Column - Shows different content based on login status - HEIGHT ADJUSTED */}
         <Col md={6} className="d-none d-md-block"
           style={{
-            position:"sticky",
-            top:"100px",
+            position: "sticky",
+            top: "100px",
             border: "1px solid rgba(0,0,0,0.2)",
             borderRadius: "10px",
             padding: "15px",
-            height: isLoggedIn ? "auto" : "150px",
+            height: "fit-content", // Changed from "auto" to "fit-content"
+            maxHeight: "400px", // Added max height limit
+            overflow: "hidden" // Prevent overflow
           }}
         >
           {isLoggedIn ? (
             <div>
               {/* Send booking details section */}
               <div className="mb-3">
-                <h5 className="fw-semibold">
-                  <ImLocation style={{fontSize:"20px", marginRight: "8px"}}/>
+                <p className="fw-semibold" style={{fontSize:"15px"}}>
+                  <ImLocation style={{fontSize:"18px", marginRight: "8px"}}/>
                   Send booking details to
-                </h5>
-                <p className="mb-1" style={{ marginLeft: "28px", fontSize: "14px" }}>
+                </p>
+                <p style={{marginTop:"-12px", marginLeft: "28px", fontSize: "14px" }}>
                  {userInfo?.phone || "9787081119"}
                 </p>
               </div>
@@ -448,10 +586,10 @@ function CartPage() {
               {/* Address section */}
               <div className="mb-3">
                 <div className="d-flex justify-content-between align-items-center mb-2">
-                  <h5 className="fw-semibold mb-0">
-                    <ImLocation style={{fontSize:"20px", marginRight: "8px"}}/>
+                  <p className="fw-semibold mb-0" style={{fontSize:"15px",}}>
+                    <ImLocation style={{fontSize:"18px", marginRight: "8px"}}/>
                     Address
-                  </h5>
+                  </p>
                   {selectedAddress && (
                     <Button 
                       size="sm"
@@ -462,13 +600,13 @@ function CartPage() {
                     </Button>
                   )}
                 </div>
-                <div style={{ marginLeft: "28px" }}>
+                <div style={{ marginLeft: "28px",marginTop:"-12px" }}>
                   {selectedAddress ? (
                     <div >
                       <div className="d-flex justify-content-between align-items-start">
                         <div className="flex-grow-1">
                           {/* Address Type - First line */}
-                          <p className="mb-2 fw-semibold" style={{ fontSize: "14px",color:"#6b6b6bff" }}>
+                          <p className="mb-2 fw-semibold" style={{ fontSize: "12px",color:"#6b6b6bff" }}>
                             {getAddressTypeDisplay(selectedAddress.addressType)} <span className="fw-normal">• {formatAddressDisplay(selectedAddress)}</span>
                           </p>
                         </div>
@@ -476,8 +614,8 @@ function CartPage() {
                     </div>
                   ) : (
                     <Button 
-                      className="butn"
-                      onClick={handleOpenLocationModal}
+                      className="butn w-100" style={{height:"40px"}}
+                      onClick={handleAddressAndOpenSlots}
                     >
                       Select an address
                     </Button>
@@ -490,10 +628,10 @@ function CartPage() {
               {/* Slot section */}
               <div className="mb-3">
                 <div className="d-flex justify-content-between align-items-center mb-2">
-                  <h5 className="fw-semibold mb-0">
-                    <FaClock style={{fontSize:"18px", marginRight: "8px"}}/>
+                  <p className="fw-semibold mb-0" style={{fontSize:"15px"}}>
+                    <FaClock style={{fontSize:"16px", marginRight: "8px"}}/>
                     Slot
-                  </h5>
+                  </p>
                   {selectedSlot && (
                     <Button 
                       className="edit fw-semibold" 
@@ -505,10 +643,9 @@ function CartPage() {
                   )}
                 </div>
                 {selectedSlot ? (
-                  <div style={{ marginLeft: "28px" }}>
-                    <p className="mb-1 fw-semibold">{selectedSlot.time}</p>
-                    <p className="text-muted small mb-2">
-                      {selectedDate && formatDateDisplay(selectedDate)}
+                  <div style={{ marginLeft: "28px",marginTop:"-12px" }}>
+                    <p className="text-muted mb-2" style={{fontSize:"13px"}}>
+                      {selectedDate && formatDateDisplay(selectedDate)} - {selectedSlot.time}
                       {selectedSlot.extraCharge > 0 && (
                         <span className="text-warning ms-2">+{formatPrice(selectedSlot.extraCharge)} extra</span>
                       )}
@@ -517,7 +654,7 @@ function CartPage() {
                 ) : (
                   <div style={{ marginLeft: "28px" }}>
                     <Button 
-                      className="butn w-100" style={{height:"42px"}} 
+                      className="butn w-100" style={{height:"40px"}} 
                       onClick={() => setShowSlotModal(true)}
                       disabled={!selectedAddress}
                     >
@@ -533,17 +670,32 @@ function CartPage() {
               
               {/* Payment section */}
               <div>
-                <h5 className="fw-semibold">
+                <p className="fw-semibold" style={{fontSize:"15px"}}>
                   <MdPayments style={{fontSize:"20px", marginRight: "8px"}}/>
                   Payment Method
-                </h5>
-                {selectedSlot && (
+                </p>
+                {selectedSlot && selectedAddress && (
                   <div style={{ marginLeft: "28px" }}>
-                    <Button className="butn" onClick={handleProceedToPayment}>
-                      Proceed to Payment
+                    <Button 
+                      className="butn w-100 fw-semibold" 
+                      onClick={handlePlaceOrder}
+                      disabled={isPlacingOrder}
+                      style={{ height: "42px" }}
+                    >
+                      {isPlacingOrder ? (
+                        <>
+                          <Spinner animation="border" size="sm" className="me-2" />
+                          Placing Order...
+                        </>
+                      ) : (
+                        `Proceed to pay`
+                      )}
                     </Button>
                   </div>
-                )}
+                )}  <div style={{backgroundColor:"#e1e1e1ff"}}>
+                  <p className="text-muted" style={{fontSize:"12px"}}>By proceeding, you agree to our <a className="fw-semibold" style={{color:"black"}} href="">T&C</a>,<a className="fw-semibold" style={{color:"black"}}  href="">Privacy</a> and <a className="fw-semibold" style={{color:"black"}} href="">Cancellation Policy</a> </p>
+                </div>
+                
               </div>
             </div>
           ) : (
@@ -645,7 +797,7 @@ function CartPage() {
                 <Row className="mb-1">
                   <Col><p style={{fontSize:"14px"}}>Tip</p></Col>
                   <Col className="text-end"><p style={{fontSize:"14px"}}>{formatPrice(tip)}</p></Col>
-                </Row>
+              </Row>
               )}
               <hr />
               <Row className="mb-1">
@@ -738,9 +890,21 @@ function CartPage() {
                   </h5>
                 </Col>
                 <Col xs={6} className="text-end">
-                  <h5 className="fw-bold mb-0" style={{ fontSize: "16px" }}>
-                    {formatPrice(totalPrice)}
-                  </h5>
+                  <Button 
+                    className="butn fw-bold" 
+                    onClick={handlePlaceOrder}
+                    disabled={isPlacingOrder || !selectedSlot || !selectedAddress}
+                    style={{ height: "45px", fontSize: "16px" }}
+                  >
+                    {isPlacingOrder ? (
+                      <>
+                        <Spinner animation="border" size="sm" className="me-2" />
+                        Placing...
+                      </>
+                    ) : (
+                      `Pay ${formatPrice(totalPrice)}`
+                    )}
+                  </Button>
                 </Col>
               </>
             ) : (
@@ -778,98 +942,181 @@ function CartPage() {
         initialView={showLoginView ? "login" : "main"}
       />
 
-      {/* Time Slot Selection Modal */}
-      <Modal show={showSlotModal} onHide={() => setShowSlotModal(false)} centered size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>Select Time Slot</Modal.Title>
+      {/* Time Slot Selection Modal - NO VISIBLE SCROLLBAR */}
+      <Modal 
+        show={showSlotModal} 
+        onHide={() => setShowSlotModal(false)} 
+        centered 
+        size="lg"
+        backdrop="static"
+        dialogClassName="custom-modal-dialog"
+        contentClassName="custom-modal-content"
+      >
+        <Modal.Header className="border-bottom-0 pb-0 custom-modal-header" style={{ padding: '16px 20px 8px 20px' }}>
+          <div className="w-100">
+            <div className="d-flex justify-content-between align-items-start">
+              <div className="flex-grow-1">
+                <h5 className="fw-semibold mb-1" style={{ fontSize: '18px', color: '#333' }}>
+                  When should the professional arrive?
+                </h5>
+                <p className="text-muted mb-0" style={{ fontSize: '13px' }}>
+                  Service will take approx. 5hrs & 40 mins
+                </p>
+              </div>
+              <Button type="button"  onClick={() => setShowSlotModal(false)} className="position-absolute border-0 justify-content-center closebtn p-0" >X</Button>
+            </div>
+          </div>
         </Modal.Header>
-        <Modal.Body>
+        
+        <Modal.Body className="custom-modal-body" style={{ 
+          padding: '16px 20px',
+          maxHeight: '50vh',
+          overflowY: 'auto',
+          scrollbarWidth: 'none', /* Firefox */
+          msOverflowStyle: 'none' /* IE and Edge */
+        }}>
+          {/* Hide scrollbar for Chrome, Safari and Opera */}
+          <style>
+            {`
+              .custom-modal-body::-webkit-scrollbar {
+                display: none;
+              }
+            `}
+          </style>
+
           {/* Date Selection Row */}
           <div className="mb-4">
-            <h6 className="fw-semibold mb-3">Select Date</h6>
-            <div className="d-flex gap-2 overflow-auto pb-2">
-              {dates.map((date, index) => (
-                <Button
-                  key={index}
-                  variant={selectedDate?.toDateString() === date.toDateString() }
-                  className="flex-shrink-0 button"
-                  style={{ minWidth: "100px" ,fontSize:"15px"}}
-                  onClick={() => handleDateSelect(date)}
-                >
-                  {formatDateDisplay(date)}
-                </Button>
-              ))}
+            <div className="d-flex gap-2 overflow-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              <style>
+                {`
+                  .date-scroll-container::-webkit-scrollbar {
+                    display: none;
+                  }
+                `}
+              </style>
+              <div className="d-flex gap-2 overflow-auto date-scroll-container" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                {dates.map((date, index) => (
+                  <Button
+                    key={index}
+                    variant={selectedDate?.toDateString() === date.toDateString() ? "primary" : "outline-secondary"}
+                    className="flex-shrink-0 button"
+                    style={{ 
+                      minWidth: "80px", 
+                      fontSize: "13px",
+                      borderRadius: "8px",
+                      borderWidth: "2px",border:"1px solid "
+                    }}
+                    onClick={() => handleDateSelect(date)}
+                  >
+                    {formatDateDisplay(date)}
+                  </Button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Time Slots */}
-          <div className="mb-4">
-            <h6 className="fw-semibold mb-3">
-              Available Time Slots {selectedDate && `- ${formatDateDisplay(selectedDate)}`}
+          {/* Time Slots - Reduced spacing to fit without scrolling */}
+          <div className="mb-2">
+            <h6 className="fw-semibold mb-2" style={{ fontSize: "15px", color: '#333' }}>
+              Select start time of service
             </h6>
             {selectedDate ? (
-              <Row>
+              <Row className="g-4">
                 {getSlotsForSelectedDate().map(slot => (
-                  <Col md={2} key={slot.id} className="mb-3">
-                    <div 
-                      className={`p-3 border rounded text-center position-relative ${
-                        selectedSlot?.id === slot.id ? 'border-primary bg-light' : ''
-                      } ${!slot.available ? 'bg-light text-muted' : ''}`}
-                      style={{ 
-                        cursor: slot.available ? 'pointer' : 'not-allowed',
-                        backgroundColor: !slot.available ? '#f8f9fa' : '',
-                        minHeight: '0px'
-                      }}
-                      onClick={() => slot.available && handleSlotSelect(slot)}
-                    >
-                      {/* ₹100 Overlay Badge */}
-                      {slot.extraCharge > 0 && (
-                        <Badge 
-                          bg="warning" 
-                          text="dark"
-                          className="position-absolute  m-1"
-                          style={{ fontSize: '0.7rem',top:"-12px",right:"-5px" }}
-                        >
-                          +₹{slot.extraCharge}
-                        </Badge>
-                      )}
-                      
-                      <p className="mb-0">{slot.time}</p>
-                      
-                    </div>
-                  </Col>
+                  <Col xs={2} key={slot.id} className="mb-2">
+  <div 
+    className={`p-2 border rounded text-center position-relative transition-all ${
+      selectedSlot?.id === slot.id ? 'border-primary' : 'border-secondary'
+    } ${!slot.available ? 'bg-light text-muted' : 'hover-shadow'}`}
+    style={{ 
+      cursor: slot.available ? 'pointer' : 'not-allowed',
+      backgroundColor: !slot.available ? '#f8f9fa' : 
+                      selectedSlot?.id === slot.id ? '#f0ebff' : '#ffffff', // Light violet background
+      minHeight: '20px',
+      fontSize: "12px",
+      borderRadius: "8px",
+      transition: 'all 0.2s ease',
+      borderWidth: selectedSlot?.id === slot.id ? '2px' : '1px',
+      borderColor: selectedSlot?.id === slot.id ? '#8b5cf6' : '#dee2e6', // Bright violet border
+      boxShadow: selectedSlot?.id === slot.id ? '0 0 0 2px rgba(139, 92, 246, 0.1)' : 'none' // Optional glow effect
+    }}
+    onClick={() => slot.available && handleSlotSelect(slot)}
+    onMouseEnter={(e) => {
+      if (slot.available && selectedSlot?.id !== slot.id) {
+        e.currentTarget.style.backgroundColor = '#f8f9fa';
+        e.currentTarget.style.borderColor = '#6c757d';
+      }
+    }}
+    onMouseLeave={(e) => {
+      if (slot.available && selectedSlot?.id !== slot.id) {
+        e.currentTarget.style.backgroundColor = '#ffffff';
+        e.currentTarget.style.borderColor = '#dee2e6';
+      } else if (slot.available && selectedSlot?.id === slot.id) {
+        e.currentTarget.style.backgroundColor = '#f0ebff';
+        e.currentTarget.style.borderColor = '#8b5cf6';
+      }
+    }}
+  >
+    {/* ₹100 Overlay Badge */}
+    {slot.extraCharge > 0 && (
+      <Badge 
+        bg={selectedSlot?.id === slot.id ? "primary" : "warning"}
+        text={selectedSlot?.id === slot.id ? "white" : "dark"}
+        className="position-absolute top-0 start-100 translate-middle"
+        style={{ 
+          fontSize: '0.6rem',
+          fontWeight: '600',
+          padding: '3px 5px',
+          backgroundColor: selectedSlot?.id === slot.id ? '#8b5cf6' : '' // Violet badge when selected
+        }}
+      >
+        +₹{slot.extraCharge}
+      </Badge>
+    )}
+    
+    <p className="mb-0 fw-semibold" style={{ 
+      fontSize: "11px",
+      color: selectedSlot?.id === slot.id ? '#8b5cf6' : // Bright violet text
+            !slot.available ? '#6c757d' : '#374151'
+    }}>
+      {slot.time}
+    </p>
+  </div>
+</Col>
                 ))}
               </Row>
             ) : (
-              <div className="text-center py-4">
-                <p className="text-muted">Please select a date to view available slots</p>
+              <div className="text-center py-3">
+                <p className="text-muted" style={{ fontSize: "13px" }}>
+                  Please select a date to view available slots
+                </p>
               </div>
             )}
           </div>
-
-          {/* Selected Address Display */}
-          {selectedAddress && (
-            <div className="border-top pt-3">
-              <h6 className="fw-semibold mb-2">Service Address</h6>
-              <p className="text-muted mb-0">
-                {formatAddressDisplay(selectedAddress)}
-              </p>
-            </div>
-          )}
         </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowSlotModal(false)}>
-            Cancel
-          </Button>
-          <Button 
-            className="butn" 
-            onClick={() => {
-              setShowSlotModal(false);
-            }}
-            disabled={!selectedSlot}
-          >
-            Confirm Slot
-          </Button>
+        
+        <Modal.Footer className="border-top-0 custom-modal-footer" style={{ 
+          padding: '12px 20px 16px 20px',
+          backgroundColor: '#f8f9fa',
+          borderBottomLeftRadius: '12px',
+          borderBottomRightRadius: '12px'
+        }}>
+          <div className="w-100 ">
+              <Button 
+                className="butn w-100" 
+                onClick={() => setShowSlotModal(false)}
+                disabled={!selectedSlot}
+                style={{ 
+                  fontSize: "13px",height:"40px",
+                  padding: "6px 20px",
+                  borderRadius: "6px",
+                  fontWeight: "600"
+                }}
+              >
+                Proceed to checkout
+              </Button>
+            </div>
+        
         </Modal.Footer>
       </Modal>
     </div>

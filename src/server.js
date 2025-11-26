@@ -105,17 +105,45 @@ const serviceSchema = new mongoose.Schema({
 });
 
 const Service = mongoose.model("Service", serviceSchema);
+// --- NEW: Bookings Schema ---
+const bookingSchema = new mongoose.Schema({
+  userId: String,
+  userPhone: String,
+  userName: String,
+  serviceName: String,
+  servicePrice: String,
+  originalPrice: String,
+  address: Object,
+  bookingDate: { type: Date, default: Date.now },
+  scheduledDate: Date,
+  scheduledTime: String,
+  status: { type: String, default: 'Confirmed' }, // Confirmed, Completed, Cancelled
+  paymentStatus: { type: String, default: 'Paid' }, // Paid, Pending, Failed
+  technician: String,
+  rating: Number,
+  review: String,
+  items: [{
+    name: String,
+    quantity: Number,
+    price: String
+  }],
+  createdAt: { type: Date, default: Date.now }
+});
 
-// --- MOCK OTP IMPLEMENTATION ---
-const mockUsers = [
-  {
-    phoneNumber: "+919876543210",
-    name: "Suba shree",
-    email: "suba@example.com",
-    countryCode: "+91"
-  }
-];
+const Booking = mongoose.model("Booking", bookingSchema);
 
+// --- NEW: User Schema for authentication ---
+const userSchema = new mongoose.Schema({
+  phoneNumber: String,
+  name: String,
+  email: String,
+  countryCode: String,
+  isVerified: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const User = mongoose.model("User", userSchema);
+// --- MOCK OTP IMPLEMENTATION -
 const mockOtpStore = new Map();
 
 // Mock send OTP endpoint
@@ -240,6 +268,140 @@ app.post("/api/resend-otp", async (req, res) => {
   } catch (error) {
     console.error("Error in resend OTP:", error);
     res.status(500).json({ error: "Failed to resend OTP" });
+  }
+});
+
+// Create new booking
+app.post("/api/bookings", async (req, res) => {
+  try {
+    const {
+      userId,
+      userPhone,
+      userName,
+      serviceName,
+      servicePrice,
+      originalPrice,
+      address,
+      scheduledDate,
+      scheduledTime,
+      items
+    } = req.body;
+
+    if (!userPhone || !serviceName) {
+      return res.status(400).json({ error: "User phone and service name are required" });
+    }
+
+    const booking = new Booking({
+      userId,
+      userPhone,
+      userName,
+      serviceName,
+      servicePrice,
+      originalPrice,
+      address,
+      scheduledDate,
+      scheduledTime,
+      items,
+      status: 'Confirmed',
+      paymentStatus: 'Paid'
+    });
+
+    await booking.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Booking created successfully",
+      booking
+    });
+
+  } catch (error) {
+    console.error("Error creating booking:", error);
+    res.status(500).json({ error: "Failed to create booking" });
+  }
+});
+
+// Get user's bookings
+app.get("/api/bookings/:userPhone", async (req, res) => {
+  try {
+    const { userPhone } = req.params;
+    
+    const bookings = await Booking.find({ userPhone })
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    res.json({
+      success: true,
+      bookings
+    });
+
+  } catch (error) {
+    console.error("Error fetching bookings:", error);
+    res.status(500).json({ error: "Failed to fetch bookings" });
+  }
+});
+
+// Get booking by ID
+app.get("/api/booking/:id", async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    
+    if (!booking) {
+      return res.status(404).json({ error: "Booking not found" });
+    }
+
+    res.json({
+      success: true,
+      booking
+    });
+
+  } catch (error) {
+    console.error("Error fetching booking:", error);
+    res.status(500).json({ error: "Failed to fetch booking" });
+  }
+});
+
+// Update booking status
+app.put("/api/bookings/:id", async (req, res) => {
+  try {
+    const { status, rating, review } = req.body;
+    
+    const booking = await Booking.findByIdAndUpdate(
+      req.params.id,
+      { status, rating, review },
+      { new: true }
+    );
+
+    if (!booking) {
+      return res.status(404).json({ error: "Booking not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Booking updated successfully",
+      booking
+    });
+
+  } catch (error) {
+    console.error("Error updating booking:", error);
+    res.status(500).json({ error: "Failed to update booking" });
+  }
+});
+
+// --- NEW: Plans API Routes ---
+app.get("/api/plans/:userPhone", async (req, res) => {
+  try {
+    const { userPhone } = req.params;
+    
+    // For now, return empty array or mock data
+    // You can implement actual plans logic later
+    res.json({
+      success: true,
+      plans: [] // Return empty array or mock plans
+    });
+
+  } catch (error) {
+    console.error("Error fetching plans:", error);
+    res.status(500).json({ error: "Failed to fetch plans" });
   }
 });
 

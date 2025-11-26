@@ -1,26 +1,36 @@
 import { useState, useEffect, useRef } from "react";
-import { Modal, Button, Container, Row, Col, Form } from "react-bootstrap";
+import { Modal, Button, Container, Row, Col, Form, Spinner, Alert, Card, Badge } from "react-bootstrap";
 import { LuNotepadText } from "react-icons/lu";
 import { IoMdHelpCircleOutline, IoMdLogOut } from "react-icons/io";
-import { MdAccountCircle, MdOutlineArrowForwardIos } from "react-icons/md";
+import { MdAccountCircle, MdOutlineArrowForwardIos, MdLocationOn, MdEdit } from "react-icons/md";
 import { BiLeftArrowAlt } from "react-icons/bi";
 import { PiNotepadLight } from "react-icons/pi";
 import { useAuth } from "./AuthContext";
 
-function AccountModal({ show, onHide, initialView = "main" }) { // ADD THIS PROP
+function AccountModal({ show, onHide, initialView = "main" }) {
   const [logo1, setLogo1] = useState("");
-  const [currentView, setCurrentView] = useState(initialView); // SET INITIAL STATE FROM PROP
+  const [currentView, setCurrentView] = useState(initialView);
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [email, setEmail] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showCountryModal, setShowCountryModal] = useState(false);
-  const [selectedCountry, setSelectedCountry] = useState({ code: "+91", name: "India", flag: "🇮🇳" });
+  const [selectedCountry, setSelectedCountry] = useState({ code: "+91", name: "India" });
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
-  const [resendMethod, setResendMethod] = useState("");
-  const [selectedTitle, setSelectedTitle] = useState("Ms");
+  const [isHuman, setIsHuman] = useState(false);
+  const [bookings, setBookings] = useState([]);
+  const [plans, setPlans] = useState([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+  
+  // Profile editing states
+  const [profileData, setProfileData] = useState({
+    title: "Ms",
+    name: "",
+    email: "",
+    phone: ""
+  });
+  const [isEditing, setIsEditing] = useState(false);
 
   const { isLoggedIn, userInfo, login, logout } = useAuth();
   const otpInputRefs = useRef([]);
@@ -32,22 +42,57 @@ function AccountModal({ show, onHide, initialView = "main" }) { // ADD THIS PROP
     { code: "+966", name: "KSA (+966)" },
   ];
 
+  // Load bookings and plans when user is logged in
+  useEffect(() => {
+    if (isLoggedIn && show && userInfo.phone) {
+      loadUserData();
+      // Initialize profile data with user info
+      setProfileData({
+        title: "Ms",
+        name: userInfo.name || "Suba shree",
+        email: userInfo.email || "",
+        phone: userInfo.phone || ""
+      });
+    }
+  }, [isLoggedIn, show, userInfo.phone, userInfo.name, userInfo.email]);
+
+  const loadUserData = async () => {
+    try {
+      setLoadingBookings(true);
+      
+      // Load bookings from server
+      const bookingsResponse = await fetch(`http://localhost:5000/api/bookings/${userInfo.phone}`);
+      if (bookingsResponse.ok) {
+        const bookingsData = await bookingsResponse.json();
+        setBookings(bookingsData.bookings || []);
+      }
+
+      // Load plans from server
+      const plansResponse = await fetch(`http://localhost:5000/api/plans/${userInfo.phone}`);
+      if (plansResponse.ok) {
+        const plansData = await plansResponse.json();
+        setPlans(plansData.plans || []);
+      }
+    } catch (error) {
+      console.error("Error loading user data:", error);
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
+
+  // Fetch logo
   useEffect(() => {
     const fetchLogo = async () => {
       try {
         const response = await fetch("http://localhost:5000/api/static-data");
-        if (!response.ok) {
-          throw new Error('Failed to fetch static data');
-        }
-        const data = await response.json();
-        
-        if (data && data.logo1) {
-          const logoUrl = data.logo1.startsWith('http') 
-            ? data.logo1
-            : `http://localhost:5000${data.logo1}`;
-          setLogo1(logoUrl);
-        } else {
-          setLogo1("http://localhost:5000/assets/urban.png");
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.logo1) {
+            const logoUrl = data.logo1.startsWith('http') 
+              ? data.logo1
+              : `http://localhost:5000${data.logo1}`;
+            setLogo1(logoUrl);
+          }
         }
       } catch (error) {
         console.error("Error fetching logo:", error);
@@ -71,21 +116,24 @@ function AccountModal({ show, onHide, initialView = "main" }) { // ADD THIS PROP
     return () => clearInterval(interval);
   }, [showOtpInput, timer]);
 
-  // Reset state when modal opens - UPDATED TO USE initialView
+  // Reset state when modal opens
   useEffect(() => {
     if (show) {
-      setCurrentView(initialView); // USE THE PROP HERE
+      setCurrentView(initialView);
       setShowOtpInput(false);
       setPhoneNumber("");
       setOtp(["","","","","",""]);
       setTimer(30);
       setCanResend(false);
+      setIsHuman(false);
+      setIsEditing(false);
     }
-  }, [show, initialView]); // ADD initialView TO DEPENDENCY ARRAY
+  }, [show, initialView]);
 
   const handleBack = () => {
-    if (currentView === "profile-details" || currentView === "bookings" || currentView === "plans") {
+    if (["profile-details", "bookings", "plans", "help", "about", "edit-profile"].includes(currentView)) {
       setCurrentView("main");
+      setIsEditing(false);
     } else if (currentView !== "main") {
       setCurrentView("main");
       setShowOtpInput(false);
@@ -93,22 +141,33 @@ function AccountModal({ show, onHide, initialView = "main" }) { // ADD THIS PROP
       setOtp(["","","","","",""]);
       setTimer(30);
       setCanResend(false);
+      setIsHuman(false);
+      setIsEditing(false);
     } else {
       onHide();
     }
   };
 
-  // ... rest of your component remains EXACTLY THE SAME
-  // (handleNavigation, handlePhoneSubmit, handleOtpChange, etc.)
-
   const handleNavigation = (view) => {
     setCurrentView(view);
   };
 
+  // Human verification checkbox handler
+  const handleHumanVerification = (e) => {
+    setIsHuman(e.target.checked);
+  };
+
   const handlePhoneSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validation
     if (phoneNumber.length !== 10) {
       alert("Please enter a valid 10-digit phone number");
+      return;
+    }
+
+    if (!isHuman) {
+      alert("Please verify that you are human");
       return;
     }
     
@@ -143,9 +202,7 @@ function AccountModal({ show, onHide, initialView = "main" }) { // ADD THIS PROP
     }
   };
 
-  // ... ALL OTHER FUNCTIONS REMAIN EXACTLY THE SAME
-  // (handleOtpChange, handleOtpKeyDown, handleOtpSubmit, handleResendCode, etc.)
-
+  // OTP handling functions
   const handleOtpChange = (index, value) => {
     if (value.length <= 1 && /^\d*$/.test(value)) {
       const newOtp = [...otp];
@@ -197,8 +254,10 @@ function AccountModal({ show, onHide, initialView = "main" }) { // ADD THIS PROP
       }
 
       login({
-        name: data.user.name,
-        phone: data.user.phoneNumber
+        name: data.user.name || "Suba shree",
+        phone: data.user.phoneNumber,
+        userId: data.user.id,
+        email: data.user.email || ""
       });
 
       setCurrentView("main");
@@ -206,6 +265,7 @@ function AccountModal({ show, onHide, initialView = "main" }) { // ADD THIS PROP
       setOtp(["","","","","",""]);
       setTimer(30);
       setCanResend(false);
+      setIsHuman(false);
       
       onHide();
       
@@ -238,7 +298,6 @@ function AccountModal({ show, onHide, initialView = "main" }) { // ADD THIS PROP
           throw new Error(data.error || "Failed to resend OTP");
         }
 
-        setResendMethod(method);
         setTimer(30);
         setCanResend(false);
         setOtp(["", "", "", "", "", ""]);
@@ -254,6 +313,8 @@ function AccountModal({ show, onHide, initialView = "main" }) { // ADD THIS PROP
   const handleLogout = () => {
     logout();
     setCurrentView("main");
+    setBookings([]);
+    setPlans([]);
     onHide();
   };
 
@@ -262,7 +323,324 @@ function AccountModal({ show, onHide, initialView = "main" }) { // ADD THIS PROP
     setShowCountryModal(false);
   };
 
-  // Render login view
+  // Profile editing handlers
+  const handleProfileEdit = () => {
+    setIsEditing(true);
+    setCurrentView("edit-profile");
+  };
+
+  const handleProfileSave = async () => {
+    // Basic validation
+    if (!profileData.name.trim()) {
+      alert("Please enter your name");
+      return;
+    }
+
+    if (!profileData.email.trim()) {
+      alert("Please enter your email");
+      return;
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(profileData.email)) {
+      alert("Please enter a valid email address");
+      return;
+    }
+
+    try {
+      // Here you would typically save to your backend
+      // For now, we'll just update the local state and AuthContext
+      
+      // Update user info in context
+      login({
+        ...userInfo,
+        name: profileData.name,
+        email: profileData.email
+      });
+
+      setIsEditing(false);
+      setCurrentView("profile-details");
+      alert("Profile updated successfully!");
+      
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      alert("Failed to update profile");
+    }
+  };
+
+  const handleProfileCancel = () => {
+    // Reset to original values
+    setProfileData({
+      title: "Ms",
+      name: userInfo.name || "Suba shree",
+      email: userInfo.email || "",
+      phone: userInfo.phone || ""
+    });
+    setIsEditing(false);
+    setCurrentView("profile-details");
+  };
+
+  const handleProfileChange = (field, value) => {
+    setProfileData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Render profile editing view
+  const renderProfileEditView = () => (
+    <div>
+      <h6 className="fw-bold mb-3">Edit Profile</h6>
+      
+      <Card className="border-0 shadow-sm">
+        <Card.Body>
+          {/* Title Selection */}
+          <div className="mb-4">
+            <label className="form-label fw-semibold">Title</label>
+            <div className="d-flex gap-2">
+              {['Mr', 'Ms', 'Mrs', 'Dr'].map(title => (
+                <Button
+                  key={title}
+                  variant={profileData.title === title ? "primary" : "outline-secondary"}
+                  className="flex-grow-1"
+                  onClick={() => handleProfileChange('title', title)}
+                >
+                  {title}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Name Field */}
+          <div className="mb-3">
+            <Form.Label className="fw-semibold">Full Name</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Enter your full name"
+              value={profileData.name}
+              onChange={(e) => handleProfileChange('name', e.target.value)}
+            />
+          </div>
+
+          {/* Email Field */}
+          <div className="mb-3">
+            <Form.Label className="fw-semibold">Email Address</Form.Label>
+            <Form.Control
+              type="email"
+              placeholder="Enter your email address"
+              value={profileData.email}
+              onChange={(e) => handleProfileChange('email', e.target.value)}
+            />
+            <Form.Text className="text-muted">
+              We'll send booking confirmations and updates to this email
+            </Form.Text>
+          </div>
+
+          {/* Phone Number (Read-only) */}
+          <div className="mb-4">
+            <Form.Label className="fw-semibold">Phone Number</Form.Label>
+            <Form.Control
+              type="tel"
+              value={profileData.phone}
+              readOnly
+              disabled
+              className="bg-light"
+            />
+            <Form.Text className="text-muted">
+              Phone number cannot be changed
+            </Form.Text>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="d-flex gap-2">
+            <Button
+              variant="outline-secondary"
+              className="flex-grow-1"
+              onClick={handleProfileCancel}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="butn flex-grow-1"
+              onClick={handleProfileSave}
+            >
+              Save Changes
+            </Button>
+          </div>
+        </Card.Body>
+      </Card>
+    </div>
+  );
+
+  // Render bookings view
+  const renderBookingsView = () => (
+    <div>
+      <h6 className="fw-bold mb-3">My Bookings</h6>
+      
+      {loadingBookings ? (
+        <div className="text-center py-5">
+          <Spinner animation="border" variant="primary" />
+          <p className="mt-2 text-muted">Loading your bookings...</p>
+        </div>
+      ) : bookings.length === 0 ? (
+        <div className="text-center py-5">
+          <LuNotepadText size={48} className="text-muted mb-3" />
+          <p className="text-muted">No bookings yet</p>
+          <p className="small text-muted">Your completed orders will appear here</p>
+        </div>
+      ) : (
+        <div className="d-grid gap-3">
+          {bookings.map((booking) => (
+            <Card key={booking._id} className="border-0 shadow-sm">
+              <Card.Body>
+                <div className="d-flex justify-content-between align-items-start mb-2">
+                  <h6 className="fw-semibold mb-1">{booking.serviceName}</h6>
+                  <span className={`badge ${
+                    booking.status === 'Confirmed' ? 'bg-success' : 
+                    booking.status === 'Completed' ? 'bg-primary' : 
+                    booking.status === 'Cancelled' ? 'bg-danger' : 'bg-warning'
+                  }`}>
+                    {booking.status}
+                  </span>
+                </div>
+                
+                <div className="mb-2">
+                  <p className="small text-muted mb-1">
+                    <strong>Date:</strong> {new Date(booking.bookingDate).toLocaleDateString()}
+                  </p>
+                  {booking.scheduledTime && (
+                    <p className="small text-muted mb-1">
+                      <strong>Time:</strong> {booking.scheduledTime}
+                    </p>
+                  )}
+                  <p className="small text-muted mb-1">
+                    <strong>Price:</strong> ₹{booking.servicePrice}
+                  </p>
+                </div>
+
+                {booking.address && (
+                  <div className="d-flex align-items-start mb-2">
+                    <MdLocationOn size={14} className="text-muted mt-1 me-2" />
+                    <p className="small text-muted mb-0 flex-grow-1">
+                      {booking.address.doorNo}, {booking.address.landmark}
+                    </p>
+                  </div>
+                )}
+
+                {booking.items && booking.items.length > 0 && (
+                  <div className="mt-2">
+                    <p className="small fw-semibold mb-1">Services:</p>
+                    {booking.items.map((item, index) => (
+                      <p key={index} className="small text-muted mb-0">
+                        • {item.name}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </Card.Body>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  // Render plans view
+  const renderPlansView = () => (
+    <div>
+      <h6 className="fw-bold mb-3">My Plans</h6>
+      
+      {plans.length === 0 ? (
+        <div className="text-center py-5">
+          <PiNotepadLight size={48} className="text-muted mb-3" />
+          <p className="text-muted">No active plans</p>
+          <p className="small text-muted">Your subscription plans will appear here</p>
+          <Button 
+            variant="outline-primary" 
+            size="sm"
+            onClick={() => {
+              alert("Browse our plans to subscribe");
+            }}
+          >
+            Browse Plans
+          </Button>
+        </div>
+      ) : (
+        <div className="d-grid gap-3">
+          {plans.map((plan) => (
+            <Card key={plan._id} className="border-0 shadow-sm">
+              <Card.Body>
+                <div className="d-flex justify-content-between align-items-start mb-2">
+                  <h6 className="fw-semibold mb-1">{plan.name}</h6>
+                  <span className="badge bg-primary">{plan.status}</span>
+                </div>
+                <p className="small text-muted mb-1">Validity: {plan.validity}</p>
+                <p className="small text-muted mb-1">Services: {plan.services}</p>
+                <p className="small fw-semibold mb-0">Price: ₹{plan.price}</p>
+              </Card.Body>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  // Render profile details view
+  const renderProfileDetailsView = () => (
+    <div>
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h6 className="fw-bold mb-0">My Profile</h6>
+        <Button 
+          variant="outline-primary" 
+          size="sm"
+          onClick={handleProfileEdit}
+          className="d-flex align-items-center gap-1"
+        >
+          <MdEdit size={16} />
+          Edit
+        </Button>
+      </div>
+      
+      <Card className="border-0 shadow-sm">
+        <Card.Body>
+          <div className="text-center mb-4">
+            <MdAccountCircle size={80} className="text-primary mb-2" />
+            <div>
+              <Badge bg="light" text="dark" className="mb-2">
+                {profileData.title}
+              </Badge>
+              <h5 className="fw-semibold mb-1">{profileData.name}</h5>
+              <p className="text-muted mb-1">{profileData.email}</p>
+              <p className="text-muted">{profileData.phone}</p>
+            </div>
+          </div>
+
+          <div className="border-top pt-3">
+            <h6 className="fw-semibold mb-2">Account Details</h6>
+            <div className="row">
+              <div className="col-4">
+                <p className="small text-muted mb-1">Title</p>
+                <p className="fw-semibold">{profileData.title}</p>
+              </div>
+              <div className="col-8">
+                <p className="small text-muted mb-1">Full Name</p>
+                <p className="fw-semibold">{profileData.name}</p>
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="small text-muted mb-1">Email Address</p>
+              <p className="fw-semibold">{profileData.email || "Not provided"}</p>
+            </div>
+            <div className="mt-2">
+              <p className="small text-muted mb-1">Phone Number</p>
+              <p className="fw-semibold">{profileData.phone}</p>
+            </div>
+          </div>
+        </Card.Body>
+      </Card>
+    </div>
+  );
+
+  // Render login view with human verification
   const renderLoginView = () => (
     <div>
       <div>
@@ -283,7 +661,7 @@ function AccountModal({ show, onHide, initialView = "main" }) { // ADD THIS PROP
             <h5 className="fw-bold">Enter your phone number</h5>
             <p style={{fontSize:"13px"}}>We'll send you a text with a verification code. Standard tariff may apply</p>
             
-            <div className="d-flex">
+            <div className="d-flex mb-3">
               <div>
                 <div 
                   className="form-control d-flex justify-content-between align-items-center"
@@ -314,13 +692,23 @@ function AccountModal({ show, onHide, initialView = "main" }) { // ADD THIS PROP
                 />
               </div>
             </div>
+
+            {/* Human Verification Checkbox */}
+            <Form.Check 
+              type="checkbox"
+              id="human-verification"
+              label="I verify that I am a human"
+              checked={isHuman}
+              onChange={handleHumanVerification}
+              className="mb-3"
+            />
           </div>
           
           <Button 
             type="submit" 
             style={{height: "40px"}}
-            className={`butn fw-semibold w-100 ${(isLoading || phoneNumber.length !== 10) ? 'btn-secondary' : ''}`}
-            disabled={isLoading || phoneNumber.length !== 10}
+            className={`butn fw-semibold w-100 ${(isLoading || phoneNumber.length !== 10 || !isHuman) ? 'btn-secondary' : ''}`}
+            disabled={isLoading || phoneNumber.length !== 10 || !isHuman}
           >
             {isLoading ? (
               <>
@@ -420,6 +808,7 @@ function AccountModal({ show, onHide, initialView = "main" }) { // ADD THIS PROP
                 setTimer(30);
                 setCanResend(false);
                 setOtp(["","","","","",""]);
+                setIsHuman(false);
               }}
               style={{ fontSize: "14px" }}
             >
@@ -437,23 +826,22 @@ function AccountModal({ show, onHide, initialView = "main" }) { // ADD THIS PROP
     </div>
   );
 
+  // Render main view after login
   const renderMainViewAfterLogin = () => (
-  <div>
-    <div 
-      className="mb-4 p-3"
-      style={{ 
-        cursor: "pointer",
-      }}
-      onClick={() => handleNavigation("profile-details")}
-    >
-      <div className="d-flex justify-content-between align-items-center">
-        <div>
-          <h5 className="fw-semibold mb-1">Subashre</h5> {/* Changed here */}
-          <p className="small text-muted mb-0">{userInfo.phone}</p>
+    <div>
+      <div 
+        className="mb-4 p-3"
+        style={{ cursor: "pointer" }}
+        onClick={() => handleNavigation("profile-details")}
+      >
+        <div className="d-flex justify-content-between align-items-center">
+          <div>
+            <h5 className="fw-semibold mb-1">{userInfo.name || "Suba shree"}</h5>
+            <p className="small text-muted mb-0">{userInfo.phone}</p>
+          </div>
+          <MdOutlineArrowForwardIos size={14} className="text-muted" />
         </div>
-        <MdOutlineArrowForwardIos size={14} className="text-muted" />
       </div>
-    </div>
 
       <div>
         {[
@@ -512,13 +900,39 @@ function AccountModal({ show, onHide, initialView = "main" }) { // ADD THIS PROP
     </div>
   );
 
-  // ... REST OF YOUR COMPONENT REMAINS EXACTLY THE SAME
-  // (renderProfileDetailsView, renderBookingsView, renderPlansView, renderHelpView, renderAboutView, getViewTitle, renderMainContent)
+  // Render help view
+  const renderHelpView = () => (
+    <div>
+      <h6 className="fw-bold mb-3">Help Center</h6>
+      <p className="text-muted">Contact support for any assistance:</p>
+      <ul className="text-muted">
+        <li>Email: support@urbancompany.com</li>
+        <li>Phone: 1800-123-4567</li>
+        <li>WhatsApp: +91-9876543210</li>
+      </ul>
+    </div>
+  );
+
+  // Render about view
+  const renderAboutView = () => (
+    <div>
+      <h6 className="fw-bold mb-3">About Urban Company</h6>
+      <p className="text-muted">
+        Urban Company is a platform that helps customers book reliable home services like 
+        beauty treatments, massages, cleaning, plumbing, carpentry, appliance repair, painting, etc.
+      </p>
+      <p className="text-muted">
+        Our mission is to empower millions of professionals worldwide to deliver services at home 
+        like never seen before.
+      </p>
+    </div>
+  );
 
   const getViewTitle = () => {
     const titles = {
       main: isLoggedIn ? "Account" : "Profile",
       "profile-details": "My Profile",
+      "edit-profile": "Edit Profile",
       login: "Login",
       about: "About Urban Company",
       bookings: "My Bookings",
@@ -577,6 +991,8 @@ function AccountModal({ show, onHide, initialView = "main" }) { // ADD THIS PROP
           return renderMainViewAfterLogin();
         case "profile-details":
           return renderProfileDetailsView();
+        case "edit-profile":
+          return renderProfileEditView();
         case "bookings":
           return renderBookingsView();
         case "plans":
@@ -633,15 +1049,15 @@ function AccountModal({ show, onHide, initialView = "main" }) { // ADD THIS PROP
         size="sm"
       >
         <Modal.Header className="border-bottom-0 pb-0">
-          <Modal.Title className="w-100 ">
+          <Modal.Title className="w-100">
             <h6 className="fw-bold mb-0">Select a Country</h6>
           </Modal.Title>
           <Button 
-            className="p-0 border-0 text-dark position-absolute end-0 me-3 closebtn"
+            variant="close"
+            className="p-1"
             onClick={() => setShowCountryModal(false)}
-          >
-            X
-          </Button>
+            aria-label="Close"
+          />
         </Modal.Header>
         
         <Modal.Body className="pt-0">
@@ -649,7 +1065,7 @@ function AccountModal({ show, onHide, initialView = "main" }) { // ADD THIS PROP
             {countries.map((country, index) => (
               <div
                 key={country.code}
-                className={`py-2  ${
+                className={`py-2 ${
                   selectedCountry.code === country.code ? 'bg-light rounded' : ''
                 } ${index !== countries.length - 1 ? 'border-bottom' : ''}`}
                 style={{ 
@@ -666,12 +1082,8 @@ function AccountModal({ show, onHide, initialView = "main" }) { // ADD THIS PROP
                   }
                 }}
               >
-                <div className="d-flex align-items-center justify-content-between">
-                  <div className="d-flex align-items-center gap-3">
-                    <div>
-                      <div style={{ fontWeight: "500" }}>{country.name}</div>
-                    </div>
-                  </div>
+                <div className="d-flex justify-content-between align-items-center">
+                  <span className="fw-medium">{country.name}</span>
                   {selectedCountry.code === country.code && (
                     <span className="text-primary">✓</span>
                   )}
