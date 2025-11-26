@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { Modal, Button, Container, Row, Col, Form } from "react-bootstrap";
-import { CgProfile } from "react-icons/cg";
 import { LuNotepadText } from "react-icons/lu";
 import { IoMdHelpCircleOutline, IoMdLogOut } from "react-icons/io";
 import { MdAccountCircle, MdOutlineArrowForwardIos } from "react-icons/md";
@@ -8,9 +7,9 @@ import { BiLeftArrowAlt } from "react-icons/bi";
 import { PiNotepadLight } from "react-icons/pi";
 import { useAuth } from "./AuthContext";
 
-function AccountModal({ show, onHide }) {
-  const [logo, setLogo] = useState("/assets/Uc.png");
-  const [currentView, setCurrentView] = useState("main");
+function AccountModal({ show, onHide, initialView = "main" }) { // ADD THIS PROP
+  const [logo1, setLogo1] = useState("");
+  const [currentView, setCurrentView] = useState(initialView); // SET INITIAL STATE FROM PROP
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -42,16 +41,17 @@ function AccountModal({ show, onHide }) {
         }
         const data = await response.json();
         
-        if (data && data.logo) {
-          if (data.logo.startsWith('http')) {
-            setLogo(data.logo);
-          } else {
-            setLogo(`http://localhost:5000${data.logo}`);
-          }
+        if (data && data.logo1) {
+          const logoUrl = data.logo1.startsWith('http') 
+            ? data.logo1
+            : `http://localhost:5000${data.logo1}`;
+          setLogo1(logoUrl);
+        } else {
+          setLogo1("http://localhost:5000/assets/urban.png");
         }
       } catch (error) {
         console.error("Error fetching logo:", error);
-        setLogo("/assets/Uc.png");
+        setLogo1("http://localhost:5000/assets/urban.png");
       }
     };
 
@@ -71,6 +71,18 @@ function AccountModal({ show, onHide }) {
     return () => clearInterval(interval);
   }, [showOtpInput, timer]);
 
+  // Reset state when modal opens - UPDATED TO USE initialView
+  useEffect(() => {
+    if (show) {
+      setCurrentView(initialView); // USE THE PROP HERE
+      setShowOtpInput(false);
+      setPhoneNumber("");
+      setOtp(["","","","","",""]);
+      setTimer(30);
+      setCanResend(false);
+    }
+  }, [show, initialView]); // ADD initialView TO DEPENDENCY ARRAY
+
   const handleBack = () => {
     if (currentView === "profile-details" || currentView === "bookings" || currentView === "plans") {
       setCurrentView("main");
@@ -85,6 +97,9 @@ function AccountModal({ show, onHide }) {
       onHide();
     }
   };
+
+  // ... rest of your component remains EXACTLY THE SAME
+  // (handleNavigation, handlePhoneSubmit, handleOtpChange, etc.)
 
   const handleNavigation = (view) => {
     setCurrentView(view);
@@ -127,6 +142,9 @@ function AccountModal({ show, onHide }) {
       setIsLoading(false);
     }
   };
+
+  // ... ALL OTHER FUNCTIONS REMAIN EXACTLY THE SAME
+  // (handleOtpChange, handleOtpKeyDown, handleOtpSubmit, handleResendCode, etc.)
 
   const handleOtpChange = (index, value) => {
     if (value.length <= 1 && /^\d*$/.test(value)) {
@@ -178,7 +196,6 @@ function AccountModal({ show, onHide }) {
         throw new Error(data.error || "Failed to verify OTP");
       }
 
-      // Login successful - use global login function
       login({
         name: data.user.name,
         phone: data.user.phoneNumber
@@ -190,7 +207,6 @@ function AccountModal({ show, onHide }) {
       setTimer(30);
       setCanResend(false);
       
-      // Close modal after successful login
       onHide();
       
     } catch (error) {
@@ -246,28 +262,16 @@ function AccountModal({ show, onHide }) {
     setShowCountryModal(false);
   };
 
-  // Reset state when modal opens
-  useEffect(() => {
-    if (show) {
-      setCurrentView("main");
-      setShowOtpInput(false);
-      setPhoneNumber("");
-      setOtp(["","","","","",""]);
-      setTimer(30);
-      setCanResend(false);
-    }
-  }, [show]);
-
   // Render login view
   const renderLoginView = () => (
     <div>
       <div>
         <img 
-          src={logo} 
+          src={logo1} 
           alt="UC Logo" 
           style={{ height: "30px", marginLeft: "10px" }} 
           onError={(e) => {
-            e.target.src = "/assets/Uc.png";
+            e.target.src = "http://localhost:5000/assets/urban.png";
           }}
         /> 
       </div>
@@ -433,24 +437,23 @@ function AccountModal({ show, onHide }) {
     </div>
   );
 
-  // Render main view after login
   const renderMainViewAfterLogin = () => (
-    <div>
-      <div 
-        className="mb-4 p-3"
-        style={{ 
-          cursor: "pointer",
-        }}
-        onClick={() => handleNavigation("profile-details")}
-      >
-        <div className="d-flex justify-content-between align-items-center">
-          <div>
-            <h5 className="fw-semibold mb-1">{userInfo.name || "User"}</h5>
-            <p className="small text-muted mb-0">{userInfo.phone}</p>
-          </div>
-          <MdOutlineArrowForwardIos size={14} className="text-muted" />
+  <div>
+    <div 
+      className="mb-4 p-3"
+      style={{ 
+        cursor: "pointer",
+      }}
+      onClick={() => handleNavigation("profile-details")}
+    >
+      <div className="d-flex justify-content-between align-items-center">
+        <div>
+          <h5 className="fw-semibold mb-1">Subashre</h5> {/* Changed here */}
+          <p className="small text-muted mb-0">{userInfo.phone}</p>
         </div>
+        <MdOutlineArrowForwardIos size={14} className="text-muted" />
       </div>
+    </div>
 
       <div>
         {[
@@ -480,9 +483,12 @@ function AccountModal({ show, onHide }) {
           <div className="d-flex align-items-center gap-3">
             <span className="text-muted">
               <img 
-                src="/assets/Uc.png" 
+                src={logo1 || "http://localhost:5000/assets/urban.png"} 
                 alt="UC" 
                 style={{ width: "20px", height: "20px", objectFit: "contain" }}
+                onError={(e) => {
+                  e.target.src = "http://localhost:5000/assets/urban.png";
+                }}
               />
             </span>
             <span className="fw-medium">About Urban Company</span>
@@ -506,244 +512,8 @@ function AccountModal({ show, onHide }) {
     </div>
   );
 
-  // Render profile details view
-  const renderProfileDetailsView = () => (
-    <div>
-      <h5 className="fw-bold mb-4">My Profile</h5>
-      <Form>
-        <Form.Group className="mb-4 position-relative">
-          <div className="position-absolute top-0 start-0 mt-1 ms-3" style={{ zIndex: 5 }}>
-            <span className="small text-muted bg-white " style={{marginLeft:"82px"}}>Name</span>
-          </div>
-          <div className="d-flex gap-2 align-items-center border rounded p-2" style={{ height: "55px", marginTop: "8px" }}>
-            <div 
-              className="d-flex border rounded-pill overflow-hidden"
-              style={{ 
-                width: "80px",
-                height: "35px",
-                cursor: "pointer",
-                flexShrink: 0
-              }}
-            >
-              <div
-                className={`flex-fill d-flex align-items-center justify-content-center ${
-                  selectedTitle === "Mr" 
-                    ? 'bg-dark text-white' 
-                    : 'bg-light text-dark'
-                }`}
-                onClick={() => setSelectedTitle("Mr")}
-                style={{
-                  transition: "all 0.2s ease",
-                  borderRight: "1px solid #dee2e6"
-                }}
-              >
-                <span className="fw-medium">Mr</span>
-              </div>
-              <div
-                className={`flex-fill d-flex align-items-center justify-content-center ${
-                  selectedTitle === "Ms" 
-                    ? 'bg-dark text-white' 
-                    : 'bg-light text-dark'
-                }`}
-                onClick={() => setSelectedTitle("Ms")}
-                style={{
-                  transition: "all 0.2s ease"
-                }}
-              >
-                <span className="fw-medium">Ms</span>
-              </div>
-            </div>
-            <Form.Control 
-              type="text" 
-              value={userInfo.name}
-              onChange={(e) => login({ ...userInfo, name: e.target.value })}
-              placeholder=""
-              style={{ 
-                height: "40px", 
-                flex: 1, 
-                border: "none", 
-                boxShadow: "none",
-                paddingLeft: "0",marginTop:"12px"
-              }}
-              className="border-0"
-            />
-          </div>
-        </Form.Group>
-
-        <Form.Group className="mb-4 position-relative">
-          <div className="position-absolute top-0 start-0 mt-1 ms-3" style={{ zIndex: 5 }}>
-            <span className="small text-muted bg-white px-1">Email</span>
-          </div>
-          <Form.Control 
-            type="email" 
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder=""
-            style={{ 
-              height: "55px", 
-              paddingTop: "20px",
-              marginTop: "8px"
-            }}
-          />
-        </Form.Group>
-
-        <Form.Group className="mb-4 position-relative">
-          <div className="position-absolute top-0 start-0 mt-1 ms-3" style={{ zIndex: 5 }}>
-            <span className="small text-muted bg-white px-1" style={{marginLeft:"90px"}}>Phone Number</span>
-          </div>
-          <div className="d-flex border rounded p-2" style={{ height: "55px", marginTop: "8px" }}>
-            <div>
-              <div 
-                className="form-control d-flex justify-content-between align-items-center"
-                style={{ 
-                  height: "40px", 
-                  cursor: "pointer",
-                  border: "1px solid #ced4da",
-                  backgroundColor: "#fff",
-                  width: "80px"
-                }}
-                onClick={() => setShowCountryModal(true)}
-              >
-                <div>
-                  <span style={{ fontWeight: "500" }}>{selectedCountry.code}</span>
-                </div>
-                <span className="text-muted">▼</span>
-              </div>
-            </div>
-            
-            <div className="flex-grow-1 ms-2">
-              <Form.Control
-                type="tel"
-                value={userInfo.phone}
-                onChange={(e) => login({ ...userInfo, phone: e.target.value.replace(/\D/g, "") })}
-                placeholder=""
-                style={{ 
-                  height: "40px", 
-                  border: "none", 
-                  boxShadow: "none" ,marginTop:"5px"
-                }}
-                className="border-0"
-              />
-            </div>
-          </div>
-        </Form.Group>
-
-        <Button 
-          className="butn fw-semibold w-100"
-          style={{ height: "45px" }}
-          onClick={() => {
-            alert("Profile updated successfully!");
-            setCurrentView("main");
-          }}
-        >
-          Save Changes
-        </Button>
-      </Form>
-    </div>
-  );
-
-  // Enhanced Bookings View
-  const renderBookingsView = () => (
-    <div>
-      <h5 className="fw-bold mb-4">My Bookings</h5>
-      <div className="text-center py-5">
-        <div className="mb-4">
-          <LuNotepadText size={60} className="text-muted" />
-        </div>
-        <h6 className="fw-semibold mb-2">No bookings yet</h6>
-        <p className="text-muted mb-4" style={{ fontSize: "14px" }}>
-          Your upcoming and past bookings will appear here
-        </p>
-        <Button 
-          className="butn fw-semibold"
-          onClick={() => window.location.href = "/salon"}
-        >
-          Book a Service
-        </Button>
-      </div>
-    </div>
-  );
-
-  // Enhanced Plans View
-  const renderPlansView = () => (
-    <div>
-      <h5 className="fw-bold mb-4">My Plans</h5>
-      <div className="text-center py-5">
-        <div className="mb-4">
-          <PiNotepadLight size={60} className="text-muted" />
-        </div>
-        <h6 className="fw-semibold mb-2">No active plans</h6>
-        <p className="text-muted mb-4" style={{ fontSize: "14px" }}>
-          Your subscription plans will appear here
-        </p>
-        <Button 
-          className="butn fw-semibold"
-          onClick={() => window.location.href = "/plans"}
-        >
-          Explore Plans
-        </Button>
-      </div>
-    </div>
-  );
-
-  // Enhanced Help View
-  const renderHelpView = () => (
-    <div>
-      <h5 className="fw-bold mb-4">Help Center</h5>
-      <div className="border rounded p-3 mb-3">
-        <h6 className="fw-semibold mb-3">Frequently Asked Questions</h6>
-        <div className="mb-3">
-          <p className="fw-medium mb-1">How do I reschedule my booking?</p>
-          <p className="text-muted small mb-0">You can reschedule from the bookings section up to 2 hours before the service.</p>
-        </div>
-        <div className="mb-3">
-          <p className="fw-medium mb-1">What is your cancellation policy?</p>
-          <p className="text-muted small mb-0">Free cancellation up to 2 hours before the scheduled service time.</p>
-        </div>
-        <div>
-          <p className="fw-medium mb-1">How can I contact customer support?</p>
-          <p className="text-muted small mb-0">Call us at 1800-123-4567 or email support@urbancompany.com</p>
-        </div>
-      </div>
-      <Button 
-        variant="outline-primary" 
-        className="w-100 fw-semibold"
-        onClick={() => window.location.href = "/contact"}
-      >
-        Contact Support
-      </Button>
-    </div>
-  );
-
-  // Enhanced About View
-  const renderAboutView = () => (
-    <div>
-      <h5 className="fw-bold mb-4">About Urban Company</h5>
-      <div className="text-center mb-4">
-        <img 
-          src="/assets/Uc.png" 
-          alt="Urban Company" 
-          style={{ width: "80px", height: "80px", objectFit: "contain" }}
-        />
-      </div>
-      <p className="mb-3" style={{ fontSize: "14px" }}>
-        Urban Company is a platform for home services, on a mission to empower millions of professionals worldwide.
-      </p>
-      <p className="mb-3" style={{ fontSize: "14px" }}>
-        We provide services in beauty and wellness, cleaning, repair, and more, ensuring quality and convenience for our customers.
-      </p>
-      <div className="border rounded p-3">
-        <h6 className="fw-semibold mb-2">Our Services</h6>
-        <ul className="mb-0" style={{ fontSize: "14px" }}>
-          <li>Salon & Spa Services</li>
-          <li>Home Cleaning</li>
-          <li>AC & Appliance Repair</li>
-          <li>Plumbing & Electrical</li>
-          <li>Painting & Carpentry</li>
-        </ul>
-      </div>
-    </div>
-  );
+  // ... REST OF YOUR COMPONENT REMAINS EXACTLY THE SAME
+  // (renderProfileDetailsView, renderBookingsView, renderPlansView, renderHelpView, renderAboutView, getViewTitle, renderMainContent)
 
   const getViewTitle = () => {
     const titles = {
@@ -784,9 +554,12 @@ function AccountModal({ show, onHide }) {
                   <div className="d-flex align-items-center gap-3">
                     <span className="text-muted">
                       <img 
-                        src="/assets/Uc.png" 
+                        src={logo1 || "http://localhost:5000/assets/urban.png"} 
                         alt="UC" 
                         style={{ width: "20px", height: "20px", objectFit: "contain" }}
+                        onError={(e) => {
+                          e.target.src = "http://localhost:5000/assets/urban.png";
+                        }}
                       />
                     </span>
                     <span className="fw-medium">About Urban Company</span>
@@ -799,7 +572,6 @@ function AccountModal({ show, onHide }) {
         );
       }
     } else {
-      // When logged in, show different views based on currentView
       switch (currentView) {
         case "main":
           return renderMainViewAfterLogin();

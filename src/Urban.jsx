@@ -8,6 +8,7 @@ import Salon from './Salon.jsx';
 import { AuthProvider } from './AuthContext';
 
 function Urban(){
+
   return(
     <AuthProvider>
       <Urbanav/> 
@@ -21,6 +22,7 @@ function Urban(){
         }/>
         <Route path='/salon' element={<Salon/>}/>
         <Route path='/cart' element={<CartPage/>}/>
+        
       </Routes>
     </AuthProvider>
   )
