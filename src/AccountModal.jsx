@@ -30,7 +30,6 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     email: "",
     phone: ""
   });
-  const [isEditing, setIsEditing] = useState(false);
 
   const { isLoggedIn, userInfo, login, logout } = useAuth();
   const otpInputRefs = useRef([]);
@@ -43,42 +42,52 @@ function AccountModal({ show, onHide, initialView = "main" }) {
   ];
 
   // Update the useEffect that loads profile data
-useEffect(() => {
-  if (isLoggedIn && show && userInfo.phone) {
-    loadUserData();
-    // Initialize profile data with user info
-    setProfileData({
-      title: userInfo.title || "Ms", // Add title to userInfo if available
-      name: userInfo.name || "Suba shree",
-      email: userInfo.email || "",
-      phone: userInfo.phone || ""
-    });
-  }
-}, [isLoggedIn, show, userInfo.phone, userInfo.name, userInfo.email, userInfo.title]);
+  useEffect(() => {
+    if (isLoggedIn && show && userInfo.phone) {
+      loadUserData();
+      // Initialize profile data with user info
+      setProfileData({
+        title: userInfo.title || "Ms",
+        name: userInfo.name || "",
+        email: userInfo.email || "",
+        phone: userInfo.phone || ""
+      });
+    }
+  }, [isLoggedIn, show, userInfo.phone, userInfo.name, userInfo.email, userInfo.title]);
 
-  const loadUserData = async () => {
-    try {
-      setLoadingBookings(true);
+const loadUserData = async () => {
+  try {
+    setLoadingBookings(true);
+    
+    console.log("🔍 Loading bookings for user:", userInfo);
+    
+    // Load bookings from server - handle different phone formats
+    if (userInfo && userInfo.phone) {
+      console.log("🔍 Fetching bookings for phone:", userInfo.phone);
       
-      // Load bookings from server
       const bookingsResponse = await fetch(`http://localhost:5000/api/bookings/${userInfo.phone}`);
+      console.log("🔍 Bookings API response status:", bookingsResponse.status);
+      
       if (bookingsResponse.ok) {
         const bookingsData = await bookingsResponse.json();
+        console.log("🔍 Bookings data received:", bookingsData);
+        console.log("🔍 Number of bookings:", bookingsData.bookings ? bookingsData.bookings.length : 0);
         setBookings(bookingsData.bookings || []);
+      } else {
+        console.error("❌ Failed to load bookings, status:", bookingsResponse.status);
+        // Don't show error to user, just empty state
       }
-
-      // Load plans from server
-      const plansResponse = await fetch(`http://localhost:5000/api/plans/${userInfo.phone}`);
-      if (plansResponse.ok) {
-        const plansData = await plansResponse.json();
-        setPlans(plansData.plans || []);
-      }
-    } catch (error) {
-      console.error("Error loading user data:", error);
-    } finally {
-      setLoadingBookings(false);
+    } else {
+      console.log("❌ No user phone available for loading bookings");
     }
-  };
+
+  } catch (error) {
+    console.error("❌ Error loading user data:", error);
+    // Don't show error to user, just empty state
+  } finally {
+    setLoadingBookings(false);
+  }
+};
 
   // Fetch logo
   useEffect(() => {
@@ -126,14 +135,21 @@ useEffect(() => {
       setTimer(30);
       setCanResend(false);
       setIsHuman(false);
-      setIsEditing(false);
     }
   }, [show, initialView]);
 
   const handleBack = () => {
-    if (["profile-details", "bookings", "plans", "help", "about", "edit-profile"].includes(currentView)) {
+    if (["bookings", "plans", "help", "about"].includes(currentView)) {
       setCurrentView("main");
-      setIsEditing(false);
+    } else if (currentView === "edit-profile") {
+      setCurrentView("main");
+      // Reset profile data to original user info when going back
+      setProfileData({
+        title: userInfo.title || "Ms",
+        name: userInfo.name || "User",
+        email: userInfo.email || "",
+        phone: userInfo.phone || ""
+      });
     } else if (currentView !== "main") {
       setCurrentView("main");
       setShowOtpInput(false);
@@ -142,16 +158,15 @@ useEffect(() => {
       setTimer(30);
       setCanResend(false);
       setIsHuman(false);
-      setIsEditing(false);
     } else {
       onHide();
     }
   };
 
   const handleNavigation = (view) => {
-    if(view ==="profile-details"){
+    if (view === "profile-details") {
       setCurrentView("edit-profile");
-    }else{
+    } else {
       setCurrentView(view);
     }
   };
@@ -177,6 +192,11 @@ useEffect(() => {
     
     setIsLoading(true);
     try {
+      console.log("Sending OTP request:", {
+        phoneNumber: phoneNumber,
+        countryCode: selectedCountry.code
+      });
+
       const response = await fetch("http://localhost:5000/api/send-otp", {
         method: "POST",
         headers: {
@@ -189,6 +209,7 @@ useEffect(() => {
       });
 
       const data = await response.json();
+      console.log("OTP Send Response:", data);
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to send OTP");
@@ -200,7 +221,7 @@ useEffect(() => {
       
     } catch (error) {
       console.error("Error sending OTP:", error);
-      alert(error.message);
+      alert(`Error: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -230,56 +251,71 @@ useEffect(() => {
   };
 
   const handleOtpSubmit = async (enteredOtp = null) => {
-    const otpValue = enteredOtp || otp.join("");
-    
-    if (otpValue.length !== 6) {
-      alert("Please enter a valid 6-digit OTP");
-      return;
+  const otpValue = enteredOtp || otp.join("");
+  
+  if (otpValue.length !== 6) {
+    alert("Please enter a valid 6-digit OTP");
+    return;
+  }
+  
+  setIsLoading(true);
+  try {
+    console.log("Verifying OTP:", {
+      phoneNumber: phoneNumber,
+      countryCode: selectedCountry.code,
+      otp: otpValue
+    });
+
+    const response = await fetch("http://localhost:5000/api/verify-otp", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        phoneNumber: phoneNumber,
+        countryCode: selectedCountry.code,
+        otp: otpValue
+      }),
+    });
+
+    const data = await response.json();
+    console.log("OTP Verify Response:", data);
+
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to verify OTP");
     }
+
+    // Success - login user with proper data structure
+    const fullPhoneNumber = `${selectedCountry.code}${phoneNumber}`;
     
-    setIsLoading(true);
-    try {
-      const response = await fetch("http://localhost:5000/api/verify-otp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          phoneNumber: phoneNumber,
-          countryCode: selectedCountry.code,
-          otp: otpValue
-        }),
-      });
+    // Create user data with email field
+    const userData = {
+      name: data.user?.name || `User${phoneNumber}`,
+      phone: fullPhoneNumber,
+      userId: data.user?.id || fullPhoneNumber,
+      email: data.user?.email || "", // Make sure email is included
+      title: data.user?.title || "Ms"
+    };
+    
+    console.log("Logging in with user data:", userData);
+    login(userData);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to verify OTP");
-      }
-
-      login({
-        name: data.user.name || "Suba shree",
-        phone: data.user.phoneNumber,
-        userId: data.user.id,
-        email: data.user.email || ""
-      });
-
-      setCurrentView("main");
-      setShowOtpInput(false);
-      setOtp(["","","","","",""]);
-      setTimer(30);
-      setCanResend(false);
-      setIsHuman(false);
-      
-      onHide();
-      
-    } catch (error) {
-      console.error("Error verifying OTP:", error);
-      alert(error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    setCurrentView("main");
+    setShowOtpInput(false);
+    setOtp(["","","","","",""]);
+    setTimer(30);
+    setCanResend(false);
+    setIsHuman(false);
+    
+    onHide();
+    
+  } catch (error) {
+    console.error("Error verifying OTP:", error);
+    alert(`Verification Failed: ${error.message}`);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleResendCode = async (method) => {
     if (canResend) {
@@ -315,89 +351,106 @@ useEffect(() => {
   };
 
   const handleLogout = () => {
-    logout();
-    setCurrentView("main");
-    setBookings([]);
-    setPlans([]);
-    onHide();
-  };
+  logout();
+  setCurrentView("main");
+  setBookings([]);
+  setPlans([]);
+  
+  // Reset profile data to empty values
+  setProfileData({
+    title: "Ms",
+    name: "",
+    email: "",
+    phone: ""
+  });
+  
+  onHide();
+};
 
   const handleCountrySelect = (country) => {
     setSelectedCountry(country);
     setShowCountryModal(false);
   };
 
+  const handleProfileSave = async () => {
+    // Basic validation
+    if (!profileData.name.trim()) {
+      alert("Please enter your name");
+      return;
+    }
 
-const handleProfileSave = async () => {
-  // Basic validation
-  if (!profileData.name.trim()) {
-    alert("Please enter your name");
-    return;
-  }
+    if (!profileData.email.trim()) {
+      alert("Please enter your email");
+      return;
+    }
 
-  if (!profileData.email.trim()) {
-    alert("Please enter your email");
-    return;
-  }
+    if (!/^\S+@\S+\.\S+$/.test(profileData.email)) {
+      alert("Please enter a valid email address");
+      return;
+    }
 
-  if (!/^\S+@\S+\.\S+$/.test(profileData.email)) {
-    alert("Please enter a valid email address");
-    return;
-  }
+    if (!profileData.phone.trim() || profileData.phone.length < 10) {
+      alert("Please enter a valid phone number");
+      return;
+    }
 
-  if (!profileData.phone.trim() || profileData.phone.length < 10) {
-    alert("Please enter a valid phone number");
-    return;
-  }
-
-  try {
-    // Update user info in context
-    login({
-      ...userInfo,
-      name: profileData.name,
-      email: profileData.email,
-      phone: profileData.phone,
-      title: profileData.title
-    });
-
-    // Here you can also make an API call to update the profile in your backend
-    const response = await fetch("http://localhost:5000/api/update-profile", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        userId: userInfo.userId,
+    try {
+      // Update user info in context - THIS IS CRITICAL FOR UPDATING THE ACCOUNT PAGE
+      const updatedUserInfo = {
+        ...userInfo,
         name: profileData.name,
         email: profileData.email,
         phone: profileData.phone,
         title: profileData.title
-      }),
-    });
+      };
+      
+      console.log("Updating user info:", updatedUserInfo);
+      login(updatedUserInfo);
 
-    if (response.ok) {
+      // Try to make API call to update the profile in backend
+      try {
+        const response = await fetch("http://localhost:5000/api/update-profile", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: userInfo.userId,
+            name: profileData.name,
+            email: profileData.email,
+            phone: profileData.phone,
+            title: profileData.title
+          }),
+        });
+
+        if (response.ok) {
+          console.log("Profile updated successfully on server");
+        } else {
+          console.warn("Failed to update profile on server, but local update succeeded");
+        }
+      } catch (apiError) {
+        console.warn("API call failed, but local update succeeded:", apiError);
+      }
+
       setCurrentView("main");
       alert("Profile updated successfully!");
-    } else {
-      throw new Error("Failed to update profile");
+      
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      alert("Failed to update profile");
     }
-    
-  } catch (error) {
-    console.error("Error updating profile:", error);
-    alert("Failed to update profile");
-  }
-};
+  };
 
- const handleProfileCancel = () => {
-  // Reset to original user info values
-  setProfileData({
-    title: userInfo.title || "Ms",
-    name: userInfo.name || "Suba shree",
-    email: userInfo.email || "",
-    phone: userInfo.phone || ""
-  });
-  setCurrentView("main");
-};
+  const handleProfileCancel = () => {
+    // Reset to original user info values
+    setProfileData({
+      title: userInfo.title || "Ms",
+      name: userInfo.name || "User",
+      email: userInfo.email || "",
+      phone: userInfo.phone || ""
+    });
+    setCurrentView("main");
+  };
 
   const handleProfileChange = (field, value) => {
     setProfileData(prev => ({
@@ -411,33 +464,49 @@ const handleProfileSave = async () => {
     <div>
       <div className="text-center mb-4">
         <h6 className="fw-bold">My Profile</h6>
+        <p className="text-muted small">Current user: {userInfo.name}</p>
       </div>
       
       <Card className="border-0 shadow-sm">
         <Card.Body>
-          {/* Title Selection - Capsule Format */}
+          {/* Title Selection - Single Capsule Format */}
           <div className="mb-4">
-            <label className="form-label fw-semibold">Title</label>
-            <div className="d-flex gap-2 flex-wrap">
-              {['Mr', 'Ms', 'Mrs', 'Dr'].map((title) => (
-                <button
-                  key={title}
-                  type="button"
-                  className={`btn ${
-                    profileData.title === title 
-                      ? 'btn-primary' 
-                      : 'btn-outline-secondary'
-                  } rounded-pill px-4 py-2`}
-                  onClick={() => handleProfileChange('title', title)}
-                  style={{
-                    border: profileData.title === title ? 'none' : '1px solid #dee2e6',
-                    fontSize: '14px',
-                    fontWeight: '500'
-                  }}
-                >
-                  {title}
-                </button>
-              ))}
+            <label className="text-center form-label fw-semibold">Title</label>
+            <div className="d-flex" style={{ maxWidth: "200px" }}>
+              <button
+                type="button"
+                className={`btn ${
+                  profileData.title === 'Mr' 
+                    ? 'btn-dark' 
+                    : 'btn-outline-secondary'
+                } flex-fill rounded-end-0 border-end-0`}
+                onClick={() => handleProfileChange('title', 'Mr')}
+                style={{
+                  border: '1px solid #dee2e6',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  padding: '8px 16px'
+                }}
+              >
+                Mr
+              </button>
+              <button
+                type="button"
+                className={`btn ${
+                  profileData.title === 'Ms' 
+                    ? 'btn-dark' 
+                    : 'btn-outline-secondary'
+                } flex-fill rounded-start-0`}
+                onClick={() => handleProfileChange('title', 'Ms')}
+                style={{
+                  border: '1px solid #dee2e6',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  padding: '8px 16px'
+                }}
+              >
+                Ms
+              </button>
             </div>
           </div>
 
@@ -570,7 +639,6 @@ const handleProfileSave = async () => {
       )}
     </div>
   );
-
   // Render plans view
   const renderPlansView = () => (
     <div>
@@ -610,6 +678,7 @@ const handleProfileSave = async () => {
       )}
     </div>
   );
+
   // Render login view with human verification
   const renderLoginView = () => (
     <div>
@@ -697,6 +766,11 @@ const handleProfileSave = async () => {
             A 6-digit code has been sent to<br />
             <span className="fw-semibold">{selectedCountry.code} {phoneNumber}</span>
           </p>
+
+          {/* Development Helper - Remove in production */}
+          <Alert variant="info" className="small py-2 mb-3">
+            <strong>Development Note:</strong> Enter any 6-digit number to verify
+          </Alert>
 
           <div className="d-flex justify-content-between mb-4">
             {[0, 1, 2, 3, 4, 5].map((index) => (
@@ -796,8 +870,11 @@ const handleProfileSave = async () => {
     </div>
   );
 
-  // Render main view after login
-  const renderMainViewAfterLogin = () => (
+// Render main view after login - UPDATED TO SHOW CURRENT USER INFO
+const renderMainViewAfterLogin = () => {
+  console.log("Current userInfo:", userInfo); // Debug log
+  
+  return (
     <div>
       <div 
         className="mb-4 p-3"
@@ -806,8 +883,16 @@ const handleProfileSave = async () => {
       >
         <div className="d-flex justify-content-between align-items-center">
           <div>
-            <h5 className="fw-semibold mb-1">Suba shree</h5>
+            <h5 className="fw-semibold mb-1">{userInfo.name || "User"}</h5>
             <p className="small text-muted mb-0">{userInfo.phone}</p>
+            {/* ADDED: Show email if available */}
+            {userInfo.email && userInfo.email.trim() !== "" ? (
+              <p className="small text-muted mb-0">{userInfo.email}</p>
+            ) : (
+              <p className="small text-muted mb-0" style={{fontStyle: 'italic'}}>
+                No email added
+              </p>
+            )}
           </div>
           <MdOutlineArrowForwardIos size={14} className="text-muted" />
         </div>
@@ -869,6 +954,7 @@ const handleProfileSave = async () => {
       </div>
     </div>
   );
+};
 
   // Render help view
   const renderHelpView = () => (
@@ -911,7 +997,6 @@ const handleProfileSave = async () => {
     return titles[currentView] ;
   };
 
-  
   const renderMainContent = () => {
     if (!isLoggedIn) {
       if (currentView === "login") {

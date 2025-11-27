@@ -34,7 +34,10 @@ export const AuthProvider = ({ children }) => {
     setIsLoggedIn(true);
     setUserInfo({
       name: userData.name || "User",
-      phone: userData.phone || ""
+      phone: userData.phone || "",
+      email:userData.email || "",
+      title:userData.title ||"",
+      
     });
     
     // Store in localStorage
@@ -43,15 +46,26 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('userPhone', userData.phone || "");
   };
 
-  const logout = () => {
-    setIsLoggedIn(false);
-    setUserInfo({ name: "", phone: "" });
-    
-    // Clear localStorage
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userPhone');
-  };
+  // In your AuthContext, make sure logout clears ALL user data
+const logout = () => {
+  setUserInfo({
+    name: "",
+    phone: "",
+    email: "",
+    userId: "",
+    title: "Ms"
+  });
+  setIsLoggedIn(false);
+  
+  // Clear from localStorage/sessionStorage
+  localStorage.removeItem('userInfo');
+  localStorage.removeItem('isLoggedIn');
+  sessionStorage.removeItem('userInfo');
+  sessionStorage.removeItem('isLoggedIn');
+  
+  // Clear any other stored data
+  sessionStorage.removeItem('currentOrder');
+};
 
   const value = {
     isLoggedIn,

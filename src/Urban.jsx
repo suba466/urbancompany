@@ -6,7 +6,7 @@ import Book from './Book.jsx';
 import CartPage from './CartPage.jsx';
 import Salon from './Salon.jsx';
 import { AuthProvider } from './AuthContext';
-
+import PaymentPage from './PaymentPage.jsx';
 function Urban(){
 
   return(
@@ -22,7 +22,8 @@ function Urban(){
         }/>
         <Route path='/salon' element={<Salon/>}/>
         <Route path='/cart' element={<CartPage/>}/>
-        
+        <Route path="/payment" element={<PaymentPage />} />
+
       </Routes>
     </AuthProvider>
   )

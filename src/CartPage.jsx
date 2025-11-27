@@ -676,23 +676,40 @@ function CartPage() {
                 </p>
                 {selectedSlot && selectedAddress && (
                   <div style={{ marginLeft: "28px" }}>
-                    <Button 
-                      className="butn w-100 fw-semibold" 
-                      onClick={handlePlaceOrder}
-                      disabled={isPlacingOrder}
-                      style={{ height: "42px" }}
-                    >
-                      {isPlacingOrder ? (
-                        <>
-                          <Spinner animation="border" size="sm" className="me-2" />
-                          Placing Order...
-                        </>
-                      ) : (
-                        `Proceed to pay`
-                      )}
-                    </Button>
+                   
+<Button
+  className="butn fw-bold w-100 p-3"
+  disabled={!selectedSlot}
+  onClick={() => {
+    if (!selectedAddress) {
+      alert("Please select delivery address");
+      handleAddressAndOpenSlots();
+      return;
+    }
+
+    // Store complete order data before navigation
+    const orderData = {
+      items: carts,
+      itemTotal: calculateItemTotal(),
+      tax: calculateTax(),
+      tip: calculateTip(),
+      slotExtraCharge: calculateSlotExtraCharge(),
+      total: calculateTotalPrice(),
+      address: selectedAddress,
+      scheduledTime: selectedSlot?.time,
+      scheduledDate: selectedDate
+    };
+    
+    sessionStorage.setItem('currentOrder', JSON.stringify(orderData));
+    
+    // Navigate to payment page
+    window.location.href = `/payment?amount=${orderData.total}`;
+  }}
+>
+  Proceed to Payment <MdPayments size={20} />
+</Button>
                   </div>
-                )}  <div style={{backgroundColor:"#e1e1e1ff"}}>
+                )} <br /> <div style={{backgroundColor:"#e1e1e1ff",height:"40px",padding:"10px"}} className="border rounded text-center ">
                   <p className="text-muted" style={{fontSize:"12px"}}>By proceeding, you agree to our <a className="fw-semibold" style={{color:"black"}} href="">T&C</a>,<a className="fw-semibold" style={{color:"black"}}  href="">Privacy</a> and <a className="fw-semibold" style={{color:"black"}} href="">Cancellation Policy</a> </p>
                 </div>
                 
