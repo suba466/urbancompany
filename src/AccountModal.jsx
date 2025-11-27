@@ -42,19 +42,19 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     { code: "+966", name: "KSA (+966)" },
   ];
 
-  // Load bookings and plans when user is logged in
-  useEffect(() => {
-    if (isLoggedIn && show && userInfo.phone) {
-      loadUserData();
-      // Initialize profile data with user info
-      setProfileData({
-        title: "Ms",
-        name: userInfo.name || "Suba shree",
-        email: userInfo.email || "",
-        phone: userInfo.phone || ""
-      });
-    }
-  }, [isLoggedIn, show, userInfo.phone, userInfo.name, userInfo.email]);
+  // Update the useEffect that loads profile data
+useEffect(() => {
+  if (isLoggedIn && show && userInfo.phone) {
+    loadUserData();
+    // Initialize profile data with user info
+    setProfileData({
+      title: userInfo.title || "Ms", // Add title to userInfo if available
+      name: userInfo.name || "Suba shree",
+      email: userInfo.email || "",
+      phone: userInfo.phone || ""
+    });
+  }
+}, [isLoggedIn, show, userInfo.phone, userInfo.name, userInfo.email, userInfo.title]);
 
   const loadUserData = async () => {
     try {
@@ -149,7 +149,11 @@ function AccountModal({ show, onHide, initialView = "main" }) {
   };
 
   const handleNavigation = (view) => {
-    setCurrentView(view);
+    if(view ==="profile-details"){
+      setCurrentView("edit-profile");
+    }else{
+      setCurrentView(view);
+    }
   };
 
   // Human verification checkbox handler
@@ -323,61 +327,77 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     setShowCountryModal(false);
   };
 
-  // Profile editing handlers
-  const handleProfileEdit = () => {
-    setIsEditing(true);
-    setCurrentView("edit-profile");
-  };
 
-  const handleProfileSave = async () => {
-    // Basic validation
-    if (!profileData.name.trim()) {
-      alert("Please enter your name");
-      return;
-    }
+const handleProfileSave = async () => {
+  // Basic validation
+  if (!profileData.name.trim()) {
+    alert("Please enter your name");
+    return;
+  }
 
-    if (!profileData.email.trim()) {
-      alert("Please enter your email");
-      return;
-    }
+  if (!profileData.email.trim()) {
+    alert("Please enter your email");
+    return;
+  }
 
-    if (!/^\S+@\S+\.\S+$/.test(profileData.email)) {
-      alert("Please enter a valid email address");
-      return;
-    }
+  if (!/^\S+@\S+\.\S+$/.test(profileData.email)) {
+    alert("Please enter a valid email address");
+    return;
+  }
 
-    try {
-      // Here you would typically save to your backend
-      // For now, we'll just update the local state and AuthContext
-      
-      // Update user info in context
-      login({
-        ...userInfo,
-        name: profileData.name,
-        email: profileData.email
-      });
+  if (!profileData.phone.trim() || profileData.phone.length < 10) {
+    alert("Please enter a valid phone number");
+    return;
+  }
 
-      setIsEditing(false);
-      setCurrentView("profile-details");
-      alert("Profile updated successfully!");
-      
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      alert("Failed to update profile");
-    }
-  };
-
-  const handleProfileCancel = () => {
-    // Reset to original values
-    setProfileData({
-      title: "Ms",
-      name: userInfo.name || "Suba shree",
-      email: userInfo.email || "",
-      phone: userInfo.phone || ""
+  try {
+    // Update user info in context
+    login({
+      ...userInfo,
+      name: profileData.name,
+      email: profileData.email,
+      phone: profileData.phone,
+      title: profileData.title
     });
-    setIsEditing(false);
-    setCurrentView("profile-details");
-  };
+
+    // Here you can also make an API call to update the profile in your backend
+    const response = await fetch("http://localhost:5000/api/update-profile", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        userId: userInfo.userId,
+        name: profileData.name,
+        email: profileData.email,
+        phone: profileData.phone,
+        title: profileData.title
+      }),
+    });
+
+    if (response.ok) {
+      setCurrentView("main");
+      alert("Profile updated successfully!");
+    } else {
+      throw new Error("Failed to update profile");
+    }
+    
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    alert("Failed to update profile");
+  }
+};
+
+ const handleProfileCancel = () => {
+  // Reset to original user info values
+  setProfileData({
+    title: userInfo.title || "Ms",
+    name: userInfo.name || "Suba shree",
+    email: userInfo.email || "",
+    phone: userInfo.phone || ""
+  });
+  setCurrentView("main");
+};
 
   const handleProfileChange = (field, value) => {
     setProfileData(prev => ({
@@ -386,31 +406,42 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     }));
   };
 
-  // Render profile editing view
+  // Render profile editing view (this is now the main profile page)
   const renderProfileEditView = () => (
     <div>
-      <h6 className="fw-bold mb-3">Edit Profile</h6>
+      <div className="text-center mb-4">
+        <h6 className="fw-bold">My Profile</h6>
+      </div>
       
       <Card className="border-0 shadow-sm">
         <Card.Body>
-          {/* Title Selection */}
+          {/* Title Selection - Capsule Format */}
           <div className="mb-4">
             <label className="form-label fw-semibold">Title</label>
-            <div className="d-flex gap-2">
-              {['Mr', 'Ms', 'Mrs', 'Dr'].map(title => (
-                <Button
+            <div className="d-flex gap-2 flex-wrap">
+              {['Mr', 'Ms', 'Mrs', 'Dr'].map((title) => (
+                <button
                   key={title}
-                  variant={profileData.title === title ? "primary" : "outline-secondary"}
-                  className="flex-grow-1"
+                  type="button"
+                  className={`btn ${
+                    profileData.title === title 
+                      ? 'btn-primary' 
+                      : 'btn-outline-secondary'
+                  } rounded-pill px-4 py-2`}
                   onClick={() => handleProfileChange('title', title)}
+                  style={{
+                    border: profileData.title === title ? 'none' : '1px solid #dee2e6',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}
                 >
                   {title}
-                </Button>
+                </button>
               ))}
             </div>
           </div>
 
-          {/* Name Field */}
+          {/* Full Name Field */}
           <div className="mb-3">
             <Form.Label className="fw-semibold">Full Name</Form.Label>
             <Form.Control
@@ -418,6 +449,7 @@ function AccountModal({ show, onHide, initialView = "main" }) {
               placeholder="Enter your full name"
               value={profileData.name}
               onChange={(e) => handleProfileChange('name', e.target.value)}
+              className="py-2"
             />
           </div>
 
@@ -429,38 +461,33 @@ function AccountModal({ show, onHide, initialView = "main" }) {
               placeholder="Enter your email address"
               value={profileData.email}
               onChange={(e) => handleProfileChange('email', e.target.value)}
+              className="py-2"
             />
-            <Form.Text className="text-muted">
-              We'll send booking confirmations and updates to this email
-            </Form.Text>
           </div>
 
-          {/* Phone Number (Read-only) */}
+          {/* Phone Number Field - Also Editable */}
           <div className="mb-4">
             <Form.Label className="fw-semibold">Phone Number</Form.Label>
             <Form.Control
               type="tel"
+              placeholder="Enter your phone number"
               value={profileData.phone}
-              readOnly
-              disabled
-              className="bg-light"
+              onChange={(e) => handleProfileChange('phone', e.target.value.replace(/\D/g, ""))}
+              className="py-2"
             />
-            <Form.Text className="text-muted">
-              Phone number cannot be changed
-            </Form.Text>
           </div>
 
           {/* Action Buttons */}
-          <div className="d-flex gap-2">
+          <div className="d-flex gap-2 pt-3">
             <Button
               variant="outline-secondary"
-              className="flex-grow-1"
+              className="flex-grow-1 py-2"
               onClick={handleProfileCancel}
             >
               Cancel
             </Button>
             <Button
-              className="butn flex-grow-1"
+              className="butn flex-grow-1 py-2"
               onClick={handleProfileSave}
             >
               Save Changes
@@ -583,63 +610,6 @@ function AccountModal({ show, onHide, initialView = "main" }) {
       )}
     </div>
   );
-
-  // Render profile details view
-  const renderProfileDetailsView = () => (
-    <div>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h6 className="fw-bold mb-0">My Profile</h6>
-        <Button 
-          variant="outline-primary" 
-          size="sm"
-          onClick={handleProfileEdit}
-          className="d-flex align-items-center gap-1"
-        >
-          <MdEdit size={16} />
-          Edit
-        </Button>
-      </div>
-      
-      <Card className="border-0 shadow-sm">
-        <Card.Body>
-          <div className="text-center mb-4">
-            <MdAccountCircle size={80} className="text-primary mb-2" />
-            <div>
-              <Badge bg="light" text="dark" className="mb-2">
-                {profileData.title}
-              </Badge>
-              <h5 className="fw-semibold mb-1">{profileData.name}</h5>
-              <p className="text-muted mb-1">{profileData.email}</p>
-              <p className="text-muted">{profileData.phone}</p>
-            </div>
-          </div>
-
-          <div className="border-top pt-3">
-            <h6 className="fw-semibold mb-2">Account Details</h6>
-            <div className="row">
-              <div className="col-4">
-                <p className="small text-muted mb-1">Title</p>
-                <p className="fw-semibold">{profileData.title}</p>
-              </div>
-              <div className="col-8">
-                <p className="small text-muted mb-1">Full Name</p>
-                <p className="fw-semibold">{profileData.name}</p>
-              </div>
-            </div>
-            <div className="mt-2">
-              <p className="small text-muted mb-1">Email Address</p>
-              <p className="fw-semibold">{profileData.email || "Not provided"}</p>
-            </div>
-            <div className="mt-2">
-              <p className="small text-muted mb-1">Phone Number</p>
-              <p className="fw-semibold">{profileData.phone}</p>
-            </div>
-          </div>
-        </Card.Body>
-      </Card>
-    </div>
-  );
-
   // Render login view with human verification
   const renderLoginView = () => (
     <div>
@@ -836,7 +806,7 @@ function AccountModal({ show, onHide, initialView = "main" }) {
       >
         <div className="d-flex justify-content-between align-items-center">
           <div>
-            <h5 className="fw-semibold mb-1">{userInfo.name || "Suba shree"}</h5>
+            <h5 className="fw-semibold mb-1">Suba shree</h5>
             <p className="small text-muted mb-0">{userInfo.phone}</p>
           </div>
           <MdOutlineArrowForwardIos size={14} className="text-muted" />
@@ -930,18 +900,18 @@ function AccountModal({ show, onHide, initialView = "main" }) {
 
   const getViewTitle = () => {
     const titles = {
-      main: isLoggedIn ? "Account" : "Profile",
-      "profile-details": "My Profile",
-      "edit-profile": "Edit Profile",
+      main: isLoggedIn ,
+      "edit-profile": "My Profile",
       login: "Login",
       about: "About Urban Company",
       bookings: "My Bookings",
       plans: "My Plans",
       help: "Help Center"
     };
-    return titles[currentView] || "Account";
+    return titles[currentView] ;
   };
 
+  
   const renderMainContent = () => {
     if (!isLoggedIn) {
       if (currentView === "login") {
@@ -989,8 +959,6 @@ function AccountModal({ show, onHide, initialView = "main" }) {
       switch (currentView) {
         case "main":
           return renderMainViewAfterLogin();
-        case "profile-details":
-          return renderProfileDetailsView();
         case "edit-profile":
           return renderProfileEditView();
         case "bookings":
