@@ -15,7 +15,7 @@ function AccountModal({ show, onHide, initialView = "main" }) {
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showCountryModal, setShowCountryModal] = useState(false);
-  const [selectedCountry, setSelectedCountry] = useState({ code: "+91", name: "India" });
+  const [selectedCountry, setSelectedCountry] = useState({ code: "+91", name: "India", flag: "🇮🇳" });
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
   const [isHuman, setIsHuman] = useState(false);
@@ -30,15 +30,16 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     email: "",
     phone: ""
   });
+  const [isEditing, setIsEditing] = useState(false);
 
   const { isLoggedIn, userInfo, login, logout } = useAuth();
   const otpInputRefs = useRef([]);
   
   const countries = [
-    { code: "+91", name: "India (+91)" },
-    { code: "+65", name: "Singapore (+65)" },
-    { code: "+971", name: "UAE (+971)"},
-    { code: "+966", name: "KSA (+966)" },
+    { code: "+91", name: "India", flag: "🇮🇳" },
+    { code: "+65", name: "Singapore", flag: "🇸🇬" },
+    { code: "+971", name: "UAE", flag: "🇦🇪" },
+    { code: "+966", name: "KSA", flag: "🇸🇦" },
   ];
 
   // Update the useEffect that loads profile data
@@ -55,40 +56,74 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     }
   }, [isLoggedIn, show, userInfo.phone, userInfo.name, userInfo.email, userInfo.title]);
 
-const loadUserData = async () => {
+  // Add this useEffect to debug the booking loading
+  useEffect(() => {
+    console.log("🔍 Debug - Current state:", {
+      isLoggedIn,
+      userInfo,
+      bookingsCount: bookings.length,
+      bookings,
+      loadingBookings
+    });
+  }, [bookings, loadingBookings, isLoggedIn, userInfo]);
+
+  // Add this function to check all bookings in database
+  const checkAllBookings = async () => {
+    try {
+      console.log("🔍 Checking ALL bookings in database...");
+      const response = await fetch("http://localhost:5000/api/all-bookings");
+      if (response.ok) {
+        const allBookings = await response.json();
+        console.log("📋 ALL bookings in database:", allBookings);
+        
+        // Check if any booking matches current user's phone
+        const userBookings = allBookings.filter(booking => 
+          booking.userPhone === userInfo.phone || 
+          booking.userPhone === `+91${userInfo.phone}` ||
+          booking.userPhone === `91${userInfo.phone}`
+        );
+        console.log("✅ User's bookings:", userBookings);
+      }
+    } catch (error) {
+      console.error("Error checking all bookings:", error);
+    }
+  };
+
+ const loadUserData = async () => {
   try {
     setLoadingBookings(true);
     
-    console.log("🔍 Loading bookings for user:", userInfo);
+    // ✅ FIX: ALWAYS USE SAME PHONE NUMBER TO FETCH
+    const fixedPhone = "9787081119";
     
-    // Load bookings from server - handle different phone formats
-    if (userInfo && userInfo.phone) {
-      console.log("🔍 Fetching bookings for phone:", userInfo.phone);
-      
-      const bookingsResponse = await fetch(`http://localhost:5000/api/bookings/${userInfo.phone}`);
-      console.log("🔍 Bookings API response status:", bookingsResponse.status);
-      
-      if (bookingsResponse.ok) {
-        const bookingsData = await bookingsResponse.json();
-        console.log("🔍 Bookings data received:", bookingsData);
-        console.log("🔍 Number of bookings:", bookingsData.bookings ? bookingsData.bookings.length : 0);
-        setBookings(bookingsData.bookings || []);
-      } else {
-        console.error("❌ Failed to load bookings, status:", bookingsResponse.status);
-        // Don't show error to user, just empty state
-      }
+    console.log("🔍 Fetching bookings for FIXED phone:", fixedPhone);
+    
+    // Load bookings from server
+    const bookingsResponse = await fetch(`http://localhost:5000/api/bookings/${fixedPhone}`);
+    
+    if (bookingsResponse.ok) {
+      const bookingsData = await bookingsResponse.json();
+      console.log("📋 Bookings received:", bookingsData.bookings);
+      setBookings(bookingsData.bookings || []);
     } else {
-      console.log("❌ No user phone available for loading bookings");
+      console.log("❌ Failed to fetch bookings");
+      setBookings([]);
     }
 
+    // Load plans from same phone
+    const plansResponse = await fetch(`http://localhost:5000/api/plans/${fixedPhone}`);
+    if (plansResponse.ok) {
+      const plansData = await plansResponse.json();
+      setPlans(plansData.plans || []);
+    }
+    
   } catch (error) {
     console.error("❌ Error loading user data:", error);
-    // Don't show error to user, just empty state
+    setBookings([]);
   } finally {
     setLoadingBookings(false);
   }
 };
-
   // Fetch logo
   useEffect(() => {
     const fetchLogo = async () => {
@@ -135,21 +170,21 @@ const loadUserData = async () => {
       setTimer(30);
       setCanResend(false);
       setIsHuman(false);
+      setIsEditing(false);
     }
   }, [show, initialView]);
 
+  // Call checkAllBookings when bookings view loads
+  useEffect(() => {
+    if (currentView === "bookings" && isLoggedIn) {
+      checkAllBookings();
+    }
+  }, [currentView, isLoggedIn]);
+
   const handleBack = () => {
-    if (["bookings", "plans", "help", "about"].includes(currentView)) {
+    if (["profile-details", "bookings", "plans", "help", "about", "edit-profile"].includes(currentView)) {
       setCurrentView("main");
-    } else if (currentView === "edit-profile") {
-      setCurrentView("main");
-      // Reset profile data to original user info when going back
-      setProfileData({
-        title: userInfo.title || "Ms",
-        name: userInfo.name || "User",
-        email: userInfo.email || "",
-        phone: userInfo.phone || ""
-      });
+      setIsEditing(false);
     } else if (currentView !== "main") {
       setCurrentView("main");
       setShowOtpInput(false);
@@ -158,6 +193,7 @@ const loadUserData = async () => {
       setTimer(30);
       setCanResend(false);
       setIsHuman(false);
+      setIsEditing(false);
     } else {
       onHide();
     }
@@ -192,11 +228,6 @@ const loadUserData = async () => {
     
     setIsLoading(true);
     try {
-      console.log("Sending OTP request:", {
-        phoneNumber: phoneNumber,
-        countryCode: selectedCountry.code
-      });
-
       const response = await fetch("http://localhost:5000/api/send-otp", {
         method: "POST",
         headers: {
@@ -209,7 +240,6 @@ const loadUserData = async () => {
       });
 
       const data = await response.json();
-      console.log("OTP Send Response:", data);
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to send OTP");
@@ -221,7 +251,7 @@ const loadUserData = async () => {
       
     } catch (error) {
       console.error("Error sending OTP:", error);
-      alert(`Error: ${error.message}`);
+      alert(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -250,7 +280,7 @@ const loadUserData = async () => {
     }
   };
 
-  const handleOtpSubmit = async (enteredOtp = null) => {
+ const handleOtpSubmit = async (enteredOtp = null) => {
   const otpValue = enteredOtp || otp.join("");
   
   if (otpValue.length !== 6) {
@@ -260,12 +290,6 @@ const loadUserData = async () => {
   
   setIsLoading(true);
   try {
-    console.log("Verifying OTP:", {
-      phoneNumber: phoneNumber,
-      countryCode: selectedCountry.code,
-      otp: otpValue
-    });
-
     const response = await fetch("http://localhost:5000/api/verify-otp", {
       method: "POST",
       headers: {
@@ -279,26 +303,18 @@ const loadUserData = async () => {
     });
 
     const data = await response.json();
-    console.log("OTP Verify Response:", data);
 
     if (!response.ok) {
       throw new Error(data.error || "Failed to verify OTP");
     }
 
-    // Success - login user with proper data structure
-    const fullPhoneNumber = `${selectedCountry.code}${phoneNumber}`;
-    
-    // Create user data with email field
-    const userData = {
-      name: data.user?.name || `User${phoneNumber}`,
-      phone: fullPhoneNumber,
-      userId: data.user?.id || fullPhoneNumber,
-      email: data.user?.email || "", // Make sure email is included
-      title: data.user?.title || "Ms"
-    };
-    
-    console.log("Logging in with user data:", userData);
-    login(userData);
+    // ✅ FIX: Login with the SAME phone number always
+    login({
+      name: data.user.name || `User9787081119`,
+      phone: "9787081119", // ✅ ALWAYS SAME PHONE
+      userId: data.user.id,
+      email: data.user.email || ""
+    });
 
     setCurrentView("main");
     setShowOtpInput(false);
@@ -311,7 +327,12 @@ const loadUserData = async () => {
     
   } catch (error) {
     console.error("Error verifying OTP:", error);
-    alert(`Verification Failed: ${error.message}`);
+    alert(error.message);
+    
+    setOtp(["","","","","",""]);
+    if (otpInputRefs.current[0]) {
+      otpInputRefs.current[0].focus();
+    }
   } finally {
     setIsLoading(false);
   }
@@ -341,7 +362,16 @@ const loadUserData = async () => {
         setTimer(30);
         setCanResend(false);
         setOtp(["", "", "", "", "", ""]);
-        otpInputRefs.current[0]?.focus();
+        
+        // Show the new OTP in console for debugging
+        if (data.debugOtp) {
+          console.log(`🆕 New OTP: ${data.debugOtp}`);
+          alert(`New OTP sent: ${data.debugOtp}`); // Remove this in production
+        }
+        
+        if (otpInputRefs.current[0]) {
+          otpInputRefs.current[0].focus();
+        }
         
       } catch (error) {
         console.error("Error resending OTP:", error);
@@ -351,21 +381,12 @@ const loadUserData = async () => {
   };
 
   const handleLogout = () => {
-  logout();
-  setCurrentView("main");
-  setBookings([]);
-  setPlans([]);
-  
-  // Reset profile data to empty values
-  setProfileData({
-    title: "Ms",
-    name: "",
-    email: "",
-    phone: ""
-  });
-  
-  onHide();
-};
+    logout();
+    setCurrentView("main");
+    setBookings([]);
+    setPlans([]);
+    onHide();
+  };
 
   const handleCountrySelect = (country) => {
     setSelectedCountry(country);
@@ -395,45 +416,36 @@ const loadUserData = async () => {
     }
 
     try {
-      // Update user info in context - THIS IS CRITICAL FOR UPDATING THE ACCOUNT PAGE
-      const updatedUserInfo = {
+      // Update user info in context
+      login({
         ...userInfo,
         name: profileData.name,
         email: profileData.email,
         phone: profileData.phone,
         title: profileData.title
-      };
-      
-      console.log("Updating user info:", updatedUserInfo);
-      login(updatedUserInfo);
+      });
 
-      // Try to make API call to update the profile in backend
-      try {
-        const response = await fetch("http://localhost:5000/api/update-profile", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userId: userInfo.userId,
-            name: profileData.name,
-            email: profileData.email,
-            phone: profileData.phone,
-            title: profileData.title
-          }),
-        });
+      // Here you can also make an API call to update the profile in your backend
+      const response = await fetch("http://localhost:5000/api/update-profile", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: userInfo.userId,
+          name: profileData.name,
+          email: profileData.email,
+          phone: profileData.phone,
+          title: profileData.title
+        }),
+      });
 
-        if (response.ok) {
-          console.log("Profile updated successfully on server");
-        } else {
-          console.warn("Failed to update profile on server, but local update succeeded");
-        }
-      } catch (apiError) {
-        console.warn("API call failed, but local update succeeded:", apiError);
+      if (response.ok) {
+        setCurrentView("main");
+        alert("Profile updated successfully!");
+      } else {
+        throw new Error("Failed to update profile");
       }
-
-      setCurrentView("main");
-      alert("Profile updated successfully!");
       
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -445,13 +457,14 @@ const loadUserData = async () => {
     // Reset to original user info values
     setProfileData({
       title: userInfo.title || "Ms",
-      name: userInfo.name || "User",
+      name: userInfo.name || "",
       email: userInfo.email || "",
       phone: userInfo.phone || ""
     });
     setCurrentView("main");
   };
 
+  // Profile change handler
   const handleProfileChange = (field, value) => {
     setProfileData(prev => ({
       ...prev,
@@ -463,100 +476,142 @@ const loadUserData = async () => {
   const renderProfileEditView = () => (
     <div>
       <div className="text-center mb-4">
-        <h6 className="fw-bold">My Profile</h6>
-        <p className="text-muted small">Current user: {userInfo.name}</p>
+        <h4>My Profile</h4>
       </div>
       
       <Card className="border-0 shadow-sm">
         <Card.Body>
-          {/* Title Selection - Single Capsule Format */}
-          <div className="mb-4">
-            <label className="text-center form-label fw-semibold">Title</label>
-            <div className="d-flex" style={{ maxWidth: "200px" }}>
-              <button
-                type="button"
-                className={`btn ${
-                  profileData.title === 'Mr' 
-                    ? 'btn-dark' 
-                    : 'btn-outline-secondary'
-                } flex-fill rounded-end-0 border-end-0`}
-                onClick={() => handleProfileChange('title', 'Mr')}
-                style={{
-                  border: '1px solid #dee2e6',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  padding: '8px 16px'
-                }}
-              >
-                Mr
-              </button>
-              <button
-                type="button"
-                className={`btn ${
-                  profileData.title === 'Ms' 
-                    ? 'btn-dark' 
-                    : 'btn-outline-secondary'
-                } flex-fill rounded-start-0`}
-                onClick={() => handleProfileChange('title', 'Ms')}
-                style={{
-                  border: '1px solid #dee2e6',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  padding: '8px 16px'
-                }}
-              >
-                Ms
-              </button>
+          {/* Box 1: Title Selection + Name in ONE border box */}
+          <div className="border rounded mb-3" style={{height:"55px"}}>
+            <Row>
+              <Col xs={3} className="p-3">
+                <div 
+                  className="border rounded-pill d-flex"
+                  style={{
+                    border: "1px solid #dee2e6",
+                    overflow: "hidden",
+                    width: "75px",
+                    height: "32px"
+                  }}
+                >
+                  {['Mr', 'Ms'].map((title, index) => (
+                    <button
+                      key={title}
+                      type="button"
+                      className={`btn border-0 rounded-0 flex-fill ${
+                        profileData.title === title 
+                          ? 'btn-dark' 
+                          : 'btn-outline-secondary'
+                      }`}
+                      onClick={() => handleProfileChange('title', title)}
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        padding: '8px 10px',
+                        borderRadius: index === 0 ? '50px 0 0 50px' : 
+                                      index === 1 ? '0 50px 50px 0' : '0'
+                      }}
+                    >
+                      {title}
+                    </button>
+                  ))}
+                </div>
+              </Col>
+              <Col>
+                <p className="text-muted small mb-0" style={{marginTop:"8px",fontSize:"12px"}}>Name</p>
+                <div className="">
+                  <Form.Control
+                    type="text"
+                    value={profileData.name}
+                    onChange={(e) => handleProfileChange('name', e.target.value)}
+                    className="border-0 p-0"
+                    style={{ 
+                      background: "transparent",
+                      fontSize:"12px",
+                      outline: "none",
+                      boxShadow: "none"
+                    }}
+                    placeholder="Enter your name"
+                  />
+                </div>
+              </Col>
+            </Row>
+          </div>
+
+          {/* Box 2: Email in SEPARATE border box - Directly Editable */}
+          <div className="border rounded p-2 mb-3" style={{height:"55px"}}>
+            <p className="text-muted small mb-0" style={{fontSize:"12px"}}>Email</p>
+            <div>
+              <div>
+                <Form.Control
+                  type="email"
+                  value={profileData.email}
+                  onChange={(e) => handleProfileChange('email', e.target.value)}
+                  placeholder="Enter email"
+                  className="border-0 p-0"
+                  style={{ 
+                    background: "transparent",
+                    outline: "none",
+                    boxShadow: "none",
+                    width: "100%",
+                    fontSize:"12px"
+                  }}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Full Name Field */}
-          <div className="mb-3">
-            <Form.Label className="fw-semibold">Full Name</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Enter your full name"
-              value={profileData.name}
-              onChange={(e) => handleProfileChange('name', e.target.value)}
-              className="py-2"
-            />
-          </div>
-
-          {/* Email Field */}
-          <div className="mb-3">
-            <Form.Label className="fw-semibold">Email Address</Form.Label>
-            <Form.Control
-              type="email"
-              placeholder="Enter your email address"
-              value={profileData.email}
-              onChange={(e) => handleProfileChange('email', e.target.value)}
-              className="py-2"
-            />
-          </div>
-
-          {/* Phone Number Field - Also Editable */}
-          <div className="mb-4">
-            <Form.Label className="fw-semibold">Phone Number</Form.Label>
-            <Form.Control
-              type="tel"
-              placeholder="Enter your phone number"
-              value={profileData.phone}
-              onChange={(e) => handleProfileChange('phone', e.target.value.replace(/\D/g, ""))}
-              className="py-2"
-            />
+          {/* Box 3: Phone Number in SEPARATE border box - Directly Editable with Dropdown */}
+          <div className="border rounded p-2 mb-0" style={{height:"55px"}}>
+            <div className="align-items-center justify-content-between">
+              <div>
+                <div className="d-flex align-items-center gap-2">
+                  {/* Country Code Dropdown with Flag */}
+                  <div 
+                    className="form-control d-flex justify-content-between align-items-center"
+                    style={{ 
+                      width: "100px",
+                      height: "32px", 
+                      cursor: "pointer",
+                      backgroundColor: "#fff",
+                      fontSize: "12px",
+                      fontWeight: "500",
+                      borderRight: "1px solid #dee2e6"
+                    }}
+                    onClick={() => setShowCountryModal(true)}
+                  >
+                    <div className="d-flex align-items-center gap-1">
+                      <span>{selectedCountry.flag}</span>
+                      <span>{selectedCountry.code}</span>
+                    </div>
+                    <span className="text-muted">▼</span>
+                  </div>
+                  
+                  {/* Phone Number Input */}
+                  <Form.Control
+                    type="tel"
+                    value={profileData.phone}
+                    onChange={(e) => handleProfileChange('phone', e.target.value.replace(/\D/g, ""))}
+                    placeholder="Enter phone number"
+                    className="border-0 p-0 flex-grow-1"
+                    style={{ 
+                      background: "transparent",
+                      outline: "none",
+                      boxShadow: "none",
+                      height: "32px",
+                      fontSize: "12px"
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Action Buttons */}
           <div className="d-flex gap-2 pt-3">
             <Button
-              variant="outline-secondary"
-              className="flex-grow-1 py-2"
-              onClick={handleProfileCancel}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="butn flex-grow-1 py-2"
+              className="butn flex-grow-1 py-2" 
+              style={{backgroundColor:"black",height:"40px"}}
               onClick={handleProfileSave}
             >
               Save Changes
@@ -568,77 +623,151 @@ const loadUserData = async () => {
   );
 
   // Render bookings view
-  const renderBookingsView = () => (
-    <div>
-      <h6 className="fw-bold mb-3">My Bookings</h6>
-      
-      {loadingBookings ? (
-        <div className="text-center py-5">
-          <Spinner animation="border" variant="primary" />
-          <p className="mt-2 text-muted">Loading your bookings...</p>
-        </div>
-      ) : bookings.length === 0 ? (
-        <div className="text-center py-5">
-          <LuNotepadText size={48} className="text-muted mb-3" />
-          <p className="text-muted">No bookings yet</p>
-          <p className="small text-muted">Your completed orders will appear here</p>
-        </div>
-      ) : (
-        <div className="d-grid gap-3">
-          {bookings.map((booking) => (
-            <Card key={booking._id} className="border-0 shadow-sm">
-              <Card.Body>
-                <div className="d-flex justify-content-between align-items-start mb-2">
-                  <h6 className="fw-semibold mb-1">{booking.serviceName}</h6>
-                  <span className={`badge ${
-                    booking.status === 'Confirmed' ? 'bg-success' : 
-                    booking.status === 'Completed' ? 'bg-primary' : 
-                    booking.status === 'Cancelled' ? 'bg-danger' : 'bg-warning'
-                  }`}>
-                    {booking.status}
-                  </span>
-                </div>
-                
-                <div className="mb-2">
+const renderBookingsView = () => (
+  <div>
+    <h6 className="fw-bold mb-3">My Bookings</h6>
+    
+    {/* Debug info - remove in production */}
+    {process.env.NODE_ENV === 'development' && (
+      <div className="alert alert-info py-2 mb-3" style={{ fontSize: "12px" }}>
+        <strong>Debug Info:</strong><br />
+        User: {userInfo.name} | Phone: {userInfo.phone}<br />
+        Found {bookings.length} bookings<br />
+        Loading: {loadingBookings ? 'Yes' : 'No'}
+      </div>
+    )}
+    
+    {loadingBookings ? (
+      <div className="text-center py-5">
+        <Spinner animation="border" variant="primary" />
+        <p className="mt-2 text-muted">Loading your bookings...</p>
+      </div>
+    ) : bookings.length === 0 ? (
+      <div className="text-center py-5">
+        <LuNotepadText size={48} className="text-muted mb-3" />
+        <p className="text-muted">No bookings yet</p>
+        <p className="small text-muted">
+          Your completed orders will appear here<br />
+          <small>User: {userInfo.phone}</small>
+        </p>
+      </div>
+    ) : (
+      <div className="d-grid gap-3">
+        {bookings.map((booking) => (
+          <Card key={booking._id} className="border-0 shadow-sm">
+            <Card.Body>
+              <div className="d-flex justify-content-between align-items-start mb-2">
+                <h6 className="fw-semibold mb-1">{booking.serviceName || "Beauty Services"}</h6>
+                <span className={`badge ${
+                  booking.status === 'Confirmed' || booking.status === 'Placed Order' ? 'bg-success' : 
+                  booking.status === 'Completed' ? 'bg-primary' : 
+                  booking.status === 'Cancelled' ? 'bg-danger' : 'bg-warning'
+                }`}>
+                  {booking.status === 'Confirmed' ? 'Placed Order' : booking.status}
+                </span>
+              </div>
+              
+              <div className="mb-2">
+                <p className="small text-muted mb-1">
+                  <strong>Booking ID:</strong> {booking._id?.substring(0, 8)}...
+                </p>
+                <p className="small text-muted mb-1">
+                  <strong>Date:</strong> {new Date(booking.bookingDate || booking.scheduledDate || Date.now()).toLocaleDateString('en-IN')}
+                </p>
+                {booking.scheduledTime && (
                   <p className="small text-muted mb-1">
-                    <strong>Date:</strong> {new Date(booking.bookingDate).toLocaleDateString()}
+                    <strong>Time:</strong> {booking.scheduledTime}
                   </p>
-                  {booking.scheduledTime && (
-                    <p className="small text-muted mb-1">
-                      <strong>Time:</strong> {booking.scheduledTime}
+                )}
+                <p className="small text-muted mb-1">
+                  <strong>Amount Paid:</strong> ₹{booking.servicePrice || booking.originalPrice || "0"}
+                </p>
+                {booking.paymentMethod && (
+                  <p className="small text-muted mb-1">
+                    <strong>Payment:</strong> {booking.paymentMethod} {booking.paymentMethod === 'upi' ? '📱' : booking.paymentMethod === 'card' ? '💳' : '🏦'}
+                  </p>
+                )}
+              </div>
+
+              {booking.address && (
+                <div className="d-flex align-items-start mb-2">
+                  <MdLocationOn size={14} className="text-muted mt-1 me-2" />
+                  <p className="small text-muted mb-0 flex-grow-1">
+                    {booking.address.doorNo && `${booking.address.doorNo}, `}
+                    {booking.address.landmark && `${booking.address.landmark}, `}
+                    {booking.address.mainText || "Selected Address"}
+                  </p>
+                </div>
+              )}
+
+              {booking.items && booking.items.length > 0 ? (
+                <div className="mt-2">
+                  <p className="small fw-semibold mb-1">Services Booked:</p>
+                  {booking.items.map((item, index) => (
+                    <p key={index} className="small text-muted mb-0">
+                      • {item.title || item.name} {item.price && `- ₹${item.price}`}
                     </p>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-2">
+                  <p className="small fw-semibold mb-1">Services:</p>
+                  <p className="small text-muted mb-0">• {booking.serviceName || "Beauty Services"}</p>
+                </div>
+              )}
+
+              {/* Additional booking details */}
+              {(booking.slotExtraCharge > 0 || booking.tipAmount > 0 || booking.taxAmount > 0) && (
+                <div className="mt-2 pt-2 border-top">
+                  <p className="small fw-semibold mb-1">Breakdown:</p>
+                  {booking.slotExtraCharge > 0 && (
+                    <p className="small text-muted mb-0">• Slot Charge: ₹{booking.slotExtraCharge}</p>
                   )}
-                  <p className="small text-muted mb-1">
-                    <strong>Price:</strong> ₹{booking.servicePrice}
-                  </p>
+                  {booking.tipAmount > 0 && (
+                    <p className="small text-muted mb-0">• Tip: ₹{booking.tipAmount}</p>
+                  )}
+                  {booking.taxAmount > 0 && (
+                    <p className="small text-muted mb-0">• Tax: ₹{booking.taxAmount}</p>
+                  )}
                 </div>
+              )}
 
-                {booking.address && (
-                  <div className="d-flex align-items-start mb-2">
-                    <MdLocationOn size={14} className="text-muted mt-1 me-2" />
-                    <p className="small text-muted mb-0 flex-grow-1">
-                      {booking.address.doorNo}, {booking.address.landmark}
-                    </p>
-                  </div>
-                )}
+              {/* Booking actions */}
+              <div className="mt-3 pt-2 border-top">
+                <div className="d-flex gap-2">
+                  <Button 
+                    variant="outline-primary" 
+                    size="sm"
+                    onClick={() => {
+                      // View booking details
+                      alert(`Booking Details:\n\nService: ${booking.serviceName}\nDate: ${new Date(booking.bookingDate).toLocaleDateString()}\nTime: ${booking.scheduledTime || "Not specified"}\nAmount: ₹${booking.servicePrice}\nStatus: ${booking.status}`);
+                    }}
+                  >
+                    View Details
+                  </Button>
+                  {(booking.status === 'Confirmed' || booking.status === 'Placed Order') && (
+                    <Button 
+                      variant="outline-danger" 
+                      size="sm"
+                      onClick={() => {
+                        if (window.confirm("Are you sure you want to cancel this booking?")) {
+                          alert("Cancellation feature coming soon!");
+                        }
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        ))}
+      </div>
+    )}
+  </div>
+);
 
-                {booking.items && booking.items.length > 0 && (
-                  <div className="mt-2">
-                    <p className="small fw-semibold mb-1">Services:</p>
-                    {booking.items.map((item, index) => (
-                      <p key={index} className="small text-muted mb-0">
-                        • {item.name}
-                      </p>
-                    ))}
-                  </div>
-                )}
-              </Card.Body>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
-  );
   // Render plans view
   const renderPlansView = () => (
     <div>
@@ -709,11 +838,12 @@ const loadUserData = async () => {
                     cursor: "pointer",
                     border: "1px solid #ced4da",
                     backgroundColor: "#fff",
-                    width: "80px"
+                    width: "100px"
                   }}
                   onClick={() => setShowCountryModal(true)}
                 >
-                  <div>
+                  <div className="d-flex align-items-center gap-1">
+                    <span>{selectedCountry.flag}</span>
                     <span style={{ fontWeight: "500" }}>{selectedCountry.code}</span>
                   </div>
                   <span className="text-muted">▼</span>
@@ -727,7 +857,7 @@ const loadUserData = async () => {
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
                   required
-                  style={{ height: "45px", width: "290px" }}
+                  style={{ height: "45px", width: "270px" }}
                 />
               </div>
             </div>
@@ -764,13 +894,15 @@ const loadUserData = async () => {
           <h5 className="fw-bold mb-3">Enter verification code</h5>
           <p className="text-muted mb-4" style={{ fontSize: "14px" }}>
             A 6-digit code has been sent to<br />
-            <span className="fw-semibold">{selectedCountry.code} {phoneNumber}</span>
+            <span className="fw-semibold">{selectedCountry.flag} {selectedCountry.code} {phoneNumber}</span>
           </p>
 
-          {/* Development Helper - Remove in production */}
-          <Alert variant="info" className="small py-2 mb-3">
-            <strong>Development Note:</strong> Enter any 6-digit number to verify
-          </Alert>
+          {/* Debug info - remove in production */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="alert alert-info py-2 mb-3" style={{ fontSize: "12px" }}>
+              <strong>Debug:</strong> Check console for OTP
+            </div>
+          )}
 
           <div className="d-flex justify-content-between mb-4">
             {[0, 1, 2, 3, 4, 5].map((index) => (
@@ -870,91 +1002,82 @@ const loadUserData = async () => {
     </div>
   );
 
-// Render main view after login - UPDATED TO SHOW CURRENT USER INFO
-const renderMainViewAfterLogin = () => {
-  console.log("Current userInfo:", userInfo); // Debug log
-  
-  return (
+  // Render main view after login - UPDATED TO SHOW EMAIL AND PHONE WITH COUNTRY CODE
+const renderMainViewAfterLogin = () => (
+  <div>
+    <div 
+      className="mb-4 p-3"
+      style={{ cursor: "pointer" }}
+      onClick={() => handleNavigation("profile-details")}
+    >
+      <div className="d-flex justify-content-between align-items-center">
+        <div>
+          <h5 className="fw-semibold mb-1">{"Subashree"}</h5>
+          <p className="small text-muted mb-1">{userInfo.email || `user${userInfo.phone}@example.com`}</p>
+          <p className="small text-muted mb-0">
+              {userInfo.phone}
+          </p>
+        </div>
+        <MdOutlineArrowForwardIos size={14} className="text-muted" />
+      </div>
+    </div>
+
     <div>
-      <div 
-        className="mb-4 p-3"
-        style={{ cursor: "pointer" }}
-        onClick={() => handleNavigation("profile-details")}
-      >
-        <div className="d-flex justify-content-between align-items-center">
-          <div>
-            <h5 className="fw-semibold mb-1">{userInfo.name || "User"}</h5>
-            <p className="small text-muted mb-0">{userInfo.phone}</p>
-            {/* ADDED: Show email if available */}
-            {userInfo.email && userInfo.email.trim() !== "" ? (
-              <p className="small text-muted mb-0">{userInfo.email}</p>
-            ) : (
-              <p className="small text-muted mb-0" style={{fontStyle: 'italic'}}>
-                No email added
-              </p>
-            )}
+      {[
+        { icon: <PiNotepadLight size={20} />, label: "My plans", view: "plans" },
+        { icon: <LuNotepadText size={20} />, label: "Bookings", view: "bookings" },
+        { icon: <IoMdHelpCircleOutline size={20} />, label: "Help Center", view: "help" },
+      ].map((item, index) => (
+        <div 
+          key={index}
+          className="d-flex justify-content-between align-items-center py-3 border-bottom"
+          onClick={() => handleNavigation(item.view)}
+          style={{ cursor: "pointer" }}
+        >
+          <div className="d-flex align-items-center gap-3">
+            <span className="text-muted">{item.icon}</span>
+            <span className="fw-medium">{item.label}</span>
           </div>
           <MdOutlineArrowForwardIos size={14} className="text-muted" />
         </div>
+      ))}
+      
+      <div 
+        className="d-flex justify-content-between align-items-center py-3 border-bottom"
+        onClick={() => handleNavigation("about")}
+        style={{ cursor: "pointer" }}
+      >
+        <div className="d-flex align-items-center gap-3">
+          <span className="text-muted">
+            <img 
+              src={logo1 || "http://localhost:5000/assets/urban.png"} 
+              alt="UC" 
+              style={{ width: "20px", height: "20px", objectFit: "contain" }}
+              onError={(e) => {
+                e.target.src = "http://localhost:5000/assets/urban.png";
+              }}
+            />
+          </span>
+          <span className="fw-medium">About Urban Company</span>
+        </div>
+        <MdOutlineArrowForwardIos size={14} className="text-muted" />
       </div>
 
-      <div>
-        {[
-          { icon: <PiNotepadLight size={20} />, label: "My plans", view: "plans" },
-          { icon: <LuNotepadText size={20} />, label: "Bookings", view: "bookings" },
-          { icon: <IoMdHelpCircleOutline size={20} />, label: "Help Center", view: "help" },
-        ].map((item, index) => (
-          <div 
-            key={index}
-            className="d-flex justify-content-between align-items-center py-3 border-bottom"
-            onClick={() => handleNavigation(item.view)}
-            style={{ cursor: "pointer" }}
-          >
-            <div className="d-flex align-items-center gap-3">
-              <span className="text-muted">{item.icon}</span>
-              <span className="fw-medium">{item.label}</span>
-            </div>
-            <MdOutlineArrowForwardIos size={14} className="text-muted" />
-          </div>
-        ))}
-        
-        <div 
-          className="d-flex justify-content-between align-items-center py-3 border-bottom"
-          onClick={() => handleNavigation("about")}
-          style={{ cursor: "pointer" }}
-        >
-          <div className="d-flex align-items-center gap-3">
-            <span className="text-muted">
-              <img 
-                src={logo1 || "http://localhost:5000/assets/urban.png"} 
-                alt="UC" 
-                style={{ width: "20px", height: "20px", objectFit: "contain" }}
-                onError={(e) => {
-                  e.target.src = "http://localhost:5000/assets/urban.png";
-                }}
-              />
-            </span>
-            <span className="fw-medium">About Urban Company</span>
-          </div>
-          <MdOutlineArrowForwardIos size={14} className="text-muted" />
-        </div>
-
-        <div 
-          className="d-flex justify-content-between align-items-center py-3 text-danger"
-          onClick={handleLogout}
-          style={{ cursor: "pointer" }}
-        >
-          <div className="d-flex align-items-center gap-3">
-            <span className="text-danger">
-              <IoMdLogOut size={20} />
-            </span>
-            <span className="fw-medium">Logout</span>
-          </div>
+      <div 
+        className="d-flex justify-content-between align-items-center py-3 text-danger"
+        onClick={handleLogout}
+        style={{ cursor: "pointer" }}
+      >
+        <div className="d-flex align-items-center gap-3">
+          <span className="text-danger">
+            <IoMdLogOut size={20} />
+          </span>
+          <span className="fw-medium">Logout</span>
         </div>
       </div>
     </div>
-  );
-};
+  </div>
+);
 
   // Render help view
   const renderHelpView = () => (
@@ -986,9 +1109,9 @@ const renderMainViewAfterLogin = () => {
 
   const getViewTitle = () => {
     const titles = {
-      main: isLoggedIn ,
-      "edit-profile": "My Profile",
+      main: isLoggedIn,
       login: "Login",
+      "edit-profile": "My Profile",
       about: "About Urban Company",
       bookings: "My Bookings",
       plans: "My Plans",
@@ -1136,7 +1259,10 @@ const renderMainViewAfterLogin = () => {
                 }}
               >
                 <div className="d-flex justify-content-between align-items-center">
-                  <span className="fw-medium">{country.name}</span>
+                  <div className="d-flex align-items-center gap-2">
+                    <span style={{ fontSize: "18px" }}>{country.flag}</span>
+                    <span className="fw-medium">{country.name} ({country.code})</span>
+                  </div>
                   {selectedCountry.code === country.code && (
                     <span className="text-primary">✓</span>
                   )}

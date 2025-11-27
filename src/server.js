@@ -105,7 +105,8 @@ const serviceSchema = new mongoose.Schema({
 });
 
 const Service = mongoose.model("Service", serviceSchema);
-// --- NEW: Bookings Schema ---
+
+// --- Bookings Schema ---
 const bookingSchema = new mongoose.Schema({
   userId: String,
   userPhone: String,
@@ -117,8 +118,8 @@ const bookingSchema = new mongoose.Schema({
   bookingDate: { type: Date, default: Date.now },
   scheduledDate: Date,
   scheduledTime: String,
-  status: { type: String, default: 'Confirmed' }, // Confirmed, Completed, Cancelled
-  paymentStatus: { type: String, default: 'Paid' }, // Paid, Pending, Failed
+  status: { type: String, default: 'Confirmed' },
+  paymentStatus: { type: String, default: 'Paid' },
   technician: String,
   rating: Number,
   review: String,
@@ -127,12 +128,16 @@ const bookingSchema = new mongoose.Schema({
     quantity: Number,
     price: String
   }],
+  slotExtraCharge: { type: Number, default: 0 },
+  tipAmount: { type: Number, default: 0 },
+  taxAmount: { type: Number, default: 0 },
+  paymentMethod: String,
   createdAt: { type: Date, default: Date.now }
 });
 
 const Booking = mongoose.model("Booking", bookingSchema);
 
-// --- NEW: User Schema for authentication ---
+// --- User Schema for authentication ---
 const userSchema = new mongoose.Schema({
   phoneNumber: String,
   name: String,
@@ -143,9 +148,9 @@ const userSchema = new mongoose.Schema({
 });
 
 const User = mongoose.model("User", userSchema);
-// --- MOCK OTP IMPLEMENTATION -
-const mockUsers=[];
-const mockOtpStore = new Map();
+
+// --- SIMPLIFIED OTP IMPLEMENTATION ---
+const mockUsers = []; // Store verified users
 
 // Mock send OTP endpoint
 app.post("/api/send-otp", async (req, res) => {
@@ -161,19 +166,17 @@ app.post("/api/send-otp", async (req, res) => {
       return res.status(400).json({ error: "Please enter a valid 10-digit phone number" });
     }
 
-    const fullPhoneNumber = `${countryCode}${phoneNumber}`;
-    
-    // Store OTP request with timestamp
-    mockOtpStore.set(fullPhoneNumber, {
-      timestamp: Date.now(),
-      verified: false
-    });
+    // Generate a random 6-digit OTP
+    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    console.log(`📱 OTP simulation for ${countryCode}${phoneNumber}: ${generatedOtp}`);
 
     // Simulate API delay
     setTimeout(() => {
       res.json({ 
         success: true, 
-        message: "OTP sent successfully"
+        message: "OTP sent successfully",
+        debugOtp: generatedOtp
       });
     }, 1000);
 
@@ -183,7 +186,7 @@ app.post("/api/send-otp", async (req, res) => {
   }
 });
 
-// Mock verify OTP endpoint - ACCEPTS ANY 6-DIGIT OTP
+// OTP VERIFICATION - ACCEPTS ANY 6-DIGIT CODE
 app.post("/api/verify-otp", async (req, res) => {
   try {
     const { phoneNumber, countryCode, otp } = req.body;
@@ -192,42 +195,38 @@ app.post("/api/verify-otp", async (req, res) => {
       return res.status(400).json({ error: "Phone number, country code and OTP are required" });
     }
 
-    const fullPhoneNumber = `${countryCode}${phoneNumber}`;
-
-    // ACCEPT ANY 6-DIGIT OTP (not just 123456)
+    // ACCEPT ANY 6-DIGIT OTP
     const otpRegex = /^\d{6}$/;
     if (otpRegex.test(otp)) {
-      // Mark as verified
-      mockOtpStore.set(fullPhoneNumber, {
-        timestamp: Date.now(),
-        verified: true
-      });
-
+      const fullPhoneNumber = `${countryCode}${phoneNumber}`;
+      
       // Find or create user
       let user = mockUsers.find(u => u.phoneNumber === fullPhoneNumber);
       
       if (!user) {
-        // FIX: Set default name to "Subashree" instead of "User + phone number"
+        // Create new user with consistent phone format
         user = {
           phoneNumber: fullPhoneNumber,
-          name: "Subashree", // Fixed: Set default name to Subashree
+          normalizedPhone: phoneNumber,
+          name: `User${phoneNumber}`,
           email: "",
           countryCode: countryCode,
-          title: "Ms"
+          userId: `user_${phoneNumber}`
         };
         mockUsers.push(user);
       }
 
+      console.log(`✅ OTP verified successfully for ${phoneNumber}`);
+      
       res.json({
         success: true,
         message: "OTP verified successfully",
         user: {
-          id: fullPhoneNumber,
-          name: user.name, // This will now be "Subashree" for new users
-          phoneNumber: user.phoneNumber,
+          id: user.userId,
+          name: user.name,
+          phoneNumber: user.normalizedPhone,
           email: user.email,
-          countryCode: user.countryCode,
-          title: user.title || "Ms"
+          countryCode: user.countryCode
         },
         token: "mock-jwt-token"
       });
@@ -250,13 +249,10 @@ app.post("/api/resend-otp", async (req, res) => {
       return res.status(400).json({ error: "Phone number and country code are required" });
     }
 
-    const fullPhoneNumber = `${countryCode}${phoneNumber}`;
-    
-    // Update timestamp
-    mockOtpStore.set(fullPhoneNumber, {
-      timestamp: Date.now(),
-      verified: false
-    });
+    // Generate new random OTP
+    const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    console.log(`📱 OTP resent for ${countryCode}${phoneNumber}: ${newOtp}`);
 
     let message = "OTP sent via SMS";
     if (method === "WhatsApp") {
@@ -265,7 +261,8 @@ app.post("/api/resend-otp", async (req, res) => {
 
     res.json({
       success: true,
-      message: message
+      message: message,
+      debugOtp: newOtp
     });
 
   } catch (error) {
@@ -274,7 +271,7 @@ app.post("/api/resend-otp", async (req, res) => {
   }
 });
 
-// Create new booking - UPDATED TO INCLUDE PROPER DATA
+// Create new booking with phone normalization
 app.post("/api/bookings", async (req, res) => {
   try {
     const {
@@ -294,20 +291,51 @@ app.post("/api/bookings", async (req, res) => {
       paymentMethod
     } = req.body;
 
-    if (!userPhone || !serviceName) {
+    console.log("📦 Received booking data:", {
+      userPhone,
+      serviceName,
+      servicePrice,
+      itemsCount: items ? items.length : 0
+    });
+
+    // NORMALIZE PHONE NUMBER FORMAT
+    let normalizedPhone = userPhone ? userPhone.toString() : "";
+    
+    // Remove any non-digit characters
+    normalizedPhone = normalizedPhone.replace(/\D/g, '');
+    
+    // If it starts with country code, remove it
+    if (normalizedPhone.startsWith('91') && normalizedPhone.length === 12) {
+      normalizedPhone = normalizedPhone.substring(2);
+    }
+    
+    // If it starts with +91, remove it
+    if (normalizedPhone.startsWith('+91') && normalizedPhone.length === 13) {
+      normalizedPhone = normalizedPhone.substring(3);
+    }
+    
+    // Ensure it's 10 digits
+    if (normalizedPhone.length !== 10) {
+      console.log(`❌ Invalid phone format: ${userPhone} -> ${normalizedPhone}`);
+      return res.status(400).json({ error: "Invalid phone number format. Must be 10 digits." });
+    }
+
+    console.log(`📱 Creating booking for normalized phone: ${normalizedPhone}`);
+
+    if (!normalizedPhone || !serviceName) {
       return res.status(400).json({ error: "User phone and service name are required" });
     }
 
     const booking = new Booking({
-      userId: userId || userPhone,
-      userPhone,
+      userId: userId || `user_${normalizedPhone}`,
+      userPhone: normalizedPhone,
       userName: userName || "Customer",
       serviceName,
-      servicePrice,
-      originalPrice,
-      address,
+      servicePrice: servicePrice ? servicePrice.toString() : "0",
+      originalPrice: originalPrice ? originalPrice.toString() : "0",
+      address: address || {},
       scheduledDate: scheduledDate ? new Date(scheduledDate) : new Date(),
-      scheduledTime,
+      scheduledTime: scheduledTime || "10:00 AM",
       items: items || [],
       slotExtraCharge: slotExtraCharge || 0,
       tipAmount: tipAmount || 0,
@@ -315,99 +343,100 @@ app.post("/api/bookings", async (req, res) => {
       paymentMethod: paymentMethod || "UPI",
       status: 'Confirmed',
       paymentStatus: 'Paid',
-      bookingDate: new Date() // Add booking date
+      bookingDate: new Date()
     });
 
-    await booking.save();
+    const savedBooking = await booking.save();
+
+    console.log(`✅ Booking created successfully:`, {
+      id: savedBooking._id,
+      phone: savedBooking.userPhone,
+      service: savedBooking.serviceName,
+      price: savedBooking.servicePrice
+    });
 
     res.status(201).json({
       success: true,
       message: "Booking created successfully",
-      booking
+      booking: savedBooking
     });
 
   } catch (error) {
-    console.error("Error creating booking:", error);
-    res.status(500).json({ error: "Failed to create booking" });
+    console.error("❌ Error creating booking:", error);
+    res.status(500).json({ error: "Failed to create booking: " + error.message });
   }
 });
 
-// Get user's bookings - IMPROVED PHONE MATCHING
-app.get("/api/bookings/:userPhone", async (req, res) => {
+// Get user's bookings with phone normalization - FIXED VERSION
+app.get("/api/bookings/:phone", async (req, res) => {
   try {
-    const { userPhone } = req.params;
+    let { phone } = req.params;
     
-    console.log("🔍 Received phone parameter:", userPhone);
-    console.log("🔍 Type of parameter:", typeof userPhone);
+    console.log(`🔍 Original phone parameter: ${phone}`);
     
-    // Handle different phone number formats more comprehensively
-    let searchPhones = [userPhone];
+    // Normalize phone number for query
+    phone = phone.replace(/\D/g, '');
     
-    // If phone includes country code, also search without it
-    if (userPhone.startsWith('+91') && userPhone.length === 13) {
-      searchPhones.push(userPhone.slice(3)); // Remove +91 -> 10 digits
-      searchPhones.push(userPhone.slice(1)); // Remove + -> 12 digits (91...)
-    } else if (userPhone.startsWith('91') && userPhone.length === 12) {
-      searchPhones.push(userPhone.slice(2)); // Remove 91 -> 10 digits
-      searchPhones.push('+' + userPhone); // Add + -> +91...
-    } else if (userPhone.length === 10) {
-      // If it's 10 digits, also search with country codes
-      searchPhones.push('+91' + userPhone);
-      searchPhones.push('91' + userPhone);
+    // Handle different phone formats
+    if (phone.startsWith('91') && phone.length === 12) {
+      phone = phone.substring(2);
+    } else if (phone.startsWith('+91') && phone.length === 13) {
+      phone = phone.substring(3);
     }
     
-    // Remove duplicates and ensure all are strings
-    searchPhones = [...new Set(searchPhones.map(p => p.toString()))];
-    
-    console.log("🔍 Searching with phone numbers:", searchPhones);
-
-    // Use case-insensitive matching and trim any whitespace
-    const bookings = await Booking.find({ 
-      userPhone: { 
-        $in: searchPhones.map(phone => new RegExp(`^${phone.replace('+', '\\+')}$`, 'i'))
-      }
-    })
-    .sort({ bookingDate: -1, createdAt: -1 })
-    .limit(50);
-
-    console.log("✅ Found bookings:", bookings.length);
-    
-    // Log what we found for debugging
-    if (bookings.length > 0) {
-      console.log("📋 Matching bookings:");
-      bookings.forEach(b => {
-        console.log(`   - Phone: "${b.userPhone}", Service: "${b.serviceName}"`);
+    // Ensure it's 10 digits
+    if (phone.length !== 10) {
+      console.log(`❌ Invalid phone format for query: ${req.params.phone} -> ${phone}`);
+      return res.json({ 
+        success: true, 
+        bookings: [],
+        message: "Invalid phone format"
       });
     }
 
+    console.log(`🔍 Fetching bookings for normalized phone: ${phone}`);
+    
+    const bookings = await Booking.find({ userPhone: phone })
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    console.log(`✅ Found ${bookings.length} bookings for phone: ${phone}`);
+    
     res.json({
       success: true,
-      bookings
+      bookings: bookings,
+      count: bookings.length
     });
 
   } catch (error) {
     console.error("❌ Error fetching bookings:", error);
-    res.status(500).json({ error: "Failed to fetch bookings" });
+    res.status(500).json({ error: "Failed to fetch bookings: " + error.message });
   }
 });
 
-// Get booking by ID
-app.get("/api/booking/:id", async (req, res) => {
+// Get all bookings (for debugging)
+app.get('/api/all-bookings', async (req, res) => {
+  try {
+    const bookings = await Booking.find({}).sort({ createdAt: -1 });
+    console.log(`📋 Total bookings in database: ${bookings.length}`);
+    res.json(bookings);
+  } catch (error) {
+    console.error("Error fetching all bookings:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get booking by ID (for debugging)
+app.get('/api/booking-by-id/:id', async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id);
-    
     if (!booking) {
       return res.status(404).json({ error: "Booking not found" });
     }
-
-    res.json({
-      success: true,
-      booking
-    });
-
+    res.json(booking);
   } catch (error) {
-    console.error("Error fetching booking:", error);
-    res.status(500).json({ error: "Failed to fetch booking" });
+    console.error("Error fetching booking by ID:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -438,21 +467,37 @@ app.put("/api/bookings/:id", async (req, res) => {
   }
 });
 
-// --- NEW: Plans API Routes ---
+// --- Plans API Routes ---
 app.get("/api/plans/:userPhone", async (req, res) => {
   try {
     const { userPhone } = req.params;
     
     // For now, return empty array or mock data
-    // You can implement actual plans logic later
     res.json({
       success: true,
-      plans: [] // Return empty array or mock plans
+      plans: []
     });
 
   } catch (error) {
     console.error("Error fetching plans:", error);
     res.status(500).json({ error: "Failed to fetch plans" });
+  }
+});
+
+// Update user profile
+app.post("/api/update-profile", async (req, res) => {
+  try {
+    const { userId, name, email, phone, title } = req.body;
+    
+    // For now, just return success since we're using mock users
+    res.json({
+      success: true,
+      message: "Profile updated successfully"
+    });
+
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    res.status(500).json({ error: "Failed to update profile" });
   }
 });
 
@@ -464,9 +509,6 @@ const initializeStaticData = () => {
     const initialData = {
       logo: "/assets/Uc.png",
       logo1: "/assets/urban.png",
-      upi:"/assets/upi.webp",
-      net:"/assets/net.webp",
-      card:"/assets/card.webp",
       services: [
         { name: "Salon for women", key: "salon", img: "/assets/salon.webp" },
         { name: "AC & Appliance Repair", key: "ac", img: "/assets/ac.webp" },
@@ -525,7 +567,10 @@ const initializeStaticData = () => {
         {name:"O3+tan clear cleanup",key:"o3",img:"/assets/o3.webp",price:"849"},
         {name:"O3+shine & glow facial ",key:"o3 shine",img:"/assets/o3 shine.webp",price:"1,699"},
         {name:"Elysian British rose manicure",key:"british",img:"/assets/british.webp",price:"649"},
-      ]
+      ],
+      upi: "/assets/upi.webp",
+      card: "/assets/card.webp",
+      net: "/assets/net.webp"
     };
     fs.writeFileSync(STATIC_DATA_FILE, JSON.stringify(initialData, null, 2));
     console.log("Static data file created");
@@ -557,123 +602,7 @@ const writeStaticData = (data) => {
 
 initializeStaticData();
 
-// ---------- Existing API Routes (unchanged) ----------
-// Add these routes to your existing server.js
-
-// Individual payment image routes
-app.get("/api/upi", (req, res) => {
-  const data = readStaticData();
-  if (data && data.upi) {
-    res.json({ upi: data.upi });
-  } else {
-    res.status(500).json({ error: "Failed to load UPI image" });
-  }
-});
-
-app.get("/api/card", (req, res) => {
-  const data = readStaticData();
-  if (data && data.card) {
-    res.json({ card: data.card });
-  } else {
-    res.status(500).json({ error: "Failed to load card image" });
-  }
-});
-
-app.get("/api/net", (req, res) => {
-  const data = readStaticData();
-  if (data && data.net) {
-    res.json({ net: data.net });
-  } else {
-    res.status(500).json({ error: "Failed to load net banking image" });
-  }
-});
-// Update user profile endpoint
-app.post("/api/update-profile", async (req, res) => {
-  try {
-    const { userId, name, email, phone, title } = req.body;
-    
-    if (!userId) {
-      return res.status(400).json({ error: "User ID is required" });
-    }
-
-    // Find user in mockUsers array
-    const userIndex = mockUsers.findIndex(u => u.phoneNumber === userId || u.id === userId);
-    
-    if (userIndex !== -1) {
-      // Update user data
-      mockUsers[userIndex] = {
-        ...mockUsers[userIndex],
-        name: name || mockUsers[userIndex].name,
-        email: email || mockUsers[userIndex].email,
-        phone: phone || mockUsers[userIndex].phoneNumber,
-        title: title || mockUsers[userIndex].title
-      };
-      
-      res.json({
-        success: true,
-        message: "Profile updated successfully",
-        user: mockUsers[userIndex]
-      });
-    } else {
-      // Create new user if not found (shouldn't happen but as fallback)
-      const newUser = {
-        phoneNumber: phone || userId,
-        name: name || "Subashree",
-        email: email || "",
-        countryCode: "+91",
-        title: title || "Ms"
-      };
-      mockUsers.push(newUser);
-      
-      res.json({
-        success: true,
-        message: "Profile created successfully",
-        user: newUser
-      });
-    }
-
-  } catch (error) {
-    console.error("Error updating profile:", error);
-    res.status(500).json({ error: "Failed to update profile" });
-  }
-});
-// Update payment images
-app.put("/api/update-payment-images", upload.fields([
-  { name: 'upi', maxCount: 1 },
-  { name: 'card', maxCount: 1 },
-  { name: 'net', maxCount: 1 }
-]), (req, res) => {
-  try {
-    const data = readStaticData();
-    const files = req.files;
-
-    if (files.upi) {
-      data.upi = `/assets/${files.upi[0].filename}`;
-    }
-    if (files.card) {
-      data.card = `/assets/${files.card[0].filename}`;
-    }
-    if (files.net) {
-      data.net = `/assets/${files.net[0].filename}`;
-    }
-
-    if (writeStaticData(data)) {
-      res.json({ 
-        message: "Payment images updated successfully", 
-        images: {
-          upi: data.upi,
-          card: data.card,
-          net: data.net
-        }
-      });
-    } else {
-      res.status(500).json({ error: "Failed to update payment images" });
-    }
-  } catch (error) {
-    console.error('Error updating payment images:', error);
-    res.status(500).json({ error: "Failed to update payment images" });
-  }
-});
+// ---------- Existing API Routes ----------
 app.get("/api/banner", async (req, res) => {
   try {
     const banner = await Banner.findOne({ isActive: true }).sort({ order: 1 });
@@ -857,9 +786,9 @@ app.get("/api/static-data", (req, res) => {
 });
 
 const staticRoutes = [
-  'logo','logo1',"upi","net","card", 'services', 'banner', 'carousel', 'book', 'salon', 
+  'logo','logo1', 'services', 'banner', 'carousel', 'book', 'salon', 
   'salonforwomen', 'advanced', 'super', 'smartlock', 'images', 
-  'cart', 'added'
+  'cart', 'added', 'upi', 'card', 'net'
 ];
 
 staticRoutes.forEach(route => {
@@ -966,6 +895,7 @@ app.post("/api/add-to-section/:section", upload.single('image'), (req, res) => {
     res.status(500).json({ error: "Failed to add item" });
   }
 });
+
 // Update logo
 app.put("/api/update-logo", upload.single('logo'), (req, res) => {
   try {
@@ -1004,6 +934,7 @@ app.put("/api/update-logo1", upload.single('logo'), (req, res) => {
     res.status(500).json({ error: "Failed to update logo1" });
   }
 });
+
 app.delete("/api/delete-section/:section/:key", (req, res) => {
   try {
     const { section, key } = req.params;
@@ -1119,6 +1050,15 @@ app.delete("/api/carts/:id", async (req, res) => {
   }
 });
 
+// Health check endpoint
+app.get("/api/health", (req, res) => {
+  res.json({ 
+    status: "OK", 
+    message: "Server is running",
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
@@ -1127,31 +1067,5 @@ app.use((error, req, res, next) => {
   }
   res.status(500).json({ error: error.message });
 });
-// Debug endpoint to check bookings by exact phone
-app.get("/api/debug-bookings-by-phone/:phone", async (req, res) => {
-  try {
-    const { phone } = req.params;
-    
-    console.log("🔍 DEBUG: Searching for exact phone:", phone);
-    
-    const exactMatch = await Booking.find({ userPhone: phone });
-    const allBookings = await Booking.find().sort({ createdAt: -1 }).limit(10);
-    
-    console.log("📋 ALL RECENT BOOKINGS:");
-    allBookings.forEach(booking => {
-      console.log(`   📞 "${booking.userPhone}" -> "${booking.serviceName}"`);
-    });
-    
-    res.json({
-      searchedPhone: phone,
-      exactMatches: exactMatch.length,
-      exactBookings: exactMatch,
-      allRecentBookings: allBookings
-    });
-  } catch (error) {
-    console.error("Error in debug endpoint:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
 
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));

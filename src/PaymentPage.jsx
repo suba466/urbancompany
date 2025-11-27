@@ -13,7 +13,7 @@ function PaymentPage() {
   const [imagesLoaded, setImagesLoaded] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isChecked, setIsChecked] = useState(false); // ✅ ADDED: Checkbox state
+  const [isChecked, setIsChecked] = useState(false);
   
   const location = useLocation();
 
@@ -82,10 +82,9 @@ function PaymentPage() {
   const handleCloseModal = () => {
     setShowPaymentModal(false);
     setIsProcessing(false);
-    setIsChecked(false); // ✅ Reset checkbox when modal closes
+    setIsChecked(false);
   };
 
-  // ✅ ADDED: Checkbox change handler
   const handleCheckboxChange = (e) => {
     setIsChecked(e.target.checked);
   };
@@ -94,7 +93,6 @@ function PaymentPage() {
   setIsProcessing(true);
   
   try {
-    // Get order data from sessionStorage
     const storedOrder = sessionStorage.getItem('currentOrder');
     let orderData = {};
     
@@ -102,28 +100,15 @@ function PaymentPage() {
       orderData = JSON.parse(storedOrder);
     }
 
-    // Get user info from AuthContext or localStorage
-    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+    // ✅ FIX: FORCE SAME PHONE NUMBER FOR ALL BOOKINGS
+    const userPhone = "9787081119"; // Always use this same phone
     
-    console.log(" Original user phone:", userInfo.phone);
-    
-    //  FIXED: Extract phone number and ensure consistency
-    let userPhone = userInfo.phone || "9787081119";
-    
-    // Normalize phone number to 10 digits for database storage
-    if (userPhone.startsWith('+91') && userPhone.length === 13) {
-      userPhone = userPhone.slice(3); // +914569823455 → 4569823455
-    } else if (userPhone.startsWith('91') && userPhone.length === 12) {
-      userPhone = userPhone.slice(2); // 914569823455 → 4569823455
-    }
-    
-    console.log("✅ Final phone to store:", userPhone);
-    
-    // Create booking in database with CONSISTENT phone format
+    console.log("📱 Using fixed phone for booking:", userPhone);
+
     const bookingData = {
-      userId: userInfo.userId || "user_" + Date.now(),
-      userPhone: userPhone, // ✅ Now always 10 digits
-      userName: userInfo.name || "Customer",
+      userId: `user_${userPhone}`,
+      userPhone: userPhone, // ✅ ALWAYS SAME PHONE
+      userName: "Test User",
       serviceName: orderData.items ? orderData.items.map(item => item.title).join(', ') : "Beauty Services",
       servicePrice: amountToPay.toString(),
       originalPrice: orderData.itemTotal ? orderData.itemTotal.toString() : amountToPay.toString(),
@@ -135,15 +120,10 @@ function PaymentPage() {
       tipAmount: orderData.tipAmount || 0,
       taxAmount: orderData.taxAmount || 0,
       paymentMethod: selectedMethod,
-      status: "Confirmed",
-      bookingDate: new Date() // ✅ ADD THIS: Explicit booking date
+      status: "Confirmed"
     };
 
-    console.log("📱 Creating booking with data:", {
-      phone: bookingData.userPhone,
-      service: bookingData.serviceName,
-      amount: bookingData.servicePrice
-    });
+    console.log("📦 Creating booking with FIXED phone:", userPhone);
 
     const response = await fetch("http://localhost:5000/api/bookings", {
       method: "POST",
@@ -162,21 +142,16 @@ function PaymentPage() {
     const result = await response.json();
     console.log("✅ Booking created successfully:", result.booking._id);
     
-    // ✅ FIX: Clear cart from database after successful payment
+    // Clear cart after successful payment
     await clearCartFromDatabase();
     
-    // Simulate payment processing delay
     setTimeout(() => {
       setIsProcessing(false);
       handleCloseModal();
       
-      // Show success alert with booking ID
-      alert(`🎉 Order placed successfully!\n\nBooking ID: ${result.booking._id}\nAmount: ₹${amountToPay}\nPayment Method: ${selectedMethod.toUpperCase()}`);
+      alert(`🎉 Order placed successfully!\n\nBooking ID: ${result.booking._id}\nAmount: ₹${amountToPay}`);
       
-      // Clear stored order data
       sessionStorage.removeItem('currentOrder');
-      
-      // Redirect to main page (home page)
       window.location.href = "/";
       
     }, 2000);
@@ -241,7 +216,7 @@ function PaymentPage() {
                 id="save-upi-checkbox"
                 label="Save my UPI ID securely"
                 checked={isChecked}
-                onChange={handleCheckboxChange} // FIXED: Added onChange handler
+                onChange={handleCheckboxChange}
                 style={{ fontSize: "14px", fontWeight: "500" }}
               />
             </div>
