@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import mongoose from "mongoose";
 import multer from "multer";
 import fs from "fs";
+import bcrypt from "bcryptjs";
 
 const app = express();
 const PORT = 5000;
@@ -49,8 +50,8 @@ const upload = multer({
 
 // --- MongoDB Connection ---
 mongoose.connect("mongodb://localhost:27017/suba")
-  .then(() => console.log(" MongoDB connected"))
-  .catch(err => console.error(" MongoDB connection error:", err));
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch(err => console.error("❌ MongoDB connection error:", err));
 
 // --- SCHEMAS ---
 const bannerSchema = new mongoose.Schema({
@@ -75,19 +76,19 @@ const packageSchema = new mongoose.Schema({
   duration: String,
   description: String,
   items: [{ text: String, description: String }],
-  content:[{value: String, details: String}],
-  ratingBreak:[{stars:Number,value:Number,count:String}]
+  content: [{ value: String, details: String }],
+  ratingBreak: [{ stars: Number, value: Number, count: String }]
 });
 
 const Package = mongoose.model("Package", packageSchema);
 
 const cartSchema = new mongoose.Schema({
-  productId:{type:String},
+  productId: { type: String },
   title: String,
   price: String,
   originalPrice: String,
   count: { type: Number, default: 1 },
-  content:[{value: String, details: String}],
+  content: [{ value: String, details: String }],
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -106,11 +107,28 @@ const serviceSchema = new mongoose.Schema({
 
 const Service = mongoose.model("Service", serviceSchema);
 
+// --- User Schema for authentication ---
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  phone: { type: String, required: true },
+  city: { type: String, required: true },
+  password: { type: String, required: true },
+  profileImage: { type: String, default: "" },
+  title: { type: String, default: "Ms" },
+  isVerified: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const User = mongoose.model("User", userSchema);
+
 // --- Bookings Schema ---
 const bookingSchema = new mongoose.Schema({
   userId: String,
-  userPhone: String,
+  userEmail: String,
   userName: String,
+  userPhone: String,
+  userCity: String,
   serviceName: String,
   servicePrice: String,
   originalPrice: String,
@@ -137,147 +155,196 @@ const bookingSchema = new mongoose.Schema({
 
 const Booking = mongoose.model("Booking", bookingSchema);
 
-// --- User Schema for authentication ---
-const userSchema = new mongoose.Schema({
-  phoneNumber: String,
-  name: String,
-  email: String,
-  countryCode: String,
-  isVerified: { type: Boolean, default: false },
-  createdAt: { type: Date, default: Date.now }
-});
+// --- AUTHENTICATION ROUTES ---
 
-const User = mongoose.model("User", userSchema);
-
-// --- SIMPLIFIED OTP IMPLEMENTATION ---
-const mockUsers = []; // Store verified users
-
-// Mock send OTP endpoint
-app.post("/api/send-otp", async (req, res) => {
+// User Registration with Image Upload
+app.post("/api/register", upload.single('profileImage'), async (req, res) => {
   try {
-    const { phoneNumber, countryCode } = req.body;
+    const { name, email, phone, city, password } = req.body;
     
-    if (!phoneNumber || !countryCode) {
-      return res.status(400).json({ error: "Phone number and country code are required" });
+    console.log("📝 Registration attempt:", { email, name, phone, city });
+    
+    // Validation
+    if (!name || !email || !phone || !city || !password) {
+      return res.status(400).json({ error: "All fields are required" });
     }
 
-    const phoneRegex = /^\d{10}$/;
-    if (!phoneRegex.test(phoneNumber)) {
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      return res.status(400).json({ error: "Please enter a valid email address" });
+    }
+
+    if (phone.length !== 10) {
       return res.status(400).json({ error: "Please enter a valid 10-digit phone number" });
     }
 
-    // Generate a random 6-digit OTP
-    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    console.log(`📱 OTP simulation for ${countryCode}${phoneNumber}: ${generatedOtp}`);
-
-    // Simulate API delay
-    setTimeout(() => {
-      res.json({ 
-        success: true, 
-        message: "OTP sent successfully",
-        debugOtp: generatedOtp
-      });
-    }, 1000);
-
-  } catch (error) {
-    console.error("Error in send OTP:", error);
-    res.status(500).json({ error: "Failed to send OTP" });
-  }
-});
-
-// OTP VERIFICATION - ACCEPTS ANY 6-DIGIT CODE
-app.post("/api/verify-otp", async (req, res) => {
-  try {
-    const { phoneNumber, countryCode, otp } = req.body;
-    
-    if (!phoneNumber || !countryCode || !otp) {
-      return res.status(400).json({ error: "Phone number, country code and OTP are required" });
+    if (password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters long" });
     }
 
-    // ACCEPT ANY 6-DIGIT OTP
-    const otpRegex = /^\d{6}$/;
-    if (otpRegex.test(otp)) {
-      const fullPhoneNumber = `${countryCode}${phoneNumber}`;
-      
-      // Find or create user
-      let user = mockUsers.find(u => u.phoneNumber === fullPhoneNumber);
-      
-      if (!user) {
-        // Create new user with consistent phone format
-        user = {
-          phoneNumber: fullPhoneNumber,
-          normalizedPhone: phoneNumber,
-          name: `User${phoneNumber}`,
-          email: "",
-          countryCode: countryCode,
-          userId: `user_${phoneNumber}`
-        };
-        mockUsers.push(user);
-      }
-
-      console.log(`✅ OTP verified successfully for ${phoneNumber}`);
-      
-      res.json({
-        success: true,
-        message: "OTP verified successfully",
-        user: {
-          id: user.userId,
-          name: user.name,
-          phoneNumber: user.normalizedPhone,
-          email: user.email,
-          countryCode: user.countryCode
-        },
-        token: "mock-jwt-token"
-      });
-    } else {
-      res.status(400).json({ error: "Please enter a valid 6-digit OTP" });
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: "User already exists with this email" });
     }
 
-  } catch (error) {
-    console.error("Error in verify OTP:", error);
-    res.status(500).json({ error: "Failed to verify OTP" });
-  }
-});
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-// Mock resend OTP endpoint
-app.post("/api/resend-otp", async (req, res) => {
-  try {
-    const { phoneNumber, countryCode, method = "SMS" } = req.body;
-    
-    if (!phoneNumber || !countryCode) {
-      return res.status(400).json({ error: "Phone number and country code are required" });
+    // Handle profile image
+    let profileImageUrl = "";
+    if (req.file) {
+      profileImageUrl = `/assets/${req.file.filename}`;
+      console.log("📸 Profile image uploaded:", profileImageUrl);
     }
 
-    // Generate new random OTP
-    const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    // Create new user
+    const user = new User({
+      name,
+      email,
+      phone,
+      city,
+      password: hashedPassword,
+      profileImage: profileImageUrl
+    });
 
-    console.log(`📱 OTP resent for ${countryCode}${phoneNumber}: ${newOtp}`);
+    await user.save();
 
-    let message = "OTP sent via SMS";
-    if (method === "WhatsApp") {
-      message = "OTP sent via WhatsApp";
-    }
+    console.log(`✅ New user registered: ${email}`);
 
-    res.json({
+    res.status(201).json({
       success: true,
-      message: message,
-      debugOtp: newOtp
+      message: "User registered successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        city: user.city,
+        profileImage: user.profileImage
+      }
     });
 
   } catch (error) {
-    console.error("Error in resend OTP:", error);
-    res.status(500).json({ error: "Failed to resend OTP" });
+    console.error("❌ Error in registration:", error);
+    if (error.code === 11000) {
+      return res.status(400).json({ error: "User already exists with this email" });
+    }
+    res.status(500).json({ error: "Failed to register user" });
   }
 });
 
-// Create new booking with phone normalization
+// User Login
+app.post("/api/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    console.log("🔐 Login attempt:", { email });
+    
+    // Validation
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    // Find user
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ error: "Invalid email or password" });
+    }
+
+    // Check password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ error: "Invalid email or password" });
+    }
+
+    console.log(`✅ User logged in: ${email}`);
+
+    res.json({
+      success: true,
+      message: "Login successful",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        city: user.city,
+        profileImage: user.profileImage,
+        title: user.title
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ Error in login:", error);
+    res.status(500).json({ error: "Failed to login" });
+  }
+});
+
+// Update user profile with image
+app.post("/api/update-profile", upload.single('profileImage'), async (req, res) => {
+  try {
+    const { userId, name, email, phone, city, title } = req.body;
+    
+    console.log("📝 Profile update attempt:", { userId, email });
+    
+    if (!userId) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
+
+    const updateData = {
+      name,
+      email,
+      phone,
+      city,
+      title
+    };
+
+    // Handle profile image update
+    if (req.file) {
+      updateData.profileImage = `/assets/${req.file.filename}`;
+      console.log("📸 Profile image updated:", updateData.profileImage);
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      updateData,
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    console.log(`✅ Profile updated for: ${email}`);
+
+    res.json({
+      success: true,
+      message: "Profile updated successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        city: user.city,
+        title: user.title,
+        profileImage: user.profileImage
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ Error updating profile:", error);
+    res.status(500).json({ error: "Failed to update profile" });
+  }
+});
+
+// Create new booking with email
 app.post("/api/bookings", async (req, res) => {
   try {
     const {
       userId,
-      userPhone,
+      userEmail,
       userName,
+      userPhone,
+      userCity,
       serviceName,
       servicePrice,
       originalPrice,
@@ -292,44 +359,22 @@ app.post("/api/bookings", async (req, res) => {
     } = req.body;
 
     console.log("📦 Received booking data:", {
-      userPhone,
+      userEmail,
       serviceName,
       servicePrice,
       itemsCount: items ? items.length : 0
     });
 
-    // NORMALIZE PHONE NUMBER FORMAT
-    let normalizedPhone = userPhone ? userPhone.toString() : "";
-    
-    // Remove any non-digit characters
-    normalizedPhone = normalizedPhone.replace(/\D/g, '');
-    
-    // If it starts with country code, remove it
-    if (normalizedPhone.startsWith('91') && normalizedPhone.length === 12) {
-      normalizedPhone = normalizedPhone.substring(2);
-    }
-    
-    // If it starts with +91, remove it
-    if (normalizedPhone.startsWith('+91') && normalizedPhone.length === 13) {
-      normalizedPhone = normalizedPhone.substring(3);
-    }
-    
-    // Ensure it's 10 digits
-    if (normalizedPhone.length !== 10) {
-      console.log(`❌ Invalid phone format: ${userPhone} -> ${normalizedPhone}`);
-      return res.status(400).json({ error: "Invalid phone number format. Must be 10 digits." });
-    }
-
-    console.log(`📱 Creating booking for normalized phone: ${normalizedPhone}`);
-
-    if (!normalizedPhone || !serviceName) {
-      return res.status(400).json({ error: "User phone and service name are required" });
+    if (!userEmail || !serviceName) {
+      return res.status(400).json({ error: "User email and service name are required" });
     }
 
     const booking = new Booking({
-      userId: userId || `user_${normalizedPhone}`,
-      userPhone: normalizedPhone,
+      userId: userId || `user_${userEmail}`,
+      userEmail,
       userName: userName || "Customer",
+      userPhone: userPhone || "",
+      userCity: userCity || "",
       serviceName,
       servicePrice: servicePrice ? servicePrice.toString() : "0",
       originalPrice: originalPrice ? originalPrice.toString() : "0",
@@ -350,7 +395,7 @@ app.post("/api/bookings", async (req, res) => {
 
     console.log(`✅ Booking created successfully:`, {
       id: savedBooking._id,
-      phone: savedBooking.userPhone,
+      email: savedBooking.userEmail,
       service: savedBooking.serviceName,
       price: savedBooking.servicePrice
     });
@@ -367,40 +412,18 @@ app.post("/api/bookings", async (req, res) => {
   }
 });
 
-// Get user's bookings with phone normalization - FIXED VERSION
-app.get("/api/bookings/:phone", async (req, res) => {
+// Get user's bookings by email
+app.get("/api/bookings/:email", async (req, res) => {
   try {
-    let { phone } = req.params;
+    const { email } = req.params;
     
-    console.log(`🔍 Original phone parameter: ${phone}`);
+    console.log(`🔍 Fetching bookings for email: ${email}`);
     
-    // Normalize phone number for query
-    phone = phone.replace(/\D/g, '');
-    
-    // Handle different phone formats
-    if (phone.startsWith('91') && phone.length === 12) {
-      phone = phone.substring(2);
-    } else if (phone.startsWith('+91') && phone.length === 13) {
-      phone = phone.substring(3);
-    }
-    
-    // Ensure it's 10 digits
-    if (phone.length !== 10) {
-      console.log(`❌ Invalid phone format for query: ${req.params.phone} -> ${phone}`);
-      return res.json({ 
-        success: true, 
-        bookings: [],
-        message: "Invalid phone format"
-      });
-    }
-
-    console.log(`🔍 Fetching bookings for normalized phone: ${phone}`);
-    
-    const bookings = await Booking.find({ userPhone: phone })
+    const bookings = await Booking.find({ userEmail: email })
       .sort({ createdAt: -1 })
       .limit(50);
 
-    console.log(`✅ Found ${bookings.length} bookings for phone: ${phone}`);
+    console.log(`✅ Found ${bookings.length} bookings for email: ${email}`);
     
     res.json({
       success: true,
@@ -426,51 +449,36 @@ app.get('/api/all-bookings', async (req, res) => {
   }
 });
 
-// Get booking by ID (for debugging)
-app.get('/api/booking-by-id/:id', async (req, res) => {
+// Get all users (for debugging)
+app.get('/api/all-users', async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id);
-    if (!booking) {
-      return res.status(404).json({ error: "Booking not found" });
-    }
-    res.json(booking);
+    const users = await User.find({}).select('-password').sort({ createdAt: -1 });
+    console.log(`📋 Total users in database: ${users.length}`);
+    res.json(users);
   } catch (error) {
-    console.error("Error fetching booking by ID:", error);
+    console.error("Error fetching all users:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Update booking status
-app.put("/api/bookings/:id", async (req, res) => {
+// Get user by ID
+app.get('/api/user/:id', async (req, res) => {
   try {
-    const { status, rating, review } = req.body;
-    
-    const booking = await Booking.findByIdAndUpdate(
-      req.params.id,
-      { status, rating, review },
-      { new: true }
-    );
-
-    if (!booking) {
-      return res.status(404).json({ error: "Booking not found" });
+    const user = await User.findById(req.params.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
     }
-
-    res.json({
-      success: true,
-      message: "Booking updated successfully",
-      booking
-    });
-
+    res.json(user);
   } catch (error) {
-    console.error("Error updating booking:", error);
-    res.status(500).json({ error: "Failed to update booking" });
+    console.error("Error fetching user:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 
 // --- Plans API Routes ---
-app.get("/api/plans/:userPhone", async (req, res) => {
+app.get("/api/plans/:userEmail", async (req, res) => {
   try {
-    const { userPhone } = req.params;
+    const { userEmail } = req.params;
     
     // For now, return empty array or mock data
     res.json({
@@ -481,23 +489,6 @@ app.get("/api/plans/:userPhone", async (req, res) => {
   } catch (error) {
     console.error("Error fetching plans:", error);
     res.status(500).json({ error: "Failed to fetch plans" });
-  }
-});
-
-// Update user profile
-app.post("/api/update-profile", async (req, res) => {
-  try {
-    const { userId, name, email, phone, title } = req.body;
-    
-    // For now, just return success since we're using mock users
-    res.json({
-      success: true,
-      message: "Profile updated successfully"
-    });
-
-  } catch (error) {
-    console.error("Error updating profile:", error);
-    res.status(500).json({ error: "Failed to update profile" });
   }
 });
 
@@ -573,7 +564,7 @@ const initializeStaticData = () => {
       net: "/assets/net.webp"
     };
     fs.writeFileSync(STATIC_DATA_FILE, JSON.stringify(initialData, null, 2));
-    console.log("Static data file created");
+    console.log("✅ Static data file created");
   }
 };
 
@@ -585,7 +576,7 @@ const readStaticData = () => {
     }
     return null;
   } catch (error) {
-    console.error('Error reading static data:', error);
+    console.error('❌ Error reading static data:', error);
     return null;
   }
 };
@@ -595,7 +586,7 @@ const writeStaticData = (data) => {
     fs.writeFileSync(STATIC_DATA_FILE, JSON.stringify(data, null, 2));
     return true;
   } catch (error) {
-    console.error('Error writing static data:', error);
+    console.error('❌ Error writing static data:', error);
     return false;
   }
 };
@@ -622,7 +613,7 @@ app.get("/api/banner", async (req, res) => {
     }
     res.status(404).json({ error: "No banner found" });
   } catch (error) {
-    console.error("Error fetching banner:", error);
+    console.error("❌ Error fetching banner:", error);
     res.status(500).json({ error: "Failed to fetch banner" });
   }
 });
@@ -653,7 +644,7 @@ app.post("/api/banners", upload.single('image'), async (req, res) => {
     await banner.save();
     res.status(201).json({ message: "Banner created successfully", banner });
   } catch (error) {
-    console.error("Error creating banner:", error);
+    console.error("❌ Error creating banner:", error);
     res.status(500).json({ error: "Failed to create banner" });
   }
 });
@@ -678,7 +669,7 @@ app.put("/api/banners/:id", upload.single('image'), async (req, res) => {
     }
     res.json({ message: "Banner updated successfully", banner });
   } catch (error) {
-    console.error("Error updating banner:", error);
+    console.error("❌ Error updating banner:", error);
     res.status(500).json({ error: "Failed to update banner" });
   }
 });
@@ -691,7 +682,7 @@ app.delete("/api/banners/:id", async (req, res) => {
     }
     res.json({ message: "Banner deleted successfully" });
   } catch (error) {
-    console.error("Error deleting banner:", error);
+    console.error("❌ Error deleting banner:", error);
     res.status(500).json({ error: "Failed to delete banner" });
   }
 });
@@ -708,7 +699,7 @@ app.get("/api/services", async (req, res) => {
     }
     res.status(404).json({ error: "No services found" });
   } catch (error) {
-    console.error("Error fetching services:", error);
+    console.error("❌ Error fetching services:", error);
     res.status(500).json({ error: "Failed to fetch services" });
   }
 });
@@ -740,7 +731,7 @@ app.post("/api/services", upload.single('image'), async (req, res) => {
     await service.save();
     res.status(201).json({ message: "Service created successfully", service });
   } catch (error) {
-    console.error("Error creating service:", error);
+    console.error("❌ Error creating service:", error);
     res.status(500).json({ error: "Failed to create service" });
   }
 });
@@ -758,7 +749,7 @@ app.put("/api/services/:id", upload.single('image'), async (req, res) => {
     }
     res.json({ message: "Service updated successfully", service });
   } catch (error) {
-    console.error("Error updating service:", error);
+    console.error("❌ Error updating service:", error);
     res.status(500).json({ error: "Failed to update service" });
   }
 });
@@ -771,7 +762,7 @@ app.delete("/api/services/:id", async (req, res) => {
     }
     res.json({ message: "Service deleted successfully" });
   } catch (error) {
-    console.error("Error deleting service:", error);
+    console.error("❌ Error deleting service:", error);
     res.status(500).json({ error: "Failed to delete service" });
   }
 });
@@ -864,7 +855,7 @@ app.put("/api/update-section/:section/:key", upload.single('image'), (req, res) 
       }
     }
   } catch (error) {
-    console.error('Error updating section:', error);
+    console.error('❌ Error updating section:', error);
     res.status(500).json({ error: "Failed to update section" });
   }
 });
@@ -891,7 +882,7 @@ app.post("/api/add-to-section/:section", upload.single('image'), (req, res) => {
       res.status(500).json({ error: "Failed to add item" });
     }
   } catch (error) {
-    console.error('Error adding to section:', error);
+    console.error('❌ Error adding to section:', error);
     res.status(500).json({ error: "Failed to add item" });
   }
 });
@@ -1027,7 +1018,7 @@ app.post("/api/addcarts", async (req, res) => {
     await newCart.save();
     res.status(201).json({ message: "Cart added", cart: newCart });
   } catch (err) {
-    console.error("Error in /api/addcarts:", err);
+    console.error("❌ Error in /api/addcarts:", err);
     res.status(500).json({ error: "Failed to add/update cart" });
   }
 });
@@ -1055,17 +1046,25 @@ app.get("/api/health", (req, res) => {
   res.json({ 
     status: "OK", 
     message: "Server is running",
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    version: "1.0.0"
   });
 });
 
+// Error handling middleware
 app.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'File too large' });
+      return res.status(400).json({ error: 'File too large. Maximum size is 5MB.' });
     }
   }
+  console.error('❌ Server error:', error);
   res.status(500).json({ error: error.message });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: "Route not found" });
 });
 
 app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
