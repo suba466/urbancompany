@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Modal, Button, Container, Row, Col, Form, Spinner, Alert, Card, Badge } from "react-bootstrap";
 import { LuNotepadText } from "react-icons/lu";
 import { IoMdHelpCircleOutline, IoMdLogOut } from "react-icons/io";
-import { MdAccountCircle, MdOutlineArrowForwardIos, MdLocationOn, MdEdit } from "react-icons/md";
+import { MdAccountCircle, MdOutlineArrowForwardIos, MdLocationOn, MdEdit, MdCameraAlt } from "react-icons/md";
 import { BiLeftArrowAlt } from "react-icons/bi";
 import { PiNotepadLight } from "react-icons/pi";
 import { useAuth } from "./AuthContext";
@@ -14,6 +14,7 @@ function AccountModal({ show, onHide, initialView = "main" }) {
   const [bookings, setBookings] = useState([]);
   const [plans, setPlans] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
+  const fileInputRef = useRef(null);
   
   // Registration states
   const [registerData, setRegisterData] = useState({
@@ -22,7 +23,9 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     phone: "",
     city: "",
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
+    profilePicture: null,
+    profileFile: null
   });
 
   // Login states
@@ -37,7 +40,9 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     name: "",
     email: "",
     phone: "",
-    city: ""
+    city: "",
+    profilePicture: null,
+    profileFile: null
   });
 
   const { isLoggedIn, userInfo, login, logout } = useAuth();
@@ -52,7 +57,8 @@ function AccountModal({ show, onHide, initialView = "main" }) {
         name: userInfo.name || "",
         email: userInfo.email || "",
         phone: userInfo.phone || "",
-        city: userInfo.city || ""
+        city: userInfo.city || "",
+        profilePicture: userInfo.profileImage || null
       });
     }
   }, [isLoggedIn, show, userInfo]);
@@ -162,7 +168,9 @@ function AccountModal({ show, onHide, initialView = "main" }) {
         phone: "",
         city: "",
         password: "",
-        confirmPassword: ""
+        confirmPassword: "",
+        profilePicture: null,
+        profileFile: null
       });
       setLoginData({
         email: "",
@@ -191,6 +199,40 @@ function AccountModal({ show, onHide, initialView = "main" }) {
       setCurrentView("edit-profile");
     } else {
       setCurrentView(view);
+    }
+  };
+
+  // Handle profile picture upload
+  const handleProfilePictureUpload = (event, isRegistration = false) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Check file size (max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        alert("Please select an image smaller than 2MB");
+        return;
+      }
+
+      // Check file type
+      if (!file.type.startsWith('image/')) {
+        alert("Please select a valid image file");
+        return;
+      }
+
+      // Create preview URL for display
+      const previewUrl = URL.createObjectURL(file);
+      if (isRegistration) {
+        setRegisterData(prev => ({
+          ...prev,
+          profilePicture: previewUrl,
+          profileFile: file // Store the actual file for upload
+        }));
+      } else {
+        setProfileData(prev => ({
+          ...prev,
+          profilePicture: previewUrl,
+          profileFile: file // Store the actual file for upload
+        }));
+      }
     }
   };
 
@@ -257,18 +299,22 @@ function AccountModal({ show, onHide, initialView = "main" }) {
 
     setIsLoading(true);
     try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('name', registerData.name);
+      formData.append('email', registerData.email);
+      formData.append('phone', registerData.phone);
+      formData.append('city', registerData.city);
+      formData.append('password', registerData.password);
+      
+      // Append profile picture if exists
+      if (registerData.profileFile) {
+        formData.append('profileImage', registerData.profileFile);
+      }
+
       const response = await fetch("http://localhost:5000/api/register", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: registerData.name,
-          email: registerData.email,
-          phone: registerData.phone,
-          city: registerData.city,
-          password: registerData.password
-        }),
+        body: formData, // No Content-Type header for FormData
       });
 
       const data = await response.json();
@@ -283,7 +329,8 @@ function AccountModal({ show, onHide, initialView = "main" }) {
         email: data.user.email,
         phone: data.user.phone,
         city: data.user.city,
-        userId: data.user.id
+        userId: data.user.id,
+        profileImage: data.user.profileImage
       });
 
       setCurrentView("main");
@@ -338,7 +385,8 @@ function AccountModal({ show, onHide, initialView = "main" }) {
         email: data.user.email,
         phone: data.user.phone,
         city: data.user.city,
-        userId: data.user.id
+        userId: data.user.id,
+        profileImage: data.user.profileImage
       });
 
       setCurrentView("main");
@@ -389,33 +437,39 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     }
 
     try {
-      // Update user info in context
-      login({
-        ...userInfo,
-        name: profileData.name,
-        email: profileData.email,
-        phone: profileData.phone,
-        city: profileData.city,
-        title: profileData.title
-      });
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('userId', userInfo.userId);
+      formData.append('name', profileData.name);
+      formData.append('email', profileData.email);
+      formData.append('phone', profileData.phone);
+      formData.append('city', profileData.city);
+      formData.append('title', profileData.title);
+      
+      // Append profile picture if a new file is selected
+      if (profileData.profileFile) {
+        formData.append('profileImage', profileData.profileFile);
+      }
 
-      // Update profile in backend
       const response = await fetch("http://localhost:5000/api/update-profile", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId: userInfo.userId,
-          name: profileData.name,
-          email: profileData.email,
-          phone: profileData.phone,
-          city: profileData.city,
-          title: profileData.title
-        }),
+        body: formData, // No Content-Type header for FormData
       });
 
       if (response.ok) {
+        const data = await response.json();
+        
+        // Update user info in context with the response from server
+        login({
+          ...userInfo,
+          name: data.user.name,
+          email: data.user.email,
+          phone: data.user.phone,
+          city: data.user.city,
+          title: data.user.title,
+          profileImage: data.user.profileImage
+        });
+
         setCurrentView("main");
         alert("Profile updated successfully!");
       } else {
@@ -436,10 +490,100 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     }));
   };
 
-  // Render registration view
+  // Render profile picture component
+  const renderProfilePicture = (pictureUrl, size = 80, editable = false, onEditClick = null) => {
+    // Construct full URL if it's a relative path
+    const getFullImageUrl = (url) => {
+      if (!url) return null;
+      if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) {
+        return url;
+      }
+      if (url.startsWith('/assets/')) {
+        return `http://localhost:5000${url}`;
+      }
+      return `http://localhost:5000/assets/${url}`;
+    };
+
+    const fullImageUrl = getFullImageUrl(pictureUrl);
+
+    return (
+      <div 
+        className="position-relative d-inline-block"
+        style={{ cursor: editable ? 'pointer' : 'default' }}
+        onClick={editable ? onEditClick : null}
+      >
+        {fullImageUrl ? (
+          <img
+            src={fullImageUrl}
+            alt="Profile"
+            className="rounded-circle border"
+            style={{
+              width: `${size}px`,
+              height: `${size}px`,
+              objectFit: 'cover'
+            }}
+            onError={(e) => {
+              console.error("Error loading profile image:", fullImageUrl);
+              // If image fails to load, show default avatar
+              e.target.style.display = 'none';
+            }}
+          />
+        ) : (
+          <div
+            className="rounded-circle border d-flex align-items-center justify-content-center bg-light"
+            style={{
+              width: `${size}px`,
+              height: `${size}px`
+            }}
+          >
+            <MdAccountCircle 
+              size={size} 
+              className="text-muted"
+            />
+          </div>
+        )}
+        {editable && (
+          <div 
+            className="position-absolute bottom-0 end-0 bg-primary rounded-circle p-1 border border-white"
+            style={{ width: '28px', height: '28px' }}
+          >
+            <MdCameraAlt size={16} className="text-white" />
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Render registration view with profile picture
   const renderRegisterView = () => (
     <div>
       <Form onSubmit={handleRegister}>
+        <div className="text-center mb-4">
+          {renderProfilePicture(
+            registerData.profilePicture, 
+            100, 
+            true,
+            () => fileInputRef.current?.click()
+          )}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={(e) => handleProfilePictureUpload(e, true)}
+            accept="image/*"
+            style={{ display: 'none' }}
+          />
+          <div className="mt-2">
+            <button
+              type="button"
+              className="btn btn-link p-0 text-decoration-none"
+              onClick={() => fileInputRef.current?.click()}
+              style={{ fontSize: "14px", color: "#6e42e5" }}
+            >
+              {registerData.profilePicture ? "Change Photo" : "Add Profile Photo"}
+            </button>
+          </div>
+        </div>
+
         <div className="mb-3">
           <p style={{fontSize:"13px"}}>Join Urban Company for the best home services</p>
           
@@ -562,25 +706,30 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     </div>
   );
 
-  // Render login view
+  // Render login view with profile picture
   const renderLoginView = () => (
     <div>
-      <div>
-        <img 
-          src={logo1} 
-          alt="UC Logo" 
-          style={{ height: "30px", marginLeft: "10px" }} 
-          onError={(e) => {
-            e.target.src = "http://localhost:5000/assets/urban.png";
-          }}
-        /> 
+      <div className="text-center mb-4">
+        {userInfo.profileImage && isLoggedIn ? (
+          renderProfilePicture(userInfo.profileImage, 80, false)
+        ) : (
+          <div>
+            <img 
+              src={logo1} 
+              alt="UC Logo" 
+              style={{ height: "40px", marginBottom: "10px" }} 
+              onError={(e) => {
+                e.target.src = "http://localhost:5000/assets/urban.png";
+              }}
+            /> 
+          </div>
+        )}
       </div>
-      <br />
 
       <Form onSubmit={handleLogin}>
         <div className="mb-3">
-          <h5 className="fw-bold">Login to Your Account</h5>
-          <p style={{fontSize:"13px"}}>Welcome back! Please enter your details</p>
+          <h5 className="fw-bold text-center">Login to Your Account</h5>
+          <p style={{fontSize:"13px"}} className="text-center">Welcome back! Please enter your details</p>
           
           {/* Email */}
           <Form.Group className="mb-3">
@@ -660,11 +809,27 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     </div>
   );
 
-  // Render profile editing view
+  // Render profile editing view with profile picture
   const renderProfileEditView = () => (
     <div>
       <div className="text-center mb-4">
-        <h4>My Profile</h4>
+        <div className="position-relative d-inline-block">
+          {renderProfilePicture(
+            profileData.profilePicture || userInfo.profileImage, 
+            100, 
+            true,
+            () => fileInputRef.current?.click()
+          )}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={(e) => handleProfilePictureUpload(e, false)}
+            accept="image/*"
+            style={{ display: 'none' }}
+          />
+        </div>
+        <h4 className="mt-3">My Profile</h4>
+        <p className="text-muted small">Tap on photo to change</p>
       </div>
       
       <Card className="border-0 shadow-sm">
@@ -800,7 +965,7 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     </div>
   );
 
-  // Render bookings view (same as before, but using email instead of phone)
+  // Render bookings view
   const renderBookingsView = () => (
     <div>
       <h6 className="fw-bold mb-3">My Bookings</h6>
@@ -876,7 +1041,7 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     </div>
   );
 
-  // Render plans view (same as before)
+  // Render plans view
   const renderPlansView = () => (
     <div>
       <h6 className="fw-bold mb-3">My Plans</h6>
@@ -907,7 +1072,7 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     </div>
   );
 
-  // Render main view after login
+  // Render main view after login with profile picture
   const renderMainViewAfterLogin = () => (
     <div>
       <div 
@@ -915,8 +1080,9 @@ function AccountModal({ show, onHide, initialView = "main" }) {
         style={{ cursor: "pointer" }}
         onClick={() => handleNavigation("profile-details")}
       >
-        <div className="d-flex justify-content-between align-items-center">
-          <div>
+        <div className="d-flex align-items-center gap-3">
+          {renderProfilePicture(userInfo.profileImage, 60, false)}
+          <div className="flex-grow-1">
             <h5 className="fw-semibold mb-1">{userInfo.name || "User"}</h5>
             <p className="small text-muted mb-1">{userInfo.email}</p>
             <p className="small text-muted mb-0">
@@ -964,7 +1130,7 @@ function AccountModal({ show, onHide, initialView = "main" }) {
               />
             </span>
             <span className="fw-medium">About Urban Company</span>
-          </div>
+            </div>
           <MdOutlineArrowForwardIos size={14} className="text-muted" />
         </div>
 
@@ -984,7 +1150,7 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     </div>
   );
 
-  // Render help view (same as before)
+  // Render help view
   const renderHelpView = () => (
     <div>
       <h6 className="fw-bold mb-3">Help Center</h6>
@@ -997,7 +1163,7 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     </div>
   );
 
-  // Render about view (same as before)
+  // Render about view
   const renderAboutView = () => (
     <div>
       <h6 className="fw-bold mb-3">About Urban Company</h6>
@@ -1015,16 +1181,34 @@ function AccountModal({ show, onHide, initialView = "main" }) {
   // Render main view when not logged in
   const renderMainViewNotLoggedIn = () => (
     <div>
+      <div className="text-center mb-4">
+        <div
+          className="rounded-circle border d-flex align-items-center justify-content-center bg-light mx-auto"
+          style={{
+            width: "100px",
+            height: "100px"
+          }}
+        >
+          <MdAccountCircle 
+            size={100} 
+            className="text-muted"
+          />
+        </div>
+        <h5 className="mt-3">Welcome to Urban Company</h5>
+        <p className="text-muted small">Login or create an account to manage your bookings</p>
+      </div>
+
       <div className="d-grid">
-         <Button 
+        <Button 
           variant="outline-primary" 
-          className="fw-bold " 
+          className="fw-bold" 
           style={{height: "45px"}}
           onClick={() => handleNavigation("register")}
         >
           Create Account
-        </Button><br />
-        <p>Alread a registered user?</p>
+        </Button>
+        <br />
+        <p className="text-center">Already a registered user?</p>
 
         <Button 
           className="butn fw-bold" 

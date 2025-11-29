@@ -163,6 +163,7 @@ app.post("/api/register", upload.single('profileImage'), async (req, res) => {
     const { name, email, phone, city, password } = req.body;
     
     console.log("📝 Registration attempt:", { email, name, phone, city });
+    console.log("📁 Uploaded file:", req.file);
     
     // Validation
     if (!name || !email || !phone || !city || !password) {
@@ -195,6 +196,8 @@ app.post("/api/register", upload.single('profileImage'), async (req, res) => {
     if (req.file) {
       profileImageUrl = `/assets/${req.file.filename}`;
       console.log("📸 Profile image uploaded:", profileImageUrl);
+    } else {
+      console.log("ℹ️ No profile image uploaded");
     }
 
     // Create new user
@@ -220,7 +223,8 @@ app.post("/api/register", upload.single('profileImage'), async (req, res) => {
         email: user.email,
         phone: user.phone,
         city: user.city,
-        profileImage: user.profileImage
+        profileImage: user.profileImage,
+        title: user.title
       }
     });
 
@@ -285,6 +289,7 @@ app.post("/api/update-profile", upload.single('profileImage'), async (req, res) 
     const { userId, name, email, phone, city, title } = req.body;
     
     console.log("📝 Profile update attempt:", { userId, email });
+    console.log("📁 Uploaded file:", req.file);
     
     if (!userId) {
       return res.status(400).json({ error: "User ID is required" });
@@ -295,13 +300,16 @@ app.post("/api/update-profile", upload.single('profileImage'), async (req, res) 
       email,
       phone,
       city,
-      title
+      title,
+      updatedAt: new Date()
     };
 
     // Handle profile image update
     if (req.file) {
       updateData.profileImage = `/assets/${req.file.filename}`;
       console.log("📸 Profile image updated:", updateData.profileImage);
+    } else {
+      console.log("ℹ️ No new profile image uploaded, keeping existing one");
     }
 
     const user = await User.findByIdAndUpdate(
@@ -613,7 +621,7 @@ app.get("/api/banner", async (req, res) => {
     }
     res.status(404).json({ error: "No banner found" });
   } catch (error) {
-    console.error("❌ Error fetching banner:", error);
+    console.error("Error fetching banner:", error);
     res.status(500).json({ error: "Failed to fetch banner" });
   }
 });
@@ -644,7 +652,7 @@ app.post("/api/banners", upload.single('image'), async (req, res) => {
     await banner.save();
     res.status(201).json({ message: "Banner created successfully", banner });
   } catch (error) {
-    console.error("❌ Error creating banner:", error);
+    console.error("Error creating banner:", error);
     res.status(500).json({ error: "Failed to create banner" });
   }
 });
@@ -669,7 +677,7 @@ app.put("/api/banners/:id", upload.single('image'), async (req, res) => {
     }
     res.json({ message: "Banner updated successfully", banner });
   } catch (error) {
-    console.error("❌ Error updating banner:", error);
+    console.error("Error updating banner:", error);
     res.status(500).json({ error: "Failed to update banner" });
   }
 });
@@ -682,7 +690,7 @@ app.delete("/api/banners/:id", async (req, res) => {
     }
     res.json({ message: "Banner deleted successfully" });
   } catch (error) {
-    console.error("❌ Error deleting banner:", error);
+    console.error("Error deleting banner:", error);
     res.status(500).json({ error: "Failed to delete banner" });
   }
 });
@@ -699,7 +707,7 @@ app.get("/api/services", async (req, res) => {
     }
     res.status(404).json({ error: "No services found" });
   } catch (error) {
-    console.error("❌ Error fetching services:", error);
+    console.error("Error fetching services:", error);
     res.status(500).json({ error: "Failed to fetch services" });
   }
 });
@@ -731,7 +739,7 @@ app.post("/api/services", upload.single('image'), async (req, res) => {
     await service.save();
     res.status(201).json({ message: "Service created successfully", service });
   } catch (error) {
-    console.error("❌ Error creating service:", error);
+    console.error("Error creating service:", error);
     res.status(500).json({ error: "Failed to create service" });
   }
 });
@@ -749,7 +757,7 @@ app.put("/api/services/:id", upload.single('image'), async (req, res) => {
     }
     res.json({ message: "Service updated successfully", service });
   } catch (error) {
-    console.error("❌ Error updating service:", error);
+    console.error("Error updating service:", error);
     res.status(500).json({ error: "Failed to update service" });
   }
 });
@@ -762,7 +770,7 @@ app.delete("/api/services/:id", async (req, res) => {
     }
     res.json({ message: "Service deleted successfully" });
   } catch (error) {
-    console.error("❌ Error deleting service:", error);
+    console.error("Error deleting service:", error);
     res.status(500).json({ error: "Failed to delete service" });
   }
 });
@@ -855,7 +863,7 @@ app.put("/api/update-section/:section/:key", upload.single('image'), (req, res) 
       }
     }
   } catch (error) {
-    console.error('❌ Error updating section:', error);
+    console.error('Error updating section:', error);
     res.status(500).json({ error: "Failed to update section" });
   }
 });
@@ -882,7 +890,7 @@ app.post("/api/add-to-section/:section", upload.single('image'), (req, res) => {
       res.status(500).json({ error: "Failed to add item" });
     }
   } catch (error) {
-    console.error('❌ Error adding to section:', error);
+    console.error('Error adding to section:', error);
     res.status(500).json({ error: "Failed to add item" });
   }
 });
@@ -1018,7 +1026,7 @@ app.post("/api/addcarts", async (req, res) => {
     await newCart.save();
     res.status(201).json({ message: "Cart added", cart: newCart });
   } catch (err) {
-    console.error("❌ Error in /api/addcarts:", err);
+    console.error("Error in /api/addcarts:", err);
     res.status(500).json({ error: "Failed to add/update cart" });
   }
 });
@@ -1058,6 +1066,31 @@ app.use((error, req, res, next) => {
       return res.status(400).json({ error: 'File too large. Maximum size is 5MB.' });
     }
   }
+  console.error('Server error:', error);
+  res.status(500).json({ error: error.message });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: "Route not found" });
+});
+
+app.get("/api/health", (req, res) => {
+  res.json({ 
+    status: "OK", 
+    message: "Server is running",
+    timestamp: new Date().toISOString(),
+    version: "1.0.0"
+  });
+});
+
+// Error handling middleware
+app.use((error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'File too large. Maximum size is 5MB.' });
+    }
+  }
   console.error('❌ Server error:', error);
   res.status(500).json({ error: error.message });
 });
@@ -1068,3 +1101,5 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

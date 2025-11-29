@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import CartBlock from "./CartBlock";
 import Salon1modal from "./Salon1modal";
 import { Row, Col, Button, Container, Form, Modal, Card, Badge, Spinner } from "react-bootstrap";
