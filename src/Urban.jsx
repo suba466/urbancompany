@@ -6,25 +6,42 @@ import Book from './Book.jsx';
 import CartPage from './CartPage.jsx';
 import Salon from './Salon.jsx';
 import { AuthProvider } from './AuthContext';
+import { CartProvider } from './CartContext'; // Import CartProvider
 import PaymentPage from './PaymentPage.jsx';
-function Urban(){
+import CartSummary from './CartSummary'; // Add this import
 
-  return(
+function Urban() {
+  return (
     <AuthProvider>
-      <Urbanav/> 
-      <Routes>
-        <Route path='/' element={
-          <>
-          <Banner/> <br />
-          <Shine/> <br />
-          <Book/><br/>
-          </>
-        }/>
-        <Route path='/salon' element={<Salon/>}/>
-        <Route path='/cart' element={<CartPage/>}/>
-        <Route path="/payment" element={<PaymentPage />} />
-
-      </Routes>
+      <CartProvider>
+        <Routes>
+          {/* Routes WITH navbar */}
+          <Route path='/' element={
+            <>
+              <Urbanav/> 
+              <Banner/> <br />
+              <Shine/> <br />
+              <Book/><br/>
+            </>
+          }/>
+          <Route path='/salon' element={
+            <>
+              <Urbanav/>
+              <Salon/>
+            </>
+          }/>
+          <Route path="/payment" element={
+            <>
+              <Urbanav/>
+              <PaymentPage />
+            </>
+          }/>
+          
+          {/* Routes WITHOUT navbar */}
+          <Route path='/cart-summary' element={<CartSummary/>}/>
+          <Route path='/cart' element={<><Urbanav/><CartPage/></>}/>
+        </Routes>
+      </CartProvider>
     </AuthProvider>
   )
 }

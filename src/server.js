@@ -74,7 +74,7 @@ const packageSchema = new mongoose.Schema({
   price: String,
   originalPrice: String,
   duration: String,
-  description: String,
+  description: String,category:String,
   items: [{ text: String, description: String }],
   content: [{ value: String, details: String }],
   ratingBreak: [{ stars: Number, value: Number, count: String }]
@@ -86,7 +86,7 @@ const cartSchema = new mongoose.Schema({
   productId: { type: String },
   title: String,
   price: String,
-  originalPrice: String,
+  originalPrice: String,category:String,
   count: { type: Number, default: 1 },
   content: [{ value: String, details: String }],
   createdAt: { type: Date, default: Date.now }
@@ -1015,7 +1015,10 @@ app.get("/api/packages", async (req, res) => {
 
 app.post("/api/addpackages", async (req, res) => {
   try {
-    const newPackage = new Package(req.body);
+    const newPackage = new Package({
+      ...req.body,
+      category: req.body.category || 'Salon for women' // Ensure category is set
+    });
     await newPackage.save();
     res.status(201).json({ message: "Package added", package: newPackage });
   } catch {
@@ -1051,10 +1054,9 @@ app.get("/api/carts", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch carts" });
   }
 });
-
 app.post("/api/addcarts", async (req, res) => {
   try {
-    const { productId, title, price, originalPrice, content } = req.body;
+    const { productId, title, price, originalPrice, content, category } = req.body; // ADD category here
     let existing = null;
     if (productId) {
       existing = await Cart.findOne({ productId });
@@ -1063,6 +1065,7 @@ app.post("/api/addcarts", async (req, res) => {
       existing.content = content;
       existing.price = price;
       existing.originalPrice = originalPrice;
+      existing.category = category || 'Salon for women'; // ADD this line
       existing.count = existing.count || 1;
       await existing.save();
       return res.json({ message: "Cart updated", cart: existing });
@@ -1073,6 +1076,7 @@ app.post("/api/addcarts", async (req, res) => {
       price,
       originalPrice,
       content,
+      category: category || 'Salon for women', // ADD this line
       count: 1,
     });
     await newCart.save();
@@ -1091,7 +1095,6 @@ app.put("/api/carts/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to update cart" });
   }
 });
-
 app.delete("/api/carts/:id", async (req, res) => {
   try {
     await Cart.findByIdAndDelete(req.params.id);

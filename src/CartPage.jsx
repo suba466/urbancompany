@@ -8,10 +8,11 @@ import { MdKeyboardArrowRight, MdPayments } from "react-icons/md";
 import AccountModal from "./AccountModal";
 import { ImLocation } from "react-icons/im";
 import { useAuth } from "./AuthContext";
+import { useCart } from "./CartContext"; // Import useCart
 import { FaClock } from "react-icons/fa";
 
 function CartPage() {
-  const [carts, setCarts] = useState([]);
+  const { cartItems, removeFromCart, refreshCart, clearCart } = useCart(); // Use cart context
   const [showModal, setShowModal] = useState(false);
   const [selectedPkg, setSelectedPkg] = useState(null);
   const [addedImgs, setAddedImgs] = useState([]);
@@ -65,11 +66,7 @@ function CartPage() {
     ]
   };
 
-  const fetchCarts = () => {
-    fetch("http://localhost:5000/api/carts")
-      .then(res => res.json())
-      .then(data => setCarts(data.carts || []));
-  };
+  // REMOVED: fetchCarts function - now using cartItems from context
 
   const fetchAddedItems = () => {
     fetch("http://localhost:5000/api/added")
@@ -86,26 +83,11 @@ function CartPage() {
     }
   };
 
-  // Clear cart function
-  const clearCart = async () => {
-    try {
-      // Delete all cart items one by one
-      for (const item of carts) {
-        await fetch(`http://localhost:5000/api/carts/${item._id}`, {
-          method: "DELETE"
-        });
-      }
-      setCarts([]);
-    } catch (error) {
-      console.error("Error clearing cart:", error);
-    }
-  };
-
   // Check for saved address when component loads
   useEffect(() => {
-    fetchCarts();
     fetchAddedItems();
     loadSavedAddresses();
+    refreshCart(); // Refresh cart on mount
     
     // Check if address is saved in localStorage
     const savedAddress = localStorage.getItem('selectedAddress');
@@ -150,7 +132,7 @@ function CartPage() {
   const formatPrice = (amount) => `₹${amount.toLocaleString("en-IN")}`;
 
   const calculateItemTotal = () => {
-    return carts.reduce((total, item) => {
+    return cartItems.reduce((total, item) => {
       return total + (safePrice(item.price) * (item.count || 1));
     }, 0);
   };
@@ -181,27 +163,37 @@ function CartPage() {
   };
 
   const handleIncrease = async (item) => {
-    await fetch(`http://localhost:5000/api/carts/${item._id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ count: item.count + 1 }),
-    });
-    fetchCarts();
-  };
-
-  const handleDecrease = async (item) => {
-    if (item.count <= 1) {
-      await fetch(`http://localhost:5000/api/carts/${item._id}`, {
-        method: "DELETE",
-      });
-    } else {
+    try {
       await fetch(`http://localhost:5000/api/carts/${item._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ count: item.count - 1 }),
+        body: JSON.stringify({ count: item.count + 1 }),
       });
+      refreshCart(); // Refresh cart from context
+      window.dispatchEvent(new Event('cartUpdated'));
+    } catch (error) {
+      console.error("Error increasing item:", error);
     }
-    fetchCarts();
+  };
+
+  const handleDecrease = async (item) => {
+    try {
+      if (item.count <= 1) {
+        await fetch(`http://localhost:5000/api/carts/${item._id}`, {
+          method: "DELETE",
+        });
+      } else {
+        await fetch(`http://localhost:5000/api/carts/${item._id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ count: item.count - 1 }),
+        });
+      }
+      refreshCart(); // Refresh cart from context
+      window.dispatchEvent(new Event('cartUpdated'));
+    } catch (error) {
+      console.error("Error decreasing item:", error);
+    }
   };
 
   const handleAddToCart = async (item, extraSelected = [], price, discount = 0, action = "add") => {
@@ -220,7 +212,7 @@ function CartPage() {
           isFrequentlyAdded: true
         };
 
-        const existingItem = carts.find(cart => cart.title === item.name);
+        const existingItem = cartItems.find(cart => cart.title === item.name);
         
         if (existingItem) {
           await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
@@ -239,7 +231,7 @@ function CartPage() {
           });
         }
       } else if (action === "remove") {
-        const existingItem = carts.find(cart => cart.title === item.name);
+        const existingItem = cartItems.find(cart => cart.title === item.name);
         if (existingItem) {
           if (existingItem.count > 1) {
             await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
@@ -254,14 +246,15 @@ function CartPage() {
           }
         }
       }
-      fetchCarts();
+      refreshCart(); // Refresh cart from context
+      window.dispatchEvent(new Event('cartUpdated'));
     } catch (error) {
       console.error("Error handling cart:", error);
     }
   };
 
   const visibleCarouselItems = addedImgs.filter(img => {
-    const inCart = carts.some(c => c.title === img.name);
+    const inCart = cartItems.some(c => c.title === img.name);
     return !inCart;
   });
 
@@ -353,13 +346,13 @@ function CartPage() {
         userId: userInfo.userId || userInfo.phone,
         userPhone: userInfo.phone,
         userName: userInfo.name,
-        serviceName: carts.map(item => item.title).join(', '),
+        serviceName: cartItems.map(item => item.title).join(', '),
         servicePrice: calculateTotalPrice().toString(),
         originalPrice: calculateItemTotal().toString(),
         address: selectedAddress,
         scheduledDate: selectedDate,
         scheduledTime: selectedSlot.time,
-        items: carts.map(item => ({
+        items: cartItems.map(item => ({
           name: item.title,
           quantity: item.count || 1,
           price: item.price
@@ -525,7 +518,7 @@ function CartPage() {
   const totalPrice = calculateTotalPrice();
 
   // If cart is empty, show empty state
-  if (carts.length === 0) {
+  if (cartItems.length === 0) {
     return (
       <Container className="d-flex flex-column align-items-center justify-content-center" >
         <div className="text-center mt-5">
@@ -689,7 +682,7 @@ function CartPage() {
 
     // Store complete order data before navigation
     const orderData = {
-      items: carts,
+      items: cartItems,
       itemTotal: calculateItemTotal(),
       tax: calculateTax(),
       tip: calculateTip(),
@@ -736,7 +729,7 @@ function CartPage() {
         {/* Cart Column (full-width on mobile) */}
         <Col xs={12} md={6}>
           <CartBlock
-            carts={carts}
+            carts={cartItems} // Use cartItems from context
             formatPrice={formatPrice}
             safePrice={safePrice}
             handleIncrease={handleIncrease}
@@ -750,7 +743,7 @@ function CartPage() {
               <h5 className="fw-bold mb-2" style={{ fontSize: "15px" }}>Frequently added together</h5>
               <FrequentlyAddedCarousel
                 items={visibleCarouselItems}
-                carts={carts}
+                carts={cartItems} // Use cartItems from context
                 onAdd={(item) => handleAddToCart(item, [], item.price, 0, "add")}
                 onRemove={(item) => handleAddToCart(item, [], item.price, 0, "remove")}
               />
@@ -948,7 +941,7 @@ function CartPage() {
           show={showModal}
           onHide={() => setShowModal(false)}
           selectedItem={selectedPkg}
-          refresh={fetchCarts}
+          refresh={refreshCart} // Pass refreshCart instead of fetchCarts
         />
       )}
 
