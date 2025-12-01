@@ -50,8 +50,8 @@ const upload = multer({
 
 // --- MongoDB Connection ---
 mongoose.connect("mongodb://localhost:27017/suba")
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch(err => console.error("❌ MongoDB connection error:", err));
+  .then(() => console.log(" MongoDB connected"))
+  .catch(err => console.error(" MongoDB connection error:", err));
 
 // --- SCHEMAS ---
 const bannerSchema = new mongoose.Schema({
@@ -107,7 +107,6 @@ const serviceSchema = new mongoose.Schema({
 
 const Service = mongoose.model("Service", serviceSchema);
 
-// --- User Schema for authentication ---
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
@@ -117,7 +116,8 @@ const userSchema = new mongoose.Schema({
   profileImage: { type: String, default: "" },
   title: { type: String, default: "Ms" },
   isVerified: { type: Boolean, default: true },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now } // Add this line
 });
 
 const User = mongoose.model("User", userSchema);
@@ -154,16 +154,13 @@ const bookingSchema = new mongoose.Schema({
 });
 
 const Booking = mongoose.model("Booking", bookingSchema);
-
-// --- AUTHENTICATION ROUTES ---
-
 // User Registration with Image Upload
 app.post("/api/register", upload.single('profileImage'), async (req, res) => {
   try {
     const { name, email, phone, city, password } = req.body;
     
-    console.log("📝 Registration attempt:", { email, name, phone, city });
-    console.log("📁 Uploaded file:", req.file);
+    console.log(" Registration attempt:", { email, name, phone, city });
+    console.log(" Uploaded file:", req.file);
     
     // Validation
     if (!name || !email || !phone || !city || !password) {
@@ -195,9 +192,9 @@ app.post("/api/register", upload.single('profileImage'), async (req, res) => {
     let profileImageUrl = "";
     if (req.file) {
       profileImageUrl = `/assets/${req.file.filename}`;
-      console.log("📸 Profile image uploaded:", profileImageUrl);
+      console.log(" Profile image uploaded:", profileImageUrl);
     } else {
-      console.log("ℹ️ No profile image uploaded");
+      console.log(" No profile image uploaded");
     }
 
     // Create new user
@@ -212,13 +209,13 @@ app.post("/api/register", upload.single('profileImage'), async (req, res) => {
 
     await user.save();
 
-    console.log(`✅ New user registered: ${email}`);
+    console.log(` New user registered: ${email}`);
 
     res.status(201).json({
       success: true,
       message: "User registered successfully",
       user: {
-        id: user._id,
+        id: user._id,  // Change this line - was: data.user.id
         name: user.name,
         email: user.email,
         phone: user.phone,
@@ -229,20 +226,19 @@ app.post("/api/register", upload.single('profileImage'), async (req, res) => {
     });
 
   } catch (error) {
-    console.error("❌ Error in registration:", error);
+    console.error(" Error in registration:", error);
     if (error.code === 11000) {
       return res.status(400).json({ error: "User already exists with this email" });
     }
     res.status(500).json({ error: "Failed to register user" });
   }
 });
-
 // User Login
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    console.log("🔐 Login attempt:", { email });
+    console.log(" Login attempt:", { email });
     
     // Validation
     if (!email || !password) {
@@ -261,13 +257,13 @@ app.post("/api/login", async (req, res) => {
       return res.status(400).json({ error: "Invalid email or password" });
     }
 
-    console.log(`✅ User logged in: ${email}`);
+    console.log(` User logged in: ${email}`);
 
     res.json({
       success: true,
       message: "Login successful",
       user: {
-        id: user._id,
+        id: user._id,  // Change this line - was: data.user.id
         name: user.name,
         email: user.email,
         phone: user.phone,
@@ -278,69 +274,125 @@ app.post("/api/login", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("❌ Error in login:", error);
+    console.error(" Error in login:", error);
     res.status(500).json({ error: "Failed to login" });
   }
 });
-
-// Update user profile with image
-app.post("/api/update-profile", upload.single('profileImage'), async (req, res) => {
+app.post("/api/update-profile", upload.single("profileImage"), async (req, res) => {
   try {
     const { userId, name, email, phone, city, title } = req.body;
-    
-    console.log("📝 Profile update attempt:", { userId, email });
-    console.log("📁 Uploaded file:", req.file);
-    
-    if (!userId) {
-      return res.status(400).json({ error: "User ID is required" });
-    }
 
-    const updateData = {
+    console.log("Profile update request received:", {
+      userId,
       name,
       email,
       phone,
       city,
       title,
-      updatedAt: new Date()
-    };
+      hasFile: !!req.file,
+      file: req.file
+    });
 
-    // Handle profile image update
-    if (req.file) {
-      updateData.profileImage = `/assets/${req.file.filename}`;
-      console.log("📸 Profile image updated:", updateData.profileImage);
-    } else {
-      console.log("ℹ️ No new profile image uploaded, keeping existing one");
+    // Check if userId is valid
+    if (!userId || userId === "undefined") {
+      console.error("Invalid userId:", userId);
+      return res.status(400).json({ 
+        error: "Invalid user ID. Please log out and log in again." 
+      });
     }
 
-    const user = await User.findByIdAndUpdate(
-      userId,
-      updateData,
-      { new: true }
-    );
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      console.error(" Invalid MongoDB ObjectId:", userId);
+      return res.status(400).json({ 
+        error: "Invalid user ID format. Please log out and log in again." 
+      });
+    }
 
-    if (!user) {
+    // Find existing user
+    const existingUser = await User.findById(userId);
+    if (!existingUser) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    console.log(`✅ Profile updated for: ${email}`);
-
-    res.json({
-      success: true,
-      message: "Profile updated successfully",
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        city: user.city,
-        title: user.title,
-        profileImage: user.profileImage
+    // Check if email is being changed to one that already exists
+    if (email && email !== existingUser.email) {
+      const emailExists = await User.findOne({ email, _id: { $ne: userId } });
+      if (emailExists) {
+        return res.status(400).json({ error: "Email already exists" });
       }
+    }
+
+    // Handle profile image
+    let newProfileImage = existingUser.profileImage;
+    if (req.file) {
+      newProfileImage = `/assets/${req.file.filename}`;
+      console.log(" New profile image:", newProfileImage);
+
+      // Delete previous image if it exists and is not the default
+      if (existingUser.profileImage && existingUser.profileImage.startsWith('/assets/')) {
+        try {
+          const oldImagePath = path.join(__dirname, existingUser.profileImage);
+          if (fs.existsSync(oldImagePath)) {
+            fs.unlinkSync(oldImagePath);
+            console.log(" Deleted old image:", oldImagePath);
+          }
+        } catch (err) {
+          console.error(" Error deleting old image:", err);
+          // Continue even if deletion fails
+        }
+      }
+    }
+
+    // Prepare update data
+    const updateData = {
+      name: name || existingUser.name,
+      email: email || existingUser.email,
+      phone: phone || existingUser.phone,
+      city: city || existingUser.city,
+      title: title || existingUser.title || "Ms",
+      profileImage: newProfileImage,
+      updatedAt: new Date()
+    };
+
+    console.log(" Updating user with data:", updateData);
+
+    // Update user in database
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      updateData,
+      { 
+        new: true, 
+        runValidators: true,
+        select: '-password' // Don't return password
+      }
+    );
+
+    console.log(" User updated successfully:", {
+      id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email
     });
 
-  } catch (error) {
-    console.error("❌ Error updating profile:", error);
-    res.status(500).json({ error: "Failed to update profile" });
+    return res.json({
+      success: true,
+      message: "Profile updated successfully",
+      user: updatedUser
+    });
+
+  } catch (err) {
+    console.error(" Update error:", err);
+    
+    // Handle specific MongoDB errors
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(val => val.message);
+      return res.status(400).json({ error: messages.join(', ') });
+    }
+    
+    if (err.code === 11000) {
+      return res.status(400).json({ error: "Email already exists" });
+    }
+    
+    return res.status(500).json({ error: "Failed to update profile. Please try again." });
   }
 });
 
@@ -366,7 +418,7 @@ app.post("/api/bookings", async (req, res) => {
       paymentMethod
     } = req.body;
 
-    console.log("📦 Received booking data:", {
+    console.log(" Received booking data:", {
       userEmail,
       serviceName,
       servicePrice,
@@ -401,7 +453,7 @@ app.post("/api/bookings", async (req, res) => {
 
     const savedBooking = await booking.save();
 
-    console.log(`✅ Booking created successfully:`, {
+    console.log(` Booking created successfully:`, {
       id: savedBooking._id,
       email: savedBooking.userEmail,
       service: savedBooking.serviceName,
@@ -415,7 +467,7 @@ app.post("/api/bookings", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("❌ Error creating booking:", error);
+    console.error(" Error creating booking:", error);
     res.status(500).json({ error: "Failed to create booking: " + error.message });
   }
 });
@@ -425,13 +477,13 @@ app.get("/api/bookings/:email", async (req, res) => {
   try {
     const { email } = req.params;
     
-    console.log(`🔍 Fetching bookings for email: ${email}`);
+    console.log(` Fetching bookings for email: ${email}`);
     
     const bookings = await Booking.find({ userEmail: email })
       .sort({ createdAt: -1 })
       .limit(50);
 
-    console.log(`✅ Found ${bookings.length} bookings for email: ${email}`);
+    console.log(` Found ${bookings.length} bookings for email: ${email}`);
     
     res.json({
       success: true,
@@ -440,7 +492,7 @@ app.get("/api/bookings/:email", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("❌ Error fetching bookings:", error);
+    console.error(" Error fetching bookings:", error);
     res.status(500).json({ error: "Failed to fetch bookings: " + error.message });
   }
 });
@@ -449,7 +501,7 @@ app.get("/api/bookings/:email", async (req, res) => {
 app.get('/api/all-bookings', async (req, res) => {
   try {
     const bookings = await Booking.find({}).sort({ createdAt: -1 });
-    console.log(`📋 Total bookings in database: ${bookings.length}`);
+    console.log(`Total bookings in database: ${bookings.length}`);
     res.json(bookings);
   } catch (error) {
     console.error("Error fetching all bookings:", error);
@@ -461,7 +513,7 @@ app.get('/api/all-bookings', async (req, res) => {
 app.get('/api/all-users', async (req, res) => {
   try {
     const users = await User.find({}).select('-password').sort({ createdAt: -1 });
-    console.log(`📋 Total users in database: ${users.length}`);
+    console.log(`Total users in database: ${users.length}`);
     res.json(users);
   } catch (error) {
     console.error("Error fetching all users:", error);
@@ -572,7 +624,7 @@ const initializeStaticData = () => {
       net: "/assets/net.webp"
     };
     fs.writeFileSync(STATIC_DATA_FILE, JSON.stringify(initialData, null, 2));
-    console.log("✅ Static data file created");
+    console.log("Static data file created");
   }
 };
 
@@ -584,7 +636,7 @@ const readStaticData = () => {
     }
     return null;
   } catch (error) {
-    console.error('❌ Error reading static data:', error);
+    console.error(' Error reading static data:', error);
     return null;
   }
 };
@@ -594,7 +646,7 @@ const writeStaticData = (data) => {
     fs.writeFileSync(STATIC_DATA_FILE, JSON.stringify(data, null, 2));
     return true;
   } catch (error) {
-    console.error('❌ Error writing static data:', error);
+    console.error('Error writing static data:', error);
     return false;
   }
 };
@@ -1091,7 +1143,7 @@ app.use((error, req, res, next) => {
       return res.status(400).json({ error: 'File too large. Maximum size is 5MB.' });
     }
   }
-  console.error('❌ Server error:', error);
+  console.error('Server error:', error);
   res.status(500).json({ error: error.message });
 });
 
@@ -1100,6 +1152,5 @@ app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
 
-app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
 
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

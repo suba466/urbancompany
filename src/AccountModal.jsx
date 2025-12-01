@@ -15,6 +15,8 @@ function AccountModal({ show, onHide, initialView = "main" }) {
   const [plans, setPlans] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
   const fileInputRef = useRef(null);
+  const profileFileInputRef = useRef(null);
+  const [profilePreview, setProfilePreview] = useState(null);
   
   // Registration states
   const [registerData, setRegisterData] = useState({
@@ -34,14 +36,13 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     password: ""
   });
 
-  // Profile editing states
+  // Profile editing states - INCLUDING profileFile for image upload
   const [profileData, setProfileData] = useState({
     title: "Ms",
     name: "",
     email: "",
     phone: "",
     city: "",
-    profilePicture: null,
     profileFile: null
   });
 
@@ -51,6 +52,7 @@ function AccountModal({ show, onHide, initialView = "main" }) {
   useEffect(() => {
     if (isLoggedIn && show && userInfo.email) {
       loadUserData();
+      
       // Initialize profile data with user info
       setProfileData({
         title: userInfo.title || "Ms",
@@ -58,7 +60,15 @@ function AccountModal({ show, onHide, initialView = "main" }) {
         email: userInfo.email || "",
         phone: userInfo.phone || "",
         city: userInfo.city || "",
-        profilePicture: userInfo.profileImage || null
+        profileFile: null
+      });
+
+      console.log("Profile data initialized with:", {
+        name: userInfo.name,
+        email: userInfo.email,
+        phone: userInfo.phone,
+        city: userInfo.city,
+        title: userInfo.title
       });
     }
   }, [isLoggedIn, show, userInfo]);
@@ -161,6 +171,7 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     if (show) {
       setCurrentView(initialView);
       setIsLoading(false);
+      setProfilePreview(null);
       // Reset form data
       setRegisterData({
         name: "",
@@ -189,6 +200,7 @@ function AccountModal({ show, onHide, initialView = "main" }) {
   const handleBack = () => {
     if (["profile-details", "bookings", "plans", "help", "about", "edit-profile", "register", "login"].includes(currentView)) {
       setCurrentView("main");
+      setProfilePreview(null);
     } else {
       onHide();
     }
@@ -202,7 +214,7 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     }
   };
 
-  // Handle profile picture upload
+  // Handle profile picture upload for registration
   const handleProfilePictureUpload = (event, isRegistration = false) => {
     const file = event.target.files[0];
     if (file) {
@@ -224,15 +236,35 @@ function AccountModal({ show, onHide, initialView = "main" }) {
         setRegisterData(prev => ({
           ...prev,
           profilePicture: previewUrl,
-          profileFile: file // Store the actual file for upload
-        }));
-      } else {
-        setProfileData(prev => ({
-          ...prev,
-          profilePicture: previewUrl,
-          profileFile: file // Store the actual file for upload
+          profileFile: file
         }));
       }
+    }
+  };
+
+  // Handle profile image upload for profile edit
+  const handleProfileImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Check file size (max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        alert("Please select an image smaller than 2MB");
+        return;
+      }
+
+      // Check file type
+      if (!file.type.startsWith('image/')) {
+        alert("Please select a valid image file");
+        return;
+      }
+
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setProfilePreview(previewUrl);
+      setProfileData(prev => ({
+        ...prev,
+        profileFile: file
+      }));
     }
   };
 
@@ -247,6 +279,15 @@ function AccountModal({ show, onHide, initialView = "main" }) {
   // Handle login form changes
   const handleLoginChange = (field, value) => {
     setLoginData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Handle profile change
+  const handleProfileChange = (field, value) => {
+    console.log(`Changing ${field} to:`, value);
+    setProfileData(prev => ({
       ...prev,
       [field]: value
     }));
@@ -299,14 +340,14 @@ function AccountModal({ show, onHide, initialView = "main" }) {
 
     setIsLoading(true);
     try {
-      // Create FormData for file upload
-      const formData = new FormData();
-      formData.append('name', registerData.name);
-      formData.append('email', registerData.email);
-      formData.append('phone', registerData.phone);
-      formData.append('city', registerData.city);
-      formData.append('password', registerData.password);
-      
+     // In handleProfileSave function, modify the formData:
+const formData = new FormData();
+formData.append('userId', userInfo.userId || '');
+formData.append('name', profileData.name);
+formData.append('email', profileData.email);  // Important: include email
+formData.append('phone', profileData.phone);
+formData.append('city', profileData.city);
+formData.append('title', profileData.title || "Ms");
       // Append profile picture if exists
       if (registerData.profileFile) {
         formData.append('profileImage', registerData.profileFile);
@@ -314,7 +355,7 @@ function AccountModal({ show, onHide, initialView = "main" }) {
 
       const response = await fetch("http://localhost:5000/api/register", {
         method: "POST",
-        body: formData, // No Content-Type header for FormData
+        body: formData,
       });
 
       const data = await response.json();
@@ -330,7 +371,8 @@ function AccountModal({ show, onHide, initialView = "main" }) {
         phone: data.user.phone,
         city: data.user.city,
         userId: data.user.id,
-        profileImage: data.user.profileImage
+        profileImage: data.user.profileImage,
+        title: data.user.title || "Ms"
       });
 
       setCurrentView("main");
@@ -386,7 +428,8 @@ function AccountModal({ show, onHide, initialView = "main" }) {
         phone: data.user.phone,
         city: data.user.city,
         userId: data.user.id,
-        profileImage: data.user.profileImage
+        profileImage: data.user.profileImage,
+        title: data.user.title || "Ms"
       });
 
       setCurrentView("main");
@@ -406,89 +449,125 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     setCurrentView("main");
     setBookings([]);
     setPlans([]);
+    setProfilePreview(null);
     onHide();
   };
 
-  const handleProfileSave = async () => {
-    // Basic validation
-    if (!profileData.name.trim()) {
-      alert("Please enter your name");
-      return;
+// Handle profile save
+const handleProfileSave = async () => {
+  console.log("=== DEBUG START ===");
+  console.log("📋 Profile data to save:", profileData);
+  console.log("👤 Full userInfo object:", userInfo);
+  console.log("🆔 User ID value:", userInfo.userId);
+  console.log("🆔 User ID type:", typeof userInfo.userId);
+  console.log("=== DEBUG END ===");
+  
+  // Validation
+  if (!userInfo.userId || userInfo.userId === "undefined" || userInfo.userId === "") {
+    console.error("❌ Invalid userId:", userInfo.userId);
+    alert("User ID is missing or invalid. Please:\n1. Log out\n2. Clear browser cache\n3. Log in again");
+    return;
+  }
+
+  if (!profileData.name.trim()) {
+    alert("Please enter your name");
+    return;
+  }
+
+  if (!profileData.email.trim()) {
+    alert("Please enter your email");
+    return;
+  }
+
+  if (!/^\S+@\S+\.\S+$/.test(profileData.email)) {
+    alert("Please enter a valid email address");
+    return;
+  }
+
+  if (!profileData.phone.trim() || profileData.phone.length < 10) {
+    alert("Please enter a valid phone number (10 digits)");
+    return;
+  }
+
+  if (!profileData.city.trim()) {
+    alert("Please enter your city");
+    return;
+  }
+
+  setIsLoading(true);
+  try {
+    // Create FormData for file upload
+    const formData = new FormData();
+    formData.append('userId', userInfo.userId);
+    formData.append('name', profileData.name);
+    formData.append('email', profileData.email);
+    formData.append('phone', profileData.phone);
+    formData.append('city', profileData.city);
+    formData.append('title', profileData.title || "Ms");
+    
+    // Append profile file if exists
+    if (profileData.profileFile) {
+      formData.append('profileImage', profileData.profileFile);
+      console.log("📤 Uploading profile image:", profileData.profileFile.name);
     }
 
-    if (!profileData.email.trim()) {
-      alert("Please enter your email");
-      return;
-    }
+    console.log("📤 Sending update request to server...");
+    console.log("🔗 Endpoint: http://localhost:5000/api/update-profile");
+    console.log("🆔 User ID being sent:", userInfo.userId);
 
-    if (!/^\S+@\S+\.\S+$/.test(profileData.email)) {
-      alert("Please enter a valid email address");
-      return;
-    }
+    const response = await fetch("http://localhost:5000/api/update-profile", {
+      method: "POST",
+      body: formData,
+    });
 
-    if (!profileData.phone.trim() || profileData.phone.length < 10) {
-      alert("Please enter a valid phone number");
-      return;
-    }
+    console.log("📥 Response status:", response.status);
+    console.log("📥 Response headers:", response.headers);
 
-    if (!profileData.city.trim()) {
-      alert("Please enter your city");
-      return;
-    }
-
-    try {
-      // Create FormData for file upload
-      const formData = new FormData();
-      formData.append('userId', userInfo.userId);
-      formData.append('name', profileData.name);
-      formData.append('email', profileData.email);
-      formData.append('phone', profileData.phone);
-      formData.append('city', profileData.city);
-      formData.append('title', profileData.title);
+    if (response.ok) {
+      const data = await response.json();
+      console.log("✅ Profile update response:", data);
       
-      // Append profile picture if a new file is selected
-      if (profileData.profileFile) {
-        formData.append('profileImage', profileData.profileFile);
-      }
-
-      const response = await fetch("http://localhost:5000/api/update-profile", {
-        method: "POST",
-        body: formData, // No Content-Type header for FormData
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Update user info in context with the response from server
-        login({
-          ...userInfo,
-          name: data.user.name,
-          email: data.user.email,
-          phone: data.user.phone,
-          city: data.user.city,
-          title: data.user.title,
-          profileImage: data.user.profileImage
-        });
-
-        setCurrentView("main");
-        alert("Profile updated successfully!");
-      } else {
-        throw new Error("Failed to update profile");
+      // Clean up preview URL if exists
+      if (profilePreview) {
+        URL.revokeObjectURL(profilePreview);
       }
       
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      alert("Failed to update profile");
-    }
-  };
+      // Update user info in context
+      const updatedUserInfo = {
+        ...userInfo,
+        name: data.user.name,
+        email: data.user.email,
+        phone: data.user.phone,
+        city: data.user.city,
+        title: data.user.title || "Ms",
+        profileImage: data.user.profileImage
+      };
+      
+      console.log("🔄 Updating context with:", updatedUserInfo);
+      login(updatedUserInfo);
 
-  // Profile change handler
-  const handleProfileChange = (field, value) => {
-    setProfileData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+      setProfilePreview(null);
+      setCurrentView("main");
+      alert("Profile updated successfully!");
+    } else {
+      const errorText = await response.text();
+      console.error("❌ Update failed - Response text:", errorText);
+      
+      try {
+        const errorData = JSON.parse(errorText);
+        throw new Error(errorData.error || "Failed to update profile");
+      } catch {
+        throw new Error(`Server error: ${response.status} - ${errorText}`);
+      }
+    }
+    
+  } catch (error) {
+    console.error("❌ Error updating profile:", error);
+    alert("Failed to update profile: " + error.message);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Render profile picture component
   const renderProfilePicture = (pictureUrl, size = 80, editable = false, onEditClick = null) => {
@@ -809,161 +888,187 @@ function AccountModal({ show, onHide, initialView = "main" }) {
     </div>
   );
 
-  // Render profile editing view with profile picture
-  const renderProfileEditView = () => (
-    <div>
-      <div className="text-center mb-4">
-        <div className="position-relative d-inline-block">
-          {renderProfilePicture(
-            profileData.profilePicture || userInfo.profileImage, 
-            100, 
-            true,
-            () => fileInputRef.current?.click()
-          )}
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={(e) => handleProfilePictureUpload(e, false)}
-            accept="image/*"
-            style={{ display: 'none' }}
-          />
-        </div>
-        <h4 className="mt-3">My Profile</h4>
-        <p className="text-muted small">Tap on photo to change</p>
-      </div>
-      
-      <Card className="border-0 shadow-sm">
-        <Card.Body>
-          {/* Box 1: Title Selection + Name */}
-          <div className="border rounded mb-3" style={{height:"55px"}}>
-            <Row>
-              <Col xs={3} className="p-3">
-                <div 
-                  className="border rounded-pill d-flex"
-                  style={{
-                    border: "1px solid #dee2e6",
-                    overflow: "hidden",
-                    width: "75px",
-                    height: "32px"
-                  }}
-                >
-                  {['Mr', 'Ms'].map((title, index) => (
-                    <button
-                      key={title}
-                      type="button"
-                      className={`btn border-0 rounded-0 flex-fill ${
-                        profileData.title === title 
-                          ? 'btn-dark' 
-                          : 'btn-outline-secondary'
-                      }`}
-                      onClick={() => handleProfileChange('title', title)}
-                      style={{
-                        fontSize: '12px',
-                        fontWeight: '500',
-                        padding: '8px 10px',
-                        borderRadius: index === 0 ? '50px 0 0 50px' : 
-                                      index === 1 ? '0 50px 50px 0' : '0'
-                      }}
-                    >
-                      {title}
-                    </button>
-                  ))}
-                </div>
-              </Col>
-              <Col>
-                <p className="text-muted small mb-0" style={{marginTop:"8px",fontSize:"12px"}}>Name</p>
-                <div className="">
-                  <Form.Control
-                    type="text"
-                    value={profileData.name}
-                    onChange={(e) => handleProfileChange('name', e.target.value)}
-                    className="border-0 p-0"
-                    style={{ 
-                      background: "transparent",
-                      fontSize:"12px",
-                      outline: "none",
-                      boxShadow: "none"
-                    }}
-                    placeholder="Enter your name"
-                  />
-                </div>
-              </Col>
-            </Row>
+  // Render profile editing view
+  const renderProfileEditView = () => {
+    console.log("Edit View - Current Profile Data:", profileData);
+    console.log("Edit View - Current User Info:", userInfo);
+    
+    // Use preview if exists, otherwise use existing profile image
+    const displayImage = profilePreview || userInfo.profileImage;
+    
+    return (
+      <div>
+        <div className="text-center mb-4">
+          <div 
+            className="position-relative d-inline-block"
+            style={{ cursor: 'pointer' }}
+            onClick={() => profileFileInputRef.current?.click()}
+          >
+            {renderProfilePicture(displayImage, 100, true)}
+            <input
+              type="file"
+              ref={profileFileInputRef}
+              onChange={handleProfileImageUpload}
+              accept="image/*"
+              style={{ display: 'none' }}
+            />
           </div>
+          <div className="mt-2">
+            <button
+              type="button"
+              className="btn btn-link p-0 text-decoration-none"
+              onClick={() => profileFileInputRef.current?.click()}
+              style={{ fontSize: "14px", color: "#6e42e5" }}
+            >
+              Change Photo
+            </button>
+          </div>
+          <h4 className="mt-3">My Profile</h4>
+          <p className="text-muted small">Edit your profile information</p>
+        </div>
+        
+        <Card className="border-0 shadow-sm">
+          <Card.Body>
+            {/* Box 1: Title Selection + Name */}
+            <div className="border rounded mb-3" style={{height:"55px"}}>
+              <Row>
+                <Col xs={3} className="p-3">
+                  <div 
+                    className="border rounded-pill d-flex"
+                    style={{
+                      border: "1px solid #dee2e6",
+                      overflow: "hidden",
+                      width: "75px",
+                      height: "32px"
+                    }}
+                  >
+                    {['Mr', 'Ms'].map((title, index) => (
+                      <button
+                        key={title}
+                        type="button"
+                        className={`btn border-0 rounded-0 flex-fill ${
+                          (profileData.title || userInfo.title || "Ms") === title 
+                            ? 'btn-dark' 
+                            : 'btn-outline-secondary'
+                        }`}
+                        onClick={() => handleProfileChange('title', title)}
+                        style={{
+                          fontSize: '12px',
+                          fontWeight: '500',
+                          padding: '8px 10px',
+                          borderRadius: index === 0 ? '50px 0 0 50px' : 
+                                        index === 1 ? '0 50px 50px 0' : '0'
+                        }}
+                      >
+                        {title}
+                      </button>
+                    ))}
+                  </div>
+                </Col>
+                <Col>
+                  <p className="text-muted small mb-0" style={{marginTop:"8px",fontSize:"12px"}}>Name</p>
+                  <div className="">
+                    <Form.Control
+                      type="text"
+                      value={profileData.name || userInfo.name || ""}
+                      onChange={(e) => handleProfileChange('name', e.target.value)}
+                      className="border-0 p-0"
+                      style={{ 
+                        background: "transparent",
+                        fontSize:"12px",
+                        outline: "none",
+                        boxShadow: "none"
+                      }}
+                      placeholder="Enter your name"
+                    />
+                  </div>
+                </Col>
+              </Row>
+            </div>
 
-          {/* Box 2: Email */}
-          <div className="border rounded p-2 mb-3" style={{height:"55px"}}>
-            <p className="text-muted small mb-0" style={{fontSize:"12px"}}>Email</p>
-            <div>
+            {/* Box 2: Email */}
+            <div className="border rounded p-2 mb-3" style={{height:"55px"}}>
+              <p className="text-muted small mb-0" style={{fontSize:"12px"}}>Email</p>
+              <div>
+                <Form.Control
+                  type="email"
+                  value={profileData.email || userInfo.email || ""}
+                  onChange={(e) => handleProfileChange('email', e.target.value)}
+                  placeholder="Enter email"
+                  className="border-0 p-0"
+                  style={{ 
+                    background: "transparent",
+                    outline: "none",
+                    boxShadow: "none",
+                    width: "100%",
+                    fontSize:"12px"
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Box 3: Phone Number */}
+            <div className="border rounded p-2 mb-3" style={{height:"55px"}}>
+              <p className="text-muted small mb-0" style={{fontSize:"12px"}}>Phone Number</p>
               <Form.Control
-                type="email"
-                value={profileData.email}
-                onChange={(e) => handleProfileChange('email', e.target.value)}
-                placeholder="Enter email"
+                type="tel"
+                value={profileData.phone || userInfo.phone || ""}
+                onChange={(e) => handleProfileChange('phone', e.target.value.replace(/\D/g, ""))}
+                placeholder="Enter phone number"
                 className="border-0 p-0"
                 style={{ 
                   background: "transparent",
                   outline: "none",
                   boxShadow: "none",
-                  width: "100%",
-                  fontSize:"12px"
+                  height: "32px",
+                  fontSize: "12px"
+                }}
+                maxLength={10}
+              />
+            </div>
+
+            {/* Box 4: City */}
+            <div className="border rounded p-2 mb-0" style={{height:"55px"}}>
+              <p className="text-muted small mb-0" style={{fontSize:"12px"}}>City</p>
+              <Form.Control
+                type="text"
+                value={profileData.city || userInfo.city || ""}
+                onChange={(e) => handleProfileChange('city', e.target.value)}
+                placeholder="Enter your city"
+                className="border-0 p-0"
+                style={{ 
+                  background: "transparent",
+                  outline: "none",
+                  boxShadow: "none",
+                  height: "32px",
+                  fontSize: "12px"
                 }}
               />
             </div>
-          </div>
 
-          {/* Box 3: Phone Number */}
-          <div className="border rounded p-2 mb-3" style={{height:"55px"}}>
-            <p className="text-muted small mb-0" style={{fontSize:"12px"}}>Phone Number</p>
-            <Form.Control
-              type="tel"
-              value={profileData.phone}
-              onChange={(e) => handleProfileChange('phone', e.target.value.replace(/\D/g, ""))}
-              placeholder="Enter phone number"
-              className="border-0 p-0"
-              style={{ 
-                background: "transparent",
-                outline: "none",
-                boxShadow: "none",
-                height: "32px",
-                fontSize: "12px"
-              }}
-            />
-          </div>
-
-          {/* Box 4: City */}
-          <div className="border rounded p-2 mb-0" style={{height:"55px"}}>
-            <p className="text-muted small mb-0" style={{fontSize:"12px"}}>City</p>
-            <Form.Control
-              type="text"
-              value={profileData.city}
-              onChange={(e) => handleProfileChange('city', e.target.value)}
-              placeholder="Enter your city"
-              className="border-0 p-0"
-              style={{ 
-                background: "transparent",
-                outline: "none",
-                boxShadow: "none",
-                height: "32px",
-                fontSize: "12px"
-              }}
-            />
-          </div>
-
-          {/* Action Buttons */}
-          <div className="d-flex gap-2 pt-3">
-            <Button
-              className="butn flex-grow-1 py-2" 
-              style={{backgroundColor:"black",height:"40px"}}
-              onClick={handleProfileSave}
-            >
-              Save Changes
-            </Button>
-          </div>
-        </Card.Body>
-      </Card>
-    </div>
-  );
+            {/* Action Buttons */}
+            <div className="d-flex gap-2 pt-3">
+              <Button
+                className="butn flex-grow-1 py-2" 
+                style={{backgroundColor:"black",height:"40px"}}
+                onClick={handleProfileSave}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </div>
+          </Card.Body>
+        </Card>
+      </div>
+    );
+  };
 
   // Render bookings view
   const renderBookingsView = () => (
@@ -1084,10 +1189,10 @@ function AccountModal({ show, onHide, initialView = "main" }) {
           {renderProfilePicture(userInfo.profileImage, 60, false)}
           <div className="flex-grow-1">
             <h5 className="fw-semibold mb-1">{userInfo.name || "User"}</h5>
-            <p className="small text-muted mb-1">{userInfo.email}</p>
             <p className="small text-muted mb-0">
-              {userInfo.phone} • {userInfo.city}
+              +91 {userInfo.phone}
             </p>
+              <p className="small text-muted mb-1">{userInfo.email}</p>
           </div>
           <MdOutlineArrowForwardIos size={14} className="text-muted" />
         </div>

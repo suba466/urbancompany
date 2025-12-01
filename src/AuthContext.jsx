@@ -4,68 +4,81 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 const AuthContext = createContext();
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  return useContext(AuthContext);
 };
 
 export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userInfo, setUserInfo] = useState({ name: "", phone: "" });
+  const [userInfo, setUserInfo] = useState({
+    userId: '',
+    name: '',
+    email: '',
+    phone: '',
+    city: '',
+    profileImage: '',
+    title: 'Ms'
+  });
 
-  // Check for existing login on app start
+  // Load from localStorage on initial render
   useEffect(() => {
-    const loggedIn = localStorage.getItem('isLoggedIn');
-    const userName = localStorage.getItem('userName');
-    const userPhone = localStorage.getItem('userPhone');
-    
-    if (loggedIn === 'true' && userName) {
-      setIsLoggedIn(true);
-      setUserInfo({ 
-        name: userName, 
-        phone: userPhone || "" 
-      });
+    const storedUser = localStorage.getItem('urbanUser');
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        console.log("📂 Loading user from localStorage:", userData);
+        setUserInfo(userData);
+        setIsLoggedIn(true);
+      } catch (error) {
+        console.error("❌ Error parsing stored user:", error);
+        localStorage.removeItem('urbanUser');
+      }
     }
   }, []);
 
   const login = (userData) => {
-    setIsLoggedIn(true);
-    setUserInfo({
-      name: userData.name || "User",
-      phone: userData.phone || "",
-      email:userData.email || "",
-      title:userData.title ||"",
-      
-    });
+    console.log("🔑 Login called with data:", userData);
     
-    // Store in localStorage
-    localStorage.setItem('isLoggedIn', 'true');
-    localStorage.setItem('userName', userData.name || "User");
-    localStorage.setItem('userPhone', userData.phone || "");
+    // Ensure userId is present
+    if (!userData.userId) {
+      console.error("❌ No userId provided during login!");
+      alert("Login failed: User ID missing");
+      return;
+    }
+
+    const userInfoToStore = {
+      userId: userData.userId,
+      name: userData.name || '',
+      email: userData.email || '',
+      phone: userData.phone || '',
+      city: userData.city || '',
+      profileImage: userData.profileImage || '',
+      title: userData.title || 'Ms'
+    };
+
+    console.log("💾 Storing user info:", userInfoToStore);
+    
+    setUserInfo(userInfoToStore);
+    setIsLoggedIn(true);
+    
+    // Save to localStorage
+    localStorage.setItem('urbanUser', JSON.stringify(userInfoToStore));
+    console.log("✅ User saved to localStorage");
   };
 
-  // In your AuthContext, make sure logout clears ALL user data
-const logout = () => {
-  setUserInfo({
-    name: "",
-    phone: "",
-    email: "",
-    userId: "",
-    title: "Ms"
-  });
-  setIsLoggedIn(false);
-  
-  // Clear from localStorage/sessionStorage
-  localStorage.removeItem('userInfo');
-  localStorage.removeItem('isLoggedIn');
-  sessionStorage.removeItem('userInfo');
-  sessionStorage.removeItem('isLoggedIn');
-  
-  // Clear any other stored data
-  sessionStorage.removeItem('currentOrder');
-};
+  const logout = () => {
+    console.log("🚪 Logging out user");
+    setUserInfo({
+      userId: '',
+      name: '',
+      email: '',
+      phone: '',
+      city: '',
+      profileImage: '',
+      title: 'Ms'
+    });
+    setIsLoggedIn(false);
+    localStorage.removeItem('urbanUser');
+  };
 
   const value = {
     isLoggedIn,
