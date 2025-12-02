@@ -1070,32 +1070,54 @@ const handleProfileSave = async () => {
     );
   };
 
-  // Render bookings view
-  const renderBookingsView = () => (
-    <div>
-      <h6 className="fw-bold mb-3">My Bookings</h6>
-      
-      {loadingBookings ? (
-        <div className="text-center py-5">
-          <Spinner animation="border" variant="primary" />
-          <p className="mt-2 text-muted">Loading your bookings...</p>
-        </div>
-      ) : bookings.length === 0 ? (
-        <div className="text-center py-5">
-          <LuNotepadText size={48} className="text-muted mb-3" />
-          <p className="text-muted">No bookings yet</p>
-          <p className="small text-muted">
-            Your completed orders will appear here<br />
-            <small>User: {userInfo.email}</small>
-          </p>
-        </div>
-      ) : (
-        <div className="d-grid gap-3">
-          {bookings.map((booking) => (
+  // Render bookings view with individual services
+const renderBookingsView = () => (
+  <div>
+    <h6 className="fw-bold mb-3">My Bookings</h6>
+    
+    {loadingBookings ? (
+      <div className="text-center py-5">
+        <Spinner animation="border" variant="primary" />
+        <p className="mt-2 text-muted">Loading your bookings...</p>
+      </div>
+    ) : bookings.length === 0 ? (
+      <div className="text-center py-5">
+        <LuNotepadText size={48} className="text-muted mb-3" />
+        <p className="text-muted">No bookings yet</p>
+        <p className="small text-muted">
+          Your completed orders will appear here<br />
+          <small>User: {userInfo.email}</small>
+        </p>
+      </div>
+    ) : (
+      <div className="d-grid gap-3">
+        {bookings.map((booking) => {
+          // Calculate total amount from individual items
+          const totalAmount = booking.items && booking.items.length > 0
+            ? booking.items.reduce((sum, item) => {
+                const price = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
+                const quantity = item.quantity || 1;
+                return sum + (price * quantity);
+              }, 0)
+            : booking.servicePrice || "0";
+          
+          return (
             <Card key={booking._id} className="border-0 shadow-sm">
               <Card.Body>
                 <div className="d-flex justify-content-between align-items-start mb-2">
-                  <h6 className="fw-semibold mb-1">{booking.serviceName || "Beauty Services"}</h6>
+                  <div>
+                    <p className="fw-semibold mb-1">
+                      Order #{booking._id}
+                    </p>
+                    <p className="small text-muted mb-0">
+                      {new Date(booking.bookingDate || Date.now()).toLocaleDateString('en-IN', {
+                        weekday: 'short',
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric'
+                      })} at {booking.scheduledTime || "10:00 AM"}
+                    </p>
+                  </div>
                   <span className={`badge ${
                     booking.status === 'Confirmed' ? 'bg-success' : 
                     booking.status === 'Completed' ? 'bg-primary' : 
@@ -1105,47 +1127,125 @@ const handleProfileSave = async () => {
                   </span>
                 </div>
                 
-                <div className="mb-2">
-                  <p className="small text-muted mb-1">
-                    <strong>Booking ID:</strong> {booking._id?.substring(0, 8)}...
-                  </p>
-                  <p className="small text-muted mb-1">
-                    <strong>Date:</strong> {new Date(booking.bookingDate || Date.now()).toLocaleDateString('en-IN')}
-                  </p>
-                  <p className="small text-muted mb-1">
-                    <strong>Amount Paid:</strong> ₹{booking.servicePrice || "0"}
-                  </p>
-                </div>
-
-                {booking.address && (
-                  <div className="d-flex align-items-start mb-2">
-                    <MdLocationOn size={14} className="text-muted mt-1 me-2" />
-                    <p className="small text-muted mb-0 flex-grow-1">
-                      {booking.address.doorNo && `${booking.address.doorNo}, `}
-                      {booking.address.mainText || "Selected Address"}
+                {/* Display individual services */}
+                {booking.items && booking.items.length > 0 ? (
+                  <div className="mb-3">
+                    <p className="small fw-semibold mb-2">Services:</p>
+                    <div >
+                      {booking.items.map((item, index) => {
+                        const itemPrice = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
+                        const quantity = item.quantity || 1;
+                        const totalItemPrice = itemPrice * quantity;
+                        
+                        return (
+                          <div key={index} className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                            <div>
+                              <p className="mb-1 small">{item.name}</p>
+                              <p className="mb-0 text-muted" style={{ fontSize: "11px" }}>
+                                Qty: {quantity}
+                              </p>
+                            </div>
+                            <p className="mb-0  small">
+                              ₹{totalItemPrice.toLocaleString('en-IN')}
+                            </p>
+                          </div>
+                        );
+                      })}
+                      {/* Total amount */}
+                      <div className="d-flex justify-content-between align-items-center mt-2 pt-2">
+                        <p className="mb-0">Total Amount</p>
+                        <p className="mb-0 ">₹{typeof totalAmount === 'number' ? totalAmount.toLocaleString('en-IN') : totalAmount}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mb-3">
+                    <p className="small text-muted mb-1">
+                      <strong>Service:</strong> {booking.serviceName || "Beauty Services"}
+                    </p>
+                    <p className="small fw-semibold mb-0">
+                      Amount: ₹{booking.servicePrice || "0"}
                     </p>
                   </div>
                 )}
 
-                <div className="mt-3 pt-2 border-top">
+                {/* Address */}
+                {booking.address && (
+                  <div className="d-flex align-items-start mb-3">
+                    <MdLocationOn size={14} className="text-muted mt-1 me-2 flex-shrink-0" />
+                    <div className="flex-grow-1">
+                      <p className="small text-muted mb-1">
+                        {booking.address.doorNo && `${booking.address.doorNo}, `}
+                        {booking.address.mainText || "Selected Address"}
+                        {booking.address.subText && `, ${booking.address.subText}`}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div className="mt-3 pt-2 border-top d-flex gap-2">
                   <Button 
                     variant="outline-primary" 
                     size="sm"
+                    className="flex-grow-1"
                     onClick={() => {
-                      alert(`Booking Details:\n\nService: ${booking.serviceName}\nDate: ${new Date(booking.bookingDate).toLocaleDateString()}\nAmount: ₹${booking.servicePrice}\nStatus: ${booking.status}`);
+                      // Create detailed message
+                      let details = `Booking Details:\n`;
+                      details += `Booking ID: ${booking._id}\n`;
+                      details += `Date: ${new Date(booking.bookingDate).toLocaleDateString('en-IN')}\n`;
+                      details += `Time: ${booking.scheduledTime || "10:00 AM"}\n`;
+                      details += `Status: ${booking.status}\n\n`;
+                      
+                      if (booking.items && booking.items.length > 0) {
+                        details += `Services:\n`;
+                        booking.items.forEach((item, index) => {
+                          const itemPrice = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
+                          const quantity = item.quantity || 1;
+                          details += `${index + 1}. ${item.name} - ₹${itemPrice} × ${quantity}\n`;
+                        });
+                        details += `\nTotal: ₹${totalAmount}\n`;
+                      } else {
+                        details += `Service: ${booking.serviceName}\n`;
+                        details += `Amount: ₹${booking.servicePrice}\n`;
+                      }
+                      
+                      if (booking.address) {
+                        details += `\nAddress:\n`;
+                        details += `${booking.address.doorNo ? booking.address.doorNo + ', ' : ''}`;
+                        details += `${booking.address.mainText || ''}`;
+                        details += `${booking.address.subText ? ', ' + booking.address.subText : ''}`;
+                      }
+                      
+                      alert(details);
                     }}
                   >
                     View Details
                   </Button>
+                  
+                  {booking.status === 'Confirmed' && (
+                    <Button 
+                      variant="outline-danger" 
+                      size="sm"
+                      onClick={() => {
+                        if (window.confirm("Are you sure you want to cancel this booking?")) {
+                          alert("Cancellation feature coming soon!");
+                          // You can add API call to cancel booking here
+                        }
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  )}
                 </div>
               </Card.Body>
             </Card>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-
+          );
+        })}
+      </div>
+    )}
+  </div>
+);
   // Render plans view
   const renderPlansView = () => (
     <div>

@@ -5,7 +5,6 @@ import {
 } from "react-bootstrap";
 import { CiLocationOn, CiShoppingCart, CiSearch } from "react-icons/ci";
 import { IoIosArrowDown } from "react-icons/io";
-import { BiLeftArrowAlt } from "react-icons/bi";
 import { LuNotepadText } from "react-icons/lu";
 import { CgProfile } from "react-icons/cg";
 import { IoMdLocate } from "react-icons/io";
@@ -472,8 +471,6 @@ function Urbanav() {
                 {/* Icons - Desktop */}
                 {!location.pathname.startsWith("/salon") && (
                   <div className="icons display desktop-only d-flex align-items-center gap-3">
-                    <LuNotepadText size={20} className="text-muted" />
-                    
                     {/* Cart Icon with Badge - Navigates to CartSummary page */}
                     <div 
                       className="position-relative"
@@ -592,7 +589,6 @@ function Urbanav() {
                   >
                     {/* Note: You have GoHomeFill icon here, might want to change to CiShoppingCart */}
                     <GoHomeFill size={18} className="mb-1" />
-                    <CartBadge count={cartCount} size="lg" />
                     <div className="nav-label" style={{ fontSize: "12px" }}>Cart</div>
                   </div>
                 </div>

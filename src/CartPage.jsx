@@ -1,18 +1,23 @@
 import { useState, useEffect } from "react";
 import CartBlock from "./CartBlock";
 import Salon1modal from "./Salon1modal";
-import { Row, Col, Button, Container, Form, Modal, Card, Badge, Spinner } from "react-bootstrap";
+import { Row, Col, Button, Container, Form, Modal, Card, Badge } from "react-bootstrap";
 import FrequentlyAddedCarousel from "./FrequentlyAddedCarousel";
 import { TbCirclePercentageFilled } from "react-icons/tb";
 import { MdKeyboardArrowRight, MdPayments } from "react-icons/md";
 import AccountModal from "./AccountModal";
 import { ImLocation } from "react-icons/im";
 import { useAuth } from "./AuthContext";
-import { useCart } from "./CartContext"; // Import useCart
+import { useCart } from "./CartContext";
 import { FaClock } from "react-icons/fa";
+import { MdEdit } from "react-icons/md";
+import { MdHomeFilled } from "react-icons/md";
+import { MdWork } from "react-icons/md";
+import { MdLocationOn } from "react-icons/md";
+import { LuClock3 } from "react-icons/lu";
 
 function CartPage() {
-  const { cartItems, removeFromCart, refreshCart, clearCart } = useCart(); // Use cart context
+  const { cartItems, refreshCart } = useCart();
   const [showModal, setShowModal] = useState(false);
   const [selectedPkg, setSelectedPkg] = useState(null);
   const [addedImgs, setAddedImgs] = useState([]);
@@ -26,14 +31,129 @@ function CartPage() {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
-  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-  const [savedAddresses, setSavedAddresses] = useState([]);
 
   const { isLoggedIn, userInfo } = useAuth();
 
-  // Enhanced time slots data with proper dates (only next 3 days)
+ // In CartPage.jsx, update the processPayment function
+const processPayment = async () => {
+  // First check if all required fields are filled
+  if (!selectedAddress) {
+    alert("Please select an address first");
+    return;
+  }
+  
+  if (!selectedSlot) {
+    alert("Please select a time slot");
+    return;
+  }
+  
+  // Check if user is logged in
+  if (!isLoggedIn) {
+    alert("Please login to place an order");
+    setShowAccountModal(true);
+    setShowLoginView(true);
+    return;
+  }
+
+  try {
+    // Calculate totals
+    const itemTotal = calculateItemTotal();
+    const tax = calculateTax();
+    const tip = calculateTip();
+    const slotExtraCharge = calculateSlotExtraCharge();
+    const totalPrice = itemTotal + tax + tip + slotExtraCharge;
+
+    // Prepare booking data
+    const bookingData = {
+      userId: userInfo.userId || `user_${userInfo.phone || "9787081119"}`,
+      userEmail: userInfo.email,
+      userName: userInfo.name || "Customer",
+      userPhone: userInfo.phone || "9787081119",
+      userCity: userInfo.city || "",
+      serviceName: cartItems.map(item => item.title).join(', '),
+      servicePrice: totalPrice.toString(),
+      originalPrice: itemTotal.toString(),
+      address: selectedAddress,
+      scheduledDate: selectedDate ? selectedDate.toISOString() : new Date().toISOString(),
+      scheduledTime: selectedSlot.time,
+      items: cartItems.map(item => ({
+        name: item.title,
+        quantity: item.count || 1,
+        price: item.price
+      })),
+      slotExtraCharge: slotExtraCharge,
+      tipAmount: tip,
+      taxAmount: tax,
+      paymentMethod: "Direct Booking", // Or "Cash on Delivery" if you prefer
+      status: "Confirmed"
+    };
+
+    console.log("Creating booking with data:", bookingData);
+
+    // Send booking to server
+    const response = await fetch("http://localhost:5000/api/bookings", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(bookingData),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to create booking");
+    }
+
+    const result = await response.json();
+    
+    // Clear cart after successful booking
+    await clearCartFromDatabase();
+    
+    // Clear local storage
+    localStorage.removeItem('selectedAddress');
+    
+    // Show success message
+    alert(`🎉 Order placed successfully!\n\nBooking ID: ${result.booking._id}\nAmount: ₹${totalPrice}`);
+    
+    // Redirect to home or bookings page
+    window.location.href = "/";
+    
+  } catch (error) {
+    console.error("Error processing order:", error);
+    alert(`Order failed: ${error.message}`);
+  }
+};
+
+// Add clearCartFromDatabase function
+const clearCartFromDatabase = async () => {
+  try {
+    const response = await fetch("http://localhost:5000/api/carts");
+    if (response.ok) {
+      const data = await response.json();
+      const cartItems = data.carts || [];
+      
+      // Delete all cart items
+      for (const item of cartItems) {
+        await fetch(`http://localhost:5000/api/carts/${item._id}`, {
+          method: "DELETE"
+        });
+      }
+      
+      // Refresh cart context
+      refreshCart();
+    }
+  } catch (error) {
+    console.error("Error clearing cart:", error);
+  }
+};
+// Add this function to check if order can be placed
+const canPlaceOrder = () => {
+  if (!isLoggedIn) return false;
+  if (!selectedAddress) return false;
+  if (!selectedSlot) return false;
+  if (cartItems.length === 0) return false;
+  return true;
+};
   const timeSlotsData = {
-    // Today
     [new Date().toISOString().split('T')[0]]: [
       { id: 1, time: "10:00 AM", available: true, extraCharge: 0 },
       { id: 2, time: "10:30 AM", available: true, extraCharge: 0 },
@@ -41,32 +161,28 @@ function CartPage() {
       { id: 4, time: "11:30 AM", available: true, extraCharge: 0 },
       { id: 5, time: "02:00 PM", available: true, extraCharge: 0 },
       { id: 6, time: "02:30 PM", available: true, extraCharge: 0 },
-      { id: 7, time: "07:00 PM", available: true, extraCharge: 100 }, // ₹100 extra
-      { id: 8, time: "07:30 PM", available: true, extraCharge: 100 }, // ₹100 extra
+      { id: 7, time: "07:00 PM", available: true, extraCharge: 100 },
+      { id: 8, time: "07:30 PM", available: true, extraCharge: 100 },
     ],
-    // Tomorrow
     [new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]]: [
       { id: 9, time: "09:00 AM", available: true, extraCharge: 0 },
       { id: 10, time: "09:30 AM", available: true, extraCharge: 0 },
       { id: 11, time: "10:00 AM", available: true, extraCharge: 0 },
       { id: 12, time: "11:00 AM", available: true, extraCharge: 0 },
       { id: 13, time: "03:00 PM", available: true, extraCharge: 0 },
-      { id: 14, time: "07:00 PM", available: true, extraCharge: 100 }, // ₹100 extra
-      { id: 15, time: "07:30 PM", available: true, extraCharge: 100 }, // ₹100 extra
+      { id: 14, time: "07:00 PM", available: true, extraCharge: 100 },
+      { id: 15, time: "07:30 PM", available: true, extraCharge: 100 },
     ],
-    // Day after tomorrow
     [new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]]: [
       { id: 16, time: "01:00 PM", available: true, extraCharge: 0 },
       { id: 17, time: "01:30 PM", available: true, extraCharge: 0 },
       { id: 18, time: "02:00 PM", available: true, extraCharge: 0 },
       { id: 19, time: "04:00 PM", available: true, extraCharge: 0 },
       { id: 20, time: "04:30 PM", available: false, extraCharge: 0 },
-      { id: 21, time: "07:00 PM", available: true, extraCharge: 100 }, // ₹100 extra
-      { id: 22, time: "07:30 PM", available: true, extraCharge: 100 }, // ₹100 extra
+      { id: 21, time: "07:00 PM", available: true, extraCharge: 100 },
+      { id: 22, time: "07:30 PM", available: true, extraCharge: 100 },
     ]
   };
-
-  // REMOVED: fetchCarts function - now using cartItems from context
 
   const fetchAddedItems = () => {
     fetch("http://localhost:5000/api/added")
@@ -75,44 +191,28 @@ function CartPage() {
       .catch(err => console.error("Failed to load added images:", err));
   };
 
-  // Load saved addresses
-  const loadSavedAddresses = () => {
-    const saved = localStorage.getItem('savedAddresses');
-    if (saved) {
-      setSavedAddresses(JSON.parse(saved));
-    }
-  };
-
-  // Check for saved address when component loads
   useEffect(() => {
     fetchAddedItems();
-    loadSavedAddresses();
-    refreshCart(); // Refresh cart on mount
+    refreshCart();
     
-    // Check if address is saved in localStorage
     const savedAddress = localStorage.getItem('selectedAddress');
     if (savedAddress) {
       setSelectedAddress(JSON.parse(savedAddress));
     }
 
-    // Set today as default selected date
     setSelectedDate(new Date());
   }, []);
 
-  // Listen for address updates from UrbanNav
   useEffect(() => {
     const handleStorageChange = () => {
       const savedAddress = localStorage.getItem('selectedAddress');
       if (savedAddress) {
         setSelectedAddress(JSON.parse(savedAddress));
       }
-      // Reload saved addresses when storage changes
-      loadSavedAddresses();
     };
 
     window.addEventListener('storage', handleStorageChange);
     
-    // Also check periodically
     const interval = setInterval(() => {
       const savedAddress = localStorage.getItem('selectedAddress');
       if (savedAddress && !selectedAddress) {
@@ -169,7 +269,7 @@ function CartPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ count: item.count + 1 }),
       });
-      refreshCart(); // Refresh cart from context
+      refreshCart();
       window.dispatchEvent(new Event('cartUpdated'));
     } catch (error) {
       console.error("Error increasing item:", error);
@@ -189,7 +289,7 @@ function CartPage() {
           body: JSON.stringify({ count: item.count - 1 }),
         });
       }
-      refreshCart(); // Refresh cart from context
+      refreshCart();
       window.dispatchEvent(new Event('cartUpdated'));
     } catch (error) {
       console.error("Error decreasing item:", error);
@@ -246,7 +346,7 @@ function CartPage() {
           }
         }
       }
-      refreshCart(); // Refresh cart from context
+      refreshCart();
       window.dispatchEvent(new Event('cartUpdated'));
     } catch (error) {
       console.error("Error handling cart:", error);
@@ -315,171 +415,85 @@ function CartPage() {
 
   const handleDateSelect = (date) => {
     setSelectedDate(date);
-    setSelectedSlot(null); // Reset slot when date changes
+    setSelectedSlot(null);
   };
 
-  // Handle Place Order with Database Integration
-  const handlePlaceOrder = async () => {
-    if (!isLoggedIn) {
-      alert("Please login to place order");
-      setShowAccountModal(true);
-      return;
-    }
-
-    if (!selectedAddress) {
-      alert("Please select delivery address");
-      handleOpenLocationModal();
-      return;
-    }
-
-    if (!selectedSlot) {
-      alert("Please select a time slot");
-      setShowSlotModal(true);
-      return;
-    }
-
-    setIsPlacingOrder(true);
-
-    try {
-      // Create booking in database
-      const bookingData = {
-        userId: userInfo.userId || userInfo.phone,
-        userPhone: userInfo.phone,
-        userName: userInfo.name,
-        serviceName: cartItems.map(item => item.title).join(', '),
-        servicePrice: calculateTotalPrice().toString(),
-        originalPrice: calculateItemTotal().toString(),
-        address: selectedAddress,
-        scheduledDate: selectedDate,
-        scheduledTime: selectedSlot.time,
-        items: cartItems.map(item => ({
-          name: item.title,
-          quantity: item.count || 1,
-          price: item.price
-        })),
-        slotExtraCharge: selectedSlot.extraCharge,
-        tipAmount: calculateTip(),
-        taxAmount: calculateTax()
-      };
-
-      const response = await fetch("http://localhost:5000/api/bookings", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(bookingData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create booking");
-      }
-
-      const result = await response.json();
-
-      // Clear cart after successful booking
-      await clearCart();
-      
-      // Show success message
-      alert(`🎉 Order placed successfully!\n\nBooking ID: ${result.booking._id}\nService: ${bookingData.serviceName}\nDate: ${selectedDate.toLocaleDateString()}\nTime: ${selectedSlot.time}\nTotal: ${formatPrice(calculateTotalPrice())}`);
-      
-      // Reset form
-      setSelectedSlot(null);
-      setSelectedDate(new Date());
-      setSelectedTip(0);
-      setCustomTip("");
-      
-      // You can navigate to bookings page or home page here
-      // window.location.href = "/";
-
-    } catch (error) {
-      console.error("Error placing order:", error);
-      alert(`Failed to place order: ${error.message}`);
-    } finally {
-      setIsPlacingOrder(false);
-    }
-  };
-
-  // Function to open UrbanNav's location modal
   const handleOpenLocationModal = () => {
     const event = new CustomEvent('openLocationModal');
     window.dispatchEvent(event);
     localStorage.setItem('openLocationModal', 'true');
   };
 
-  // Function to handle address selection and automatically open slots modal
-  const handleAddressAndOpenSlots = () => {
+  const handleAddress = () => {
     handleOpenLocationModal();
-    
-    // Listen for address selection and then open slots modal
-    const handleAddressSelected = () => {
-      const savedAddress = localStorage.getItem('selectedAddress');
-      if (savedAddress) {
-        setSelectedAddress(JSON.parse(savedAddress));
-        // Open slots modal after a short delay to ensure address is set
-        setTimeout(() => {
-          setShowSlotModal(true);
-        }, 500);
-      }
-    };
-
-    // Add event listener for storage changes
-    window.addEventListener('storage', handleAddressSelected);
-    
-    // Also check periodically for address selection
-    const checkInterval = setInterval(() => {
-      const savedAddress = localStorage.getItem('selectedAddress');
-      if (savedAddress) {
-        setSelectedAddress(JSON.parse(savedAddress));
-        setShowSlotModal(true);
-        clearInterval(checkInterval);
-        window.removeEventListener('storage', handleAddressSelected);
-      }
-    }, 100);
-
-    // Cleanup after 10 seconds if no address is selected
-    setTimeout(() => {
-      clearInterval(checkInterval);
-      window.removeEventListener('storage', handleAddressSelected);
-    }, 10000);
   };
 
-  // Format address for display
-  const formatAddressDisplay = (address) => {
-    if (!address) return "";
-    const parts = [];
-    if (address.doorNo) parts.push(address.doorNo);
-    if (address.mainText) parts.push(address.mainText);
-    if (address.subText) {
-      const firstPart = address.subText.split(',')[0];
-      parts.push(firstPart);
+  // Function to get address icon based on type
+  const getAddressIcon = (addressType) => {
+    switch (addressType) {
+      case 'home': return <MdHomeFilled style={{ marginRight: "4px", fontSize: "16px", verticalAlign: "text-bottom" }} />;
+      case 'work': return <MdWork style={{ marginRight: "4px", fontSize: "16px", verticalAlign: "text-bottom" }} />;
+      default: return <MdLocationOn style={{ marginRight: "4px", fontSize: "16px", verticalAlign: "text-bottom" }} />;
     }
-    
-    let formattedAddress = parts.join(', ');
-    
-    // Truncate if too long
-    if (formattedAddress.length > 20) {
-      formattedAddress = formattedAddress.substring(0, 20) + '...';
-    }
-    
-    return formattedAddress;
   };
 
-  // Get address type display name
-  const getAddressTypeDisplay = (addressType) => {
+  // Function to get address type text
+  const getAddressTypeText = (addressType) => {
     switch (addressType) {
       case 'home': return 'Home';
       case 'work': return 'Work';
-      case 'other': return 'Other';
-      default: return 'Home';
+      default: return 'Other';
     }
   };
 
-  // Get only next 3 dates
+  // Function to format full address for display
+  const formatFullAddress = (address) => {
+    if (!address) return "";
+    
+    const parts = [];
+    
+    if (address.doorNo && address.doorNo.trim() !== "") {
+      parts.push(address.doorNo.trim());
+    }
+    
+    if (address.mainText && address.mainText.trim() !== "") {
+      parts.push(address.mainText.trim());
+    }
+    
+    if (address.subText && address.subText.trim() !== "") {
+      parts.push(address.subText.trim());
+    }
+    
+    return parts.join(", ");
+  };
+
+  // Function to format address for mobile footer (with truncation if needed)
+  const formatMobileAddress = (address) => {
+    if (!address) return "";
+    
+    const fullAddress = formatFullAddress(address);
+    
+    // For mobile, show full address but truncate if too long
+    if (fullAddress.length > 50) {
+      return fullAddress.substring(0, 47) + "...";
+    }
+    
+    return fullAddress;
+  };
+
+  // Function to format date for mobile footer
+  const formatDateForMobile = (date) => {
+    if (!date) return "";
+    
+    // Format: "Wed, Dec 4"
+    const options = { weekday: 'short', month: 'short', day: 'numeric' };
+    return date.toLocaleDateString('en-US', options);
+  };
+
   const getDates = () => {
     const dates = [];
     const today = new Date();
-    for (let i = 0; i < 3; i++) { // Only 3 days
+    for (let i = 0; i < 3; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
       dates.push(date);
@@ -489,14 +503,12 @@ function CartPage() {
 
   const dates = getDates();
 
-  // Get slots for selected date
   const getSlotsForSelectedDate = () => {
     if (!selectedDate) return [];
     const dateKey = selectedDate.toISOString().split('T')[0];
     return timeSlotsData[dateKey] || [];
   };
 
-  // Format date for display
   const formatDateDisplay = (date) => {
     const today = new Date();
     const tomorrow = new Date(today);
@@ -517,7 +529,6 @@ function CartPage() {
   const slotExtraCharge = calculateSlotExtraCharge();
   const totalPrice = calculateTotalPrice();
 
-  // If cart is empty, show empty state
   if (cartItems.length === 0) {
     return (
       <Container className="d-flex flex-column align-items-center justify-content-center" >
@@ -548,7 +559,7 @@ function CartPage() {
   return (
     <div className="container mt-4">
       <Row>
-        {/* Account Column - Shows different content based on login status - HEIGHT ADJUSTED */}
+        {/* Account Column - Desktop View */}
         <Col md={6} className="d-none d-md-block"
           style={{
             position: "sticky",
@@ -556,14 +567,13 @@ function CartPage() {
             border: "1px solid rgba(0,0,0,0.2)",
             borderRadius: "10px",
             padding: "15px",
-            height: "fit-content", // Changed from "auto" to "fit-content"
-            maxHeight: "400px", // Added max height limit
-            overflow: "hidden" // Prevent overflow
+            height: "fit-content",
+            maxHeight: "400px",
+            overflow: "hidden"
           }}
         >
           {isLoggedIn ? (
             <div>
-              {/* Send booking details section */}
               <div className="mb-3">
                 <p className="fw-semibold" style={{fontSize:"15px"}}>
                   <ImLocation style={{fontSize:"18px", marginRight: "8px"}}/>
@@ -576,10 +586,9 @@ function CartPage() {
               
               <hr />
               
-              {/* Address section */}
               <div className="mb-3">
                 <div className="d-flex justify-content-between align-items-center mb-2">
-                  <p className="fw-semibold mb-0" style={{fontSize:"15px",}}>
+                  <p className="fw-semibold mb-0" style={{fontSize:"15px"}}>
                     <ImLocation style={{fontSize:"18px", marginRight: "8px"}}/>
                     Address
                   </p>
@@ -595,20 +604,21 @@ function CartPage() {
                 </div>
                 <div style={{ marginLeft: "28px",marginTop:"-12px" }}>
                   {selectedAddress ? (
-                    <div >
+                    <div>
                       <div className="d-flex justify-content-between align-items-start">
                         <div className="flex-grow-1">
-                          {/* Address Type - First line */}
-                          <p className="mb-2 fw-semibold" style={{ fontSize: "12px",color:"#6b6b6bff" }}>
-                            {getAddressTypeDisplay(selectedAddress.addressType)} <span className="fw-normal">• {formatAddressDisplay(selectedAddress)}</span>
+                          <p className="mb-2 fw-semibold" style={{ fontSize: "12px", color: "#6b6b6bff" }}>
+                            {getAddressIcon(selectedAddress.addressType)}
+                            {getAddressTypeText(selectedAddress.addressType)} • {formatMobileAddress(selectedAddress)}
                           </p>
                         </div>
                       </div>
                     </div>
                   ) : (
                     <Button 
-                      className="butn w-100" style={{height:"40px"}}
-                      onClick={handleAddressAndOpenSlots}
+                      className="butn w-100" 
+                      style={{height:"40px"}}
+                      onClick={handleAddress}
                     >
                       Select an address
                     </Button>
@@ -618,7 +628,6 @@ function CartPage() {
               
               <hr />
               
-              {/* Slot section */}
               <div className="mb-3">
                 <div className="d-flex justify-content-between align-items-center mb-2">
                   <p className="fw-semibold mb-0" style={{fontSize:"15px"}}>
@@ -658,10 +667,10 @@ function CartPage() {
                     )}
                   </div>
                 )}
-              </div>     
+              </div>
+              
               <hr />
               
-              {/* Payment section */}
               <div>
                 <p className="fw-semibold" style={{fontSize:"15px"}}>
                   <MdPayments style={{fontSize:"20px", marginRight: "8px"}}/>
@@ -669,47 +678,26 @@ function CartPage() {
                 </p>
                 {selectedSlot && selectedAddress && (
                   <div style={{ marginLeft: "28px" }}>
-                   
+                    // Update button states
 <Button
   className="butn fw-bold w-100 p-3"
-  disabled={!selectedSlot}
-  onClick={() => {
-    if (!selectedAddress) {
-      alert("Please select delivery address");
-      handleAddressAndOpenSlots();
-      return;
-    }
-
-    // Store complete order data before navigation
-    const orderData = {
-      items: cartItems,
-      itemTotal: calculateItemTotal(),
-      tax: calculateTax(),
-      tip: calculateTip(),
-      slotExtraCharge: calculateSlotExtraCharge(),
-      total: calculateTotalPrice(),
-      address: selectedAddress,
-      scheduledTime: selectedSlot?.time,
-      scheduledDate: selectedDate
-    };
-    
-    sessionStorage.setItem('currentOrder', JSON.stringify(orderData));
-    
-    // Navigate to payment page
-    window.location.href = `/payment?amount=${orderData.total}`;
-  }}
+  disabled={!canPlaceOrder()}
+  onClick={processPayment}
 >
-  Proceed to Payment <MdPayments size={20} />
+  {!isLoggedIn ? "Login to Continue" : 
+   !selectedAddress ? "Select Address" : 
+   !selectedSlot ? "Select Time Slot" : 
+   "Place an order"}
 </Button>
                   </div>
-                )} <br /> <div style={{backgroundColor:"#e1e1e1ff",height:"40px",padding:"10px"}} className="border rounded text-center ">
+                )}
+                <br />
+                <div style={{backgroundColor:"#e1e1e1ff",height:"40px",padding:"10px"}} className="border rounded text-center">
                   <p className="text-muted" style={{fontSize:"12px"}}>By proceeding, you agree to our <a className="fw-semibold" style={{color:"black"}} href="">T&C</a>,<a className="fw-semibold" style={{color:"black"}}  href="">Privacy</a> and <a className="fw-semibold" style={{color:"black"}} href="">Cancellation Policy</a> </p>
                 </div>
-                
               </div>
             </div>
           ) : (
-            // Login Section when not logged in
             <div>
               <p className="fw-semibold mb-1">Account</p>
               <p style={{ fontSize: "13px", color: "#555" }}>
@@ -729,7 +717,7 @@ function CartPage() {
         {/* Cart Column (full-width on mobile) */}
         <Col xs={12} md={6}>
           <CartBlock
-            carts={cartItems} // Use cartItems from context
+            carts={cartItems}
             formatPrice={formatPrice}
             safePrice={safePrice}
             handleIncrease={handleIncrease}
@@ -743,7 +731,7 @@ function CartPage() {
               <h5 className="fw-bold mb-2" style={{ fontSize: "15px" }}>Frequently added together</h5>
               <FrequentlyAddedCarousel
                 items={visibleCarouselItems}
-                carts={cartItems} // Use cartItems from context
+                carts={cartItems}
                 onAdd={(item) => handleAddToCart(item, [], item.price, 0, "add")}
                 onRemove={(item) => handleAddToCart(item, [], item.price, 0, "remove")}
               />
@@ -795,7 +783,6 @@ function CartPage() {
                 <Col className="text-end"><p style={{fontSize:"14px"}}>{formatPrice(tax)}</p></Col>
               </Row>
               
-              {/* Slot Extra Charge */}
               {slotExtraCharge > 0 && (
                 <Row className="mb-1">
                   <Col><p style={{fontSize:"14px"}}>Evening slot charge</p></Col>
@@ -874,7 +861,7 @@ function CartPage() {
           </div>
 
           {/* Amount to Pay Section - Only in 2nd column for desktop */}
-          <div className="d-none position-sticky bottom-0 d-md-block mt-4 p-3 " style={{backgroundColor:"white"}} >
+          <div className="d-none position-sticky bottom-0 d-md-block mt-4 p-3" style={{backgroundColor:"white"}}>
             <Row className="align-items-center">
               <Col>
                 <h5 className="fw-bold mb-0">Amount to Pay</h5>
@@ -894,34 +881,118 @@ function CartPage() {
           <Row className="align-items-center">
             {isLoggedIn ? (
               <>
-                <Col xs={6}>
-                  <h5 className="fw-bold mb-0" style={{ fontSize: "16px" }}>
-                    Amount to Pay
-                  </h5>
-                </Col>
-                <Col xs={6} className="text-end">
-                  <Button 
-                    className="butn fw-bold" 
-                    onClick={handlePlaceOrder}
-                    disabled={isPlacingOrder || !selectedSlot || !selectedAddress}
-                    style={{ height: "45px", fontSize: "16px" }}
-                  >
-                    {isPlacingOrder ? (
-                      <>
-                        <Spinner animation="border" size="sm" className="me-2" />
-                        Placing...
-                      </>
-                    ) : (
-                      `Pay ${formatPrice(totalPrice)}`
-                    )}
-                  </Button>
-                </Col>
+                {/* Step 1: No Address Selected - Show Address Button */}
+                {!selectedAddress && (
+                  <Col xs={12}>
+                    <Button 
+                      className="butn w-100 fw-bold" 
+                      style={{ height: "48px", fontSize: "16px", borderRadius: "8px" }} 
+                      onClick={handleAddress}
+                    >
+                      Add address
+                    </Button>
+                  </Col>
+                )}
+
+                {/* Step 2: Address Selected, No Slot - Show Slot Button */}
+                {selectedAddress && !selectedSlot && (
+                  <Col xs={12}>
+                    <div className="d-flex justify-content-between align-items-center mb-2 p-2">
+                      <div style={{ flex: 1 }}>
+                        <div className="d-flex align-items-center mb-1">
+                          {getAddressIcon(selectedAddress.addressType)}
+                          <span style={{ fontSize: "14px" }}>
+                            {getAddressTypeText(selectedAddress.addressType)} - 
+                          </span>
+                          <p className="mb-0" style={{ fontSize: "12px", lineHeight: "1.3" }}>
+                            {formatMobileAddress(selectedAddress)}
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        className="p-1 border-0" 
+                        style={{ backgroundColor: "transparent", minWidth: "36px" }}
+                        onClick={() => handleAddress(true)}
+                      >
+                        <MdEdit style={{ color: "#000000ff", fontSize: "18px" }} />
+                      </Button>
+                    </div>
+                    <Button 
+                      className="butn w-100 fw-bold" 
+                      style={{ height: "48px", fontSize: "16px", borderRadius: "8px" }} 
+                      onClick={() => setShowSlotModal(true)}
+                    >
+                      Select Time Slot
+                    </Button>
+                  </Col>
+                )}
+
+                {/* Step 3: Both Address & Slot Selected - Show Payment Button */}
+                {selectedAddress && selectedSlot && (
+                  <Col xs={12}>
+                    {/* Address Section */}
+                    <div className="d-flex justify-content-between align-items-center mb-2 p-2" style={{borderBottom:"1px dashed"}}>
+                      <div style={{ flex: 1 }}>
+                        <div className="d-flex align-items-center mb-1">
+                          {getAddressIcon(selectedAddress.addressType)}
+                          <span style={{ fontSize: "14px" }}>
+                            {getAddressTypeText(selectedAddress.addressType)} - 
+                          </span>
+                          <p className="mb-0" style={{ fontSize: "12px", lineHeight: "1.3" }}>
+                            {formatMobileAddress(selectedAddress)}
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        className="p-1 border-0" 
+                        style={{ backgroundColor: "transparent", minWidth: "36px" }}
+                        onClick={() => handleAddress(true)}
+                      >
+                        <MdEdit style={{ color: "#000000ff", fontSize: "18px" }} />
+                      </Button>
+                    </div> 
+
+                    {/* Slot Section */}
+                    <div className="d-flex justify-content-between align-items-center  p-2" style={{borderBottom:"3px solid #d4d1d1ff"}}>
+                      <div style={{ flex: 1 }}>
+                        <div >
+                            <p style={{ fontSize: "12px" }}>  <LuClock3 className="fw-bold" style={{ marginRight: "4px", fontSize: "16px" }} />
+                              {selectedDate && formatDateForMobile(selectedDate)} - {selectedSlot.time} 
+                            </p>
+                        </div>
+                      </div>
+                      <Button 
+                        className="p-1 border-0" 
+                        style={{ backgroundColor: "transparent", minWidth: "36px" }}
+                        onClick={() => setShowSlotModal(true)}
+                      >
+                        <MdEdit style={{ color: "#000000ff", fontSize: "18px" }} />
+                      </Button>
+                    </div>
+
+                    {/* Amount and Pay Button */}
+                    <div className=" mb-2 p-2">
+                    <Button
+                      className="butn fw-bold w-100 p-3"
+                      disabled={!canPlaceOrder()}
+                      onClick={processPayment}
+                    >
+                      {!isLoggedIn ? "Login to Continue" : 
+                      !selectedAddress ? "Select Address" : 
+                      !selectedSlot ? "Select Time Slot" : 
+                      "Place an order"}
+                    </Button>
+                    </div> <div className="border rounded text-center" style={{height:"24px",backgroundColor:"#eaeaeaff"}}>
+                      <p>By proceedng, you agree to our <a href="" style={{color:"black"}}>T&C</a>,<a href="" style={{color:"black"}}>Privacy</a> and <a href="" style={{color:"black"}}>Cancellation Policy</a></p></div>
+                  </Col>
+                )}
               </>
             ) : (
+              /* Not Logged In - Show Login Button */
               <Col xs={12}>
                 <Button 
                   className="butn w-100 fw-bold" 
-                  style={{ height: "45px", fontSize: "16px" }} 
+                  style={{ height: "48px", fontSize: "16px", borderRadius: "8px" }} 
                   onClick={handleLogin}
                 >
                   Login to Continue
@@ -941,7 +1012,7 @@ function CartPage() {
           show={showModal}
           onHide={() => setShowModal(false)}
           selectedItem={selectedPkg}
-          refresh={refreshCart} // Pass refreshCart instead of fetchCarts
+          refresh={refreshCart}
         />
       )}
 
@@ -952,17 +1023,15 @@ function CartPage() {
         initialView={showLoginView ? "login" : "main"}
       />
 
-      {/* Time Slot Selection Modal - NO VISIBLE SCROLLBAR */}
+      {/* Time Slot Selection Modal */}
       <Modal 
         show={showSlotModal} 
         onHide={() => setShowSlotModal(false)} 
         centered 
         size="lg"
         backdrop="static"
-        dialogClassName="custom-modal-dialog"
-        contentClassName="custom-modal-content"
       >
-        <Modal.Header className="border-bottom-0 pb-0 custom-modal-header" style={{ padding: '16px 20px 8px 20px' }}>
+        <Modal.Header className="border-bottom-0 pb-0" style={{ padding: '16px 20px 8px 20px' }}>
           <div className="w-100">
             <div className="d-flex justify-content-between align-items-start">
               <div className="flex-grow-1">
@@ -973,48 +1042,34 @@ function CartPage() {
                   Service will take approx. 5hrs & 40 mins
                 </p>
               </div>
-              <Button type="button"  onClick={() => setShowSlotModal(false)} className="position-absolute border-0 justify-content-center closebtn p-0" >X</Button>
+              <Button type="button" onClick={() => setShowSlotModal(false)} className="position-absolute border-0 justify-content-center closebtn p-0">X</Button>
             </div>
           </div>
         </Modal.Header>
         
-        <Modal.Body className="custom-modal-body" style={{ 
+        <Modal.Body style={{ 
           padding: '16px 20px',
           maxHeight: '50vh',
           overflowY: 'auto',
-          scrollbarWidth: 'none', /* Firefox */
-          msOverflowStyle: 'none' /* IE and Edge */
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none'
         }}>
-          {/* Hide scrollbar for Chrome, Safari and Opera */}
-          <style>
-            {`
-              .custom-modal-body::-webkit-scrollbar {
-                display: none;
-              }
-            `}
-          </style>
+          
 
           {/* Date Selection Row */}
           <div className="mb-4">
             <div className="d-flex gap-2 overflow-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              <style>
-                {`
-                  .date-scroll-container::-webkit-scrollbar {
-                    display: none;
-                  }
-                `}
-              </style>
-              <div className="d-flex gap-2 overflow-auto date-scroll-container" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              <div className="d-flex gap-2 overflow-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {dates.map((date, index) => (
                   <Button
                     key={index}
                     variant={selectedDate?.toDateString() === date.toDateString() ? "primary" : "outline-secondary"}
-                    className="flex-shrink-0 button"
+                    className="flex-shrink-0"
                     style={{ 
                       minWidth: "80px", 
                       fontSize: "13px",
                       borderRadius: "8px",
-                      borderWidth: "2px",border:"1px solid "
+                      borderWidth: "2px"
                     }}
                     onClick={() => handleDateSelect(date)}
                   >
@@ -1025,7 +1080,7 @@ function CartPage() {
             </div>
           </div>
 
-          {/* Time Slots - Reduced spacing to fit without scrolling */}
+          {/* Time Slots */}
           <div className="mb-2">
             <h6 className="fw-semibold mb-2" style={{ fontSize: "15px", color: '#333' }}>
               Select start time of service
@@ -1034,65 +1089,46 @@ function CartPage() {
               <Row className="g-4">
                 {getSlotsForSelectedDate().map(slot => (
                   <Col xs={2} key={slot.id} className="mb-2">
-  <div 
-    className={`p-2 border rounded text-center position-relative transition-all ${
-      selectedSlot?.id === slot.id ? 'border-primary' : 'border-secondary'
-    } ${!slot.available ? 'bg-light text-muted' : 'hover-shadow'}`}
-    style={{ 
-      cursor: slot.available ? 'pointer' : 'not-allowed',
-      backgroundColor: !slot.available ? '#f8f9fa' : 
-                      selectedSlot?.id === slot.id ? '#f0ebff' : '#ffffff', // Light violet background
-      minHeight: '20px',
-      fontSize: "12px",
-      borderRadius: "8px",
-      transition: 'all 0.2s ease',
-      borderWidth: selectedSlot?.id === slot.id ? '2px' : '1px',
-      borderColor: selectedSlot?.id === slot.id ? '#8b5cf6' : '#dee2e6', // Bright violet border
-      boxShadow: selectedSlot?.id === slot.id ? '0 0 0 2px rgba(139, 92, 246, 0.1)' : 'none' // Optional glow effect
-    }}
-    onClick={() => slot.available && handleSlotSelect(slot)}
-    onMouseEnter={(e) => {
-      if (slot.available && selectedSlot?.id !== slot.id) {
-        e.currentTarget.style.backgroundColor = '#f8f9fa';
-        e.currentTarget.style.borderColor = '#6c757d';
-      }
-    }}
-    onMouseLeave={(e) => {
-      if (slot.available && selectedSlot?.id !== slot.id) {
-        e.currentTarget.style.backgroundColor = '#ffffff';
-        e.currentTarget.style.borderColor = '#dee2e6';
-      } else if (slot.available && selectedSlot?.id === slot.id) {
-        e.currentTarget.style.backgroundColor = '#f0ebff';
-        e.currentTarget.style.borderColor = '#8b5cf6';
-      }
-    }}
-  >
-    {/* ₹100 Overlay Badge */}
-    {slot.extraCharge > 0 && (
-      <Badge 
-        bg={selectedSlot?.id === slot.id ? "primary" : "warning"}
-        text={selectedSlot?.id === slot.id ? "white" : "dark"}
-        className="position-absolute top-0 start-100 translate-middle"
-        style={{ 
-          fontSize: '0.6rem',
-          fontWeight: '600',
-          padding: '3px 5px',
-          backgroundColor: selectedSlot?.id === slot.id ? '#8b5cf6' : '' // Violet badge when selected
-        }}
-      >
-        +₹{slot.extraCharge}
-      </Badge>
-    )}
-    
-    <p className="mb-0 fw-semibold" style={{ 
-      fontSize: "11px",
-      color: selectedSlot?.id === slot.id ? '#8b5cf6' : // Bright violet text
-            !slot.available ? '#6c757d' : '#374151'
-    }}>
-      {slot.time}
-    </p>
-  </div>
-</Col>
+                    <div 
+                      className={`p-2 border rounded text-center position-relative ${
+                        selectedSlot?.id === slot.id ? 'border-primary' : 'border-secondary'
+                      } ${!slot.available ? 'bg-light text-muted' : ''}`}
+                      style={{ 
+                        cursor: slot.available ? 'pointer' : 'not-allowed',
+                        backgroundColor: !slot.available ? '#f8f9fa' : 
+                                        selectedSlot?.id === slot.id ? '#f0ebff' : '#ffffff',
+                        minHeight: '20px',
+                        fontSize: "12px",
+                        borderRadius: "8px",
+                        borderWidth: selectedSlot?.id === slot.id ? '2px' : '1px',
+                        borderColor: selectedSlot?.id === slot.id ? '#8b5cf6' : '#dee2e6'
+                      }}
+                      onClick={() => slot.available && handleSlotSelect(slot)}
+                    >
+                      {slot.extraCharge > 0 && (
+                        <Badge 
+                          bg={selectedSlot?.id === slot.id ? "primary" : "warning"}
+                          text={selectedSlot?.id === slot.id ? "white" : "dark"}
+                          className="position-absolute top-0 start-100 translate-middle"
+                          style={{ 
+                            fontSize: '0.6rem',
+                            fontWeight: '600',
+                            padding: '3px 5px'
+                          }}
+                        >
+                          +₹{slot.extraCharge}
+                        </Badge>
+                      )}
+                      
+                      <p className="mb-0 fw-semibold" style={{ 
+                        fontSize: "11px",
+                        color: selectedSlot?.id === slot.id ? '#8b5cf6' : 
+                              !slot.available ? '#6c757d' : '#374151'
+                      }}>
+                        {slot.time}
+                      </p>
+                    </div>
+                  </Col>
                 ))}
               </Row>
             ) : (
@@ -1105,28 +1141,28 @@ function CartPage() {
           </div>
         </Modal.Body>
         
-        <Modal.Footer className="border-top-0 custom-modal-footer" style={{ 
+        <Modal.Footer className="border-top-0" style={{ 
           padding: '12px 20px 16px 20px',
           backgroundColor: '#f8f9fa',
           borderBottomLeftRadius: '12px',
           borderBottomRightRadius: '12px'
         }}>
-          <div className="w-100 ">
-              <Button 
-                className="butn w-100" 
-                onClick={() => setShowSlotModal(false)}
-                disabled={!selectedSlot}
-                style={{ 
-                  fontSize: "13px",height:"40px",
-                  padding: "6px 20px",
-                  borderRadius: "6px",
-                  fontWeight: "600"
-                }}
-              >
-                Proceed to checkout
-              </Button>
-            </div>
-        
+          <div className="w-100">
+            <Button 
+              className="butn w-100" 
+              onClick={() => setShowSlotModal(false)}
+              disabled={!selectedSlot}
+              style={{ 
+                fontSize: "13px",
+                height: "40px",
+                padding: "6px 20px",
+                borderRadius: "6px",
+                fontWeight: "600"
+              }}
+            >
+              Proceed to checkout
+            </Button>
+          </div>
         </Modal.Footer>
       </Modal>
     </div>

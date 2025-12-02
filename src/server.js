@@ -1104,6 +1104,44 @@ app.delete("/api/carts/:id", async (req, res) => {
   }
 });
 
+// Get salon for women data
+app.get("/api/salonforwomen", async (req, res) => {
+  try {
+    const salonforwomen = await Package.find({ category: 'Salon for women' });
+    if (salonforwomen.length > 0) {
+      return res.json({ salonforwomen });
+    }
+    // Fallback to static data
+    const staticData = readStaticData();
+    if (staticData && staticData.services) {
+      return res.json({ salonforwomen: staticData.services });
+    }
+    res.status(404).json({ error: "No salon for women data found" });
+  } catch (error) {
+    console.error("Error fetching salon for women:", error);
+    res.status(500).json({ error: "Failed to fetch salon for women data" });
+  }
+});
+
+// Get services for other categories (similar pattern)
+app.get("/api/services/:category", async (req, res) => {
+  try {
+    const { category } = req.params;
+    const services = await Package.find({ category: category });
+    if (services.length > 0) {
+      return res.json({ services });
+    }
+    // Fallback to static data
+    const staticData = readStaticData();
+    const categoryServices = staticData?.services?.filter(s => 
+      s.name.toLowerCase().includes(category.toLowerCase())
+    ) || [];
+    res.json({ services: categoryServices });
+  } catch (error) {
+    console.error(`Error fetching ${category} services:`, error);
+    res.status(500).json({ error: `Failed to fetch ${category} services` });
+  }
+});
 // Health check endpoint
 app.get("/api/health", (req, res) => {
   res.json({ 
@@ -1129,27 +1167,6 @@ app.use((error, req, res, next) => {
 app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
-
-app.get("/api/health", (req, res) => {
-  res.json({ 
-    status: "OK", 
-    message: "Server is running",
-    timestamp: new Date().toISOString(),
-    version: "1.0.0"
-  });
-});
-
-// Error handling middleware
-app.use((error, req, res, next) => {
-  if (error instanceof multer.MulterError) {
-    if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'File too large. Maximum size is 5MB.' });
-    }
-  }
-  console.error('Server error:', error);
-  res.status(500).json({ error: error.message });
-});
-
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });

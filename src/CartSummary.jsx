@@ -1,54 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Button, Row, Col, Badge, Spinner, Card } from 'react-bootstrap';
+import { useState, useEffect } from 'react';
+import { Container, Button, Badge, Card, Row, Col } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from './CartContext';
 import { BiLeftArrowAlt } from 'react-icons/bi';
 import { FaShoppingCart } from "react-icons/fa";
+import { GoDotFill } from "react-icons/go";
 
 function CartSummary() {
   const navigate = useNavigate();
-  const { cartItems, removeFromCart } = useCart();
-  const [salonData, setSalonData] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  // Fetch salon for women data to get the actual image
-  useEffect(() => {
-    const fetchSalonData = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch("http://localhost:5000/api/salonforwomen");
-        if (!response.ok) {
-          throw new Error('Failed to fetch salon for women data');
-        }
-        const data = await response.json();
-        setSalonData(data.salonforwomen || []);
-      } catch (error) {
-        console.error("Error fetching salon data: ", error);
-        // Fallback to static data
-        try {
-          const staticResponse = await fetch("http://localhost:5000/api/static-data");
-          const staticData = await staticResponse.json();
-          setSalonData(staticData.salonforwomen || []);
-        } catch (staticError) {
-          console.error("Error fetching static data:", staticError);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSalonData();
-  }, []);
+  const { cartItems } = useCart();
+  const [loading, setLoading] = useState(false);
 
   const handleContinueShopping = () => {
     navigate('/salon'); 
   };
 
   const handleCheckout = () => {
-    navigate('/cart'); // Navigate to full cart page
+    navigate('/cart');
   };
 
-  // Group items by category/salon type
+  // Group items by category
   const groupedItems = cartItems.reduce((groups, item) => {
     const category = item.category || 'Salon for women';
     if (!groups[category]) {
@@ -58,32 +29,42 @@ function CartSummary() {
     return groups;
   }, {});
 
-  // Get the actual salon image from fetched data
-  const getSalonImage = () => {
-    if (salonData && salonData.length > 0) {
-      // Try to get the "Super saver packages" image first (the first item in your array)
-      const superSaverPackage = salonData.find(item => item.name === "Super saver packages");
-      if (superSaverPackage && superSaverPackage.img) {
-        return superSaverPackage.img.startsWith("http") 
-          ? superSaverPackage.img 
-          : `http://localhost:5000${superSaverPackage.img}`;
-      }
-      
-      // Fallback to the first salon item's image
-      const firstSalon = salonData[0];
-      if (firstSalon.img) {
-        return firstSalon.img.startsWith("http") 
-          ? firstSalon.img 
-          : `http://localhost:5000${firstSalon.img}`;
-      }
-    }
+  // Get category image directly
+  const getCategoryImage = (category) => {
+    const categoryImages = {
+      'Salon for women': "http://localhost:5000/assets/salon.webp",
+      'AC & Appliance Repair': "http://localhost:5000/assets/ac.webp",
+      'Cleaning': "http://localhost:5000/assets/clean.webp",
+      'Electrician, Plumber & Carpenters': "http://localhost:5000/assets/electric.webp",
+      'Native Water Purifier': "http://localhost:5000/assets/native.webp"
+    };
     
-    // Default fallback image
-    return "http://localhost:5000/assets/super.webp";
+    return categoryImages[category] || "http://localhost:5000/assets/placeholder.png";
   };
 
+  // Calculate total price for a specific category
+  const calculateCategoryTotal = (items) => {
+    return items.reduce((total, item) => {
+      const price = parseFloat(item.price) || 0;
+      const count = item.count || 1;
+      return total + (price * count);
+    }, 0);
+  };
+
+  // Calculate overall total
+  const calculateOverallTotal = () => {
+    return cartItems.reduce((total, item) => {
+      const price = parseFloat(item.price) || 0;
+      const count = item.count || 1;
+      return total + (price * count);
+    }, 0);
+  };
+
+  // Format price
+  const formatPrice = (amount) => `₹${amount.toLocaleString("en-IN")}`;
+
   return (
-    <Container className="py-4 min-vh-100">
+    <Container className="py-4 min-vh-100" style={{width:"50%"}}>
       <Button 
         variant="link" 
         className="p-0 text-dark me-3"
@@ -92,7 +73,6 @@ function CartSummary() {
         <BiLeftArrowAlt size={28} />
       </Button>
       
-      {/* Header with Back Button */}
       <div className="mt-5 mb-4">
         <h3 className="fw-bold mb-0">
           <span>
@@ -101,7 +81,6 @@ function CartSummary() {
         </h3>
       </div>
 
-      {/* Cart Content */}
       {cartItems.length === 0 ? (
         <Card className="border-0 shadow-sm">
           <Card.Body className="text-center py-5">
@@ -124,91 +103,100 @@ function CartSummary() {
           {/* Cart Items */}
           <Card className="border-0 shadow-sm mb-4">
             <Card.Body className="p-0">
-              {Object.entries(groupedItems).map(([category, items], catIndex) => (
-                <div key={catIndex} className="border-bottom">
-                  <div className="p-3 pb-2">
-                    <div className="d-flex justify-content-between align-items-center mb-2">
-                      <div className="d-flex align-items-center">
-                        {/* Show icon for Salon for women */}
-                        {category === 'Salon for women' ? (
-                          <div className="me-2">
-                            {loading ? (
-                              <Spinner animation="border" size="sm" />
-                            ) : (
-                              <img
-                                src={getSalonImage()}
-                                alt="Salon for women"
-                                style={{
-                                  width: "40px",
-                                  height: "40px",
-                                  borderRadius: "8px",
-                                  objectFit: "cover"
-                                }}
-                                onError={(e) => {
-                                  e.target.src = "http://localhost:5000/assets/placeholder.png";
-                                }}
-                              />
-                            )}
-                          </div>
-                        ) : null}
-                        <h5 className="fw-bold text-dark mb-0">
-                          {category}
-                        </h5>
-                      </div>
-                      <Badge bg="light" text="dark">
-                        {items.length} service{items.length > 1 ? 's' : ''}
-                      </Badge>
-                    </div>
-                    
-                    {items.map((item, index) => (
-                      <div key={index} className="mb-3">
-                        <div className="d-flex justify-content-between align-items-start">
-                          <div className="flex-grow-1">
-                            <div className="d-flex align-items-center mb-1">
-                              <h6 className="mb-0 fw-semibold">{item.title || "Service"}</h6>
-                              {item.count > 1 && (
-                                <Badge bg="light" text="dark" className="ms-2">
-                                  ×{item.count}
-                                </Badge>
-                              )}
-                            </div>
-                            
-                            {item.description && (
-                              <p className="text-muted small mb-1">{item.description}</p>
-                            )}
-                            
-                            {item.content && item.content.length > 0 && (
-                              <div className="mt-2">
-                                <div className="d-flex align-items-center mb-1">
-                                  <span className="text-muted small">Make your own package</span>
-                                  <Badge bg="light" text="dark" className="ms-2 small">
-                                    ×1
-                                  </Badge>
-                                </div>
+              {Object.entries(groupedItems).map(([category, items], catIndex) => {
+                const categoryTotal = calculateCategoryTotal(items);
+                
+                return (
+                  <div key={catIndex} className="border-bottom">
+                    <div className="p-3">
+                      {/* First Row: Image + Category Name + Badge + Total Amount */}
+                      <Row className="align-items-center mb-2">
+                        {/* First Column: Image */}
+                        <Col xs={1} style={{width:"70px"}}>
+                          <img
+                            src={getCategoryImage(category)}
+                            alt={category}
+                            style={{
+                              width: "50px",
+                              height: "60px",
+                              borderRadius: "8px",
+                              objectFit: "cover",
+                              border: "1px solid #f0f0f0"
+                            }}
+                            onError={(e) => {
+                              console.error(`Failed to load image for ${category}:`, e.target.src);
+                              e.target.src = "http://localhost:5000/assets/placeholder.png";
+                            }}
+                          />
+                        </Col>
+                        
+                        {/* Second Column: Category name + Badge + Total */}
+                        <Col xs={10} style={{marginTop:"20px"}}>
+                          <Row className="align-items-center">
+                            <Col xs={8} sm={9}>
+                              <h5 className="fw-bold text-dark mb-0">
+                                {category}
+                              </h5>
+                              <div>
+                                <p  style={{color:"#5c5c5cff",fontSize:"14px"}}>
+                                  {items.length} service{items.length > 1 ? 's' : ''} <span  style={{fontSize: "14px"}}>
+                                 <GoDotFill />{formatPrice(categoryTotal)}
+                                </span>
+                                </p>
+                                
                               </div>
-                            )}
+                            </Col>
+                          
+                          </Row>
+                        </Col>
+                      </Row>
+                      
+                      {/* Second Row: Services list */}
+                      <div className="mt-2 ms-5 ps-1">
+                        {items.map((item, index) => (
+                          <div key={index} className="mb-2">
+                            <Row className="align-items-center">
+                              <Col xs={8} sm={9}>
+                                <div className="d-flex align-items-center">
+                                  <GoDotFill style={{
+                                    fontSize: "10px", 
+                                    marginRight: "8px",
+                                    color: "#6c757d",
+                                    flexShrink: 0
+                                  }} />
+                                  <span className="text-muted" style={{fontSize: "13px"}}>
+                                    {item.title || "Service"}
+                                  </span>
+                                  {item.count > 1 && (
+                                    <Badge bg="transparent" text="dark" className="ms-2">
+                                      ×{item.count}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </Col>
+                            </Row>
                           </div>
-                        </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </Card.Body>
           </Card>
-
+          
+         
+          
           {/* Action Buttons */}
           <div className="d-flex gap-3">
             <Button 
-              variant="outline-secondary" 
-              className="flex-grow-1 py-3"
+              className="flex-grow-1 py-3 edit" style={{height:"50px"}}
               onClick={handleContinueShopping}
             >
               Add services
             </Button>
             <Button 
-              variant="primary" 
-              className="flex-grow-1 py-3 fw-bold"
+              className="flex-grow-1 py-3 fw-bold butn"
               onClick={handleCheckout}
             >
               Checkout

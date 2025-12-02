@@ -6,8 +6,7 @@ import Book from './Book.jsx';
 import CartPage from './CartPage.jsx';
 import Salon from './Salon.jsx';
 import { AuthProvider } from './AuthContext';
-import { CartProvider } from './CartContext'; // Import CartProvider
-import PaymentPage from './PaymentPage.jsx';
+import { CartProvider } from './CartContext'; 
 import CartSummary from './CartSummary'; // Add this import
 
 function Urban() {
@@ -30,12 +29,7 @@ function Urban() {
               <Salon/>
             </>
           }/>
-          <Route path="/payment" element={
-            <>
-              <Urbanav/>
-              <PaymentPage />
-            </>
-          }/>
+          
           
           {/* Routes WITHOUT navbar */}
           <Route path='/cart-summary' element={<CartSummary/>}/>
