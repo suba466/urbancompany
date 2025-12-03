@@ -7,7 +7,7 @@ import { BiLeftArrowAlt } from "react-icons/bi";
 import { PiNotepadLight } from "react-icons/pi";
 import { useAuth } from "./AuthContext";
 
-function AccountModal({ show, onHide, initialView = "main" }) {
+function AccountModal({ show,totalPrice=()=>{}, onHide, initialView = "main" }) {
   const [logo1, setLogo1] = useState("");
   const [currentView, setCurrentView] = useState(initialView);
   const [isLoading, setIsLoading] = useState(false);
@@ -787,29 +787,9 @@ const handleProfileSave = async () => {
 
   // Render login view with profile picture
   const renderLoginView = () => (
-    <div>
-      <div className="text-center mb-4">
-        {userInfo.profileImage && isLoggedIn ? (
-          renderProfilePicture(userInfo.profileImage, 80, false)
-        ) : (
-          <div>
-            <img 
-              src={logo1} 
-              alt="UC Logo" 
-              style={{ height: "40px", marginBottom: "10px" }} 
-              onError={(e) => {
-                e.target.src = "http://localhost:5000/assets/urban.png";
-              }}
-            /> 
-          </div>
-        )}
-      </div>
-
+    <div>   
       <Form onSubmit={handleLogin}>
         <div className="mb-3">
-          <h5 className="fw-bold text-center">Login to Your Account</h5>
-          <p style={{fontSize:"13px"}} className="text-center">Welcome back! Please enter your details</p>
-          
           {/* Email */}
           <Form.Group className="mb-3">
             <Form.Label>Email Address *</Form.Label>
@@ -1070,182 +1050,217 @@ const handleProfileSave = async () => {
     );
   };
 
-  // Render bookings view with individual services
-const renderBookingsView = () => (
-  <div>
-    <h6 className="fw-bold mb-3">My Bookings</h6>
+  // In AccountModal.jsx, update the renderBookingsView function
+const renderBookingsView = () => {
+  // Calculate total for each booking
+  const calculateBookingTotal = (booking) => {
+    if (booking.isCurrent && totalPrice) {
+      return totalPrice;
+    }
+    if (booking.paymentBreakdown) {
+      return booking.paymentBreakdown.totalPrice || 0;
+    }
+    if (booking.servicePrice) {
+      return Number(booking.servicePrice) || 0;
+    }
+    // Calculate from items
+    if (booking.items && booking.items.length > 0) {
+      return booking.items.reduce((sum, item) => {
+        const price = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
+        const quantity = item.quantity || 1;
+        return sum + (price * quantity);
+      }, 0);
+    }
     
-    {loadingBookings ? (
-      <div className="text-center py-5">
-        <Spinner animation="border" variant="primary" />
-        <p className="mt-2 text-muted">Loading your bookings...</p>
-      </div>
-    ) : bookings.length === 0 ? (
-      <div className="text-center py-5">
-        <LuNotepadText size={48} className="text-muted mb-3" />
-        <p className="text-muted">No bookings yet</p>
-        <p className="small text-muted">
-          Your completed orders will appear here<br />
-          <small>User: {userInfo.email}</small>
-        </p>
-      </div>
-    ) : (
-      <div className="d-grid gap-3">
-        {bookings.map((booking) => {
-          // Calculate total amount from individual items
-          const totalAmount = booking.items && booking.items.length > 0
-            ? booking.items.reduce((sum, item) => {
-                const price = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
-                const quantity = item.quantity || 1;
-                return sum + (price * quantity);
-              }, 0)
-            : booking.servicePrice || "0";
-          
-          return (
-            <Card key={booking._id} className="border-0 shadow-sm">
-              <Card.Body>
-                <div className="d-flex justify-content-between align-items-start mb-2">
-                  <div>
-                    <p className="fw-semibold mb-1">
-                      Order #{booking._id}
-                    </p>
-                    <p className="small text-muted mb-0">
-                      {new Date(booking.bookingDate || Date.now()).toLocaleDateString('en-IN', {
-                        weekday: 'short',
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric'
-                      })} at {booking.scheduledTime || "10:00 AM"}
-                    </p>
-                  </div>
-                  <span className={`badge ${
-                    booking.status === 'Confirmed' ? 'bg-success' : 
-                    booking.status === 'Completed' ? 'bg-primary' : 
-                    booking.status === 'Cancelled' ? 'bg-danger' : 'bg-warning'
-                  }`}>
-                    {booking.status}
-                  </span>
-                </div>
-                
-                {/* Display individual services */}
-                {booking.items && booking.items.length > 0 ? (
-                  <div className="mb-3">
-                    <p className="small fw-semibold mb-2">Services:</p>
-                    <div >
-                      {booking.items.map((item, index) => {
-                        const itemPrice = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
-                        const quantity = item.quantity || 1;
-                        const totalItemPrice = itemPrice * quantity;
-                        
-                        return (
-                          <div key={index} className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
-                            <div>
-                              <p className="mb-1 small">{item.name}</p>
-                              <p className="mb-0 text-muted" style={{ fontSize: "11px" }}>
-                                Qty: {quantity}
-                              </p>
-                            </div>
-                            <p className="mb-0  small">
-                              ₹{totalItemPrice.toLocaleString('en-IN')}
-                            </p>
-                          </div>
-                        );
-                      })}
-                      {/* Total amount */}
-                      <div className="d-flex justify-content-between align-items-center mt-2 pt-2">
-                        <p className="mb-0">Total Amount</p>
-                        <p className="mb-0 ">₹{typeof totalAmount === 'number' ? totalAmount.toLocaleString('en-IN') : totalAmount}</p>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mb-3">
-                    <p className="small text-muted mb-1">
-                      <strong>Service:</strong> {booking.serviceName || "Beauty Services"}
-                    </p>
-                    <p className="small fw-semibold mb-0">
-                      Amount: ₹{booking.servicePrice || "0"}
-                    </p>
-                  </div>
-                )}
+    return 0;
+  };
 
-                {/* Address */}
-                {booking.address && (
-                  <div className="d-flex align-items-start mb-3">
-                    <MdLocationOn size={14} className="text-muted mt-1 me-2 flex-shrink-0" />
-                    <div className="flex-grow-1">
-                      <p className="small text-muted mb-1">
-                        {booking.address.doorNo && `${booking.address.doorNo}, `}
-                        {booking.address.mainText || "Selected Address"}
-                        {booking.address.subText && `, ${booking.address.subText}`}
+  return (
+    <div>
+      <h6 className="fw-bold mb-3">My Bookings</h6>
+      
+      {loadingBookings ? (
+        <div className="text-center py-5">
+          <Spinner animation="border" variant="primary" />
+          <p className="mt-2 text-muted">Loading your bookings...</p>
+        </div>
+      ) : bookings.length === 0 ? (
+        <div className="text-center py-5">
+          <LuNotepadText size={48} className="text-muted mb-3" />
+          <p className="text-muted">No bookings yet</p>
+          <p className="small text-muted">
+            Your completed orders will appear here
+          </p>
+        </div>
+      ) : (
+        <div className="d-grid gap-3">
+          {bookings.map((booking) => {
+            const bookingTotal = calculateBookingTotal(booking);
+            
+            return (
+              <Card key={booking._id} className="border-0 shadow-sm">
+                <Card.Body>
+                  <div className="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                      <p className="fw-semibold mb-1">
+                        Order #{booking._id}
+                      </p>
+                      <p className="small text-muted mb-0">
+                        {new Date(booking.bookingDate || Date.now()).toLocaleDateString('en-IN', {
+                          weekday: 'short',
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric'
+                        })} at {booking.scheduledTime || "10:00 AM"}
                       </p>
                     </div>
+                    <span className={`badge ${
+                      booking.status === 'Confirmed' ? 'bg-success' : 
+                      booking.status === 'Completed' ? 'bg-primary' : 
+                      booking.status === 'Cancelled' ? 'bg-danger' : 'bg-warning'
+                    }`}>
+                      {booking.status}
+                    </span>
                   </div>
-                )}
-
-                {/* Action buttons */}
-                <div className="mt-3 pt-2 border-top d-flex gap-2">
-                  <Button 
-                    variant="outline-primary" 
-                    size="sm"
-                    className="flex-grow-1"
-                    onClick={() => {
-                      // Create detailed message
-                      let details = `Booking Details:\n`;
-                      details += `Booking ID: ${booking._id}\n`;
-                      details += `Date: ${new Date(booking.bookingDate).toLocaleDateString('en-IN')}\n`;
-                      details += `Time: ${booking.scheduledTime || "10:00 AM"}\n`;
-                      details += `Status: ${booking.status}\n\n`;
-                      
-                      if (booking.items && booking.items.length > 0) {
-                        details += `Services:\n`;
-                        booking.items.forEach((item, index) => {
+                  
+                  {/* Display individual services */}
+                  {booking.items && booking.items.length > 0 ? (
+                    <div className="mb-3">
+                      <p className="small fw-semibold mb-2">Services:</p>
+                      <div>
+                        {booking.items.map((item, index) => {
                           const itemPrice = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
                           const quantity = item.quantity || 1;
-                          details += `${index + 1}. ${item.name} - ₹${itemPrice} × ${quantity}\n`;
-                        });
-                        details += `\nTotal: ₹${totalAmount}\n`;
-                      } else {
-                        details += `Service: ${booking.serviceName}\n`;
-                        details += `Amount: ₹${booking.servicePrice}\n`;
-                      }
-                      
-                      if (booking.address) {
-                        details += `\nAddress:\n`;
-                        details += `${booking.address.doorNo ? booking.address.doorNo + ', ' : ''}`;
-                        details += `${booking.address.mainText || ''}`;
-                        details += `${booking.address.subText ? ', ' + booking.address.subText : ''}`;
-                      }
-                      
-                      alert(details);
-                    }}
-                  >
-                    View Details
-                  </Button>
-                  
-                  {booking.status === 'Confirmed' && (
+                          const totalItemPrice = itemPrice * quantity;
+                          
+                          return (
+                            <div key={index} className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                              <div>
+                                <p className="mb-1 small">{item.name}</p>
+                                <p className="mb-0 text-muted" style={{ fontSize: "11px" }}>
+                                  Qty: {quantity} × ₹{itemPrice.toLocaleString('en-IN')}
+                                </p>
+                              </div>
+                              <p className="mb-0 small ">
+                                ₹{totalItemPrice.toLocaleString('en-IN')}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mb-3">
+                      <p className="small text-muted mb-1">
+                        <strong>Service:</strong> {booking.serviceName || "Beauty Services"}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Total Amount with taxes */}
+                  <div >
+                    <div className="d-flex justify-content-between mt-2 pt-2 ">
+                      <span>Amount to Pay (with tax):</span>
+                      <span >
+                        ₹{bookingTotal.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Address */}
+                  {booking.address && (
+                    <div className="d-flex align-items-start mb-3">
+                      <MdLocationOn size={14} className="text-muted mt-1 me-2 flex-shrink-0" />
+                      <div className="flex-grow-1">
+                        <p className="small text-muted mb-1">
+                          {booking.address.doorNo && `${booking.address.doorNo}, `}
+                          {booking.address.mainText || "Selected Address"}
+                          {booking.address.subText && `, ${booking.address.subText}`}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action buttons with CANCEL functionality */}
+                  <div className="mt-3 pt-2 border-top d-flex gap-2">
                     <Button 
-                      variant="outline-danger" 
+                      variant="outline-primary" 
                       size="sm"
+                      className="flex-grow-1"
                       onClick={() => {
-                        if (window.confirm("Are you sure you want to cancel this booking?")) {
-                          alert("Cancellation feature coming soon!");
-                          // You can add API call to cancel booking here
+                        // Create detailed message
+                        let details = `Booking Details\n`;
+                        details += `────────────────\n`;
+                        details += `Booking ID: ${booking._id}\n`;
+                        details += `Date: ${new Date(booking.bookingDate).toLocaleDateString('en-IN')}\n`;
+                        details += `Time: ${booking.scheduledTime || "10:00 AM"}\n`;
+                        details += `Status: ${booking.status}\n\n`;
+                        
+                        details += `🛒 Services:\n`;
+                        if (booking.items && booking.items.length > 0) {
+                          booking.items.forEach((item, index) => {
+                            const itemPrice = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
+                            const quantity = item.quantity || 1;
+                            details += `  ${index + 1}. ${item.name}\n`;
+                            details += `     ₹${itemPrice} × ${quantity} = ₹${itemPrice * quantity}\n`;
+                          });
+                        } else {
+                          details += ` ${booking.serviceName}\n`;
+                        }
+                        
+                        details += `\nPayment Summary:\n`;
+                        details += `  Amount to Pay: ₹${bookingTotal}\n\n`;
+                        
+                        if (booking.address) {
+                          details += `Address:\n`;
+                          details += `  ${booking.address.doorNo ? booking.address.doorNo + ', ' : ''}`;
+                          details += `${booking.address.mainText || ''}`;
+                          details += `${booking.address.subText ? ', ' + booking.address.subText : ''}`;
+                        }
+                        
+                        alert(details);
+                      }}
+                    >
+                      View Details
+                    </Button>
+                    {/* DELETE BUTTON - For all bookings */}
+                    <Button 
+                      variant="outline-dark" 
+                      size="sm"
+                      onClick={async () => {
+                        if (window.confirm("Are you sure you want to delete this booking record?")) {
+                          try {
+                            // Call API to delete booking
+                            const response = await fetch(`http://localhost:5000/api/bookings/${booking._id}`, {
+                              method: "DELETE"
+                            });
+                            
+                            if (response.ok) {
+                              alert("Booking deleted successfully!");
+                              // Refresh bookings
+                              loadUserData();
+                            } else {
+                              alert("Failed to delete booking");
+                            }
+                          } catch (error) {
+                            console.error("Error deleting booking:", error);
+                            alert("Error deleting booking. Please try again.");
+                          }
                         }
                       }}
                     >
-                      Cancel
+                      Delete
                     </Button>
-                  )}
-                </div>
-              </Card.Body>
-            </Card>
-          );
-        })}
-      </div>
-    )}
-  </div>
-);
+                  </div>
+                </Card.Body>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
   // Render plans view
   const renderPlansView = () => (
     <div>
@@ -1387,19 +1402,7 @@ const renderBookingsView = () => (
   const renderMainViewNotLoggedIn = () => (
     <div>
       <div className="text-center mb-4">
-        <div
-          className="rounded-circle border d-flex align-items-center justify-content-center bg-light mx-auto"
-          style={{
-            width: "100px",
-            height: "100px"
-          }}
-        >
-          <MdAccountCircle 
-            size={100} 
-            className="text-muted"
-          />
-        </div>
-        <h5 className="mt-3">Welcome to Urban Company</h5>
+        
         <p className="text-muted small">Login or create an account to manage your bookings</p>
       </div>
 
@@ -1412,8 +1415,7 @@ const renderBookingsView = () => (
         >
           Create Account
         </Button>
-        <br />
-        <p className="text-center">Already a registered user?</p>
+        <p></p>
 
         <Button 
           className="butn fw-bold" 

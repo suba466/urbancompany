@@ -31,9 +31,11 @@ function CartPage() {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
-
+  const [showBookingsModal, setShowBookingsModal]=useState(false);
   const { isLoggedIn, userInfo } = useAuth();
-
+  const handleViewBookings=()=>{
+    setShowBookingsModal(true);
+  }
  // In CartPage.jsx, update the processPayment function
 const processPayment = async () => {
   // First check if all required fields are filled
@@ -112,7 +114,7 @@ const processPayment = async () => {
     localStorage.removeItem('selectedAddress');
     
     // Show success message
-    alert(`🎉 Order placed successfully!\n\nBooking ID: ${result.booking._id}\nAmount: ₹${totalPrice}`);
+    alert(` Order placed successfully!\n\nBooking ID: ${result.booking._id}\nAmount: ₹${totalPrice}`);
     
     // Redirect to home or bookings page
     window.location.href = "/";
@@ -239,7 +241,7 @@ const canPlaceOrder = () => {
 
   const calculateTax = () => {
     const itemTotal = calculateItemTotal();
-    return Math.round(itemTotal * 0.18);
+    return Math.round(itemTotal * 0.068);
   };
 
   const calculateTip = () => {
@@ -1018,8 +1020,12 @@ const canPlaceOrder = () => {
 
       {/* Account Modal for Login/Profile */}
       <AccountModal
-        show={showAccountModal}
-        onHide={handleAccountModalClose}
+        show={showAccountModal || showBookingsModal}
+        totalPrice={totalPrice}
+        onHide={() => {
+        setShowAccountModal(false);
+        setShowBookingsModal(false);
+        }}
         initialView={showLoginView ? "login" : "main"}
       />
 
@@ -1165,6 +1171,8 @@ const canPlaceOrder = () => {
           </div>
         </Modal.Footer>
       </Modal>
+      
+ 
     </div>
   );
 }

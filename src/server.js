@@ -497,6 +497,31 @@ app.get("/api/bookings/:email", async (req, res) => {
   }
 });
 
+app.delete("/api/bookings/:id",async(req,res)=>{
+  try{
+    const {id}=req.params;
+    console.log(`Cancelling booking with ID: ${id}`);
+    const booking=await Booking.findByIdAndDelete(id);
+    if(!booking){
+      return res.status(404).json({
+        success:false,error:"Booking not found"
+      });
+    }
+    console.log(`Booking ${id} deleted successfully`);
+   res.json({
+      success: true,
+      message: "Booking deleted successfully"
+    });
+    
+  } catch (error) {
+    console.error("Error deleting booking:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to delete booking: " + error.message 
+    });
+  }
+});
+
 // Get all bookings (for debugging)
 app.get('/api/all-bookings', async (req, res) => {
   try {
