@@ -1076,9 +1076,7 @@ const renderBookingsView = () => {
   };
 
   return (
-    <div>
-      <h6 className="fw-bold mb-3">My Bookings</h6>
-      
+    <div className="p-2">
       {loadingBookings ? (
         <div className="text-center py-5">
           <Spinner animation="border" variant="primary" />
@@ -1500,7 +1498,7 @@ const renderBookingsView = () => {
         show={show} 
         onHide={onHide}
         centered
-        fullscreen="sm-down"
+        fullscreen="sm-down" className="account-modal"
       >
         <Modal.Header className="border-bottom-0">
           <Container fluid>

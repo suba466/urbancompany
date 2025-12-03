@@ -372,6 +372,35 @@
   transform: scale(0.9);
   background-color: transparent  !important; 
 }
+.account-modal .modal-content {
+  max-height: 85vh;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.account-modal .modal-header {
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 1050;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  padding: 16px 20px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.account-modal .modal-body {
+  max-height: calc(85vh - 70px);
+  overflow-y: auto;
+  padding: 20px;
+  padding-top: 0;
+}
+
+/* Custom scrollbar */
+.account-modal .modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+
 
 
 /*.btn:active{
