@@ -47,28 +47,25 @@ export default function FrequentlyAddedCarousel({
                 cursor: "pointer"
               }}
               onClick={() => onViewProduct(item)} // 👈 Open product on click
-            >
+            ><Row><Col style={{height:"140px"}}>
               <img
-  src={`http://localhost:5000/${item.img}`}
-  alt={item.name}
-  style={{
-    width: "100px",
-    height: "100px",
-    borderRadius: "8px",
-    objectFit: "cover",
-  }}
-/>
+              src={`http://localhost:5000/${item.img}`}
+              alt={item.name}
+              style={{
+                width: "100px",
+                height: "100px",
+                borderRadius: "8px",
+                objectFit: "cover",
+              }}
+            />
+            <p className="fw-semibold" style={{ fontSize: "11px", minHeight: "28px", margin: "4px 0" }}>
+              {item.name}
+            </p></Col>
+            <p className="fw-semibold" style={{ fontSize: "12px", margin: "3px 0" }}>
+              ₹{item.price}
+            </p></Row>
 
-<p className="fw-semibold" style={{ fontSize: "11px", minHeight: "28px", margin: "4px 0" }}>
-  {item.name}
-</p>
-
-<p className="fw-semibold" style={{ fontSize: "12px", margin: "3px 0" }}>
-  ₹{item.price}
-</p>
-
-<div style={{ height: "28px" }} onClick={(e) => e.stopPropagation()}>
-
+            <div style={{ height: "28px" }} onClick={(e) => e.stopPropagation()}>
                 {count === 0 ? (
                   <Button
                     size="sm"

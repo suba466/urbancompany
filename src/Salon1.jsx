@@ -302,7 +302,7 @@ function Salon1() {
                         </Button>
                       ) : (
                         <div 
-                          className="d-flex align-items-center gap-2 bn w-50 justify-content-center" 
+                          className="d-flex align-items-center gap-1 bn w-50 justify-content-center" 
                           style={{
                             border: "1px solid rgb(110, 66, 229)", 
                             borderRadius: "6px",
@@ -409,26 +409,10 @@ function Salon1() {
       {/* Mobile Cart Footer */}
       {carts.length > 0 && (
         <div className="mobile-cart-footer-wrapper position-fixed d-flex flex-column d-lg-none">
-          <div className="d-flex justify-content-between align-items-center left">
-            <div className="mobile-cart-footer-total w-100 border-0">
-              {(() => {
-                const total = (Array.isArray(carts) ? carts : []).reduce(
-                  (acc, c) => acc + safePrice(c.price) * (c.count || 1),
-                  0
-                );
-                if (total === 0) return null;
-                return (
-                  <>
-                    <span>{formatPrice(total)}</span>{" "}
-                  </>
-                );
-              })()}
               <Button className="mobile-cart-footer-button mobile-cart-footer-total w-100 border-0" onClick={() => navigate("/cart")}>
                 View cart
               </Button>
             </div>
-          </div>
-        </div>
       )}
 
       {/* Salon Modal */}

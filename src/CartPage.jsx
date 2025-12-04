@@ -603,7 +603,7 @@ const canPlaceOrder = () => {
                       Edit
                     </Button>
                   )}
-                </div>
+                </div><p></p>
                 <div style={{ marginLeft: "28px",marginTop:"-12px" }}>
                   {selectedAddress ? (
                     <div>
@@ -679,23 +679,21 @@ const canPlaceOrder = () => {
                   Payment Method
                 </p>
                 {selectedSlot && selectedAddress && (
-                  <div style={{ marginLeft: "28px" }}>
-                    // Update button states
-<Button
-  className="butn fw-bold w-100 p-3"
-  disabled={!canPlaceOrder()}
-  onClick={processPayment}
->
-  {!isLoggedIn ? "Login to Continue" : 
-   !selectedAddress ? "Select Address" : 
-   !selectedSlot ? "Select Time Slot" : 
-   "Place an order"}
-</Button>
+                  <div style={{ marginLeft: "28px" }}>               
+                  <Button
+                    className="butn fw-bold w-100 p-3"
+                    disabled={!canPlaceOrder()}
+                    onClick={processPayment}
+                  >
+                    {!isLoggedIn ? "Login to Continue" : 
+                    !selectedAddress ? "Select Address" : 
+                    !selectedSlot ? "Select Time Slot" : 
+                    "Place an order"}
+                  </Button>
                   </div>
                 )}
-                <br />
-                <div style={{backgroundColor:"#e1e1e1ff",height:"40px",padding:"10px"}} className="border rounded text-center">
-                  <p className="text-muted" style={{fontSize:"12px"}}>By proceeding, you agree to our <a className="fw-semibold" style={{color:"black"}} href="">T&C</a>,<a className="fw-semibold" style={{color:"black"}}  href="">Privacy</a> and <a className="fw-semibold" style={{color:"black"}} href="">Cancellation Policy</a> </p>
+                <div  className="border rounded proceed  text-center">
+                  <p className="text-muted " style={{fontSize:"12px"}}>By proceeding, you agree to our <a  style={{color:"black"}} href="">T&C</a>,<a  style={{color:"black"}}  href="">Privacy</a> and <a  style={{color:"black"}} href="">Cancellation Policy</a> </p>
                 </div>
               </div>
             </div>
@@ -906,7 +904,7 @@ const canPlaceOrder = () => {
                           <span style={{ fontSize: "14px" }}>
                             {getAddressTypeText(selectedAddress.addressType)} - 
                           </span>
-                          <p className="mb-0" style={{ fontSize: "12px", lineHeight: "1.3" }}>
+                          <p className="mb-0" style={{ fontSize: "11px", lineHeight: "1.3" }}>
                             {formatMobileAddress(selectedAddress)}
                           </p>
                         </div>
@@ -940,7 +938,7 @@ const canPlaceOrder = () => {
                           <span style={{ fontSize: "14px" }}>
                             {getAddressTypeText(selectedAddress.addressType)} - 
                           </span>
-                          <p className="mb-0" style={{ fontSize: "12px", lineHeight: "1.3" }}>
+                          <p className="mb-0" style={{ fontSize: "11px", lineHeight: "1.3" }}>
                             {formatMobileAddress(selectedAddress)}
                           </p>
                         </div>
@@ -984,8 +982,7 @@ const canPlaceOrder = () => {
                       !selectedSlot ? "Select Time Slot" : 
                       "Place an order"}
                     </Button>
-                    </div> <div className="border rounded text-center" style={{height:"24px",backgroundColor:"#eaeaeaff"}}>
-                      <p>By proceedng, you agree to our <a href="" style={{color:"black"}}>T&C</a>,<a href="" style={{color:"black"}}>Privacy</a> and <a href="" style={{color:"black"}}>Cancellation Policy</a></p></div>
+                    </div> 
                   </Col>
                 )}
               </>
@@ -1094,9 +1091,9 @@ const canPlaceOrder = () => {
             {selectedDate ? (
               <Row className="g-4">
                 {getSlotsForSelectedDate().map(slot => (
-                  <Col xs={2} key={slot.id} className="mb-2">
+                  <Col xs={3} key={slot.id} className="mb-2">
                     <div 
-                      className={`p-2 border rounded text-center position-relative ${
+                      className={`p-2  border rounded text-center position-relative ${
                         selectedSlot?.id === slot.id ? 'border-primary' : 'border-secondary'
                       } ${!slot.available ? 'bg-light text-muted' : ''}`}
                       style={{ 

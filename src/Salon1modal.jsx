@@ -418,7 +418,7 @@ function Salon1modal({
                     }}
                   >Add</Button>
                 ) : (
-                  <div className='d-flex align-items-center gap-2 bn' style={{ border: "1px solid rgb(110, 66, 229)", backgroundColor: "rgb(245, 241, 255)", borderRadius: "6px", justifyContent: "center" }}>
+                  <div className='d-flex align-items-center gap-1 bn' style={{ border: "1px solid rgb(110, 66, 229)", backgroundColor: "rgb(245, 241, 255)", borderRadius: "6px"}}>
                     <Button 
                       type="button" 
                       onClick={() => {

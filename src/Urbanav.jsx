@@ -523,8 +523,8 @@ function Urbanav() {
                 )}
               </div>
 
-              <div className="search-line">
-                <div className="position-relative" ref={dropdownRef}>
+              <div className="search-line ">
+                <div className="position-relative w-100"  ref={dropdownRef}>
                   <FormControl
                     type="text"
                     placeholder={placeholder}
@@ -534,7 +534,7 @@ function Urbanav() {
                     className="location-input"
                   />
                   {showDropdown && (
-                    <Searchdropdown
+                    <Searchdropdown 
                       searchValue={searchValue}
                       onSelect={(val) => {
                         setSearchValue(val);
