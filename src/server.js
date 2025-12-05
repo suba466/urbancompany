@@ -6,13 +6,14 @@ import mongoose from "mongoose";
 import multer from "multer";
 import fs from "fs";
 import bcrypt from "bcryptjs";
-
+import adminRoutes from "./adminRoutes.js";
 const app = express();
 const PORT = 5000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+
 
 // __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -154,6 +155,11 @@ const bookingSchema = new mongoose.Schema({
 });
 
 const Booking = mongoose.model("Booking", bookingSchema);
+
+
+app.use("/api/admin", adminRoutes);
+
+
 // User Registration with Image Upload
 app.post("/api/register", upload.single('profileImage'), async (req, res) => {
   try {

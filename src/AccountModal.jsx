@@ -6,7 +6,7 @@ import { MdAccountCircle, MdOutlineArrowForwardIos, MdLocationOn, MdEdit, MdCame
 import { BiLeftArrowAlt } from "react-icons/bi";
 import { PiNotepadLight } from "react-icons/pi";
 import { useAuth } from "./AuthContext";
-
+import { IoSettingsOutline } from "react-icons/io5";
 function AccountModal({ show,totalPrice=()=>{}, onHide, initialView = "main" }) {
   const [logo1, setLogo1] = useState("");
   const [currentView, setCurrentView] = useState(initialView);
@@ -293,99 +293,128 @@ function AccountModal({ show,totalPrice=()=>{}, onHide, initialView = "main" }) 
     }));
   };
 
-  // Handle user registration
   const handleRegister = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+  // DEBUG: Log all registration data
+  console.log("=== REGISTRATION DATA ===");
+  console.log("Name:", registerData.name);
+  console.log("Email:", registerData.email);
+  console.log("Phone:", registerData.phone);
+  console.log("City:", registerData.city);
+  console.log("Password:", registerData.password);
+  console.log("Confirm Password:", registerData.confirmPassword);
+  console.log("Profile File:", registerData.profileFile);
+  console.log("========================");
+  
+  // Validation
+  if (!registerData.name || registerData.name.trim() === "") {
+    console.log("Validation failed: Name is empty");
+    alert("Please enter your name");
+    return;
+  }
+
+  if (!registerData.email || registerData.email.trim() === "") {
+    console.log("Validation failed: Email is empty");
+    alert("Please enter your email");
+    return;
+  }
+
+  if (!/^\S+@\S+\.\S+$/.test(registerData.email)) {
+    console.log("Validation failed: Invalid email format");
+    alert("Please enter a valid email address");
+    return;
+  }
+
+  if (!registerData.phone || registerData.phone.trim() === "" || registerData.phone.length !== 10) {
+    console.log("Validation failed: Phone is invalid");
+    alert("Please enter a valid 10-digit phone number");
+    return;
+  }
+
+  if (!registerData.city || registerData.city.trim() === "") {
+    console.log("Validation failed: City is empty");
+    alert("Please enter your city");
+    return;
+  }
+
+  if (!registerData.password || registerData.password === "") {
+    console.log("Validation failed: Password is empty");
+    alert("Please enter a password");
+    return;
+  }
+
+  if (registerData.password.length < 6) {
+    console.log("Validation failed: Password too short");
+    alert("Password must be at least 6 characters long");
+    return;
+  }
+
+  if (!registerData.confirmPassword || registerData.confirmPassword === "") {
+    console.log("Validation failed: Confirm password is empty");
+    alert("Please confirm your password");
+    return;
+  }
+
+  if (registerData.password !== registerData.confirmPassword) {
+    console.log("Validation failed: Passwords don't match");
+    console.log("Password:", registerData.password);
+    console.log("Confirm Password:", registerData.confirmPassword);
+    alert("Passwords do not match");
+    return;
+  }
+
+  setIsLoading(true);
+  try {
+    // Create FormData
+    const formData = new FormData();
+    formData.append('name', registerData.name);
+    formData.append('email', registerData.email);
+    formData.append('phone', registerData.phone);
+    formData.append('city', registerData.city);
+    formData.append('password', registerData.password);
     
-    // Validation
-    if (!registerData.name.trim()) {
-      alert("Please enter your name");
-      return;
+    // Append profile picture if exists
+    if (registerData.profileFile) {
+      formData.append('profileImage', registerData.profileFile);
+      console.log("Appending profile image:", registerData.profileFile.name);
     }
 
-    if (!registerData.email.trim()) {
-      alert("Please enter your email");
-      return;
+    console.log("Sending registration request...");
+    const response = await fetch("http://localhost:5000/api/register", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await response.json();
+    console.log("Registration response:", data);
+
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to register");
     }
 
-    if (!/^\S+@\S+\.\S+$/.test(registerData.email)) {
-      alert("Please enter a valid email address");
-      return;
-    }
+    // Auto login after successful registration
+    login({
+      name: data.user.name,
+      email: data.user.email,
+      phone: data.user.phone,
+      city: data.user.city,
+      userId: data.user.id,
+      profileImage: data.user.profileImage,
+      title: data.user.title || "Ms"
+    });
 
-    if (!registerData.phone.trim() || registerData.phone.length !== 10) {
-      alert("Please enter a valid 10-digit phone number");
-      return;
-    }
-
-    if (!registerData.city.trim()) {
-      alert("Please enter your city");
-      return;
-    }
-
-    if (!registerData.password) {
-      alert("Please enter a password");
-      return;
-    }
-
-    if (registerData.password.length < 6) {
-      alert("Password must be at least 6 characters long");
-      return;
-    }
-
-    if (registerData.password !== registerData.confirmPassword) {
-      alert("Passwords do not match");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-     // In handleProfileSave function, modify the formData:
-const formData = new FormData();
-formData.append('userId', userInfo.userId || '');
-formData.append('name', profileData.name);
-formData.append('email', profileData.email);  // Important: include email
-formData.append('phone', profileData.phone);
-formData.append('city', profileData.city);
-formData.append('title', profileData.title || "Ms");
-      // Append profile picture if exists
-      if (registerData.profileFile) {
-        formData.append('profileImage', registerData.profileFile);
-      }
-
-      const response = await fetch("http://localhost:5000/api/register", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to register");
-      }
-
-      // Auto login after successful registration
-      login({
-        name: data.user.name,
-        email: data.user.email,
-        phone: data.user.phone,
-        city: data.user.city,
-        userId: data.user.id,
-        profileImage: data.user.profileImage,
-        title: data.user.title || "Ms"
-      });
-
-      setCurrentView("main");
-      onHide();
-      alert("Registration successful! Welcome to Urban Company");
-      
-    } catch (error) {
-      console.error("Error registering:", error);
-      alert(error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    setCurrentView("main");
+    onHide();
+    alert("Registration successful! Welcome to Urban Company");
+    
+  } catch (error) {
+    console.error("Error registering:", error);
+    alert(error.message);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Handle user login
   const handleLogin = async (e) => {
@@ -1262,7 +1291,6 @@ const renderBookingsView = () => {
   // Render plans view
   const renderPlansView = () => (
     <div>
-      <h6 className="fw-bold mb-3">My Plans</h6>
       
       {plans.length === 0 ? (
         <div className="text-center py-5">
@@ -1287,6 +1315,16 @@ const renderBookingsView = () => {
           ))}
         </div>
       )}
+    </div>
+  );
+
+    // Render plans view
+  const renderSettingsView = () => (
+    <div style={{padding:"10px"}}>
+      <h5 className="fw-semibold">Order related messages</h5>
+      <p className="text-muted">Order related messages can't be turned off as they are important for service experience</p>
+      <hr style={{border:"2px solid"}}/>
+
     </div>
   );
 
@@ -1316,6 +1354,7 @@ const renderBookingsView = () => {
           { icon: <PiNotepadLight size={20} />, label: "My plans", view: "plans" },
           { icon: <LuNotepadText size={20} />, label: "Bookings", view: "bookings" },
           { icon: <IoMdHelpCircleOutline size={20} />, label: "Help Center", view: "help" },
+          {icon: <IoSettingsOutline size={20}/>, label: "Settings", view: "settings"}
         ].map((item, index) => (
           <div 
             key={index}
@@ -1370,8 +1409,7 @@ const renderBookingsView = () => {
 
   // Render help view
   const renderHelpView = () => (
-    <div>
-      <h6 className="fw-bold mb-3">Help Center</h6>
+    <div style={{padding:"20px"}}>
       <p className="text-muted">Contact support for any assistance:</p>
       <ul className="text-muted">
         <li>Email: support@urbancompany.com</li>
@@ -1383,8 +1421,7 @@ const renderBookingsView = () => {
 
   // Render about view
   const renderAboutView = () => (
-    <div>
-      <h6 className="fw-bold mb-3">About Urban Company</h6>
+    <div style={{padding:"12px"}}>
       <p className="text-muted">
         Urban Company is a platform that helps customers book reliable home services like 
         beauty treatments, massages, cleaning, plumbing, carpentry, appliance repair, painting, etc.
@@ -1456,7 +1493,8 @@ const renderBookingsView = () => {
       "edit-profile": "My Profile",
       about: "About Urban Company",
       bookings: "My Bookings",
-      plans: "My Plans",
+      plans: "My plans ",
+      settings:"Settings ",
       help: "Help Center"
     };
     return titles[currentView] || "Profile";
@@ -1484,6 +1522,8 @@ const renderBookingsView = () => {
           return renderPlansView();
         case "help":
           return renderHelpView();
+        case "settings":
+          return renderSettingsView();
         case "about":
           return renderAboutView();
         default:

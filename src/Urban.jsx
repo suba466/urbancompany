@@ -7,7 +7,8 @@ import CartPage from './CartPage.jsx';
 import Salon from './Salon.jsx';
 import { AuthProvider } from './AuthContext';
 import { CartProvider } from './CartContext'; 
-import CartSummary from './CartSummary'; // Add this import
+import CartSummary from './CartSummary'; 
+import AdminPanel from './AdminPanel.jsx';
 
 function Urban() {
   return (
@@ -30,10 +31,9 @@ function Urban() {
             </>
           }/>
           
-          
-          {/* Routes WITHOUT navbar */}
           <Route path='/cart-summary' element={<CartSummary/>}/>
           <Route path='/cart' element={<><Urbanav/><CartPage/></>}/>
+          <Route path='/admin' element={<><AdminPanel/></>}/>
         </Routes>
       </CartProvider>
     </AuthProvider>
