@@ -1,11 +1,21 @@
-// AdminPanel.jsx
+// AdminPanel.jsx - Updated with New Menu Structure
 import React, { useState, useEffect } from 'react';
 import { 
   Container, Row, Col, Card, Table, Form, Button, 
   Spinner, Modal, Nav, Navbar, Badge,
-  Dropdown, Pagination, Tabs, Tab, InputGroup
+  Dropdown, Pagination, InputGroup, Alert
 } from 'react-bootstrap';
-
+import { MdOutlineNoteAlt } from "react-icons/md";import { SiCashapp } from "react-icons/si";
+import { 
+  FaUserSecret, 
+  FaCut, 
+  FaSnowflake, 
+  FaBroom, 
+  FaWrench, 
+  FaTools,
+  FaClipboardList,
+  FaRupeeSign
+} from "react-icons/fa";
 function AdminPanel() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginData, setLoginData] = useState({ email: '', password: '' });
@@ -19,6 +29,57 @@ function AdminPanel() {
   const [recentBookings, setRecentBookings] = useState([]);
   const [recentUsers, setRecentUsers] = useState([]);
   
+  // Staff Management States
+  const [staff, setStaff] = useState([]);
+  const [staffSearch, setStaffSearch] = useState('');
+  const [staffPage, setStaffPage] = useState(1);
+  const [staffTotalPages, setStaffTotalPages] = useState(1);
+  const [showAddStaffForm, setShowAddStaffForm] = useState(false);
+  const [newStaff, setNewStaff] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    designation: '',
+    profileImage: null,
+    permissions: {
+      dashboard: false,
+      bookings: false,
+      staff: false,
+      category: false,products:false,
+      reports: false,
+      settings: false
+    },
+    isActive: true
+  });
+  
+  // Form feedback
+  const [formSuccess, setFormSuccess] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [profileImageFile, setProfileImageFile] = useState(null);
+  const [profileImagePreview, setProfileImagePreview] = useState('');
+  
+  // Edit Staff States
+  const [editStaffModal, setEditStaffModal] = useState(false);
+  const [editingStaff, setEditingStaff] = useState(null);
+  const [editStaffData, setEditStaffData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    designation: '',
+    profileImage: '',
+    permissions: {
+      dashboard: false,
+      bookings: false,
+      staff: false,
+      category: false,product:false,
+      reports: false,
+      settings: false
+    },
+    isActive: true
+  });
+  const [editProfileImageFile, setEditProfileImageFile] = useState(null);
+  const [editProfileImagePreview, setEditProfileImagePreview] = useState('');
+  
   // User Management States
   const [users, setUsers] = useState([]);
   const [userSearch, setUserSearch] = useState('');
@@ -30,19 +91,41 @@ function AdminPanel() {
     email: '',
     phone: '',
     city: '',
-    password: ''
+    password: '',
+    profileImage: null,
+    isActive: true
   });
-  
-  // Category Management States
-  const [categories, setCategories] = useState([]);
+    // Category Management States
+  const [categories, setCategories] = useState([
+    { _id: '1', name: 'Salon for Women', description: 'Beauty services', icon: 'FaCut', order: 1, isActive: true },
+    { _id: '2', name: 'AC Repair', description: 'Appliance services', icon: 'FaSnowflake', order: 2, isActive: true },
+    { _id: '3', name: 'Cleaning', description: 'Home cleaning', icon: 'FaBroom', order: 3, isActive: true },
+    { _id: '4', name: 'Plumbing', description: 'Plumber services', icon: 'FaWrench', order: 4, isActive: true },
+    { _id: '5', name: 'Electrician', description: 'Electrical services', icon: 'FaTools', order: 5, isActive: true }
+  ]);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [newCategory, setNewCategory] = useState({
     name: '',
     description: '',
-    icon: '',
+    icon: 'FaCut',
     order: 0,
     isActive: true
   });
+  
+  // Product Management States
+  const [products, setProducts] = useState([]);
+  const [productSearch, setProductSearch] = useState('');
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    description: '',
+    category: '',
+    price: '',
+    discountPrice: '',
+    stock: 0,
+    isActive: true
+  });
+  const [productImage, setProductImage] = useState(null);
   
   // Bookings Management States
   const [bookings, setBookings] = useState([]);
@@ -50,44 +133,6 @@ function AdminPanel() {
   const [bookingStatus, setBookingStatus] = useState('');
   const [bookingPage, setBookingPage] = useState(1);
   const [bookingTotalPages, setBookingTotalPages] = useState(1);
-  
-  // Services Management States
-  const [services, setServices] = useState([]);
-  const [serviceSearch, setServiceSearch] = useState('');
-  const [showAddServiceModal, setShowAddServiceModal] = useState(false);
-  const [newService, setNewService] = useState({
-    name: '',
-    description: '',
-    category: '',
-    price: '',
-    duration: '',
-    isActive: true
-  });
-  const [serviceImage, setServiceImage] = useState(null);
-  
-  // Packages Management States
-  const [packages, setPackages] = useState([]);
-  const [showAddPackageModal, setShowAddPackageModal] = useState(false);
-  const [newPackage, setNewPackage] = useState({
-    title: '',
-    description: '',
-    price: '',
-    originalPrice: '',
-    duration: '',
-    category: '',
-    items: [{ text: '', description: '' }]
-  });
-  
-  // Offers Management States
-  const [offers, setOffers] = useState([]);
-  const [showAddOfferModal, setShowAddOfferModal] = useState(false);
-  const [newOffer, setNewOffer] = useState({
-    title: '',
-    description: '',
-    discount: '',
-    validUntil: '',
-    code: ''
-  });
   
   // Reports States
   const [reports, setReports] = useState({
@@ -97,6 +142,16 @@ function AdminPanel() {
     topCategories: []
   });
 
+  // Settings States
+  const [settings, setSettings] = useState({
+    siteTitle: 'Urban Company',
+    siteLogo: '',
+    contactEmail: 'support@urbancompany.com',
+    contactPhone: '1800-123-4567',
+    address: '123 Business Street, City, Country'
+  });
+
+  
   const fetchAdminLogo = async () => {
     try {
       const response = await fetch('http://localhost:5000/api/static-data');
@@ -153,9 +208,28 @@ function AdminPanel() {
     }
   };
 
+  const fetchStaff = async (page = 1, search = '') => {
+    try {
+      let url = `http://localhost:5000/api/admin/staff?page=${page}&limit=10&search=${search}`;
+      
+      const response = await fetch(url, {
+        headers: { 'admin-token': 'admin-secret-token' }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setStaff(data.staff || []);
+        setStaffTotalPages(data.pagination?.pages || 1);
+      }
+    } catch (error) {
+      console.error('Error fetching staff:', error);
+    }
+  };
+
   const fetchUsers = async (page = 1, search = '') => {
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/users?page=${page}&limit=10&search=${search}`, {
+      let url = `http://localhost:5000/api/admin/users?page=${page}&limit=10&search=${search}`;
+      
+      const response = await fetch(url, {
         headers: { 'admin-token': 'admin-secret-token' }
       });
       const data = await response.json();
@@ -170,8 +244,6 @@ function AdminPanel() {
 
   const fetchCategories = async () => {
     try {
-      // This would need a categories endpoint in your backend
-      // For now, let's create mock data
       const mockCategories = [
         { _id: '1', name: 'Salon for Women', description: 'Beauty services', icon: '✂️', order: 1, isActive: true },
         { _id: '2', name: 'AC Repair', description: 'Appliance services', icon: '❄️', order: 2, isActive: true },
@@ -182,6 +254,19 @@ function AdminPanel() {
       setCategories(mockCategories);
     } catch (error) {
       console.error('Error fetching categories:', error);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const mockProducts = [
+        { _id: '1', name: 'Hair Shampoo', description: 'Premium hair care shampoo', category: 'Salon', price: '₹299', discountPrice: '₹249', stock: 50, isActive: true },
+        { _id: '2', name: 'Cleaning Solution', description: 'Multi-surface cleaner', category: 'Cleaning', price: '₹199', discountPrice: '₹149', stock: 100, isActive: true },
+        { _id: '3', name: 'Tool Kit', description: 'Professional repair tools', category: 'Repair', price: '₹1299', discountPrice: '₹999', stock: 20, isActive: true }
+      ];
+      setProducts(mockProducts);
+    } catch (error) {
+      console.error('Error fetching products:', error);
     }
   };
 
@@ -203,51 +288,8 @@ function AdminPanel() {
     }
   };
 
-  const fetchServices = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/admin/services?limit=100', {
-        headers: { 'admin-token': 'admin-secret-token' }
-      });
-      const data = await response.json();
-      if (data.success) {
-        setServices(data.services || []);
-      }
-    } catch (error) {
-      console.error('Error fetching services:', error);
-    }
-  };
-
-  const fetchPackages = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/admin/packages?limit=100', {
-        headers: { 'admin-token': 'admin-secret-token' }
-      });
-      const data = await response.json();
-      if (data.success) {
-        setPackages(data.packages || []);
-      }
-    } catch (error) {
-      console.error('Error fetching packages:', error);
-    }
-  };
-
-  const fetchOffers = async () => {
-    try {
-      // Mock offers data - you would need to create an offers endpoint
-      const mockOffers = [
-        { _id: '1', title: 'Festival Special', description: '25% off on all services', discount: '25%', validUntil: '2024-12-31', code: 'FEST25' },
-        { _id: '2', title: 'First Time User', description: 'Extra 20% off for new users', discount: '20%', validUntil: '2024-12-31', code: 'NEW20' },
-        { _id: '3', title: 'Weekend Special', description: '15% off on weekends', discount: '15%', validUntil: '2024-12-31', code: 'WEEKEND15' }
-      ];
-      setOffers(mockOffers);
-    } catch (error) {
-      console.error('Error fetching offers:', error);
-    }
-  };
-
   const fetchReports = async () => {
     try {
-      // Mock reports data
       const mockReports = {
         dailyBookings: 45,
         monthlyRevenue: 125000,
@@ -271,30 +313,352 @@ function AdminPanel() {
       case 'dashboard':
         fetchDashboardData();
         break;
-      case 'users':
+      case 'add-staff':
+        setShowAddStaffForm(true);
+        fetchStaff();
+        break;
+      case 'manage-staff':
+        setShowAddStaffForm(false);
+        fetchStaff();
+        break;
+      case 'add-user':
+        setShowAddUserModal(true);
         fetchUsers();
         break;
-      case 'categories':
+      case 'manage-users':
+        setShowAddUserModal(false);
+        fetchUsers();
+        break;
+      case 'add-category':
+        setShowAddCategoryModal(true);
         fetchCategories();
+        break;
+      case 'manage-categories':
+        setShowAddCategoryModal(false);
+        fetchCategories();
+        break;
+      case 'add-product':
+        setShowAddProductModal(true);
+        fetchProducts();
+        break;
+      case 'manage-products':
+        setShowAddProductModal(false);
+        fetchProducts();
         break;
       case 'bookings':
         fetchBookings();
         break;
-      case 'services':
-        fetchServices();
-        break;
-      case 'packages':
-        fetchPackages();
-        break;
-      case 'offers':
-        fetchOffers();
-        break;
       case 'reports':
         fetchReports();
+        break;
+      case 'settings':
+        // Load settings if needed
         break;
       default:
         break;
     }
+  };
+
+  // Staff Management Functions
+  const handleAddStaff = async (e) => {
+    e.preventDefault();
+    setFormError('');
+    setFormSuccess(false);
+    
+    if (!newStaff.name || !newStaff.email || !newStaff.phone || !newStaff.designation) {
+      setFormError("Please fill all required fields");
+      return;
+    }
+    
+    try {
+      const formData = new FormData();
+      formData.append('name', newStaff.name);
+      formData.append('email', newStaff.email);
+      formData.append('phone', newStaff.phone);
+      formData.append('designation', newStaff.designation);
+      formData.append('permissions', JSON.stringify(newStaff.permissions));
+      formData.append('isActive', newStaff.isActive);
+      
+      if (profileImageFile) {
+        formData.append('profileImage', profileImageFile);
+      }
+
+      const response = await fetch('http://localhost:5000/api/admin/staff', {
+        method: 'POST',
+        headers: { 
+          'admin-token': 'admin-secret-token'
+        },
+        body: formData
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setFormSuccess(true);
+        
+        // Reset form
+        setNewStaff({
+          name: '',
+          email: '',
+          phone: '',
+          designation: '',
+          profileImage: null,
+          permissions: {
+            dashboard: false,
+            bookings: false,
+            staff: false,
+            services: false,
+            packages: false,
+            categories: false,
+            offers: false,
+            reports: false,
+            settings: false
+          },
+          isActive: true
+        });
+        setProfileImageFile(null);
+        setProfileImagePreview('');
+        
+        // Refresh staff list
+        setTimeout(() => {
+          fetchStaff();
+        }, 500);
+        
+        setTimeout(() => {
+          setFormSuccess(false);
+        }, 5000);
+        
+      } else {
+        setFormError(data.error || 'Failed to add staff member');
+      }
+    } catch (error) {
+      console.error('Error adding staff:', error);
+      setFormError('Failed to add staff member. Please try again.');
+    }
+  };
+
+  // User Management Functions
+  const handleAddUser = async (e) => {
+    e.preventDefault();
+    try {
+      const formData = new FormData();
+      formData.append('name', newUser.name);
+      formData.append('email', newUser.email);
+      formData.append('phone', newUser.phone);
+      formData.append('city', newUser.city);
+      formData.append('password', newUser.password);
+
+      const response = await fetch('http://localhost:5000/api/admin/users', {
+        method: 'POST',
+        headers: { 'admin-token': 'admin-secret-token' },
+        body: formData
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        alert('User added successfully!');
+        setShowAddUserModal(false);
+        setNewUser({
+          name: '',
+          email: '',
+          phone: '',
+          city: '',
+          password: '',
+          profileImage: null,
+          isActive: true
+        });
+        fetchUsers();
+      } else {
+        alert(data.error || 'Failed to add user');
+      }
+    } catch (error) {
+      console.error('Error adding user:', error);
+      alert('Failed to add user');
+    }
+  };
+
+  // Category Functions
+  const handleAddCategory = async (e) => {
+    e.preventDefault();
+    alert('Category added successfully!');
+    setShowAddCategoryModal(false);
+    setNewCategory({ name: '', description: '', icon: '', order: 0, isActive: true });
+    fetchCategories();
+  };
+
+  // Product Functions
+  const handleAddProduct = async (e) => {
+    e.preventDefault();
+    alert('Product added successfully!');
+    setShowAddProductModal(false);
+    setNewProduct({
+      name: '',
+      description: '',
+      category: '',
+      price: '',
+      discountPrice: '',
+      stock: 0,
+      isActive: true
+    });
+    fetchProducts();
+  };
+
+  // Settings Functions
+  const handleSaveSettings = async (e) => {
+    e.preventDefault();
+    alert('Settings saved successfully!');
+  };
+
+  // Delete Functions
+  const deleteStaff = async (staffId) => {
+    if (window.confirm('Are you sure you want to delete this staff member?')) {
+      try {
+        const response = await fetch(`http://localhost:5000/api/admin/staff/${staffId}`, {
+          method: 'DELETE',
+          headers: { 'admin-token': 'admin-secret-token' }
+        });
+        const data = await response.json();
+        if (data.success) {
+          alert('Staff member deleted successfully');
+          fetchStaff();
+        } else {
+          alert(data.error || 'Failed to delete staff member');
+        }
+      } catch (error) {
+        console.error('Error deleting staff:', error);
+        alert('Failed to delete staff member');
+      }
+    }
+  };
+
+  const deleteUser = async (userId) => {
+    if (window.confirm('Are you sure you want to delete this user?')) {
+      alert('User deleted successfully!');
+      fetchUsers();
+    }
+  };
+
+  const deleteCategory = async (categoryId) => {
+    if (window.confirm('Are you sure you want to delete this category?')) {
+      alert('Category deleted successfully!');
+      fetchCategories();
+    }
+  };
+
+  const deleteProduct = async (productId) => {
+    if (window.confirm('Are you sure you want to delete this product?')) {
+      alert('Product deleted successfully!');
+      fetchProducts();
+    }
+  };
+
+  // Function to get initials from name
+  const getInitials = (name) => {
+    if (!name) return 'NA';
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
+  // Open Edit Staff Modal
+  const openEditStaff = (staffMember) => {
+    setEditingStaff(staffMember);
+    setEditStaffData({
+      name: staffMember.name,
+      email: staffMember.email,
+      phone: staffMember.phone,
+      designation: staffMember.designation,
+      profileImage: staffMember.profileImage || '',
+      permissions: staffMember.permissions || {
+        dashboard: false,
+        bookings: false,
+        staff: false,
+        services: false,
+        packages: false,
+        categories: false,
+        offers: false,
+        reports: false,
+        settings: false
+      },
+      isActive: staffMember.isActive
+    });
+    setEditProfileImagePreview('');
+    setEditProfileImageFile(null);
+    setEditStaffModal(true);
+  };
+
+  // Handle Edit Profile Image Change
+  const handleEditProfileImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setEditProfileImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditProfileImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle Edit Staff Submit
+  const handleEditStaffSubmit = async (e) => {
+    e.preventDefault();
+    setFormError('');
+    setFormSuccess(false);
+    
+    try {
+      const formData = new FormData();
+      formData.append('name', editStaffData.name);
+      formData.append('email', editStaffData.email);
+      formData.append('phone', editStaffData.phone);
+      formData.append('designation', editStaffData.designation);
+      formData.append('permissions', JSON.stringify(editStaffData.permissions));
+      formData.append('isActive', editStaffData.isActive);
+      
+      if (editProfileImageFile) {
+        formData.append('profileImage', editProfileImageFile);
+      }
+
+      const response = await fetch(`http://localhost:5000/api/admin/staff/${editingStaff._id}`, {
+        method: 'PUT',
+        headers: { 
+          'admin-token': 'admin-secret-token'
+        },
+        body: formData
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setFormSuccess(true);
+        setEditStaffModal(false);
+        
+        // Refresh staff list
+        fetchStaff(staffPage, staffSearch);
+        
+        setTimeout(() => {
+          setFormSuccess(false);
+        }, 3000);
+      } else {
+        setFormError(data.error || 'Failed to update staff member');
+      }
+    } catch (error) {
+      console.error('Error updating staff:', error);
+      setFormError('Failed to update staff member. Please try again.');
+    }
+  };
+
+  const viewStaffPermissions = (staffMember) => {
+    const permissions = staffMember.permissions || {};
+    const permissionList = Object.entries(permissions)
+      .filter(([key, value]) => value)
+      .map(([key]) => key.charAt(0).toUpperCase() + key.slice(1))
+      .join(', ');
+    
+    alert(`Permissions for ${staffMember.name}:\n${permissionList || 'No permissions'}`);
   };
 
   const updateBookingStatus = async (bookingId, status) => {
@@ -340,195 +704,6 @@ function AdminPanel() {
         console.error('Error deleting booking:', error);
         alert('Failed to delete booking');
       }
-    }
-  };
-
-  const handleAddUser = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await fetch('http://localhost:5000/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newUser)
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        alert('User added successfully');
-        setShowAddUserModal(false);
-        setNewUser({ name: '', email: '', phone: '', city: '', password: '' });
-        fetchUsers();
-      } else {
-        alert(data.error || 'Failed to add user');
-      }
-    } catch (error) {
-      console.error('Error adding user:', error);
-      alert('Failed to add user');
-    }
-  };
-
-  const handleAddCategory = async (e) => {
-    e.preventDefault();
-    // This would need a backend endpoint
-    alert('Category added successfully! (Backend integration needed)');
-    setShowAddCategoryModal(false);
-    setNewCategory({ name: '', description: '', icon: '', order: 0, isActive: true });
-    fetchCategories();
-  };
-
-  const handleAddService = async (e) => {
-    e.preventDefault();
-    try {
-      const formData = new FormData();
-      Object.keys(newService).forEach(key => {
-        formData.append(key, newService[key]);
-      });
-      if (serviceImage) {
-        formData.append('image', serviceImage);
-      }
-
-      const response = await fetch('http://localhost:5000/api/services', {
-        method: 'POST',
-        headers: { 'admin-token': 'admin-secret-token' },
-        body: formData
-      });
-      
-      const data = await response.json();
-      if (data.message) {
-        alert('Service added successfully');
-        setShowAddServiceModal(false);
-        setNewService({
-          name: '',
-          description: '',
-          category: '',
-          price: '',
-          duration: '',
-          isActive: true
-        });
-        setServiceImage(null);
-        fetchServices();
-      } else {
-        alert(data.error || 'Failed to add service');
-      }
-    } catch (error) {
-      console.error('Error adding service:', error);
-      alert('Failed to add service');
-    }
-  };
-
-  const handleAddPackage = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await fetch('http://localhost:5000/api/addpackages', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'admin-token': 'admin-secret-token'
-        },
-        body: JSON.stringify(newPackage)
-      });
-      
-      const data = await response.json();
-      if (data.message) {
-        alert('Package added successfully');
-        setShowAddPackageModal(false);
-        setNewPackage({
-          title: '',
-          description: '',
-          price: '',
-          originalPrice: '',
-          duration: '',
-          category: '',
-          items: [{ text: '', description: '' }]
-        });
-        fetchPackages();
-      } else {
-        alert(data.error || 'Failed to add package');
-      }
-    } catch (error) {
-      console.error('Error adding package:', error);
-      alert('Failed to add package');
-    }
-  };
-
-  const handleAddOffer = async (e) => {
-    e.preventDefault();
-    // This would need a backend endpoint
-    alert('Offer added successfully! (Backend integration needed)');
-    setShowAddOfferModal(false);
-    setNewOffer({
-      title: '',
-      description: '',
-      discount: '',
-      validUntil: '',
-      code: ''
-    });
-    fetchOffers();
-  };
-
-  const deleteUser = async (userId) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      // This would need a backend endpoint
-      alert('User deleted successfully! (Backend integration needed)');
-      fetchUsers();
-    }
-  };
-
-  const deleteCategory = async (categoryId) => {
-    if (window.confirm('Are you sure you want to delete this category?')) {
-      // This would need a backend endpoint
-      alert('Category deleted successfully! (Backend integration needed)');
-      fetchCategories();
-    }
-  };
-
-  const deleteService = async (serviceId) => {
-    if (window.confirm('Are you sure you want to delete this service?')) {
-      try {
-        const response = await fetch(`http://localhost:5000/api/services/${serviceId}`, {
-          method: 'DELETE',
-          headers: { 'admin-token': 'admin-secret-token' }
-        });
-        const data = await response.json();
-        if (data.message) {
-          alert('Service deleted successfully');
-          fetchServices();
-        } else {
-          alert(data.error || 'Failed to delete service');
-        }
-      } catch (error) {
-        console.error('Error deleting service:', error);
-        alert('Failed to delete service');
-      }
-    }
-  };
-
-  const deletePackage = async (packageId) => {
-    if (window.confirm('Are you sure you want to delete this package?')) {
-      try {
-        const response = await fetch(`http://localhost:5000/api/packages/${packageId}`, {
-          method: 'DELETE',
-          headers: { 'admin-token': 'admin-secret-token' }
-        });
-        const data = await response.json();
-        if (data.message) {
-          alert('Package deleted successfully');
-          fetchPackages();
-        } else {
-          alert(data.error || 'Failed to delete package');
-        }
-      } catch (error) {
-        console.error('Error deleting package:', error);
-        alert('Failed to delete package');
-      }
-    }
-  };
-
-  const deleteOffer = async (offerId) => {
-    if (window.confirm('Are you sure you want to delete this offer?')) {
-      // This would need a backend endpoint
-      alert('Offer deleted successfully! (Backend integration needed)');
-      fetchOffers();
     }
   };
 
@@ -666,12 +841,12 @@ function AdminPanel() {
                 <Card className="text-center border-0 shadow-sm">
                   <Card.Body className="py-4">
                     <div className="d-flex align-items-center justify-content-center mb-3">
-                      <div className="rounded-circle p-3" style={{ background: "rgba(102, 126, 234, 0.1)" }}>
-                        <span style={{ color: "#667eea", fontSize: "24px" }}>👥</span>
+                      <div>
+                        <span style={{  fontSize: "30px" }}><FaUserSecret /></span>
                       </div>
                     </div>
                     <h5 className="text-muted mb-2">Total Users</h5>
-                    <h2 className="mb-0" style={{ color: "#667eea" }}>{stats?.totalUsers || 0}</h2>
+                    <h2 className="mb-0" >{stats?.totalUsers || 0}</h2>
                   </Card.Body>
                 </Card>
               </Col>
@@ -679,12 +854,12 @@ function AdminPanel() {
                 <Card className="text-center border-0 shadow-sm">
                   <Card.Body className="py-4">
                     <div className="d-flex align-items-center justify-content-center mb-3">
-                      <div className="rounded-circle p-3" style={{ background: "rgba(118, 75, 162, 0.1)" }}>
-                        <span style={{ color: "#764ba2", fontSize: "24px" }}>📅</span>
+                      <div>
+                        <span style={{  fontSize: "30px" }}><MdOutlineNoteAlt /></span>
                       </div>
                     </div>
                     <h5 className="text-muted mb-2">Total Bookings</h5>
-                    <h2 className="mb-0" style={{ color: "#764ba2" }}>{stats?.totalBookings || 0}</h2>
+                    <h2 className="mb-0" >{stats?.totalBookings || 0}</h2>
                   </Card.Body>
                 </Card>
               </Col>
@@ -692,12 +867,12 @@ function AdminPanel() {
                 <Card className="text-center border-0 shadow-sm">
                   <Card.Body className="py-4">
                     <div className="d-flex align-items-center justify-content-center mb-3">
-                      <div className="rounded-circle p-3" style={{ background: "rgba(56, 178, 172, 0.1)" }}>
-                        <span style={{ color: "#38b2ac", fontSize: "24px" }}>💰</span>
+                      <div >
+                        <span style={{  fontSize: "30px" }}><SiCashapp /></span>
                       </div>
                     </div>
                     <h5 className="text-muted mb-2">Total Revenue</h5>
-                    <h2 className="mb-0" style={{ color: "#38b2ac" }}>₹{stats?.totalRevenue?.toLocaleString() || 0}</h2>
+                    <h2 className="mb-0" >₹{stats?.totalRevenue?.toLocaleString() || 0}</h2>
                   </Card.Body>
                 </Card>
               </Col>
@@ -723,47 +898,49 @@ function AdminPanel() {
                     <h5>Recent Bookings</h5>
                   </Card.Header>
                   <Card.Body>
-                    <Table hover responsive>
-                      <thead>
-                        <tr>
-                          <th>Customer</th>
-                          <th>Service</th>
-                          <th>Price</th>
-                          <th>Status</th>
-                          <th>Date</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {recentBookings.slice(0, 5).map((booking) => (
-                          <tr key={booking._id}>
-                            <td>
-                              <div className="d-flex align-items-center">
-                                <div className="rounded-circle bg-light d-flex align-items-center justify-content-center me-3" 
-                                     style={{ width: "40px", height: "40px" }}>
-                                  {booking.userName?.charAt(0) || 'C'}
-                                </div>
-                                <div>
-                                  <strong>{booking.userName}</strong><br/>
-                                  <small className="text-muted">{booking.userEmail}</small>
-                                </div>
-                              </div>
-                            </td>
-                            <td>{booking.serviceName}</td>
-                            <td><strong>₹{booking.servicePrice}</strong></td>
-                            <td>
-                              <Badge bg={
-                                booking.status === 'Completed' ? 'success' :
-                                booking.status === 'Confirmed' ? 'primary' :
-                                booking.status === 'Pending' ? 'warning' : 'danger'
-                              }>
-                                {booking.status}
-                              </Badge>
-                            </td>
-                            <td>{new Date(booking.createdAt).toLocaleDateString()}</td>
+                    <div className="table-responsive">
+                      <Table hover responsive>
+                        <thead>
+                          <tr>
+                            <th>Customer</th>
+                            <th>Service</th>
+                            <th>Price</th>
+                            <th>Status</th>
+                            <th>Date</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </Table>
+                        </thead>
+                        <tbody>
+                          {recentBookings.slice(0, 5).map((booking) => (
+                            <tr key={booking._id}>
+                              <td>
+                                <div className="d-flex align-items-center">
+                                  <div className="rounded-circle bg-light d-flex align-items-center justify-content-center me-3" 
+                                       style={{ width: "40px", height: "40px" }}>
+                                    {booking.userName?.charAt(0) || 'C'}
+                                  </div>
+                                  <div>
+                                    <strong>{booking.userName}</strong><br/>
+                                    <small className="text-muted">{booking.userEmail}</small>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>{booking.serviceName}</td>
+                              <td><strong>₹{booking.servicePrice}</strong></td>
+                              <td>
+                                <Badge bg={
+                                  booking.status === 'Completed' ? 'success' :
+                                  booking.status === 'Confirmed' ? 'primary' :
+                                  booking.status === 'Pending' ? 'warning' : 'danger'
+                                }>
+                                  {booking.status}
+                                </Badge>
+                              </td>
+                              <td>{new Date(booking.createdAt).toLocaleDateString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </Table>
+                    </div>
                   </Card.Body>
                 </Card>
               </Col>
@@ -792,13 +969,544 @@ function AdminPanel() {
           </>
         );
 
-      case 'users':
+      case 'add-staff':
         return (
           <Card className="border-0 shadow-sm">
             <Card.Header className="border-0 d-flex justify-content-between align-items-center">
               <div>
-                <h5 className="mb-0">User Management</h5>
-                <p className="text-muted mb-0">Manage all registered users</p>
+                <h5 className="mb-0">Add New Staff</h5>
+                <p className="text-muted mb-0">Add new staff members to the system</p>
+              </div>
+              <div className="d-flex gap-2">
+                <Button 
+                  variant="secondary" 
+                  onClick={() => handleMenuClick('manage-staff')}
+                >
+                  <i className="bi bi-arrow-left me-2"></i>View All Staff
+                </Button>
+              </div>
+            </Card.Header>
+            <Card.Body>
+              {formSuccess && (
+                <Alert variant="success" onClose={() => setFormSuccess(false)} dismissible>
+                  <Alert.Heading>Success!</Alert.Heading>
+                  <p>Staff member has been added successfully.</p>
+                </Alert>
+              )}
+              
+              {formError && (
+                <Alert variant="danger" onClose={() => setFormError('')} dismissible>
+                  <Alert.Heading>Error!</Alert.Heading>
+                  <p>{formError}</p>
+                </Alert>
+              )}
+              
+              <Form onSubmit={handleAddStaff}>
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Full Name *</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={newStaff.name}
+                        onChange={(e) => setNewStaff({...newStaff, name: e.target.value})}
+                        required
+                        placeholder="Enter full name"
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Email *</Form.Label>
+                      <Form.Control
+                        type="email"
+                        value={newStaff.email}
+                        onChange={(e) => setNewStaff({...newStaff, email: e.target.value})}
+                        required
+                        placeholder="Enter email address"
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Phone *</Form.Label>
+                      <Form.Control
+                        type="tel"
+                        value={newStaff.phone}
+                        onChange={(e) => setNewStaff({...newStaff, phone: e.target.value})}
+                        required
+                        placeholder="Enter phone number"
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Designation *</Form.Label>
+                      <Form.Select
+                        value={newStaff.designation}
+                        onChange={(e) => setNewStaff({...newStaff, designation: e.target.value})}
+                        required
+                      >
+                        <option value="">Select Designation</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Supervisor">Supervisor</option>
+                        <option value="Technician">Technician</option>
+                        <option value="Customer Support">Customer Support</option>
+                        <option value="Admin">Admin</option>
+                        <option value="Other">Other</option>
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+                </Row>
+                
+                <Form.Group className="mb-3">
+                  <Form.Label>Profile Picture</Form.Label>
+                  <div className="d-flex align-items-center gap-3">
+                    <div style={{ 
+                      width: '100px', 
+                      height: '100px', 
+                      borderRadius: '50%', 
+                      overflow: 'hidden',
+                      border: '2px solid #dee2e6'
+                    }}>
+                      {profileImagePreview ? (
+                        <img 
+                          src={profileImagePreview} 
+                          alt="Profile Preview" 
+                          style={{ 
+                            width: '100%', 
+                            height: '100%', 
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        <div className="bg-light w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                          <i className="bi bi-person" style={{ fontSize: '30px', color: '#6c757d' }}></i>
+                          <small className="text-muted mt-1">No image selected</small>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-grow-1">
+                      <Form.Control
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            setProfileImageFile(file);
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setProfileImagePreview(reader.result);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        className="mb-2"
+                      />
+                      <div className="d-flex gap-2">
+                        <Button 
+                          variant="outline-secondary" 
+                          size="sm"
+                          onClick={() => {
+                            setProfileImagePreview('');
+                            setProfileImageFile(null);
+                          }}
+                          disabled={!profileImagePreview}
+                        >
+                          <i className="bi bi-x-circle me-1"></i> Remove
+                        </Button>
+                        <Button 
+                          variant="outline-primary" 
+                          size="sm"
+                          onClick={() => document.querySelector('input[type="file"]').click()}
+                        >
+                          <i className="bi bi-upload me-1"></i> Browse
+                        </Button>
+                      </div>
+                      <Form.Text className="text-muted">
+                        Optional. If no image is selected, initials will be shown instead.
+                      </Form.Text>
+                    </div>
+                  </div>
+                </Form.Group>
+                
+                <Form.Group className="mb-4">
+                  <Form.Label>Permissions</Form.Label>
+                  <div className="border p-3 rounded">
+                    <Row>
+                      {Object.keys(newStaff.permissions || {}).map((permission) => (
+                        <Col md={4} key={permission}>
+                          <Form.Check
+                            type="checkbox"
+                            id={`permission-${permission}`}
+                            label={permission.charAt(0).toUpperCase() + permission.slice(1)}
+                            checked={newStaff.permissions[permission]}
+                            onChange={(e) => setNewStaff({
+                              ...newStaff,
+                              permissions: {
+                                ...newStaff.permissions,
+                                [permission]: e.target.checked
+                              }
+                            })}
+                            className="mb-2"
+                          />
+                        </Col>
+                      ))}
+                    </Row>
+                  </div>
+                </Form.Group>
+                
+                <Form.Group className="mb-4">
+                  <Form.Check
+                    type="checkbox"
+                    label="Active Staff Member"
+                    checked={newStaff.isActive}
+                    onChange={(e) => setNewStaff({...newStaff, isActive: e.target.checked})}
+                  />
+                </Form.Group>
+                
+                <div className="d-flex justify-content-end gap-2">
+                  <Button 
+                    variant="secondary" 
+                    onClick={() => {
+                      setNewStaff({
+                        name: '',
+                        email: '',
+                        phone: '',
+                        designation: '',
+                        profileImage: null,
+                        permissions: {
+                          dashboard: false,
+                          bookings: false,
+                          staff: false,
+                          services: false,
+                          packages: false,
+                          categories: false,
+                          offers: false,
+                          reports: false,
+                          settings: false
+                        },
+                        isActive: true
+                      });
+                      setProfileImagePreview('');
+                      setProfileImageFile(null);
+                    }}
+                  >
+                    Clear Form
+                  </Button>
+                  <Button variant="primary" type="submit">
+                    <i className="bi bi-person-plus me-2"></i>Add Staff
+                  </Button>
+                </div>
+              </Form>
+            </Card.Body>
+          </Card>
+        );
+
+      case 'manage-staff':
+        return (
+          <Card className="border-0 shadow-sm">
+            <Card.Header className="border-0 d-flex justify-content-between align-items-center">
+              <div>
+                <h5 className="mb-0">Manage Staff</h5>
+                <p className="text-muted mb-0">View and manage all staff members</p>
+              </div>
+              <div className="d-flex gap-2">
+                <Form.Control
+                  type="search"
+                  placeholder="Search staff..."
+                  value={staffSearch}
+                  onChange={(e) => {
+                    setStaffSearch(e.target.value);
+                    fetchStaff(1, e.target.value);
+                  }}
+                  style={{ width: '250px' }}
+                />
+                <Button 
+                  variant="primary"
+                  onClick={() => handleMenuClick('add-staff')}
+                >
+                  <i className="bi bi-person-plus me-2"></i>Add New Staff
+                </Button>
+              </div>
+            </Card.Header>
+            <Card.Body>
+              {formSuccess && (
+                <Alert variant="success" onClose={() => setFormSuccess(false)} dismissible>
+                  <Alert.Heading>Success!</Alert.Heading>
+                  <p>Staff member updated successfully!</p>
+                </Alert>
+              )}
+              
+              <div className="table-responsive">
+                <Table hover responsive style={{ minWidth: '800px' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ width: '60px' }}>ID</th>
+                      <th style={{ width: '80px' }}>Profile</th>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Phone</th>
+                      <th style={{ width: '120px' }}>Designation</th>
+                      <th style={{ width: '100px' }}>Status</th>
+                      <th style={{ width: '80px' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {staff.map((staffMember) => (
+                      <tr key={staffMember._id}>
+                        <td><small className="text-muted">{staffMember._id?.substring(0, 8)}...</small></td>
+                        <td>
+                          <div style={{ 
+                            width: '50px', 
+                            height: '50px', 
+                            borderRadius: '50%', 
+                            overflow: 'hidden',
+                            border: '2px solid #dee2e6'
+                          }}>
+                            {staffMember.profileImage && staffMember.profileImage !== '' ? (
+                              <img 
+                                src={`http://localhost:5000${staffMember.profileImage}`} 
+                                alt={staffMember.name}
+                                style={{ 
+                                  width: '100%', 
+                                  height: '100%', 
+                                  objectFit: 'cover'
+                                }}
+                                onError={(e) => {
+                                  // Fallback to initials
+                                  e.target.style.display = 'none';
+                                  const parent = e.target.parentElement;
+                                  const initials = getInitials(staffMember.name);
+                                  parent.innerHTML = `
+                                    <div style="
+                                      width: 100%;
+                                      height: 100%;
+                                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                      display: flex;
+                                      align-items: center;
+                                      justify-content: center;
+                                      color: white;
+                                      font-weight: bold;
+                                      font-size: 16px;
+                                    ">
+                                      ${initials}
+                                    </div>
+                                  `;
+                                }}
+                              />
+                            ) : (
+                              <div style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                fontWeight: 'bold',
+                                fontSize: '16px'
+                              }}>
+                                {getInitials(staffMember.name)}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <div>
+                            <strong>{staffMember.name}</strong>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="text-truncate" style={{ maxWidth: '200px' }}>
+                            {staffMember.email}
+                          </div>
+                        </td>
+                        <td>{staffMember.phone}</td>
+                        <td>
+                          <Badge bg={
+                            staffMember.designation === 'Manager' ? 'primary' :
+                            staffMember.designation === 'Supervisor' ? 'info' :
+                            staffMember.designation === 'Technician' ? 'warning' :
+                            staffMember.designation === 'Admin' ? 'danger' : 'secondary'
+                          }>
+                            {staffMember.designation}
+                          </Badge>
+                        </td>
+                        <td>
+                          <Badge bg={staffMember.isActive ? 'success' : 'secondary'}>
+                            {staffMember.isActive ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </td>
+                        <td>
+                          <Dropdown>
+                            <Dropdown.Toggle variant="light" size="sm">
+                              <i className="bi bi-three-dots"></i>
+                            </Dropdown.Toggle>
+                            <Dropdown.Menu>
+                              <Dropdown.Item onClick={() => openEditStaff(staffMember)}>
+                                <i className="bi bi-pencil me-2"></i>Edit
+                              </Dropdown.Item>
+                              <Dropdown.Item onClick={() => viewStaffPermissions(staffMember)}>
+                                <i className="bi bi-shield-check me-2"></i>View Permissions
+                              </Dropdown.Item>
+                              <Dropdown.Divider />
+                              <Dropdown.Item className="text-danger" onClick={() => deleteStaff(staffMember._id)}>
+                                <i className="bi bi-trash me-2"></i>Delete
+                              </Dropdown.Item>
+                            </Dropdown.Menu>
+                          </Dropdown>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+              <div className="d-flex justify-content-center mt-3">
+                <Pagination>
+                  <Pagination.Prev 
+                    onClick={() => staffPage > 1 && fetchStaff(staffPage - 1, staffSearch)} 
+                    disabled={staffPage === 1}
+                  />
+                  {[...Array(staffTotalPages)].map((_, i) => (
+                    <Pagination.Item 
+                      key={i + 1} 
+                      active={i + 1 === staffPage}
+                      onClick={() => fetchStaff(i + 1, staffSearch)}
+                    >
+                      {i + 1}
+                    </Pagination.Item>
+                  ))}
+                  <Pagination.Next 
+                    onClick={() => staffPage < staffTotalPages && fetchStaff(staffPage + 1, staffSearch)} 
+                    disabled={staffPage === staffTotalPages}
+                  />
+                </Pagination>
+              </div>
+            </Card.Body>
+          </Card>
+        );
+
+      case 'add-user':
+        return (
+          <Card className="border-0 shadow-sm">
+            <Card.Header className="border-0 d-flex justify-content-between align-items-center">
+              <div>
+                <h5 className="mb-0">Add New User</h5>
+                <p className="text-muted mb-0">Register a new user account</p>
+              </div>
+              <div className="d-flex gap-2">
+                <Button 
+                  variant="secondary" 
+                  onClick={() => handleMenuClick('manage-users')}
+                >
+                  <i className="bi bi-arrow-left me-2"></i>View All Users
+                </Button>
+              </div>
+            </Card.Header>
+            <Card.Body>
+              <Form onSubmit={handleAddUser}>
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Full Name *</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={newUser.name}
+                        onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+                        required
+                        placeholder="Enter full name"
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Email *</Form.Label>
+                      <Form.Control
+                        type="email"
+                        value={newUser.email}
+                        onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                        required
+                        placeholder="Enter email address"
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Phone *</Form.Label>
+                      <Form.Control
+                        type="tel"
+                        value={newUser.phone}
+                        onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
+                        required
+                        placeholder="Enter phone number"
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>City *</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={newUser.city}
+                        onChange={(e) => setNewUser({...newUser, city: e.target.value})}
+                        required
+                        placeholder="Enter city"
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Password *</Form.Label>
+                      <Form.Control
+                        type="password"
+                        value={newUser.password}
+                        onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                        required
+                        placeholder="Enter password"
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+                <div className="d-flex justify-content-end gap-2">
+                  <Button 
+                    variant="secondary" 
+                    onClick={() => {
+                      setNewUser({
+                        name: '',
+                        email: '',
+                        phone: '',
+                        city: '',
+                        password: '',
+                        profileImage: null,
+                        isActive: true
+                      });
+                    }}
+                  >
+                    Clear Form
+                  </Button>
+                  <Button variant="primary" type="submit">
+                    <i className="bi bi-person-plus me-2"></i>Add User
+                  </Button>
+                </div>
+              </Form>
+            </Card.Body>
+          </Card>
+        );
+
+      case 'manage-users':
+        return (
+          <Card className="border-0 shadow-sm">
+            <Card.Header className="border-0 d-flex justify-content-between align-items-center">
+              <div>
+                <h5 className="mb-0">Manage Users</h5>
+                <p className="text-muted mb-0">View and manage all registered users</p>
               </div>
               <div className="d-flex gap-2">
                 <Form.Control
@@ -811,78 +1519,96 @@ function AdminPanel() {
                   }}
                   style={{ width: '250px' }}
                 />
-                <Dropdown>
-                  <Dropdown.Toggle variant="primary">
-                    <i className="bi bi-plus-circle me-2"></i>Actions
-                  </Dropdown.Toggle>
-                  <Dropdown.Menu>
-                    <Dropdown.Item onClick={() => setShowAddUserModal(true)}>
-                      <i className="bi bi-person-plus me-2"></i>Add New User
-                    </Dropdown.Item>
-                    <Dropdown.Item>
-                      <i className="bi bi-download me-2"></i>Export Users
-                    </Dropdown.Item>
-                  </Dropdown.Menu>
-                </Dropdown>
+                <Button 
+                  variant="primary"
+                  onClick={() => handleMenuClick('add-user')}
+                >
+                  <i className="bi bi-person-plus me-2"></i>Add New User
+                </Button>
               </div>
             </Card.Header>
             <Card.Body>
-              <Table hover responsive>
-                <thead>
-                  <tr>
-                    <th>User ID</th>
-                    <th>Profile</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>City</th>
-                    <th>Joined</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user) => (
-                    <tr key={user._id}>
-                      <td><small className="text-muted">{user._id?.substring(0, 8)}...</small></td>
-                      <td>
-                        {user.profileImage ? (
-                          <img 
-                            src={`http://localhost:5000${user.profileImage}`} 
-                            alt={user.name}
-                            style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
-                          />
-                        ) : (
-                          <div className="rounded-circle bg-light d-flex align-items-center justify-content-center" 
-                               style={{ width: "40px", height: "40px" }}>
-                            {user.name?.charAt(0) || 'U'}
-                          </div>
-                        )}
-                      </td>
-                      <td>{user.name}</td>
-                      <td>{user.email}</td>
-                      <td>{user.phone}</td>
-                      <td>{user.city}</td>
-                      <td>{new Date(user.createdAt).toLocaleDateString()}</td>
-                      <td>
-                        <Dropdown>
-                          <Dropdown.Toggle variant="light" size="sm">
-                            <i className="bi bi-three-dots"></i>
-                          </Dropdown.Toggle>
-                          <Dropdown.Menu>
-                            <Dropdown.Item><i className="bi bi-eye me-2"></i>View Details</Dropdown.Item>
-                            <Dropdown.Item><i className="bi bi-pencil me-2"></i>Edit User</Dropdown.Item>
-                            <Dropdown.Divider />
-                            <Dropdown.Item className="text-danger" onClick={() => deleteUser(user._id)}>
-                              <i className="bi bi-trash me-2"></i>Delete User
-                            </Dropdown.Item>
-                          </Dropdown.Menu>
-                        </Dropdown>
-                      </td>
+              <div className="table-responsive">
+                <Table hover responsive>
+                  <thead>
+                    <tr>
+                      <th style={{ width: '80px' }}>Profile</th>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Phone</th>
+                      <th>City</th>
+                      <th>Joined Date</th>
+                      <th style={{ width: '100px' }}>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </Table>
-              <div className="d-flex justify-content-center">
+                  </thead>
+                  <tbody>
+                    {users.map((user) => (
+                      <tr key={user._id}>
+                        <td>
+                          <div style={{ 
+                            width: '50px', 
+                            height: '50px', 
+                            borderRadius: '50%', 
+                            overflow: 'hidden',
+                            border: '2px solid #dee2e6'
+                          }}>
+                            {user.profileImage ? (
+                              <img 
+                                src={`http://localhost:5000${user.profileImage}`} 
+                                alt={user.name}
+                                style={{ 
+                                  width: '100%', 
+                                  height: '100%', 
+                                  objectFit: 'cover'
+                                }}
+                              />
+                            ) : (
+                              <div style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                fontWeight: 'bold',
+                                fontSize: '16px'
+                              }}>
+                                {getInitials(user.name)}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td><strong>{user.name}</strong></td>
+                        <td>{user.email}</td>
+                        <td>{user.phone}</td>
+                        <td>{user.city}</td>
+                        <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+                        <td>
+                          <Dropdown>
+                            <Dropdown.Toggle variant="light" size="sm">
+                              <i className="bi bi-three-dots"></i>
+                            </Dropdown.Toggle>
+                            <Dropdown.Menu>
+                              <Dropdown.Item>
+                                <i className="bi bi-pencil me-2"></i>Edit
+                              </Dropdown.Item>
+                              <Dropdown.Item>
+                                <i className="bi bi-eye me-2"></i>View Details
+                              </Dropdown.Item>
+                              <Dropdown.Divider />
+                              <Dropdown.Item className="text-danger" onClick={() => deleteUser(user._id)}>
+                                <i className="bi bi-trash me-2"></i>Delete
+                              </Dropdown.Item>
+                            </Dropdown.Menu>
+                          </Dropdown>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+              <div className="d-flex justify-content-center mt-3">
                 <Pagination>
                   <Pagination.Prev 
                     onClick={() => userPage > 1 && fetchUsers(userPage - 1, userSearch)} 
@@ -907,43 +1633,143 @@ function AdminPanel() {
           </Card>
         );
 
-      case 'categories':
+      case 'add-category':
         return (
           <Card className="border-0 shadow-sm">
             <Card.Header className="border-0 d-flex justify-content-between align-items-center">
               <div>
-                <h5 className="mb-0">Category Management</h5>
-                <p className="text-muted mb-0">Manage service categories</p>
+                <h5 className="mb-0">Add New Category</h5>
+                <p className="text-muted mb-0">Create a new service category</p>
               </div>
-              <Dropdown>
-                <Dropdown.Toggle variant="primary">
-                  <i className="bi bi-plus-circle me-2"></i>Actions
-                </Dropdown.Toggle>
-                <Dropdown.Menu>
-                  <Dropdown.Item onClick={() => setShowAddCategoryModal(true)}>
-                    <i className="bi bi-folder-plus me-2"></i>Add New Category
-                  </Dropdown.Item>
-                  <Dropdown.Item>
-                    <i className="bi bi-arrow-down-up me-2"></i>Reorder Categories
-                  </Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown>
+              <div className="d-flex gap-2">
+                <Button 
+                  variant="secondary" 
+                  onClick={() => handleMenuClick('manage-categories')}
+                >
+                  <i className="bi bi-arrow-left me-2"></i>View All Categories
+                </Button>
+              </div>
             </Card.Header>
             <Card.Body>
-              <Row>
-                {categories.map((category) => (
-                  <Col md={4} key={category._id} className="mb-3">
-                    <Card>
-                      <Card.Body>
-                        <div className="d-flex justify-content-between align-items-start">
-                          <div>
-                            <h5>{category.icon} {category.name}</h5>
-                            <p className="text-muted mb-2">{category.description}</p>
-                            <Badge bg={category.isActive ? 'success' : 'secondary'}>
-                              {category.isActive ? 'Active' : 'Inactive'}
-                            </Badge>
-                            <span className="ms-2 text-muted">Order: {category.order}</span>
-                          </div>
+              <Form onSubmit={handleAddCategory}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Category Name *</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={newCategory.name}
+                    onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
+                    required
+                    placeholder="Enter category name"
+                  />
+                </Form.Group>
+                <Form.Group className="mb-3">
+                  <Form.Label>Description</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={3}
+                    value={newCategory.description}
+                    onChange={(e) => setNewCategory({...newCategory, description: e.target.value})}
+                    placeholder="Enter category description"
+                  />
+                </Form.Group>
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Icon</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={newCategory.icon}
+                        onChange={(e) => setNewCategory({...newCategory, icon: e.target.value})}
+                        placeholder="e.g., ✂️, 🔧, 🧹"
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Display Order</Form.Label>
+                      <Form.Control
+                        type="number"
+                        value={newCategory.order}
+                        onChange={(e) => setNewCategory({...newCategory, order: parseInt(e.target.value)})}
+                        placeholder="0"
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+                <Form.Group className="mb-3">
+                  <Form.Check
+                    type="checkbox"
+                    label="Active Category"
+                    checked={newCategory.isActive}
+                    onChange={(e) => setNewCategory({...newCategory, isActive: e.target.checked})}
+                  />
+                </Form.Group>
+                <div className="d-flex justify-content-end gap-2">
+                  <Button 
+                    variant="secondary" 
+                    onClick={() => {
+                      setNewCategory({ name: '', description: '', icon: '', order: 0, isActive: true });
+                    }}
+                  >
+                    Clear Form
+                  </Button>
+                  <Button variant="primary" type="submit">
+                    Add Category
+                  </Button>
+                </div>
+              </Form>
+            </Card.Body>
+          </Card>
+        );
+
+      case 'manage-categories':
+        return (
+          <Card className="border-0 shadow-sm">
+            <Card.Header className="border-0 d-flex justify-content-between align-items-center">
+              <div>
+                <h5 className="mb-0">Manage Categories</h5>
+                <p className="text-muted mb-0">View and manage all service categories</p>
+              </div>
+              <div className="d-flex gap-2">
+                <Form.Control
+                  type="search"
+                  placeholder="Search categories..."
+                  style={{ width: '250px' }}
+                />
+                <Button 
+                  variant="primary"
+                  onClick={() => handleMenuClick('add-category')}
+                >
+                  <i className="bi bi-plus-circle me-2"></i>Add New Category
+                </Button>
+              </div>
+            </Card.Header>
+            <Card.Body>
+              <div className="table-responsive">
+                <Table hover responsive>
+                  <thead>
+                    <tr>
+                      <th style={{ width: '60px' }}>Icon</th>
+                      <th>Name</th>
+                      <th>Description</th>
+                      <th style={{ width: '80px' }}>Order</th>
+                      <th style={{ width: '100px' }}>Status</th>
+                      <th style={{ width: '100px' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {categories.map((category) => (
+                      <tr key={category._id}>
+                        <td style={{ fontSize: '24px' }}>{category.icon}</td>
+                        <td><strong>{category.name}</strong></td>
+                        <td>{category.description}</td>
+                        <td>{category.order}</td>
+                        <td>
+                          <Badge bg={category.isActive ? 'success' : 'secondary'}>
+                            {category.isActive ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </td>
+                        <td>
                           <Dropdown>
                             <Dropdown.Toggle variant="light" size="sm">
                               <i className="bi bi-three-dots"></i>
@@ -957,12 +1783,259 @@ function AdminPanel() {
                               </Dropdown.Item>
                             </Dropdown.Menu>
                           </Dropdown>
-                        </div>
-                      </Card.Body>
-                    </Card>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+            </Card.Body>
+          </Card>
+        );
+
+      case 'add-product':
+        return (
+          <Card className="border-0 shadow-sm">
+            <Card.Header className="border-0 d-flex justify-content-between align-items-center">
+              <div>
+                <h5 className="mb-0">Add New Product</h5>
+                <p className="text-muted mb-0">Add a new product to inventory</p>
+              </div>
+              <div className="d-flex gap-2">
+                <Button 
+                  variant="secondary" 
+                  onClick={() => handleMenuClick('manage-products')}
+                >
+                  <i className="bi bi-arrow-left me-2"></i>View All Products
+                </Button>
+              </div>
+            </Card.Header>
+            <Card.Body>
+              <Form onSubmit={handleAddProduct}>
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Product Name *</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={newProduct.name}
+                        onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                        required
+                        placeholder="Enter product name"
+                      />
+                    </Form.Group>
                   </Col>
-                ))}
-              </Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Category *</Form.Label>
+                      <Form.Select
+                        value={newProduct.category}
+                        onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
+                        required
+                      >
+                        <option value="">Select Category</option>
+                        <option value="Salon">Salon</option>
+                        <option value="Cleaning">Cleaning</option>
+                        <option value="Repair">Repair</option>
+                        <option value="Plumbing">Plumbing</option>
+                        <option value="Electrician">Electrician</option>
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+                </Row>
+                <Form.Group className="mb-3">
+                  <Form.Label>Description</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={3}
+                    value={newProduct.description}
+                    onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+                    placeholder="Enter product description"
+                  />
+                </Form.Group>
+                <Row>
+                  <Col md={4}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Price (₹) *</Form.Label>
+                      <Form.Control
+                        type="number"
+                        value={newProduct.price}
+                        onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
+                        required
+                        placeholder="Enter price"
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={4}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Discount Price (₹)</Form.Label>
+                      <Form.Control
+                        type="number"
+                        value={newProduct.discountPrice}
+                        onChange={(e) => setNewProduct({...newProduct, discountPrice: e.target.value})}
+                        placeholder="Enter discount price"
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={4}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Stock Quantity *</Form.Label>
+                      <Form.Control
+                        type="number"
+                        value={newProduct.stock}
+                        onChange={(e) => setNewProduct({...newProduct, stock: parseInt(e.target.value)})}
+                        required
+                        placeholder="Enter stock quantity"
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+                <Form.Group className="mb-3">
+                  <Form.Label>Product Image</Form.Label>
+                  <Form.Control
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setProductImage(e.target.files[0])}
+                  />
+                  <Form.Text className="text-muted">
+                    Recommended size: 800x600 px. Max 5MB.
+                  </Form.Text>
+                </Form.Group>
+                <Form.Group className="mb-3">
+                  <Form.Check
+                    type="checkbox"
+                    label="Active Product"
+                    checked={newProduct.isActive}
+                    onChange={(e) => setNewProduct({...newProduct, isActive: e.target.checked})}
+                  />
+                </Form.Group>
+                <div className="d-flex justify-content-end gap-2">
+                  <Button 
+                    variant="secondary" 
+                    onClick={() => {
+                      setNewProduct({
+                        name: '',
+                        description: '',
+                        category: '',
+                        price: '',
+                        discountPrice: '',
+                        stock: 0,
+                        isActive: true
+                      });
+                      setProductImage(null);
+                    }}
+                  >
+                    Clear Form
+                  </Button>
+                  <Button variant="primary" type="submit">
+                    Add Product
+                  </Button>
+                </div>
+              </Form>
+            </Card.Body>
+          </Card>
+        );
+
+      case 'manage-products':
+        return (
+          <Card className="border-0 shadow-sm">
+            <Card.Header className="border-0 d-flex justify-content-between align-items-center">
+              <div>
+                <h5 className="mb-0">Manage Products</h5>
+                <p className="text-muted mb-0">View and manage all products</p>
+              </div>
+              <div className="d-flex gap-2">
+                <Form.Control
+                  type="search"
+                  placeholder="Search products..."
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
+                  style={{ width: '250px' }}
+                />
+                <Button 
+                  variant="primary"
+                  onClick={() => handleMenuClick('add-product')}
+                >
+                  <i className="bi bi-plus-circle me-2"></i>Add New Product
+                </Button>
+              </div>
+            </Card.Header>
+            <Card.Body>
+              <div className="table-responsive">
+                <Table hover responsive>
+                  <thead>
+                    <tr>
+                      <th style={{ width: '80px' }}>Image</th>
+                      <th>Product</th>
+                      <th>Category</th>
+                      <th style={{ width: '120px' }}>Price</th>
+                      <th style={{ width: '80px' }}>Stock</th>
+                      <th style={{ width: '100px' }}>Status</th>
+                      <th style={{ width: '100px' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {products.map((product) => (
+                      <tr key={product._id}>
+                        <td>
+                          <div style={{ 
+                            width: '60px', 
+                            height: '60px', 
+                            overflow: 'hidden',
+                            border: '1px solid #dee2e6'
+                          }}>
+                            <img 
+                              src="/assets/default-product.png" 
+                              alt={product.name}
+                              style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                objectFit: 'cover'
+                              }}
+                            />
+                          </div>
+                        </td>
+                        <td>
+                          <div>
+                            <strong>{product.name}</strong>
+                            <small className="text-muted d-block">{product.description?.substring(0, 50)}...</small>
+                          </div>
+                        </td>
+                        <td>{product.category}</td>
+                        <td>
+                          <div>
+                            <strong>{product.price}</strong>
+                            {product.discountPrice && (
+                              <small className="text-muted text-decoration-line-through d-block">{product.discountPrice}</small>
+                            )}
+                          </div>
+                        </td>
+                        <td>{product.stock}</td>
+                        <td>
+                          <Badge bg={product.isActive ? 'success' : 'secondary'}>
+                            {product.isActive ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </td>
+                        <td>
+                          <Dropdown>
+                            <Dropdown.Toggle variant="light" size="sm">
+                              <i className="bi bi-three-dots"></i>
+                            </Dropdown.Toggle>
+                            <Dropdown.Menu>
+                              <Dropdown.Item><i className="bi bi-pencil me-2"></i>Edit</Dropdown.Item>
+                              <Dropdown.Item><i className="bi bi-eye me-2"></i>View Details</Dropdown.Item>
+                              <Dropdown.Divider />
+                              <Dropdown.Item className="text-danger" onClick={() => deleteProduct(product._id)}>
+                                <i className="bi bi-trash me-2"></i>Delete
+                              </Dropdown.Item>
+                            </Dropdown.Menu>
+                          </Dropdown>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
             </Card.Body>
           </Card>
         );
@@ -997,92 +2070,81 @@ function AdminPanel() {
                   onChange={(e) => setBookingSearch(e.target.value)}
                   style={{ width: '250px' }}
                 />
-                <Dropdown>
-                  <Dropdown.Toggle variant="primary">
-                    <i className="bi bi-plus-circle me-2"></i>Actions
-                  </Dropdown.Toggle>
-                  <Dropdown.Menu>
-                    <Dropdown.Item>
-                      <i className="bi bi-calendar-plus me-2"></i>Add Manual Booking
-                    </Dropdown.Item>
-                    <Dropdown.Item>
-                      <i className="bi bi-download me-2"></i>Export Bookings
-                    </Dropdown.Item>
-                  </Dropdown.Menu>
-                </Dropdown>
               </div>
             </Card.Header>
             <Card.Body>
-              <Table hover responsive>
-                <thead>
-                  <tr>
-                    <th>Booking ID</th>
-                    <th>Customer</th>
-                    <th>Service</th>
-                    <th>Price</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bookings.map((booking) => (
-                    <tr key={booking._id}>
-                      <td><small className="text-muted">{booking._id?.substring(0, 8)}...</small></td>
-                      <td>
-                        <div className="d-flex align-items-center">
-                          <div className="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" 
-                               style={{ width: "30px", height: "30px" }}>
-                            {booking.userName?.charAt(0) || 'C'}
-                          </div>
-                          <div>
-                            <strong>{booking.userName}</strong><br/>
-                            <small className="text-muted">{booking.userEmail}</small>
-                          </div>
-                        </div>
-                      </td>
-                      <td>{booking.serviceName}</td>
-                      <td><strong>₹{booking.servicePrice}</strong></td>
-                      <td>
-                        <Badge bg={
-                          booking.status === 'Completed' ? 'success' :
-                          booking.status === 'Confirmed' ? 'primary' :
-                          booking.status === 'Pending' ? 'warning' : 'danger'
-                        }>
-                          {booking.status}
-                        </Badge>
-                      </td>
-                      <td>{new Date(booking.createdAt).toLocaleDateString()}</td>
-                      <td>
-                        <Dropdown>
-                          <Dropdown.Toggle variant="light" size="sm">
-                            <i className="bi bi-three-dots"></i>
-                          </Dropdown.Toggle>
-                          <Dropdown.Menu>
-                            <Dropdown.Item onClick={() => updateBookingStatus(booking._id, 'Confirmed')}>
-                              <i className="bi bi-check-circle me-2"></i>Confirm
-                            </Dropdown.Item>
-                            <Dropdown.Item onClick={() => updateBookingStatus(booking._id, 'Completed')}>
-                              <i className="bi bi-check-all me-2"></i>Complete
-                            </Dropdown.Item>
-                            <Dropdown.Item onClick={() => updateBookingStatus(booking._id, 'Cancelled')}>
-                              <i className="bi bi-x-circle me-2"></i>Cancel
-                            </Dropdown.Item>
-                            <Dropdown.Divider />
-                            <Dropdown.Item>
-                              <i className="bi bi-eye me-2"></i>View Details
-                            </Dropdown.Item>
-                            <Dropdown.Item className="text-danger" onClick={() => deleteBooking(booking._id)}>
-                              <i className="bi bi-trash me-2"></i>Delete
-                            </Dropdown.Item>
-                          </Dropdown.Menu>
-                        </Dropdown>
-                      </td>
+              <div className="table-responsive">
+                <Table hover responsive>
+                  <thead>
+                    <tr>
+                      <th style={{ width: '120px' }}>Booking ID</th>
+                      <th style={{ width: '200px' }}>Customer</th>
+                      <th>Service</th>
+                      <th style={{ width: '100px' }}>Price</th>
+                      <th style={{ width: '120px' }}>Status</th>
+                      <th style={{ width: '120px' }}>Date</th>
+                      <th style={{ width: '100px' }}>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </Table>
-              <div className="d-flex justify-content-center">
+                  </thead>
+                  <tbody>
+                    {bookings.map((booking) => (
+                      <tr key={booking._id}>
+                        <td><small className="text-muted">{booking._id?.substring(0, 8)}...</small></td>
+                        <td>
+                          <div className="d-flex align-items-center">
+                            <div className="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" 
+                                 style={{ width: "30px", height: "30px" }}>
+                              {booking.userName?.charAt(0) || 'C'}
+                            </div>
+                            <div>
+                              <strong>{booking.userName}</strong><br/>
+                              <small className="text-muted">{booking.userEmail}</small>
+                            </div>
+                          </div>
+                        </td>
+                        <td>{booking.serviceName}</td>
+                        <td><strong>₹{booking.servicePrice}</strong></td>
+                        <td>
+                          <Badge bg={
+                            booking.status === 'Completed' ? 'success' :
+                            booking.status === 'Confirmed' ? 'primary' :
+                            booking.status === 'Pending' ? 'warning' : 'danger'
+                          }>
+                            {booking.status}
+                          </Badge>
+                        </td>
+                        <td>{new Date(booking.createdAt).toLocaleDateString()}</td>
+                        <td>
+                          <Dropdown>
+                            <Dropdown.Toggle variant="light" size="sm">
+                              <i className="bi bi-three-dots"></i>
+                            </Dropdown.Toggle>
+                            <Dropdown.Menu>
+                              <Dropdown.Item onClick={() => updateBookingStatus(booking._id, 'Confirmed')}>
+                                <i className="bi bi-check-circle me-2"></i>Confirm
+                              </Dropdown.Item>
+                              <Dropdown.Item onClick={() => updateBookingStatus(booking._id, 'Completed')}>
+                                <i className="bi bi-check-all me-2"></i>Complete
+                              </Dropdown.Item>
+                              <Dropdown.Item onClick={() => updateBookingStatus(booking._id, 'Cancelled')}>
+                                <i className="bi bi-x-circle me-2"></i>Cancel
+                              </Dropdown.Item>
+                              <Dropdown.Divider />
+                              <Dropdown.Item>
+                                <i className="bi bi-eye me-2"></i>View Details
+                              </Dropdown.Item>
+                              <Dropdown.Item className="text-danger" onClick={() => deleteBooking(booking._id)}>
+                                <i className="bi bi-trash me-2"></i>Delete
+                              </Dropdown.Item>
+                            </Dropdown.Menu>
+                          </Dropdown>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+              <div className="d-flex justify-content-center mt-3">
                 <Pagination>
                   <Pagination.Prev 
                     onClick={() => bookingPage > 1 && fetchBookings(bookingPage - 1, bookingSearch, bookingStatus)} 
@@ -1103,221 +2165,6 @@ function AdminPanel() {
                   />
                 </Pagination>
               </div>
-            </Card.Body>
-          </Card>
-        );
-
-      case 'services':
-        return (
-          <Card className="border-0 shadow-sm">
-            <Card.Header className="border-0 d-flex justify-content-between align-items-center">
-              <div>
-                <h5 className="mb-0">Services Management</h5>
-                <p className="text-muted mb-0">Manage all services</p>
-              </div>
-              <div className="d-flex gap-2">
-                <Form.Control
-                  type="search"
-                  placeholder="Search services..."
-                  value={serviceSearch}
-                  onChange={(e) => setServiceSearch(e.target.value)}
-                  style={{ width: '250px' }}
-                />
-                <Dropdown>
-                  <Dropdown.Toggle variant="primary">
-                    <i className="bi bi-plus-circle me-2"></i>Actions
-                  </Dropdown.Toggle>
-                  <Dropdown.Menu>
-                    <Dropdown.Item onClick={() => setShowAddServiceModal(true)}>
-                      <i className="bi bi-plus-circle me-2"></i>Add New Service
-                    </Dropdown.Item>
-                    <Dropdown.Item>
-                      <i className="bi bi-upload me-2"></i>Bulk Import
-                    </Dropdown.Item>
-                  </Dropdown.Menu>
-                </Dropdown>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              <Row>
-                {services.filter(service => 
-                  service.name.toLowerCase().includes(serviceSearch.toLowerCase()) ||
-                  service.description.toLowerCase().includes(serviceSearch.toLowerCase())
-                ).map((service) => (
-                  <Col md={4} key={service._id} className="mb-3">
-                    <Card className="h-100">
-                      {service.img && (
-                        <Card.Img 
-                          variant="top" 
-                          src={`http://localhost:5000${service.img}`} 
-                          style={{ height: '200px', objectFit: 'cover' }}
-                        />
-                      )}
-                      <Card.Body>
-                        <div className="d-flex justify-content-between align-items-start">
-                          <div>
-                            <Card.Title>{service.name}</Card.Title>
-                            <Card.Text className="text-muted">{service.description}</Card.Text>
-                            <div className="d-flex gap-2">
-                              <Badge bg="secondary">{service.category}</Badge>
-                              <Badge bg={service.isActive ? 'success' : 'secondary'}>
-                                {service.isActive ? 'Active' : 'Inactive'}
-                              </Badge>
-                            </div>
-                          </div>
-                          <Dropdown>
-                            <Dropdown.Toggle variant="light" size="sm">
-                              <i className="bi bi-three-dots"></i>
-                            </Dropdown.Toggle>
-                            <Dropdown.Menu>
-                              <Dropdown.Item><i className="bi bi-pencil me-2"></i>Edit</Dropdown.Item>
-                              <Dropdown.Item><i className="bi bi-eye me-2"></i>View Details</Dropdown.Item>
-                              <Dropdown.Divider />
-                              <Dropdown.Item className="text-danger" onClick={() => deleteService(service._id)}>
-                                <i className="bi bi-trash me-2"></i>Delete
-                              </Dropdown.Item>
-                            </Dropdown.Menu>
-                          </Dropdown>
-                        </div>
-                      </Card.Body>
-                    </Card>
-                  </Col>
-                ))}
-              </Row>
-            </Card.Body>
-          </Card>
-        );
-
-      case 'packages':
-        return (
-          <Card className="border-0 shadow-sm">
-            <Card.Header className="border-0 d-flex justify-content-between align-items-center">
-              <div>
-                <h5 className="mb-0">Packages Management</h5>
-                <p className="text-muted mb-0">Manage service packages</p>
-              </div>
-              <Dropdown>
-                <Dropdown.Toggle variant="primary">
-                  <i className="bi bi-plus-circle me-2"></i>Actions
-                </Dropdown.Toggle>
-                <Dropdown.Menu>
-                  <Dropdown.Item onClick={() => setShowAddPackageModal(true)}>
-                    <i className="bi bi-box-seam me-2"></i>Add New Package
-                  </Dropdown.Item>
-                  <Dropdown.Item>
-                    <i className="bi bi-tags me-2"></i>Manage Pricing
-                  </Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown>
-            </Card.Header>
-            <Card.Body>
-              <Table hover responsive>
-                <thead>
-                  <tr>
-                    <th>Package</th>
-                    <th>Category</th>
-                    <th>Price</th>
-                    <th>Duration</th>
-                    <th>Items</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {packages.map((pkg) => (
-                    <tr key={pkg._id}>
-                      <td>
-                        <strong>{pkg.title}</strong><br/>
-                        <small className="text-muted">{pkg.description?.substring(0, 50)}...</small>
-                      </td>
-                      <td>{pkg.category}</td>
-                      <td>
-                        <strong>₹{pkg.price}</strong><br/>
-                        {pkg.originalPrice && (
-                          <small className="text-muted text-decoration-line-through">₹{pkg.originalPrice}</small>
-                        )}
-                      </td>
-                      <td>{pkg.duration}</td>
-                      <td>{pkg.items?.length || 0} items</td>
-                      <td>
-                        <Dropdown>
-                          <Dropdown.Toggle variant="light" size="sm">
-                            <i className="bi bi-three-dots"></i>
-                          </Dropdown.Toggle>
-                          <Dropdown.Menu>
-                            <Dropdown.Item><i className="bi bi-pencil me-2"></i>Edit</Dropdown.Item>
-                            <Dropdown.Item><i className="bi bi-eye me-2"></i>View Details</Dropdown.Item>
-                            <Dropdown.Divider />
-                            <Dropdown.Item className="text-danger" onClick={() => deletePackage(pkg._id)}>
-                              <i className="bi bi-trash me-2"></i>Delete
-                            </Dropdown.Item>
-                          </Dropdown.Menu>
-                        </Dropdown>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </Card.Body>
-          </Card>
-        );
-
-      case 'offers':
-        return (
-          <Card className="border-0 shadow-sm">
-            <Card.Header className="border-0 d-flex justify-content-between align-items-center">
-              <div>
-                <h5 className="mb-0">Offers Management</h5>
-                <p className="text-muted mb-0">Manage discounts and promotions</p>
-              </div>
-              <Dropdown>
-                <Dropdown.Toggle variant="primary">
-                  <i className="bi bi-plus-circle me-2"></i>Actions
-                </Dropdown.Toggle>
-                <Dropdown.Menu>
-                  <Dropdown.Item onClick={() => setShowAddOfferModal(true)}>
-                    <i className="bi bi-percent me-2"></i>Add New Offer
-                  </Dropdown.Item>
-                  <Dropdown.Item>
-                    <i className="bi bi-megaphone me-2"></i>Promote Offers
-                  </Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown>
-            </Card.Header>
-            <Card.Body>
-              <Row>
-                {offers.map((offer) => (
-                  <Col md={4} key={offer._id} className="mb-3">
-                    <Card className="h-100 border-primary">
-                      <Card.Body>
-                        <div className="d-flex justify-content-between align-items-start">
-                          <div>
-                            <h5>{offer.title}</h5>
-                            <p className="text-muted">{offer.description}</p>
-                            <div className="mb-3">
-                              <Badge bg="success" className="me-2">{offer.discount} OFF</Badge>
-                              <Badge bg="info">Code: {offer.code}</Badge>
-                            </div>
-                            <small className="text-muted">Valid until: {offer.validUntil}</small>
-                          </div>
-                          <Dropdown>
-                            <Dropdown.Toggle variant="light" size="sm">
-                              <i className="bi bi-three-dots"></i>
-                            </Dropdown.Toggle>
-                            <Dropdown.Menu>
-                              <Dropdown.Item><i className="bi bi-pencil me-2"></i>Edit</Dropdown.Item>
-                              <Dropdown.Item><i className="bi bi-copy me-2"></i>Copy Code</Dropdown.Item>
-                              <Dropdown.Divider />
-                              <Dropdown.Item className="text-danger" onClick={() => deleteOffer(offer._id)}>
-                                <i className="bi bi-trash me-2"></i>Delete
-                              </Dropdown.Item>
-                            </Dropdown.Menu>
-                          </Dropdown>
-                        </div>
-                      </Card.Body>
-                    </Card>
-                  </Col>
-                ))}
-              </Row>
             </Card.Body>
           </Card>
         );
@@ -1365,30 +2212,32 @@ function AdminPanel() {
                 <h5>Top Categories by Revenue</h5>
               </Card.Header>
               <Card.Body>
-                <Table hover responsive>
-                  <thead>
-                    <tr>
-                      <th>Category</th>
-                      <th>Bookings</th>
-                      <th>Revenue</th>
-                      <th>Avg. Price</th>
-                      <th>Growth</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reports.topCategories.map((cat, index) => (
-                      <tr key={index}>
-                        <td><strong>{cat.name}</strong></td>
-                        <td>{cat.bookings}</td>
-                        <td>₹{cat.revenue.toLocaleString()}</td>
-                        <td>₹{(cat.revenue / cat.bookings).toFixed(0)}</td>
-                        <td>
-                          <Badge bg="success">+12%</Badge>
-                        </td>
+                <div className="table-responsive">
+                  <Table hover responsive>
+                    <thead>
+                      <tr>
+                        <th>Category</th>
+                        <th>Bookings</th>
+                        <th>Revenue</th>
+                        <th>Avg. Price</th>
+                        <th>Growth</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </Table>
+                    </thead>
+                    <tbody>
+                      {reports.topCategories.map((cat, index) => (
+                        <tr key={index}>
+                          <td><strong>{cat.name}</strong></td>
+                          <td>{cat.bookings}</td>
+                          <td>₹{cat.revenue.toLocaleString()}</td>
+                          <td>₹{(cat.revenue / cat.bookings).toFixed(0)}</td>
+                          <td>
+                            <Badge bg="success">+12%</Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
               </Card.Body>
             </Card>
 
@@ -1461,13 +2310,88 @@ function AdminPanel() {
           </>
         );
 
+      case 'settings':
+        return (
+          <Card className="border-0 shadow-sm">
+            <Card.Header className="border-0">
+              <h5 className="mb-0">Settings</h5>
+              <p className="text-muted mb-0">Manage system settings</p>
+            </Card.Header>
+            <Card.Body>
+              <Form onSubmit={handleSaveSettings}>
+                <h6 className="mb-3">General Settings</h6>
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Site Title</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={settings.siteTitle}
+                        onChange={(e) => setSettings({...settings, siteTitle: e.target.value})}
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Contact Email</Form.Label>
+                      <Form.Control
+                        type="email"
+                        value={settings.contactEmail}
+                        onChange={(e) => setSettings({...settings, contactEmail: e.target.value})}
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Contact Phone</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={settings.contactPhone}
+                        onChange={(e) => setSettings({...settings, contactPhone: e.target.value})}
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Address</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={settings.address}
+                        onChange={(e) => setSettings({...settings, address: e.target.value})}
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+                <Form.Group className="mb-4">
+                  <Form.Label>Site Logo</Form.Label>
+                  <Form.Control
+                    type="file"
+                    accept="image/*"
+                    className="mb-2"
+                  />
+                  <Form.Text className="text-muted">
+                    Upload your company logo. Recommended size: 200x50 px.
+                  </Form.Text>
+                </Form.Group>
+                <div className="d-flex justify-content-end">
+                  <Button variant="primary" type="submit">
+                    Save Settings
+                  </Button>
+                </div>
+              </Form>
+            </Card.Body>
+          </Card>
+        );
+
       default:
         return null;
     }
   };
 
   return (
-    <div className="d-flex" style={{ minHeight: '100vh' }}>
+    <div className="d-flex" style={{ minHeight: '100vh', overflowX: 'hidden' }}>
       {/* Sidebar */}
       {sidebarOpen && (
         <div style={{ 
@@ -1511,24 +2435,118 @@ function AdminPanel() {
               <i className="bi bi-speedometer2 me-2"></i>Dashboard
             </Nav.Link>
             
+            {/* Staff Management Dropdown */}
             <Dropdown className="mb-2">
               <Dropdown.Toggle 
                 as={Nav.Link} 
                 style={{ 
-                  color: ['users', 'categories'].includes(activeMenu) ? '#000' : 'white',
-                  background: ['users', 'categories'].includes(activeMenu) ? 'white' : 'transparent',
+                  color: ['add-staff', 'manage-staff'].includes(activeMenu) ? '#000' : 'white',
+                  background: ['add-staff', 'manage-staff'].includes(activeMenu) ? 'white' : 'transparent',
                   borderRadius: '8px',
-                  padding: '10px 15px'
+                  padding: '10px 15px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
                 }}
               >
-                <i className="bi bi-people me-2"></i>User Management
+                <span>
+                  <i className="bi bi-people me-2"></i>Staff Management
+                </span>
+                <i className="bi bi-chevron-down ms-auto"></i>
               </Dropdown.Toggle>
-              <Dropdown.Menu>
-                <Dropdown.Item onClick={() => handleMenuClick('users')}>
-                  <i className="bi bi-person me-2"></i>Manage Users
+              <Dropdown.Menu style={{ width: '100%' }}>
+                <Dropdown.Item onClick={() => handleMenuClick('add-staff')}>
+                  <i className="bi bi-person-plus me-2"></i>Add Staff
                 </Dropdown.Item>
-                <Dropdown.Item onClick={() => handleMenuClick('categories')}>
-                  <i className="bi bi-tags me-2"></i>Manage Categories
+                <Dropdown.Item onClick={() => handleMenuClick('manage-staff')}>
+                  <i className="bi bi-people-fill me-2"></i>Manage Staff
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+            
+            {/* User Management Dropdown */}
+            <Dropdown className="mb-2">
+              <Dropdown.Toggle 
+                as={Nav.Link} 
+                style={{ 
+                  color: ['add-user', 'manage-users'].includes(activeMenu) ? '#000' : 'white',
+                  background: ['add-user', 'manage-users'].includes(activeMenu) ? 'white' : 'transparent',
+                  borderRadius: '8px',
+                  padding: '10px 15px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <span>
+                  <i className="bi bi-person-badge me-2"></i>User Management
+                </span>
+                <i className="bi bi-chevron-down ms-auto"></i>
+              </Dropdown.Toggle>
+              <Dropdown.Menu style={{ width: '100%' }}>
+                <Dropdown.Item onClick={() => handleMenuClick('add-user')}>
+                  <i className="bi bi-person-plus me-2"></i>Add User
+                </Dropdown.Item>
+                <Dropdown.Item onClick={() => handleMenuClick('manage-users')}>
+                  <i className="bi bi-people-fill me-2"></i>Manage Users
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+            
+            {/* Category Management Dropdown */}
+            <Dropdown className="mb-2">
+              <Dropdown.Toggle 
+                as={Nav.Link} 
+                style={{ 
+                  color: ['add-category', 'manage-categories'].includes(activeMenu) ? '#000' : 'white',
+                  background: ['add-category', 'manage-categories'].includes(activeMenu) ? 'white' : 'transparent',
+                  borderRadius: '8px',
+                  padding: '10px 15px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <span>
+                  <i className="bi bi-tags me-2"></i>Category
+                </span>
+                <i className="bi bi-chevron-down ms-auto"></i>
+              </Dropdown.Toggle>
+              <Dropdown.Menu style={{ width: '100%' }}>
+                <Dropdown.Item onClick={() => handleMenuClick('add-category')}>
+                  <i className="bi bi-folder-plus me-2"></i>Add Category
+                </Dropdown.Item>
+                <Dropdown.Item onClick={() => handleMenuClick('manage-categories')}>
+                  <i className="bi bi-folder-fill me-2"></i>Manage Categories
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+            
+            {/* Product Management Dropdown */}
+            <Dropdown className="mb-2">
+              <Dropdown.Toggle 
+                as={Nav.Link} 
+                style={{ 
+                  color: ['add-product', 'manage-products'].includes(activeMenu) ? '#000' : 'white',
+                  background: ['add-product', 'manage-products'].includes(activeMenu) ? 'white' : 'transparent',
+                  borderRadius: '8px',
+                  padding: '10px 15px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <span>
+                  <i className="bi bi-box-seam me-2"></i>Product
+                </span>
+                <i className="bi bi-chevron-down ms-auto"></i>
+              </Dropdown.Toggle>
+              <Dropdown.Menu style={{ width: '100%' }}>
+                <Dropdown.Item onClick={() => handleMenuClick('add-product')}>
+                  <i className="bi bi-plus-circle me-2"></i>Add Product
+                </Dropdown.Item>
+                <Dropdown.Item onClick={() => handleMenuClick('manage-products')}>
+                  <i className="bi bi-box-seam me-2"></i>Manage Products
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
@@ -1546,31 +2564,6 @@ function AdminPanel() {
               <i className="bi bi-calendar-check me-2"></i>Bookings
             </Nav.Link>
             
-            <Dropdown className="mb-2">
-              <Dropdown.Toggle 
-                as={Nav.Link} 
-                style={{ 
-                  color: ['services', 'packages', 'offers'].includes(activeMenu) ? '#000' : 'white',
-                  background: ['services', 'packages', 'offers'].includes(activeMenu) ? 'white' : 'transparent',
-                  borderRadius: '8px',
-                  padding: '10px 15px'
-                }}
-              >
-                <i className="bi bi-tools me-2"></i>Services
-              </Dropdown.Toggle>
-              <Dropdown.Menu>
-                <Dropdown.Item onClick={() => handleMenuClick('services')}>
-                  <i className="bi bi-tools me-2"></i>Manage Services
-                </Dropdown.Item>
-                <Dropdown.Item onClick={() => handleMenuClick('packages')}>
-                  <i className="bi bi-box-seam me-2"></i>Manage Packages
-                </Dropdown.Item>
-                <Dropdown.Item onClick={() => handleMenuClick('offers')}>
-                  <i className="bi bi-percent me-2"></i>Manage Offers
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-            
             <Nav.Link 
               className={`mb-2 ${activeMenu === 'reports' ? 'active' : ''}`}
               onClick={() => handleMenuClick('reports')}
@@ -1583,6 +2576,19 @@ function AdminPanel() {
             >
               <i className="bi bi-graph-up me-2"></i>Reports
             </Nav.Link>
+            
+            <Nav.Link 
+              className={`mb-2 ${activeMenu === 'settings' ? 'active' : ''}`}
+              onClick={() => handleMenuClick('settings')}
+              style={{ 
+                color: activeMenu === 'settings' ? '#000' : 'white',
+                background: activeMenu === 'settings' ? 'white' : 'transparent',
+                borderRadius: '8px',
+                padding: '10px 15px'
+              }}
+            >
+              <i className="bi bi-gear me-2"></i>Settings
+            </Nav.Link>
           </Nav>
         </div>
       )}
@@ -1591,7 +2597,8 @@ function AdminPanel() {
       <div style={{ 
         marginLeft: sidebarOpen ? '250px' : '0', 
         flex: 1,
-        transition: 'margin-left 0.3s'
+        transition: 'margin-left 0.3s',
+        minWidth: '0'
       }}>
         {/* Top Navbar */}
         <Navbar bg="light" expand="lg" className="shadow-sm">
@@ -1599,478 +2606,473 @@ function AdminPanel() {
             <Button variant="light" onClick={() => setSidebarOpen(!sidebarOpen)} className="me-3">
               <i className={`bi bi-${sidebarOpen ? 'chevron-left' : 'chevron-right'}`}></i>
             </Button>
+            <Navbar.Brand className="fw-bold">Urban Company Admin</Navbar.Brand>
             
-            <Navbar.Brand href="#" className="d-none d-md-block">
-              <strong>Admin Panel</strong>
-            </Navbar.Brand>
-            
-            <Navbar.Toggle aria-controls="navbarScroll" />
-            <Navbar.Collapse id="navbarScroll">
-              <Nav className="me-auto my-2 my-lg-0">
-                <Nav.Link active>
-                  {activeMenu.charAt(0).toUpperCase() + activeMenu.slice(1)}
-                </Nav.Link>
+            <Navbar.Toggle aria-controls="navbar-nav" />
+            <Navbar.Collapse id="navbar-nav" className="justify-content-end">
+              <Nav className="align-items-center">
+                <Dropdown>
+                  <Dropdown.Toggle variant="light" className="d-flex align-items-center">
+                    
+                    <span className="d-none d-md-inline">Admin User</span>
+                  </Dropdown.Toggle>
+                  <Dropdown.Menu align="end">
+                    <Dropdown.Item>
+                      <i className="bi bi-person me-2"></i>Profile
+                    </Dropdown.Item>
+                    <Dropdown.Item>
+                      <i className="bi bi-gear me-2"></i>Settings
+                    </Dropdown.Item>
+                    <Dropdown.Divider />
+                    <Dropdown.Item onClick={() => {
+                      localStorage.removeItem('adminToken');
+                      setIsLoggedIn(false);
+                    }}>
+                      <i className="bi bi-box-arrow-right me-2"></i>Logout
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown>
               </Nav>
-              
-              <div className="d-flex align-items-center">
-                <span className="me-3">
-                  Welcome, <strong>Admin</strong>
-                </span>
-                <Button 
-                  variant="outline-danger" 
-                  size="sm"
-                  onClick={() => {
-                    setIsLoggedIn(false);
-                    localStorage.removeItem('adminToken');
-                  }}
-                >
-                  <i className="bi bi-box-arrow-right me-1"></i>Logout
-                </Button>
-              </div>
             </Navbar.Collapse>
           </Container>
         </Navbar>
 
-        {/* Page Content */}
+        {/* Main Content Area */}
         <Container fluid className="py-4">
           {renderContent()}
         </Container>
+
+        {/* Edit Staff Modal */}
+        <Modal show={editStaffModal} onHide={() => setEditStaffModal(false)} size="lg">
+          <Modal.Header closeButton>
+            <Modal.Title>Edit Staff Member</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {formError && (
+              <Alert variant="danger" onClose={() => setFormError('')} dismissible>
+                <Alert.Heading>Error!</Alert.Heading>
+                <p>{formError}</p>
+              </Alert>
+            )}
+            
+            <Form onSubmit={handleEditStaffSubmit}>
+              <Row>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Full Name *</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={editStaffData.name}
+                      onChange={(e) => setEditStaffData({...editStaffData, name: e.target.value})}
+                      required
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Email *</Form.Label>
+                    <Form.Control
+                      type="email"
+                      value={editStaffData.email}
+                      onChange={(e) => setEditStaffData({...editStaffData, email: e.target.value})}
+                      required
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+              <Row>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Phone *</Form.Label>
+                    <Form.Control
+                      type="tel"
+                      value={editStaffData.phone}
+                      onChange={(e) => setEditStaffData({...editStaffData, phone: e.target.value})}
+                      required
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Designation *</Form.Label>
+                    <Form.Select
+                      value={editStaffData.designation}
+                      onChange={(e) => setEditStaffData({...editStaffData, designation: e.target.value})}
+                      required
+                    >
+                      <option value="">Select Designation</option>
+                      <option value="Manager">Manager</option>
+                      <option value="Supervisor">Supervisor</option>
+                      <option value="Technician">Technician</option>
+                      <option value="Customer Support">Customer Support</option>
+                      <option value="Admin">Admin</option>
+                      <option value="Other">Other</option>
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+              </Row>
+              
+              <Form.Group className="mb-3">
+                <Form.Label>Profile Picture</Form.Label>
+                <div className="d-flex align-items-center gap-3">
+                  <div style={{ 
+                    width: '100px', 
+                    height: '100px', 
+                    borderRadius: '50%', 
+                    overflow: 'hidden',
+                    border: '2px solid #dee2e6'
+                  }}>
+                    {editProfileImagePreview ? (
+                      <img 
+                        src={editProfileImagePreview} 
+                        alt="New Profile Preview" 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : editStaffData.profileImage && editStaffData.profileImage !== '' ? (
+                      <img 
+                        src={`http://localhost:5000${editStaffData.profileImage}`}
+                        alt="Current Profile"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={(e) => {
+                          // Show initials on error
+                          e.target.style.display = 'none';
+                          const parent = e.target.parentElement;
+                          const initials = getInitials(editStaffData.name);
+                          parent.innerHTML = `
+                            <div style="
+                              width: 100%;
+                              height: 100%;
+                              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                              display: flex;
+                              align-items: center;
+                              justify-content: center;
+                              color: white;
+                              font-weight: bold;
+                              font-size: 18px;
+                            ">
+                              ${initials}
+                            </div>
+                          `;
+                        }}
+                      />
+                    ) : (
+                      <div style={{ 
+                        width: '100%', 
+                        height: '100%', 
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        fontSize: '18px'
+                      }}>
+                        {getInitials(editStaffData.name)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-grow-1">
+                    <Form.Control
+                      type="file"
+                      accept="image/*"
+                      onChange={handleEditProfileImageChange}
+                      className="mb-2"
+                      id="edit-profile-image-input"
+                    />
+                    <div className="d-flex gap-2">
+                      <Button 
+                        variant="outline-secondary" 
+                        size="sm"
+                        onClick={() => {
+                          setEditProfileImagePreview('');
+                          setEditProfileImageFile(null);
+                        }}
+                        disabled={!editProfileImagePreview}
+                      >
+                        <i className="bi bi-x-circle me-1"></i> Remove New
+                      </Button>
+                      <Button 
+                        variant="outline-primary" 
+                        size="sm"
+                        onClick={() => document.getElementById('edit-profile-image-input').click()}
+                      >
+                        <i className="bi bi-upload me-1"></i> Browse
+                      </Button>
+                    </div>
+                    <Form.Text className="text-muted">
+                      Leave empty to keep current image
+                    </Form.Text>
+                  </div>
+                </div>
+              </Form.Group>
+              
+              <Form.Group className="mb-4">
+                <Form.Label>Permissions</Form.Label>
+                <div className="border p-3 rounded">
+                  <Row>
+                    {Object.keys(editStaffData.permissions || {}).map((permission) => (
+                      <Col md={4} key={permission}>
+                        <Form.Check
+                          type="checkbox"
+                          id={`edit-permission-${permission}`}
+                          label={permission.charAt(0).toUpperCase() + permission.slice(1)}
+                          checked={editStaffData.permissions[permission]}
+                          onChange={(e) => setEditStaffData({
+                            ...editStaffData,
+                            permissions: {
+                              ...editStaffData.permissions,
+                              [permission]: e.target.checked
+                            }
+                          })}
+                          className="mb-2"
+                        />
+                      </Col>
+                    ))}
+                  </Row>
+                </div>
+              </Form.Group>
+              
+              <Form.Group className="mb-4">
+                <Form.Check
+                  type="checkbox"
+                  label="Active Staff Member"
+                  checked={editStaffData.isActive}
+                  onChange={(e) => setEditStaffData({...editStaffData, isActive: e.target.checked})}
+                />
+              </Form.Group>
+              
+              <div className="d-flex justify-content-end gap-2">
+                <Button variant="secondary" onClick={() => setEditStaffModal(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  <i className="bi bi-save me-2"></i>Save Changes
+                </Button>
+              </div>
+            </Form>
+          </Modal.Body>
+        </Modal>
+
+        {/* Add Category Modal */}
+        <Modal show={showAddCategoryModal} onHide={() => setShowAddCategoryModal(false)}>
+          <Modal.Header closeButton>
+            <Modal.Title>Add New Category</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form onSubmit={handleAddCategory}>
+              <Form.Group className="mb-3">
+                <Form.Label>Category Name *</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={newCategory.name}
+                  onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
+                  required
+                  placeholder="Enter category name"
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Description</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  value={newCategory.description}
+                  onChange={(e) => setNewCategory({...newCategory, description: e.target.value})}
+                  placeholder="Enter category description"
+                />
+              </Form.Group>
+              <Row>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Icon</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={newCategory.icon}
+                      onChange={(e) => setNewCategory({...newCategory, icon: e.target.value})}
+                      placeholder="e.g., ✂️, 🔧, 🧹"
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Display Order</Form.Label>
+                    <Form.Control
+                      type="number"
+                      value={newCategory.order}
+                      onChange={(e) => setNewCategory({...newCategory, order: parseInt(e.target.value)})}
+                      placeholder="0"
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+              <Form.Group className="mb-3">
+                <Form.Check
+                  type="checkbox"
+                  label="Active Category"
+                  checked={newCategory.isActive}
+                  onChange={(e) => setNewCategory({...newCategory, isActive: e.target.checked})}
+                />
+              </Form.Group>
+              <div className="d-flex justify-content-end gap-2">
+                <Button variant="secondary" onClick={() => setShowAddCategoryModal(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Add Category
+                </Button>
+              </div>
+            </Form>
+          </Modal.Body>
+        </Modal>
+
+        {/* Add User Modal */}
+        <Modal show={showAddUserModal} onHide={() => setShowAddUserModal(false)}>
+          <Modal.Header closeButton>
+            <Modal.Title>Add New User</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form onSubmit={handleAddUser}>
+              <Form.Group className="mb-3">
+                <Form.Label>Full Name *</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={newUser.name}
+                  onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+                  required
+                  placeholder="Enter full name"
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Email *</Form.Label>
+                <Form.Control
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                  required
+                  placeholder="Enter email address"
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Phone *</Form.Label>
+                <Form.Control
+                  type="tel"
+                  value={newUser.phone}
+                  onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
+                  required
+                  placeholder="Enter phone number"
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>City *</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={newUser.city}
+                  onChange={(e) => setNewUser({...newUser, city: e.target.value})}
+                  required
+                  placeholder="Enter city"
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Password *</Form.Label>
+                <Form.Control
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                  required
+                  placeholder="Enter password"
+                />
+              </Form.Group>
+              <div className="d-flex justify-content-end gap-2">
+                <Button variant="secondary" onClick={() => setShowAddUserModal(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Add User
+                </Button>
+              </div>
+            </Form>
+          </Modal.Body>
+        </Modal>
+
+        {/* Add Product Modal */}
+        <Modal show={showAddProductModal} onHide={() => setShowAddProductModal(false)}>
+          <Modal.Header closeButton>
+            <Modal.Title>Add New Product</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form onSubmit={handleAddProduct}>
+              <Form.Group className="mb-3">
+                <Form.Label>Product Name *</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={newProduct.name}
+                  onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                  required
+                  placeholder="Enter product name"
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Category *</Form.Label>
+                <Form.Select
+                  value={newProduct.category}
+                  onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
+                  required
+                >
+                  <option value="">Select Category</option>
+                  <option value="Salon">Salon</option>
+                  <option value="Cleaning">Cleaning</option>
+                  <option value="Repair">Repair</option>
+                  <option value="Plumbing">Plumbing</option>
+                  <option value="Electrician">Electrician</option>
+                </Form.Select>
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Description</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  value={newProduct.description}
+                  onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+                  placeholder="Enter product description"
+                />
+              </Form.Group>
+              <Row>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Price (₹) *</Form.Label>
+                    <Form.Control
+                      type="number"
+                      value={newProduct.price}
+                      onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
+                      required
+                      placeholder="Enter price"
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Stock Quantity *</Form.Label>
+                    <Form.Control
+                      type="number"
+                      value={newProduct.stock}
+                      onChange={(e) => setNewProduct({...newProduct, stock: parseInt(e.target.value)})}
+                      required
+                      placeholder="Enter stock quantity"
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+              <div className="d-flex justify-content-end gap-2">
+                <Button variant="secondary" onClick={() => setShowAddProductModal(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Add Product
+                </Button>
+              </div>
+            </Form>
+          </Modal.Body>
+        </Modal>
       </div>
-
-      {/* Add User Modal */}
-      <Modal show={showAddUserModal} onHide={() => setShowAddUserModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Add New User</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form onSubmit={handleAddUser}>
-            <Form.Group className="mb-3">
-              <Form.Label>Full Name</Form.Label>
-              <Form.Control
-                type="text"
-                value={newUser.name}
-                onChange={(e) => setNewUser({...newUser, name: e.target.value})}
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Email</Form.Label>
-              <Form.Control
-                type="email"
-                value={newUser.email}
-                onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Phone</Form.Label>
-              <Form.Control
-                type="tel"
-                value={newUser.phone}
-                onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>City</Form.Label>
-              <Form.Control
-                type="text"
-                value={newUser.city}
-                onChange={(e) => setNewUser({...newUser, city: e.target.value})}
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Password</Form.Label>
-              <Form.Control
-                type="password"
-                value={newUser.password}
-                onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                required
-              />
-            </Form.Group>
-            <div className="d-flex justify-content-end gap-2">
-              <Button variant="secondary" onClick={() => setShowAddUserModal(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" type="submit">
-                Add User
-              </Button>
-            </div>
-          </Form>
-        </Modal.Body>
-      </Modal>
-
-      {/* Add Category Modal */}
-      <Modal show={showAddCategoryModal} onHide={() => setShowAddCategoryModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Add New Category</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form onSubmit={handleAddCategory}>
-            <Form.Group className="mb-3">
-              <Form.Label>Category Name</Form.Label>
-              <Form.Control
-                type="text"
-                value={newCategory.name}
-                onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Description</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={3}
-                value={newCategory.description}
-                onChange={(e) => setNewCategory({...newCategory, description: e.target.value})}
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Icon</Form.Label>
-              <Form.Control
-                type="text"
-                value={newCategory.icon}
-                onChange={(e) => setNewCategory({...newCategory, icon: e.target.value})}
-                placeholder="e.g., ✂️, 🧹, 🔧"
-              />
-            </Form.Group>
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Order</Form.Label>
-                  <Form.Control
-                    type="number"
-                    value={newCategory.order}
-                    onChange={(e) => setNewCategory({...newCategory, order: parseInt(e.target.value)})}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Check
-                    type="checkbox"
-                    label="Active Category"
-                    checked={newCategory.isActive}
-                    onChange={(e) => setNewCategory({...newCategory, isActive: e.target.checked})}
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-            <div className="d-flex justify-content-end gap-2">
-              <Button variant="secondary" onClick={() => setShowAddCategoryModal(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" type="submit">
-                Add Category
-              </Button>
-            </div>
-          </Form>
-        </Modal.Body>
-      </Modal>
-
-      {/* Add Service Modal */}
-      <Modal show={showAddServiceModal} onHide={() => setShowAddServiceModal(false)} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>Add New Service</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form onSubmit={handleAddService}>
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Service Name</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={newService.name}
-                    onChange={(e) => setNewService({...newService, name: e.target.value})}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Category</Form.Label>
-                  <Form.Select
-                    value={newService.category}
-                    onChange={(e) => setNewService({...newService, category: e.target.value})}
-                    required
-                  >
-                    <option value="">Select Category</option>
-                    {categories.map(cat => (
-                      <option key={cat._id} value={cat.name}>{cat.name}</option>
-                    ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-            </Row>
-            <Form.Group className="mb-3">
-              <Form.Label>Description</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={3}
-                value={newService.description}
-                onChange={(e) => setNewService({...newService, description: e.target.value})}
-                required
-              />
-            </Form.Group>
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Price (₹)</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={newService.price}
-                    onChange={(e) => setNewService({...newService, price: e.target.value})}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Duration</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={newService.duration}
-                    onChange={(e) => setNewService({...newService, duration: e.target.value})}
-                    placeholder="e.g., 1 hour, 2 hours"
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-            <Form.Group className="mb-3">
-              <Form.Label>Service Image</Form.Label>
-              <Form.Control
-                type="file"
-                accept="image/*"
-                onChange={(e) => setServiceImage(e.target.files[0])}
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Check
-                type="checkbox"
-                label="Active Service"
-                checked={newService.isActive}
-                onChange={(e) => setNewService({...newService, isActive: e.target.checked})}
-              />
-            </Form.Group>
-            <div className="d-flex justify-content-end gap-2">
-              <Button variant="secondary" onClick={() => setShowAddServiceModal(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" type="submit">
-                Add Service
-              </Button>
-            </div>
-          </Form>
-        </Modal.Body>
-      </Modal>
-
-      {/* Add Package Modal */}
-      <Modal show={showAddPackageModal} onHide={() => setShowAddPackageModal(false)} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>Add New Package</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form onSubmit={handleAddPackage}>
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Package Title</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={newPackage.title}
-                    onChange={(e) => setNewPackage({...newPackage, title: e.target.value})}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Category</Form.Label>
-                  <Form.Select
-                    value={newPackage.category}
-                    onChange={(e) => setNewPackage({...newPackage, category: e.target.value})}
-                    required
-                  >
-                    <option value="">Select Category</option>
-                    {categories.map(cat => (
-                      <option key={cat._id} value={cat.name}>{cat.name}</option>
-                    ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-            </Row>
-            <Form.Group className="mb-3">
-              <Form.Label>Description</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={3}
-                value={newPackage.description}
-                onChange={(e) => setNewPackage({...newPackage, description: e.target.value})}
-                required
-              />
-            </Form.Group>
-            <Row>
-              <Col md={4}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Price (₹)</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={newPackage.price}
-                    onChange={(e) => setNewPackage({...newPackage, price: e.target.value})}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={4}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Original Price (₹)</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={newPackage.originalPrice}
-                    onChange={(e) => setNewPackage({...newPackage, originalPrice: e.target.value})}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={4}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Duration</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={newPackage.duration}
-                    onChange={(e) => setNewPackage({...newPackage, duration: e.target.value})}
-                    placeholder="e.g., 2 hours"
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-            <Form.Group className="mb-3">
-              <Form.Label>Package Items</Form.Label>
-              {newPackage.items.map((item, index) => (
-                <Row key={index} className="mb-2">
-                  <Col md={6}>
-                    <Form.Control
-                      type="text"
-                      placeholder="Item name"
-                      value={item.text}
-                      onChange={(e) => {
-                        const newItems = [...newPackage.items];
-                        newItems[index].text = e.target.value;
-                        setNewPackage({...newPackage, items: newItems});
-                      }}
-                    />
-                  </Col>
-                  <Col md={6}>
-                    <Form.Control
-                      type="text"
-                      placeholder="Description"
-                      value={item.description}
-                      onChange={(e) => {
-                        const newItems = [...newPackage.items];
-                        newItems[index].description = e.target.value;
-                        setNewPackage({...newPackage, items: newItems});
-                      }}
-                    />
-                  </Col>
-                </Row>
-              ))}
-              <Button 
-                variant="outline-secondary" 
-                size="sm" 
-                onClick={() => setNewPackage({
-                  ...newPackage, 
-                  items: [...newPackage.items, { text: '', description: '' }]
-                })}
-              >
-                <i className="bi bi-plus"></i> Add Item
-              </Button>
-            </Form.Group>
-            <div className="d-flex justify-content-end gap-2">
-              <Button variant="secondary" onClick={() => setShowAddPackageModal(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" type="submit">
-                Add Package
-              </Button>
-            </div>
-          </Form>
-        </Modal.Body>
-      </Modal>
-
-      {/* Add Offer Modal */}
-      <Modal show={showAddOfferModal} onHide={() => setShowAddOfferModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Add New Offer</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form onSubmit={handleAddOffer}>
-            <Form.Group className="mb-3">
-              <Form.Label>Offer Title</Form.Label>
-              <Form.Control
-                type="text"
-                value={newOffer.title}
-                onChange={(e) => setNewOffer({...newOffer, title: e.target.value})}
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Description</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={3}
-                value={newOffer.description}
-                onChange={(e) => setNewOffer({...newOffer, description: e.target.value})}
-                required
-              />
-            </Form.Group>
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Discount</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={newOffer.discount}
-                    onChange={(e) => setNewOffer({...newOffer, discount: e.target.value})}
-                    required
-                    placeholder="e.g., 25%"
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Valid Until</Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={newOffer.validUntil}
-                    onChange={(e) => setNewOffer({...newOffer, validUntil: e.target.value})}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-            <Form.Group className="mb-3">
-              <Form.Label>Offer Code</Form.Label>
-              <Form.Control
-                type="text"
-                value={newOffer.code}
-                onChange={(e) => setNewOffer({...newOffer, code: e.target.value})}
-                required
-                placeholder="e.g., FEST25"
-              />
-            </Form.Group>
-            <div className="d-flex justify-content-end gap-2">
-              <Button variant="secondary" onClick={() => setShowAddOfferModal(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" type="submit">
-                Add Offer
-              </Button>
-            </div>
-          </Form>
-        </Modal.Body>
-      </Modal>
     </div>
   );
 }

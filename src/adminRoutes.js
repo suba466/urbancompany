@@ -2,8 +2,337 @@
 import express from "express";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import multer from "multer";
+import path from "path";
+import { fileURLToPath } from "url";
+import fs from "fs";
 
 const router = express.Router();
+
+// Configure multer for image upload
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, "../assets/staff");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `staff-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
+});
+
+// Staff Schema
+const staffSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  phone: { type: String, required: true },
+  designation: { type: String, required: true }, 
+  permissions: {
+    dashboard: { type: Boolean, default: false },
+    users: { type: Boolean, default: false },
+    staff: { type: Boolean, default: false },
+    bookings: { type: Boolean, default: false },
+    product: { type: Boolean, default: false },
+    category: { type: Boolean, default: false },
+    reports: { type: Boolean, default: false },
+    settings: { type: Boolean, default: false }
+  },
+  isActive: { type: Boolean, default: true },
+  profileImage: { type: String, default: "" },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+const Staff = mongoose.model("Staff", staffSchema);
+
+// Initialize default staff
+export const initializeStaff = async () => {
+  try {
+    const staffExists = await Staff.findOne({ email: "manager@urbancompany.com" });
+    if (!staffExists) {
+      const staff = new Staff({
+        name: "Manager",
+        email: "manager@urbancompany.com",
+        phone: "9876543210",
+        designation: "Manager",
+        profileImage: "",
+        permissions: {
+          dashboard: true,
+          users: true,
+          staff: true,
+          bookings: true,
+          category: true,product:true,
+          reports: true,
+          settings: true
+        }
+      });
+      await staff.save();
+      console.log("✅ Default staff created: manager@urbancompany.com");
+    }
+  } catch (error) {
+    console.error("Error initializing staff:", error);
+  }
+};
+
+// Get all staff with pagination
+router.get("/staff", async (req, res) => {
+  try {
+    const { page = 1, limit = 20, search = ""} = req.query;
+    const skip = (page - 1) * limit;
+
+    let query = {};
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { phone: { $regex: search, $options: "i" } },
+        { designation: { $regex: search, $options: "i" } }
+      ];
+    }
+
+  
+
+    const staff = await Staff.find(query)
+      .select('-__v')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Staff.countDocuments(query);
+
+    res.json({
+      success: true,
+      staff,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error("Error fetching staff:", error);
+    res.status(500).json({ error: "Failed to fetch staff" });
+  }
+});
+
+// Get single staff member
+router.get("/staff/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const staff = await Staff.findById(id).select('-__v');
+    
+    if (!staff) {
+      return res.status(404).json({ error: "Staff member not found" });
+    }
+
+    res.json({
+      success: true,
+      staff
+    });
+
+  } catch (error) {
+    console.error("Error fetching staff:", error);
+    res.status(500).json({ error: "Failed to fetch staff" });
+  }
+});
+
+// Create new staff member with profile image
+router.post("/staff", upload.single("profileImage"), async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      phone,
+      designation,
+      permissions,
+      isActive
+    } = req.body;
+
+    // Parse permissions if it's a string
+    let parsedPermissions = {};
+    if (permissions) {
+      if (typeof permissions === 'string') {
+        parsedPermissions = JSON.parse(permissions);
+      } else {
+        parsedPermissions = permissions;
+      }
+    }
+
+    // Validate required fields
+    if (!name || !email || !phone || !designation) {
+      return res.status(400).json({ error: "All required fields must be provided" });
+    }
+
+    // Check if email already exists
+    const existingStaff = await Staff.findOne({ email });
+    if (existingStaff) {
+      return res.status(400).json({ error: "Staff member with this email already exists" });
+    }
+
+    // Handle profile image
+    let profileImageUrl = "";
+    if (req.file) {
+      profileImageUrl = `/assets/staff/${req.file.filename}`;
+    }
+
+    // Create new staff
+    const staff = new Staff({
+      name,
+      email,
+      phone,
+      designation,
+      profileImage: profileImageUrl,
+      permissions: parsedPermissions || {
+        dashboard: false,
+        users: false,
+        staff: false,
+        bookings: false,
+        category: false,product:false,
+        reports: false,
+        settings: false
+      },
+      isActive: isActive !== undefined ? isActive : true
+    });
+
+    await staff.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Staff member created successfully",
+      staff
+    });
+
+  } catch (error) {
+    console.error("Error creating staff:", error);
+    if (error.code === 11000) {
+      return res.status(400).json({ error: "Email already exists" });
+    }
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: "Failed to create staff member" });
+  }
+});
+
+// Update staff member with optional profile image
+router.put("/staff/:id", upload.single("profileImage"), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    // Find existing staff
+    const existingStaff = await Staff.findById(id);
+    if (!existingStaff) {
+      return res.status(404).json({ error: "Staff member not found" });
+    }
+
+    // Don't allow email update to existing email
+    if (updateData.email && updateData.email !== existingStaff.email) {
+      const emailExists = await Staff.findOne({ 
+        email: updateData.email, 
+        _id: { $ne: id } 
+      });
+      if (emailExists) {
+        return res.status(400).json({ error: "Email already exists" });
+      }
+    }
+
+    // Parse permissions if it's a string
+    if (updateData.permissions && typeof updateData.permissions === 'string') {
+      updateData.permissions = JSON.parse(updateData.permissions);
+    }
+
+    // Handle profile image update
+    if (req.file) {
+      // Delete old image if exists
+      if (existingStaff.profileImage && existingStaff.profileImage.startsWith('/assets/staff/')) {
+        try {
+          const oldImagePath = path.join(__dirname, '..', existingStaff.profileImage);
+          if (fs.existsSync(oldImagePath)) {
+            fs.unlinkSync(oldImagePath);
+          }
+        } catch (err) {
+          console.error("Error deleting old profile image:", err);
+        }
+      }
+      updateData.profileImage = `/assets/staff/${req.file.filename}`;
+    }
+
+    // Update staff
+    const staff = await Staff.findByIdAndUpdate(
+      id,
+      { ...updateData, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    ).select('-__v');
+
+    res.json({
+      success: true,
+      message: "Staff member updated successfully",
+      staff
+    });
+
+  } catch (error) {
+    console.error("Error updating staff:", error);
+    res.status(500).json({ error: "Failed to update staff member" });
+  }
+});
+
+// Delete staff member
+router.delete("/staff/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const staff = await Staff.findById(id);
+    if (!staff) {
+      return res.status(404).json({ error: "Staff member not found" });
+    }
+
+    // Delete profile image if exists
+    if (staff.profileImage && staff.profileImage.startsWith('/assets/staff/')) {
+      try {
+        const imagePath = path.join(__dirname, '..', staff.profileImage);
+        if (fs.existsSync(imagePath)) {
+          fs.unlinkSync(imagePath);
+        }
+      } catch (err) {
+        console.error("Error deleting profile image:", err);
+      }
+    }
+
+    await Staff.findByIdAndDelete(id);
+
+    res.json({
+      success: true,
+      message: "Staff member deleted successfully"
+    });
+
+  } catch (error) {
+    console.error("Error deleting staff:", error);
+    res.status(500).json({ error: "Failed to delete staff member" });
+  }
+});
 
 // Admin Schema
 const adminSchema = new mongoose.Schema({
@@ -437,10 +766,8 @@ router.get("/packages", async (req, res) => {
   }
 });
 
-// Admin middleware for authentication (simple version)
+// Admin middleware for authentication
 const adminAuth = (req, res, next) => {
-  // For now, we'll use a simple check
-  // In production, use JWT tokens
   const adminToken = req.headers['admin-token'];
   
   if (!adminToken) {
