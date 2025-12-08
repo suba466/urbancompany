@@ -1,21 +1,21 @@
-// AdminPanel.jsx - Updated with New Menu Structure
 import React, { useState, useEffect } from 'react';
 import { 
   Container, Row, Col, Card, Table, Form, Button, 
   Spinner, Modal, Nav, Navbar, Badge,
   Dropdown, Pagination, InputGroup, Alert
 } from 'react-bootstrap';
-import { MdOutlineNoteAlt } from "react-icons/md";import { SiCashapp } from "react-icons/si";
-import { 
-  FaUserSecret, 
-  FaCut, 
-  FaSnowflake, 
-  FaBroom, 
-  FaWrench, 
-  FaTools,
-  FaClipboardList,
-  FaRupeeSign
-} from "react-icons/fa";
+import { MdOutlineNoteAlt } from "react-icons/md";
+import { SiCashapp } from "react-icons/si";
+import { FaUserSecret } from "react-icons/fa";
+import { MdModeEdit } from "react-icons/md";
+import { MdOutlineDelete } from "react-icons/md";
+import { FaFileExcel, FaFilePdf, FaFileCsv } from "react-icons/fa";
+
+// Import download libraries
+import jsPDF from 'jspdf';
+import html2pdf from 'html2pdf.js';
+import * as XLSX from 'xlsx';
+
 function AdminPanel() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginData, setLoginData] = useState({ email: '', password: '' });
@@ -34,80 +34,66 @@ function AdminPanel() {
   const [staffSearch, setStaffSearch] = useState('');
   const [staffPage, setStaffPage] = useState(1);
   const [staffTotalPages, setStaffTotalPages] = useState(1);
+  const [staffPerPage, setStaffPerPage] = useState(10);
+  const [staffTotalItems, setStaffTotalItems] = useState(0);
   const [showAddStaffForm, setShowAddStaffForm] = useState(false);
   const [newStaff, setNewStaff] = useState({
     name: '',
     email: '',
     phone: '',
     designation: '',
-    profileImage: null,
+    password: '',
     permissions: {
-      dashboard: false,
-      bookings: false,
-      staff: false,
-      category: false,products:false,
-      reports: false,
-      settings: false
-    },
-    isActive: true
+      Dashboard: false,
+      Staff: false,
+      User: false,
+      Category: false,
+      Product: false,
+      Bookings: false,
+      Reports: false,
+      Settings: false
+    }
   });
+  
+  // Staff Bulk Selection
+  const [selectedStaff, setSelectedStaff] = useState([]);
+  const [selectAllStaff, setSelectAllStaff] = useState(false);
   
   // Form feedback
   const [formSuccess, setFormSuccess] = useState(false);
   const [formError, setFormError] = useState('');
-  const [profileImageFile, setProfileImageFile] = useState(null);
-  const [profileImagePreview, setProfileImagePreview] = useState('');
-  
-  // Edit Staff States
-  const [editStaffModal, setEditStaffModal] = useState(false);
-  const [editingStaff, setEditingStaff] = useState(null);
-  const [editStaffData, setEditStaffData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    designation: '',
-    profileImage: '',
-    permissions: {
-      dashboard: false,
-      bookings: false,
-      staff: false,
-      category: false,product:false,
-      reports: false,
-      settings: false
-    },
-    isActive: true
-  });
-  const [editProfileImageFile, setEditProfileImageFile] = useState(null);
-  const [editProfileImagePreview, setEditProfileImagePreview] = useState('');
-  
+  const [editStaffId, setEditStaffId] = useState(null);
+  const [isEditingStaff, setIsEditingStaff] = useState(false);
+
   // User Management States
   const [users, setUsers] = useState([]);
   const [userSearch, setUserSearch] = useState('');
   const [userPage, setUserPage] = useState(1);
   const [userTotalPages, setUserTotalPages] = useState(1);
+  const [userPerPage, setUserPerPage] = useState(10);
+  const [userTotalItems, setUserTotalItems] = useState(0);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
     phone: '',
     city: '',
-    password: '',
-    profileImage: null,
-    isActive: true
+    password: ''
   });
-    // Category Management States
-  const [categories, setCategories] = useState([
-    { _id: '1', name: 'Salon for Women', description: 'Beauty services', icon: 'FaCut', order: 1, isActive: true },
-    { _id: '2', name: 'AC Repair', description: 'Appliance services', icon: 'FaSnowflake', order: 2, isActive: true },
-    { _id: '3', name: 'Cleaning', description: 'Home cleaning', icon: 'FaBroom', order: 3, isActive: true },
-    { _id: '4', name: 'Plumbing', description: 'Plumber services', icon: 'FaWrench', order: 4, isActive: true },
-    { _id: '5', name: 'Electrician', description: 'Electrical services', icon: 'FaTools', order: 5, isActive: true }
-  ]);
+  
+  // User Bulk Selection
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [selectAllUsers, setSelectAllUsers] = useState(false);
+  
+  // Category Management States
+  const [categories, setCategories] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectAllCategories, setSelectAllCategories] = useState(false);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [newCategory, setNewCategory] = useState({
     name: '',
     description: '',
-    icon: 'FaCut',
+    icon: '',
     order: 0,
     isActive: true
   });
@@ -115,6 +101,8 @@ function AdminPanel() {
   // Product Management States
   const [products, setProducts] = useState([]);
   const [productSearch, setProductSearch] = useState('');
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [selectAllProducts, setSelectAllProducts] = useState(false);
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [newProduct, setNewProduct] = useState({
     name: '',
@@ -125,7 +113,6 @@ function AdminPanel() {
     stock: 0,
     isActive: true
   });
-  const [productImage, setProductImage] = useState(null);
   
   // Bookings Management States
   const [bookings, setBookings] = useState([]);
@@ -133,6 +120,10 @@ function AdminPanel() {
   const [bookingStatus, setBookingStatus] = useState('');
   const [bookingPage, setBookingPage] = useState(1);
   const [bookingTotalPages, setBookingTotalPages] = useState(1);
+  const [bookingPerPage, setBookingPerPage] = useState(10);
+  const [bookingTotalItems, setBookingTotalItems] = useState(0);
+  const [selectedBookings, setSelectedBookings] = useState([]);
+  const [selectAllBookings, setSelectAllBookings] = useState(false);
   
   // Reports States
   const [reports, setReports] = useState({
@@ -151,7 +142,7 @@ function AdminPanel() {
     address: '123 Business Street, City, Country'
   });
 
-  
+  // Fetch functions
   const fetchAdminLogo = async () => {
     try {
       const response = await fetch('http://localhost:5000/api/static-data');
@@ -208,9 +199,9 @@ function AdminPanel() {
     }
   };
 
-  const fetchStaff = async (page = 1, search = '') => {
+  const fetchStaff = async (page = 1, search = '', perPage = staffPerPage) => {
     try {
-      let url = `http://localhost:5000/api/admin/staff?page=${page}&limit=10&search=${search}`;
+      let url = `http://localhost:5000/api/admin/staff?page=${page}&limit=${perPage}&search=${search}`;
       
       const response = await fetch(url, {
         headers: { 'admin-token': 'admin-secret-token' }
@@ -219,15 +210,19 @@ function AdminPanel() {
       if (data.success) {
         setStaff(data.staff || []);
         setStaffTotalPages(data.pagination?.pages || 1);
+        setStaffTotalItems(data.pagination?.total || 0);
+        setSelectedStaff([]);
+        setSelectAllStaff(false);
+        setStaffPerPage(perPage);
       }
     } catch (error) {
       console.error('Error fetching staff:', error);
     }
   };
 
-  const fetchUsers = async (page = 1, search = '') => {
+  const fetchUsers = async (page = 1, search = '', perPage = userPerPage) => {
     try {
-      let url = `http://localhost:5000/api/admin/users?page=${page}&limit=10&search=${search}`;
+      let url = `http://localhost:5000/api/admin/users?page=${page}&limit=${perPage}&search=${search}`;
       
       const response = await fetch(url, {
         headers: { 'admin-token': 'admin-secret-token' }
@@ -236,6 +231,10 @@ function AdminPanel() {
       if (data.success) {
         setUsers(data.users || []);
         setUserTotalPages(data.pagination?.pages || 1);
+        setUserTotalItems(data.pagination?.total || 0);
+        setSelectedUsers([]);
+        setSelectAllUsers(false);
+        setUserPerPage(perPage);
       }
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -244,14 +243,25 @@ function AdminPanel() {
 
   const fetchCategories = async () => {
     try {
-      const mockCategories = [
-        { _id: '1', name: 'Salon for Women', description: 'Beauty services', icon: '✂️', order: 1, isActive: true },
-        { _id: '2', name: 'AC Repair', description: 'Appliance services', icon: '❄️', order: 2, isActive: true },
-        { _id: '3', name: 'Cleaning', description: 'Home cleaning', icon: '🧹', order: 3, isActive: true },
-        { _id: '4', name: 'Plumbing', description: 'Plumber services', icon: '🔧', order: 4, isActive: true },
-        { _id: '5', name: 'Electrician', description: 'Electrical services', icon: '💡', order: 5, isActive: true }
-      ];
-      setCategories(mockCategories);
+      const response = await fetch('http://localhost:5000/api/admin/services', {
+        headers: { 'admin-token': 'admin-secret-token' }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setCategories(data.services || []);
+        setSelectedCategories([]);
+        setSelectAllCategories(false);
+      } else {
+        // Fallback to mock data
+        const mockCategories = [
+          { _id: '1', name: 'Salon for Women', description: 'Beauty services', icon: '✂️', order: 1, isActive: true },
+          { _id: '2', name: 'AC Repair', description: 'Appliance services', icon: '❄️', order: 2, isActive: true },
+          { _id: '3', name: 'Cleaning', description: 'Home cleaning', icon: '🧹', order: 3, isActive: true },
+          { _id: '4', name: 'Plumbing', description: 'Plumber services', icon: '🔧', order: 4, isActive: true },
+          { _id: '5', name: 'Electrician', description: 'Electrical services', icon: '💡', order: 5, isActive: true }
+        ];
+        setCategories(mockCategories);
+      }
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
@@ -259,20 +269,31 @@ function AdminPanel() {
 
   const fetchProducts = async () => {
     try {
-      const mockProducts = [
-        { _id: '1', name: 'Hair Shampoo', description: 'Premium hair care shampoo', category: 'Salon', price: '₹299', discountPrice: '₹249', stock: 50, isActive: true },
-        { _id: '2', name: 'Cleaning Solution', description: 'Multi-surface cleaner', category: 'Cleaning', price: '₹199', discountPrice: '₹149', stock: 100, isActive: true },
-        { _id: '3', name: 'Tool Kit', description: 'Professional repair tools', category: 'Repair', price: '₹1299', discountPrice: '₹999', stock: 20, isActive: true }
-      ];
-      setProducts(mockProducts);
+      const response = await fetch('http://localhost:5000/api/admin/packages', {
+        headers: { 'admin-token': 'admin-secret-token' }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setProducts(data.packages || []);
+        setSelectedProducts([]);
+        setSelectAllProducts(false);
+      } else {
+        // Fallback to mock data
+        const mockProducts = [
+          { _id: '1', name: 'Hair Shampoo', description: 'Premium hair care shampoo', category: 'Salon', price: '₹299', discountPrice: '₹249', stock: 50, isActive: true },
+          { _id: '2', name: 'Cleaning Solution', description: 'Multi-surface cleaner', category: 'Cleaning', price: '₹199', discountPrice: '₹149', stock: 100, isActive: true },
+          { _id: '3', name: 'Tool Kit', description: 'Professional repair tools', category: 'Repair', price: '₹1299', discountPrice: '₹999', stock: 20, isActive: true }
+        ];
+        setProducts(mockProducts);
+      }
     } catch (error) {
       console.error('Error fetching products:', error);
     }
   };
 
-  const fetchBookings = async (page = 1, search = '', status = '') => {
+  const fetchBookings = async (page = 1, search = '', status = '', perPage = bookingPerPage) => {
     try {
-      let url = `http://localhost:5000/api/admin/bookings?page=${page}&limit=10&search=${search}`;
+      let url = `http://localhost:5000/api/admin/bookings?page=${page}&limit=${perPage}&search=${search}`;
       if (status) url += `&status=${status}`;
       
       const response = await fetch(url, {
@@ -282,6 +303,10 @@ function AdminPanel() {
       if (data.success) {
         setBookings(data.bookings || []);
         setBookingTotalPages(data.pagination?.pages || 1);
+        setBookingTotalItems(data.pagination?.total || 0);
+        setSelectedBookings([]);
+        setSelectAllBookings(false);
+        setBookingPerPage(perPage);
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);
@@ -307,8 +332,546 @@ function AdminPanel() {
     }
   };
 
+  // Checkbox selection handlers
+  const handleStaffSelect = (staffId) => {
+    setSelectedStaff(prev => {
+      if (prev.includes(staffId)) {
+        return prev.filter(id => id !== staffId);
+      } else {
+        return [...prev, staffId];
+      }
+    });
+  };
+
+  const handleSelectAllStaff = () => {
+    if (selectAllStaff) {
+      setSelectedStaff([]);
+    } else {
+      setSelectedStaff(staff.map(s => s._id));
+    }
+    setSelectAllStaff(!selectAllStaff);
+  };
+
+  const handleUserSelect = (userId) => {
+    setSelectedUsers(prev => {
+      if (prev.includes(userId)) {
+        return prev.filter(id => id !== userId);
+      } else {
+        return [...prev, userId];
+      }
+    });
+  };
+
+  const handleSelectAllUsers = () => {
+    if (selectAllUsers) {
+      setSelectedUsers([]);
+    } else {
+      setSelectedUsers(users.map(u => u._id));
+    }
+    setSelectAllUsers(!selectAllUsers);
+  };
+
+  const handleCategorySelect = (categoryId) => {
+    setSelectedCategories(prev => {
+      if (prev.includes(categoryId)) {
+        return prev.filter(id => id !== categoryId);
+      } else {
+        return [...prev, categoryId];
+      }
+    });
+  };
+
+  const handleSelectAllCategories = () => {
+    if (selectAllCategories) {
+      setSelectedCategories([]);
+    } else {
+      setSelectedCategories(categories.map(c => c._id));
+    }
+    setSelectAllCategories(!selectAllCategories);
+  };
+
+  const handleProductSelect = (productId) => {
+    setSelectedProducts(prev => {
+      if (prev.includes(productId)) {
+        return prev.filter(id => id !== productId);
+      } else {
+        return [...prev, productId];
+      }
+    });
+  };
+
+  const handleSelectAllProducts = () => {
+    if (selectAllProducts) {
+      setSelectedProducts([]);
+    } else {
+      setSelectedProducts(products.map(p => p._id));
+    }
+    setSelectAllProducts(!selectAllProducts);
+  };
+
+  const handleBookingSelect = (bookingId) => {
+    setSelectedBookings(prev => {
+      if (prev.includes(bookingId)) {
+        return prev.filter(id => id !== bookingId);
+      } else {
+        return [...prev, bookingId];
+      }
+    });
+  };
+
+  const handleSelectAllBookings = () => {
+    if (selectAllBookings) {
+      setSelectedBookings([]);
+    } else {
+      setSelectedBookings(bookings.map(b => b._id));
+    }
+    setSelectAllBookings(!selectAllBookings);
+  };
+
+  // Bulk delete functions
+  const handleBulkDeleteStaff = async () => {
+    if (selectedStaff.length === 0) return;
+    
+    if (window.confirm(`Are you sure you want to delete ${selectedStaff.length} staff member(s)?`)) {
+      try {
+        const response = await fetch('http://localhost:5000/api/admin/staff/bulk-delete', {
+          method: 'DELETE',
+          headers: { 
+            'Content-Type': 'application/json',
+            'admin-token': 'admin-secret-token' 
+          },
+          body: JSON.stringify({ staffIds: selectedStaff })
+        });
+        const data = await response.json();
+        if (data.success) {
+          alert(`${selectedStaff.length} staff member(s) deleted successfully`);
+          setSelectedStaff([]);
+          setSelectAllStaff(false);
+          fetchStaff(staffPage, staffSearch, staffPerPage);
+        } else {
+          alert(data.error || 'Failed to delete staff members');
+        }
+      } catch (error) {
+        console.error('Error deleting staff:', error);
+        alert('Failed to delete staff members');
+      }
+    }
+  };
+
+  const handleBulkDeleteUsers = async () => {
+    if (selectedUsers.length === 0) return;
+    
+    if (window.confirm(`Are you sure you want to delete ${selectedUsers.length} user(s)?`)) {
+      try {
+        const response = await fetch('http://localhost:5000/api/admin/users/bulk-delete', {
+          method: 'DELETE',
+          headers: { 
+            'Content-Type': 'application/json',
+            'admin-token': 'admin-secret-token' 
+          },
+          body: JSON.stringify({ userIds: selectedUsers })
+        });
+        const data = await response.json();
+        if (data.success) {
+          alert(`${selectedUsers.length} user(s) deleted successfully`);
+          setSelectedUsers([]);
+          setSelectAllUsers(false);
+          fetchUsers(userPage, userSearch, userPerPage);
+        } else {
+          alert(data.error || 'Failed to delete users');
+        }
+      } catch (error) {
+        console.error('Error deleting users:', error);
+        alert('Failed to delete users');
+      }
+    }
+  };
+
+  const handleBulkDeleteCategories = async () => {
+    if (selectedCategories.length === 0) return;
+    
+    if (window.confirm(`Are you sure you want to delete ${selectedCategories.length} category(ies)?`)) {
+      try {
+        // This should be implemented in your backend API
+        const response = await fetch('http://localhost:5000/api/admin/services/bulk-delete', {
+          method: 'DELETE',
+          headers: { 
+            'Content-Type': 'application/json',
+            'admin-token': 'admin-secret-token' 
+          },
+          body: JSON.stringify({ categoryIds: selectedCategories })
+        });
+        
+        if (response.ok) {
+          alert(`${selectedCategories.length} category(ies) deleted successfully`);
+          setSelectedCategories([]);
+          setSelectAllCategories(false);
+          fetchCategories();
+        } else {
+          alert('Failed to delete categories');
+        }
+      } catch (error) {
+        console.error('Error deleting categories:', error);
+        alert('Failed to delete categories');
+      }
+    }
+  };
+
+  const handleBulkDeleteProducts = async () => {
+    if (selectedProducts.length === 0) return;
+    
+    if (window.confirm(`Are you sure you want to delete ${selectedProducts.length} product(s)?`)) {
+      try {
+        // This should be implemented in your backend API
+        const response = await fetch('http://localhost:5000/api/admin/packages/bulk-delete', {
+          method: 'DELETE',
+          headers: { 
+            'Content-Type': 'application/json',
+            'admin-token': 'admin-secret-token' 
+          },
+          body: JSON.stringify({ productIds: selectedProducts })
+        });
+        
+        if (response.ok) {
+          alert(`${selectedProducts.length} product(s) deleted successfully`);
+          setSelectedProducts([]);
+          setSelectAllProducts(false);
+          fetchProducts();
+        } else {
+          alert('Failed to delete products');
+        }
+      } catch (error) {
+        console.error('Error deleting products:', error);
+        alert('Failed to delete products');
+      }
+    }
+  };
+
+  const handleBulkDeleteBookings = async () => {
+    if (selectedBookings.length === 0) return;
+    
+    if (window.confirm(`Are you sure you want to delete ${selectedBookings.length} booking(s)?`)) {
+      try {
+        const response = await fetch('http://localhost:5000/api/admin/bookings/bulk-delete', {
+          method: 'DELETE',
+          headers: { 
+            'Content-Type': 'application/json',
+            'admin-token': 'admin-secret-token' 
+          },
+          body: JSON.stringify({ bookingIds: selectedBookings })
+        });
+        const data = await response.json();
+        if (data.success) {
+          alert(`${selectedBookings.length} booking(s) deleted successfully`);
+          setSelectedBookings([]);
+          setSelectAllBookings(false);
+          fetchBookings(bookingPage, bookingSearch, bookingStatus, bookingPerPage);
+          fetchDashboardData();
+        } else {
+          alert(data.error || 'Failed to delete bookings');
+        }
+      } catch (error) {
+        console.error('Error deleting bookings:', error);
+        alert('Failed to delete bookings');
+      }
+    }
+  };
+
+  // Helper function to display password (always shows 6 dots)
+  const displayPassword = () => {
+    return '••••••';
+  };
+
+  // Helper function to format permissions as comma-separated text
+  const formatPermissions = (permissions) => {
+    if (!permissions) return <span className="text-muted">None</span>;
+    
+    const activePermissions = Object.entries(permissions)
+      .filter(([key, value]) => value)
+      .map(([key]) => key);
+    
+    if (activePermissions.length === 0) return <span className="text-muted">None</span>;
+    
+    return (
+      <div>
+        {activePermissions.map((permission, index) => (
+          <span key={permission}>
+            {permission.charAt(0).toUpperCase() + permission.slice(1)}
+            {index < activePermissions.length - 1 ? ', ' : ''}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
+  // Download functions for tables
+  const downloadTableAsPDF = (dataType = '') => {
+    const element = document.querySelector('.table-responsive');
+    if (!element) {
+      alert('No table found to download');
+      return;
+    }
+    
+    const options = {
+      margin: 1,
+      filename: `${dataType || 'table'}_${new Date().toISOString().split('T')[0]}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+    
+    html2pdf().from(element).set(options).save();
+  };
+
+  const downloadTableAsExcel = (dataType = '') => {
+    let data = [];
+    let headers = [];
+    
+    // Get data based on current active menu
+    switch(activeMenu) {
+      case 'manage-staff':
+        data = staff.map(s => ({
+          'Name': s.name,
+          'Email': s.email,
+          'Phone': s.phone,
+          'Designation': s.designation,
+          'Permissions': Object.entries(s.permissions || {})
+            .filter(([key, value]) => value)
+            .map(([key]) => key.charAt(0).toUpperCase() + key.slice(1))
+            .join(', ')
+        }));
+        break;
+        
+      case 'manage-users':
+        data = users.map(u => ({
+          'Name': u.name,
+          'Email': u.email,
+          'Phone': u.phone,
+          'City': u.city,
+          'Joined Date': new Date(u.createdAt).toLocaleDateString()
+        }));
+        break;
+        
+      case 'bookings':
+        data = bookings.map(b => ({
+          'Customer': b.userName,
+          'Email': b.userEmail,
+          'Service': b.serviceName,
+          'Price': `₹${b.servicePrice}`,
+          'Status': b.status,
+          'Date': new Date(b.createdAt).toLocaleDateString()
+        }));
+        break;
+        
+      default:
+        // Fallback: Try to get data from table
+        const table = document.querySelector('table');
+        if (table) {
+          headers = Array.from(table.querySelectorAll('thead th'))
+            .map(th => th.textContent.trim())
+            .filter(h => h); // Remove empty headers
+          
+          const rows = table.querySelectorAll('tbody tr');
+          data = Array.from(rows).map(row => {
+            const cells = row.querySelectorAll('td');
+            return Array.from(cells).reduce((obj, cell, index) => {
+              if (headers[index]) {
+                // Remove checkbox content
+                const text = cell.textContent.trim();
+                obj[headers[index]] = text.includes('checkbox') ? '' : text;
+              }
+              return obj;
+            }, {});
+          });
+        }
+    }
+    
+    if (data.length === 0) {
+      alert('No data available to export');
+      return;
+    }
+    
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+    
+    XLSX.writeFile(workbook, `${dataType || 'data'}_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const downloadTableAsCSV = (dataType = '') => {
+    let data = [];
+    let headers = [];
+    
+    // Get data based on current active menu
+    switch(activeMenu) {
+      case 'manage-staff':
+        headers = ['Name', 'Email', 'Phone', 'Designation', 'Permissions'];
+        data = staff.map(s => [
+          s.name,
+          s.email,
+          s.phone,
+          s.designation,
+          Object.entries(s.permissions || {})
+            .filter(([key, value]) => value)
+            .map(([key]) => key.charAt(0).toUpperCase() + key.slice(1))
+            .join(', ')
+        ]);
+        break;
+        
+      case 'manage-users':
+        headers = ['Name', 'Email', 'Phone', 'City', 'Joined Date'];
+        data = users.map(u => [
+          u.name,
+          u.email,
+          u.phone,
+          u.city,
+          new Date(u.createdAt).toLocaleDateString()
+        ]);
+        break;
+        
+      case 'bookings':
+        headers = ['Customer', 'Email', 'Service', 'Price', 'Status', 'Date'];
+        data = bookings.map(b => [
+          b.userName,
+          b.userEmail,
+          b.serviceName,
+          `₹${b.servicePrice}`,
+          b.status,
+          new Date(b.createdAt).toLocaleDateString()
+        ]);
+        break;
+        
+      default:
+        // Fallback: Try to get data from table
+        const table = document.querySelector('table');
+        if (table) {
+          headers = Array.from(table.querySelectorAll('thead th'))
+            .map(th => th.textContent.trim())
+            .filter(h => h && !h.includes('checkbox')); // Remove empty headers and checkboxes
+          
+          const rows = table.querySelectorAll('tbody tr');
+          data = Array.from(rows).map(row => {
+            const cells = row.querySelectorAll('td');
+            return Array.from(cells).map((cell, index) => {
+              // Skip checkbox cells
+              if (cell.querySelector('input[type="checkbox"]')) {
+                return '';
+              }
+              return cell.textContent.trim();
+            }).filter((_, index) => headers[index]); // Only include columns with headers
+          });
+        }
+    }
+    
+    if (data.length === 0) {
+      alert('No data available to export');
+      return;
+    }
+    
+    // Combine headers and data
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+    
+    // Create and download CSV file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${dataType || 'data'}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Pagination component with dropdown
+  const CustomPagination = ({ 
+    currentPage, 
+    totalPages, 
+    totalItems,
+    itemsPerPage,
+    onPageChange, 
+    onItemsPerPageChange,
+    showDownload = true,
+    dataType = '' // 'staff', 'users', 'bookings', etc.
+  }) => {
+    return (
+      <div className="d-flex justify-content-between align-items-center mt-3">
+        <div className="d-flex align-items-center">
+         
+          
+          <Dropdown className="me-3">
+            <Dropdown.Toggle style={{backgroundColor:"white",border:"1px solid #000000",color:"black"}} size="sm">
+              {itemsPerPage} per page
+            </Dropdown.Toggle>
+            <Dropdown.Menu>
+              <Dropdown.Item onClick={() => onItemsPerPageChange(10)}>10 per page</Dropdown.Item>
+              <Dropdown.Item onClick={() => onItemsPerPageChange(15)}>15 per page</Dropdown.Item>
+              <Dropdown.Item onClick={() => onItemsPerPageChange(20)}>20 per page</Dropdown.Item>
+              <Dropdown.Item onClick={() => onItemsPerPageChange(50)}>50 per page</Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown>
+          
+          {showDownload && (
+            <div className="d-flex gap-2">
+              <Button 
+                style={{backgroundColor:"white",border:"1px solid #000000"}}
+                onClick={() => downloadTableAsPDF(dataType)}
+                title="Download as PDF"
+              >
+                <FaFilePdf className="text-secondary" />
+              </Button>
+              <Button 
+                style={{backgroundColor:"white",border:"1px solid #000000"}}
+                onClick={() => downloadTableAsExcel(dataType)}
+                title="Download as Excel"
+              >
+                <FaFileExcel className="text-secondary" />
+              </Button>
+              <Button 
+                 style={{backgroundColor:"white",border:"1px solid #000000"}}
+                onClick={() => downloadTableAsCSV(dataType)}
+                title="Download as CSV"
+              >
+                <FaFileCsv className="text-secondary" />
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const handleMenuClick = (menu) => {
     setActiveMenu(menu);
+    setIsEditingStaff(false);
+    setEditStaffId(null);
+    
+    // Reset form when switching away from add-staff
+    if (menu !== 'add-staff') {
+      setNewStaff({
+        name: '',
+        email: '',
+        phone: '',
+        designation: '',
+        password: '',
+        permissions: {
+          Dashboard: false,
+          Staff: false,
+          User: false,
+          Category: false,
+          Product: false,
+          Bookings: false,
+          Reports: false,
+          Settings: false
+        }
+      });
+    }
+    
     switch(menu) {
       case 'dashboard':
         fetchDashboardData();
@@ -320,10 +883,6 @@ function AdminPanel() {
       case 'manage-staff':
         setShowAddStaffForm(false);
         fetchStaff();
-        break;
-      case 'add-user':
-        setShowAddUserModal(true);
-        fetchUsers();
         break;
       case 'manage-users':
         setShowAddUserModal(false);
@@ -352,14 +911,12 @@ function AdminPanel() {
         fetchReports();
         break;
       case 'settings':
-        // Load settings if needed
         break;
       default:
         break;
     }
   };
 
-  // Staff Management Functions
   const handleAddStaff = async (e) => {
     e.preventDefault();
     setFormError('');
@@ -371,24 +928,19 @@ function AdminPanel() {
     }
     
     try {
-      const formData = new FormData();
-      formData.append('name', newStaff.name);
-      formData.append('email', newStaff.email);
-      formData.append('phone', newStaff.phone);
-      formData.append('designation', newStaff.designation);
-      formData.append('permissions', JSON.stringify(newStaff.permissions));
-      formData.append('isActive', newStaff.isActive);
+      const url = isEditingStaff 
+        ? `http://localhost:5000/api/admin/staff/${editStaffId}`
+        : 'http://localhost:5000/api/admin/staff';
       
-      if (profileImageFile) {
-        formData.append('profileImage', profileImageFile);
-      }
-
-      const response = await fetch('http://localhost:5000/api/admin/staff', {
-        method: 'POST',
+      const method = isEditingStaff ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method: method,
         headers: { 
+          'Content-Type': 'application/json',
           'admin-token': 'admin-secret-token'
         },
-        body: formData
+        body: JSON.stringify(newStaff)
       });
       
       const data = await response.json();
@@ -402,22 +954,22 @@ function AdminPanel() {
           email: '',
           phone: '',
           designation: '',
-          profileImage: null,
+          password: '',
           permissions: {
-            dashboard: false,
-            bookings: false,
-            staff: false,
-            services: false,
-            packages: false,
-            categories: false,
-            offers: false,
-            reports: false,
-            settings: false
-          },
-          isActive: true
+            Dashboard: false,
+            Staff: false,
+            User: false,
+            Category: false,
+            Product: false,
+            Bookings: false,
+            Reports: false,
+            Settings: false
+          }
         });
-        setProfileImageFile(null);
-        setProfileImagePreview('');
+        
+        // Reset editing state
+        setEditStaffId(null);
+        setIsEditingStaff(false);
         
         // Refresh staff list
         setTimeout(() => {
@@ -429,29 +981,105 @@ function AdminPanel() {
         }, 5000);
         
       } else {
-        setFormError(data.error || 'Failed to add staff member');
+        setFormError(data.error || (isEditingStaff ? 'Failed to update staff member' : 'Failed to add staff member'));
       }
     } catch (error) {
-      console.error('Error adding staff:', error);
-      setFormError('Failed to add staff member. Please try again.');
+      console.error('Error saving staff:', error);
+      setFormError(`Failed to ${isEditingStaff ? 'update' : 'add'} staff member. Please try again.`);
     }
   };
 
-  // User Management Functions
+  // Function to handle editing staff
+  const handleEditStaff = (staffMember) => {
+    setNewStaff({
+      name: staffMember.name || '',
+      email: staffMember.email || '',
+      phone: staffMember.phone || '',
+      designation: staffMember.designation || '',
+      password: '', // Don't show password for security
+      permissions: staffMember.permissions || {
+        Dashboard: false,
+        Staff: false,
+        User: false,
+        Category: false,
+        Product: false,
+        Bookings: false,
+        Reports: false,
+        Settings: false
+      }
+    });
+    setEditStaffId(staffMember._id);
+    setIsEditingStaff(true);
+    setActiveMenu('add-staff');
+  };
+
+  const handleAddCategory = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('http://localhost:5000/api/admin/services', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'admin-token': 'admin-secret-token'
+        },
+        body: JSON.stringify(newCategory)
+      });
+      
+      if (response.ok) {
+        alert('Category added successfully!');
+        setShowAddCategoryModal(false);
+        setNewCategory({ name: '', description: '', icon: '', order: 0, isActive: true });
+        fetchCategories();
+      } else {
+        alert('Failed to add category');
+      }
+    } catch (error) {
+      console.error('Error adding category:', error);
+      alert('Failed to add category');
+    }
+  };
+
+  const handleAddProduct = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('http://localhost:5000/api/admin/packages', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'admin-token': 'admin-secret-token'
+        },
+        body: JSON.stringify(newProduct)
+      });
+      
+      if (response.ok) {
+        alert('Product added successfully!');
+        setShowAddProductModal(false);
+        setNewProduct({
+          name: '',
+          description: '',
+          category: '',
+          price: '',
+          discountPrice: '',
+          stock: 0,
+          isActive: true
+        });
+        fetchProducts();
+      } else {
+        alert('Failed to add product');
+      }
+    } catch (error) {
+      console.error('Error adding product:', error);
+      alert('Failed to add product');
+    }
+  };
+
   const handleAddUser = async (e) => {
     e.preventDefault();
     try {
-      const formData = new FormData();
-      formData.append('name', newUser.name);
-      formData.append('email', newUser.email);
-      formData.append('phone', newUser.phone);
-      formData.append('city', newUser.city);
-      formData.append('password', newUser.password);
-
-      const response = await fetch('http://localhost:5000/api/admin/users', {
+      const response = await fetch('http://localhost:5000/api/register', {
         method: 'POST',
-        headers: { 'admin-token': 'admin-secret-token' },
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser)
       });
       
       const data = await response.json();
@@ -463,9 +1091,7 @@ function AdminPanel() {
           email: '',
           phone: '',
           city: '',
-          password: '',
-          profileImage: null,
-          isActive: true
+          password: ''
         });
         fetchUsers();
       } else {
@@ -477,33 +1103,6 @@ function AdminPanel() {
     }
   };
 
-  // Category Functions
-  const handleAddCategory = async (e) => {
-    e.preventDefault();
-    alert('Category added successfully!');
-    setShowAddCategoryModal(false);
-    setNewCategory({ name: '', description: '', icon: '', order: 0, isActive: true });
-    fetchCategories();
-  };
-
-  // Product Functions
-  const handleAddProduct = async (e) => {
-    e.preventDefault();
-    alert('Product added successfully!');
-    setShowAddProductModal(false);
-    setNewProduct({
-      name: '',
-      description: '',
-      category: '',
-      price: '',
-      discountPrice: '',
-      stock: 0,
-      isActive: true
-    });
-    fetchProducts();
-  };
-
-  // Settings Functions
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     alert('Settings saved successfully!');
@@ -520,7 +1119,7 @@ function AdminPanel() {
         const data = await response.json();
         if (data.success) {
           alert('Staff member deleted successfully');
-          fetchStaff();
+          fetchStaff(staffPage, staffSearch, staffPerPage);
         } else {
           alert(data.error || 'Failed to delete staff member');
         }
@@ -533,22 +1132,64 @@ function AdminPanel() {
 
   const deleteUser = async (userId) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
-      alert('User deleted successfully!');
-      fetchUsers();
+      try {
+        const response = await fetch(`http://localhost:5000/api/admin/users/${userId}`, {
+          method: 'DELETE',
+          headers: { 'admin-token': 'admin-secret-token' }
+        });
+        const data = await response.json();
+        if (data.success) {
+          alert('User deleted successfully');
+          fetchUsers(userPage, userSearch, userPerPage);
+        } else {
+          alert(data.error || 'Failed to delete user');
+        }
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        alert('Failed to delete user');
+      }
     }
   };
 
   const deleteCategory = async (categoryId) => {
     if (window.confirm('Are you sure you want to delete this category?')) {
-      alert('Category deleted successfully!');
-      fetchCategories();
+      try {
+        const response = await fetch(`http://localhost:5000/api/admin/services/${categoryId}`, {
+          method: 'DELETE',
+          headers: { 'admin-token': 'admin-secret-token' }
+        });
+        
+        if (response.ok) {
+          alert('Category deleted successfully');
+          fetchCategories();
+        } else {
+          alert('Failed to delete category');
+        }
+      } catch (error) {
+        console.error('Error deleting category:', error);
+        alert('Failed to delete category');
+      }
     }
   };
 
   const deleteProduct = async (productId) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
-      alert('Product deleted successfully!');
-      fetchProducts();
+      try {
+        const response = await fetch(`http://localhost:5000/api/admin/packages/${productId}`, {
+          method: 'DELETE',
+          headers: { 'admin-token': 'admin-secret-token' }
+        });
+        
+        if (response.ok) {
+          alert('Product deleted successfully');
+          fetchProducts();
+        } else {
+          alert('Failed to delete product');
+        }
+      } catch (error) {
+        console.error('Error deleting product:', error);
+        alert('Failed to delete product');
+      }
     }
   };
 
@@ -561,94 +1202,6 @@ function AdminPanel() {
       .join('')
       .toUpperCase()
       .substring(0, 2);
-  };
-
-  // Open Edit Staff Modal
-  const openEditStaff = (staffMember) => {
-    setEditingStaff(staffMember);
-    setEditStaffData({
-      name: staffMember.name,
-      email: staffMember.email,
-      phone: staffMember.phone,
-      designation: staffMember.designation,
-      profileImage: staffMember.profileImage || '',
-      permissions: staffMember.permissions || {
-        dashboard: false,
-        bookings: false,
-        staff: false,
-        services: false,
-        packages: false,
-        categories: false,
-        offers: false,
-        reports: false,
-        settings: false
-      },
-      isActive: staffMember.isActive
-    });
-    setEditProfileImagePreview('');
-    setEditProfileImageFile(null);
-    setEditStaffModal(true);
-  };
-
-  // Handle Edit Profile Image Change
-  const handleEditProfileImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setEditProfileImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setEditProfileImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // Handle Edit Staff Submit
-  const handleEditStaffSubmit = async (e) => {
-    e.preventDefault();
-    setFormError('');
-    setFormSuccess(false);
-    
-    try {
-      const formData = new FormData();
-      formData.append('name', editStaffData.name);
-      formData.append('email', editStaffData.email);
-      formData.append('phone', editStaffData.phone);
-      formData.append('designation', editStaffData.designation);
-      formData.append('permissions', JSON.stringify(editStaffData.permissions));
-      formData.append('isActive', editStaffData.isActive);
-      
-      if (editProfileImageFile) {
-        formData.append('profileImage', editProfileImageFile);
-      }
-
-      const response = await fetch(`http://localhost:5000/api/admin/staff/${editingStaff._id}`, {
-        method: 'PUT',
-        headers: { 
-          'admin-token': 'admin-secret-token'
-        },
-        body: formData
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setFormSuccess(true);
-        setEditStaffModal(false);
-        
-        // Refresh staff list
-        fetchStaff(staffPage, staffSearch);
-        
-        setTimeout(() => {
-          setFormSuccess(false);
-        }, 3000);
-      } else {
-        setFormError(data.error || 'Failed to update staff member');
-      }
-    } catch (error) {
-      console.error('Error updating staff:', error);
-      setFormError('Failed to update staff member. Please try again.');
-    }
   };
 
   const viewStaffPermissions = (staffMember) => {
@@ -674,7 +1227,7 @@ function AdminPanel() {
       const data = await response.json();
       if (data.success) {
         alert('Booking status updated successfully');
-        fetchBookings(bookingPage, bookingSearch, bookingStatus);
+        fetchBookings(bookingPage, bookingSearch, bookingStatus, bookingPerPage);
         fetchDashboardData();
       } else {
         alert(data.error || 'Failed to update booking status');
@@ -695,7 +1248,7 @@ function AdminPanel() {
         const data = await response.json();
         if (data.success) {
           alert('Booking deleted successfully');
-          fetchBookings(bookingPage, bookingSearch, bookingStatus);
+          fetchBookings(bookingPage, bookingSearch, bookingStatus, bookingPerPage);
           fetchDashboardData();
         } else {
           alert(data.error || 'Failed to delete booking');
@@ -716,7 +1269,7 @@ function AdminPanel() {
 
   if (!isLoggedIn) {
     return (
-      <Container className='d-flex justify-content-center align-items-center' style={{ marginTop: "150px"}}>
+      <Container className='d-flex justify-content-center align-items-center' style={{ minHeight: "100vh"}}>
         <Row className='w-75 shadow-lg' style={{ border: "1px solid #dee2e6", borderRadius: "15px", overflow: "hidden" }}>
           <Col md={6} className='p-0 d-none d-md-block' >
             <div 
@@ -739,7 +1292,8 @@ function AdminPanel() {
                     objectFit: "contain",
                     backgroundColor: "white",
                     borderRadius: "88px",
-                    padding: "20px",marginTop:"0px"
+                    padding: "20px",
+                    marginTop: "0px"
                   }}
                 />
               </div> <br />
@@ -842,7 +1396,7 @@ function AdminPanel() {
                   <Card.Body className="py-4">
                     <div className="d-flex align-items-center justify-content-center mb-3">
                       <div>
-                        <span style={{  fontSize: "30px" }}><FaUserSecret /></span>
+                        <span style={{ fontSize: "30px" }}><FaUserSecret /></span>
                       </div>
                     </div>
                     <h5 className="text-muted mb-2">Total Users</h5>
@@ -855,7 +1409,7 @@ function AdminPanel() {
                   <Card.Body className="py-4">
                     <div className="d-flex align-items-center justify-content-center mb-3">
                       <div>
-                        <span style={{  fontSize: "30px" }}><MdOutlineNoteAlt /></span>
+                        <span style={{ fontSize: "30px" }}><MdOutlineNoteAlt /></span>
                       </div>
                     </div>
                     <h5 className="text-muted mb-2">Total Bookings</h5>
@@ -868,7 +1422,7 @@ function AdminPanel() {
                   <Card.Body className="py-4">
                     <div className="d-flex align-items-center justify-content-center mb-3">
                       <div >
-                        <span style={{  fontSize: "30px" }}><SiCashapp /></span>
+                        <span style={{ fontSize: "30px" }}><SiCashapp /></span>
                       </div>
                     </div>
                     <h5 className="text-muted mb-2">Total Revenue</h5>
@@ -968,21 +1522,45 @@ function AdminPanel() {
             </Row>
           </>
         );
-
+      
       case 'add-staff':
         return (
           <Card className="border-0 shadow-sm">
             <Card.Header className="border-0 d-flex justify-content-between align-items-center">
               <div>
-                <h5 className="mb-0">Add New Staff</h5>
-                <p className="text-muted mb-0">Add new staff members to the system</p>
+                <h5 className="mb-0">{isEditingStaff ? 'Edit Staff Member' : 'Add New Staff'}</h5>
+                <p className="text-muted mb-0">
+                  {isEditingStaff ? 'Edit staff member details' : 'Add new staff members to the system'}
+                </p>
               </div>
               <div className="d-flex gap-2">
                 <Button 
                   variant="secondary" 
-                  onClick={() => handleMenuClick('manage-staff')}
+                  onClick={() => {
+                    handleMenuClick('manage-staff');
+                    setEditStaffId(null);
+                    setIsEditingStaff(false);
+                    setNewStaff({
+                      name: '',
+                      email: '',
+                      phone: '',
+                      designation: '',
+                      password: '',
+                      permissions: {
+                        Dashboard: false,
+                        Staff: false,
+                        User: false,
+                        Category: false,
+                        Product: false,
+                        Bookings: false,
+                        Reports: false,
+                        Settings: false
+                      }
+                    });
+                  }}
                 >
-                  <i className="bi bi-arrow-left me-2"></i>View All Staff
+                  <i className="bi bi-arrow-left me-2"></i>
+                  {isEditingStaff ? 'Cancel Edit' : 'View All Staff'}
                 </Button>
               </div>
             </Card.Header>
@@ -990,7 +1568,7 @@ function AdminPanel() {
               {formSuccess && (
                 <Alert variant="success" onClose={() => setFormSuccess(false)} dismissible>
                   <Alert.Heading>Success!</Alert.Heading>
-                  <p>Staff member has been added successfully.</p>
+                  <p>{isEditingStaff ? 'Staff member updated successfully' : 'Staff member has been added successfully'}</p>
                 </Alert>
               )}
               
@@ -1061,110 +1639,89 @@ function AdminPanel() {
                   </Col>
                 </Row>
                 
-                <Form.Group className="mb-3">
-                  <Form.Label>Profile Picture</Form.Label>
-                  <div className="d-flex align-items-center gap-3">
-                    <div style={{ 
-                      width: '100px', 
-                      height: '100px', 
-                      borderRadius: '50%', 
-                      overflow: 'hidden',
-                      border: '2px solid #dee2e6'
-                    }}>
-                      {profileImagePreview ? (
-                        <img 
-                          src={profileImagePreview} 
-                          alt="Profile Preview" 
-                          style={{ 
-                            width: '100%', 
-                            height: '100%', 
-                            objectFit: 'cover'
-                          }}
-                        />
-                      ) : (
-                        <div className="bg-light w-100 h-100 d-flex flex-column align-items-center justify-content-center">
-                          <i className="bi bi-person" style={{ fontSize: '30px', color: '#6c757d' }}></i>
-                          <small className="text-muted mt-1">No image selected</small>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-grow-1">
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Password</Form.Label>
                       <Form.Control
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files[0];
-                          if (file) {
-                            setProfileImageFile(file);
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              setProfileImagePreview(reader.result);
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                        className="mb-2"
+                        type="password"
+                        value={newStaff.password}
+                        onChange={(e) => setNewStaff({...newStaff, password: e.target.value})}
+                        placeholder="Leave empty to generate random password"
+                        className="font-monospace"
+                        style={{ letterSpacing: '1px' }}
                       />
-                      <div className="d-flex gap-2">
-                        <Button 
-                          variant="outline-secondary" 
-                          size="sm"
-                          onClick={() => {
-                            setProfileImagePreview('');
-                            setProfileImageFile(null);
-                          }}
-                          disabled={!profileImagePreview}
-                        >
-                          <i className="bi bi-x-circle me-1"></i> Remove
-                        </Button>
-                        <Button 
-                          variant="outline-primary" 
-                          size="sm"
-                          onClick={() => document.querySelector('input[type="file"]').click()}
-                        >
-                          <i className="bi bi-upload me-1"></i> Browse
-                        </Button>
-                      </div>
                       <Form.Text className="text-muted">
-                        Optional. If no image is selected, initials will be shown instead.
+                        Will be displayed as •••••• in the staff list for security
                       </Form.Text>
-                    </div>
-                  </div>
-                </Form.Group>
+                    </Form.Group>
+                  </Col>
+                </Row>
                 
                 <Form.Group className="mb-4">
                   <Form.Label>Permissions</Form.Label>
+                  <p className="text-muted mb-2">Select permissions for this staff member.</p>
                   <div className="border p-3 rounded">
                     <Row>
-                      {Object.keys(newStaff.permissions || {}).map((permission) => (
-                        <Col md={4} key={permission}>
-                          <Form.Check
-                            type="checkbox"
-                            id={`permission-${permission}`}
-                            label={permission.charAt(0).toUpperCase() + permission.slice(1)}
-                            checked={newStaff.permissions[permission]}
-                            onChange={(e) => setNewStaff({
-                              ...newStaff,
-                              permissions: {
-                                ...newStaff.permissions,
-                                [permission]: e.target.checked
-                              }
-                            })}
-                            className="mb-2"
-                          />
-                        </Col>
-                      ))}
+                      {Object.keys(newStaff.permissions || {}).map((permission) => {
+                        return (
+                          <Col md={4} key={permission}>
+                            <div 
+                              className="d-flex align-items-center mb-2 p-2 rounded"
+                              style={{
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                              }}
+                              onClick={() => setNewStaff({
+                                ...newStaff,
+                                permissions: {
+                                  ...newStaff.permissions,
+                                  [permission]: !newStaff.permissions[permission]
+                                }
+                              })}
+                            >
+                              <div className="flex-grow-1">
+                                <Form.Check
+                                  type="checkbox"
+                                  id={`permission-${permission}`}
+                                  label={permission.charAt(0).toUpperCase() + permission.slice(1)}
+                                  checked={newStaff.permissions[permission]}
+                                  onChange={(e) => setNewStaff({
+                                    ...newStaff,
+                                    permissions: {
+                                      ...newStaff.permissions,
+                                      [permission]: e.target.checked
+                                    }
+                                  })}
+                                  className="mb-0"
+                                />
+                              </div>
+                            </div>
+                          </Col>
+                        );
+                      })}
                     </Row>
+                    
+                    {/* Summary of selected permissions */}
+                    {Object.values(newStaff.permissions).filter(v => v).length > 0 && (
+                      <div className="mt-3 pt-3 border-top">
+                        <small className="text-muted d-block mb-2">Selected Permissions:</small>
+                        <div>
+                          {Object.entries(newStaff.permissions)
+                            .filter(([key, value]) => value)
+                            .map(([permission], index, arr) => (
+                              <span key={permission}>
+                                {permission.charAt(0).toUpperCase() + permission.slice(1)}
+                                {index < arr.length - 1 ? ', ' : ''}
+                              </span>
+                            ))}
+                        </div>
+                        <small className="text-muted mt-2 d-block">
+                          {Object.values(newStaff.permissions).filter(v => v).length} permission(s) selected
+                        </small>
+                      </div>
+                    )}
                   </div>
-                </Form.Group>
-                
-                <Form.Group className="mb-4">
-                  <Form.Check
-                    type="checkbox"
-                    label="Active Staff Member"
-                    checked={newStaff.isActive}
-                    onChange={(e) => setNewStaff({...newStaff, isActive: e.target.checked})}
-                  />
                 </Form.Group>
                 
                 <div className="d-flex justify-content-end gap-2">
@@ -1176,28 +1733,29 @@ function AdminPanel() {
                         email: '',
                         phone: '',
                         designation: '',
-                        profileImage: null,
+                        password: '',
                         permissions: {
-                          dashboard: false,
-                          bookings: false,
-                          staff: false,
-                          services: false,
-                          packages: false,
-                          categories: false,
-                          offers: false,
-                          reports: false,
-                          settings: false
-                        },
-                        isActive: true
+                          Dashboard: false,
+                          Staff: false,
+                          User: false,
+                          Category: false,
+                          Product: false,
+                          Bookings: false,
+                          Reports: false,
+                          Settings: false
+                        }
                       });
-                      setProfileImagePreview('');
-                      setProfileImageFile(null);
+                      if (isEditingStaff) {
+                        setEditStaffId(null);
+                        setIsEditingStaff(false);
+                      }
                     }}
                   >
                     Clear Form
                   </Button>
-                  <Button variant="primary" type="submit">
-                    <i className="bi bi-person-plus me-2"></i>Add Staff
+                  <Button variant={isEditingStaff ? "warning" : "primary"} type="submit">
+                    <i className={`bi ${isEditingStaff ? 'bi-pencil' : 'bi-person-plus'} me-2`}></i>
+                    {isEditingStaff ? 'Update Staff' : 'Add Staff'}
                   </Button>
                 </div>
               </Form>
@@ -1220,16 +1778,26 @@ function AdminPanel() {
                   value={staffSearch}
                   onChange={(e) => {
                     setStaffSearch(e.target.value);
-                    fetchStaff(1, e.target.value);
+                    fetchStaff(1, e.target.value, staffPerPage);
                   }}
-                  style={{ width: '250px' }}
+                  style={{ width: '250px', height: "40px", marginTop: "10px" }}
                 />
-                <Button 
-                  variant="primary"
-                  onClick={() => handleMenuClick('add-staff')}
-                >
-                  <i className="bi bi-person-plus me-2"></i>Add New Staff
-                </Button>
+                 <CustomPagination
+                currentPage={staffPage}
+                totalPages={staffTotalPages}
+                totalItems={staffTotalItems}
+                itemsPerPage={staffPerPage}
+                onPageChange={(page) => {
+                  setStaffPage(page);
+                  fetchStaff(page, staffSearch, staffPerPage);
+                }}
+                onItemsPerPageChange={(perPage) => {
+                  setStaffPerPage(perPage);
+                  fetchStaff(1, staffSearch, perPage);
+                }}
+                showDownload={true}
+                dataType="staff"
+              />
               </div>
             </Card.Header>
             <Card.Body>
@@ -1240,84 +1808,51 @@ function AdminPanel() {
                 </Alert>
               )}
               
+              {selectedStaff.length > 0 && (
+                <Alert variant="info" className="d-flex justify-content-between align-items-center">
+                  <span>{selectedStaff.length} staff member(s) selected</span>
+                  <Button 
+                    variant="danger" 
+                    size="sm"
+                    onClick={handleBulkDeleteStaff}
+                  >
+                    <i className="bi bi-trash me-2"></i>Delete Selected
+                  </Button>
+                </Alert>
+              )}
+              
               <div className="table-responsive">
                 <Table hover responsive style={{ minWidth: '800px' }}>
                   <thead>
                     <tr>
-                      <th style={{ width: '60px' }}>ID</th>
-                      <th style={{ width: '80px' }}>Profile</th>
+                      <th style={{ width: '40px' }}>
+                        <Form.Check
+                          type="checkbox"
+                          checked={selectAllStaff}
+                          onChange={handleSelectAllStaff}
+                        />
+                      </th>
                       <th>Name</th>
                       <th>Email</th>
-                      <th>Phone</th>
-                      <th style={{ width: '120px' }}>Designation</th>
-                      <th style={{ width: '100px' }}>Status</th>
-                      <th style={{ width: '80px' }}>Actions</th>
+                      <th>Contact no</th>
+                      <th>Password</th>
+                      <th>Permissions</th>
+                      <th style={{ width: '100px' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {staff.map((staffMember) => (
                       <tr key={staffMember._id}>
-                        <td><small className="text-muted">{staffMember._id?.substring(0, 8)}...</small></td>
                         <td>
-                          <div style={{ 
-                            width: '50px', 
-                            height: '50px', 
-                            borderRadius: '50%', 
-                            overflow: 'hidden',
-                            border: '2px solid #dee2e6'
-                          }}>
-                            {staffMember.profileImage && staffMember.profileImage !== '' ? (
-                              <img 
-                                src={`http://localhost:5000${staffMember.profileImage}`} 
-                                alt={staffMember.name}
-                                style={{ 
-                                  width: '100%', 
-                                  height: '100%', 
-                                  objectFit: 'cover'
-                                }}
-                                onError={(e) => {
-                                  // Fallback to initials
-                                  e.target.style.display = 'none';
-                                  const parent = e.target.parentElement;
-                                  const initials = getInitials(staffMember.name);
-                                  parent.innerHTML = `
-                                    <div style="
-                                      width: 100%;
-                                      height: 100%;
-                                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                      display: flex;
-                                      align-items: center;
-                                      justify-content: center;
-                                      color: white;
-                                      font-weight: bold;
-                                      font-size: 16px;
-                                    ">
-                                      ${initials}
-                                    </div>
-                                  `;
-                                }}
-                              />
-                            ) : (
-                              <div style={{ 
-                                width: '100%', 
-                                height: '100%', 
-                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'white',
-                                fontWeight: 'bold',
-                                fontSize: '16px'
-                              }}>
-                                {getInitials(staffMember.name)}
-                              </div>
-                            )}
-                          </div>
+                          <Form.Check
+                            type="checkbox"
+                            checked={selectedStaff.includes(staffMember._id)}
+                            onChange={() => handleStaffSelect(staffMember._id)}
+                          />
                         </td>
+                        
                         <td>
-                          <div>
-                            <strong>{staffMember.name}</strong>
-                          </div>
+                          <strong>{staffMember.name}</strong>
                         </td>
                         <td>
                           <div className="text-truncate" style={{ maxWidth: '200px' }}>
@@ -1326,180 +1861,43 @@ function AdminPanel() {
                         </td>
                         <td>{staffMember.phone}</td>
                         <td>
-                          <Badge bg={
-                            staffMember.designation === 'Manager' ? 'primary' :
-                            staffMember.designation === 'Supervisor' ? 'info' :
-                            staffMember.designation === 'Technician' ? 'warning' :
-                            staffMember.designation === 'Admin' ? 'danger' : 'secondary'
-                          }>
-                            {staffMember.designation}
-                          </Badge>
+                          {displayPassword(staffMember.password)}
                         </td>
                         <td>
-                          <Badge bg={staffMember.isActive ? 'success' : 'secondary'}>
-                            {staffMember.isActive ? 'Active' : 'Inactive'}
-                          </Badge>
+                          <div style={{ maxWidth: '200px' }}>
+                            {formatPermissions(staffMember.permissions)}
+                          </div>
                         </td>
                         <td>
-                          <Dropdown>
-                            <Dropdown.Toggle variant="light" size="sm">
-                              <i className="bi bi-three-dots"></i>
-                            </Dropdown.Toggle>
-                            <Dropdown.Menu>
-                              <Dropdown.Item onClick={() => openEditStaff(staffMember)}>
-                                <i className="bi bi-pencil me-2"></i>Edit
-                              </Dropdown.Item>
-                              <Dropdown.Item onClick={() => viewStaffPermissions(staffMember)}>
-                                <i className="bi bi-shield-check me-2"></i>View Permissions
-                              </Dropdown.Item>
-                              <Dropdown.Divider />
-                              <Dropdown.Item className="text-danger" onClick={() => deleteStaff(staffMember._id)}>
-                                <i className="bi bi-trash me-2"></i>Delete
-                              </Dropdown.Item>
-                            </Dropdown.Menu>
-                          </Dropdown>
+                          <div className="d-flex gap-1">
+                            <Button 
+                              variant="warning" 
+                              size="sm"
+                              onClick={() => handleEditStaff(staffMember)}
+                              title="Edit Staff"
+                            >
+                              <MdModeEdit />
+                            </Button>
+                            <Button 
+                              variant="danger" 
+                              size="sm"
+                              onClick={() => deleteStaff(staffMember._id)}
+                              title="Delete Staff"
+                            >
+                              <MdOutlineDelete />
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </Table>
               </div>
-              <div className="d-flex justify-content-center mt-3">
-                <Pagination>
-                  <Pagination.Prev 
-                    onClick={() => staffPage > 1 && fetchStaff(staffPage - 1, staffSearch)} 
-                    disabled={staffPage === 1}
-                  />
-                  {[...Array(staffTotalPages)].map((_, i) => (
-                    <Pagination.Item 
-                      key={i + 1} 
-                      active={i + 1 === staffPage}
-                      onClick={() => fetchStaff(i + 1, staffSearch)}
-                    >
-                      {i + 1}
-                    </Pagination.Item>
-                  ))}
-                  <Pagination.Next 
-                    onClick={() => staffPage < staffTotalPages && fetchStaff(staffPage + 1, staffSearch)} 
-                    disabled={staffPage === staffTotalPages}
-                  />
-                </Pagination>
-              </div>
+              
+             
             </Card.Body>
           </Card>
         );
-
-      case 'add-user':
-        return (
-          <Card className="border-0 shadow-sm">
-            <Card.Header className="border-0 d-flex justify-content-between align-items-center">
-              <div>
-                <h5 className="mb-0">Add New User</h5>
-                <p className="text-muted mb-0">Register a new user account</p>
-              </div>
-              <div className="d-flex gap-2">
-                <Button 
-                  variant="secondary" 
-                  onClick={() => handleMenuClick('manage-users')}
-                >
-                  <i className="bi bi-arrow-left me-2"></i>View All Users
-                </Button>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              <Form onSubmit={handleAddUser}>
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Full Name *</Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={newUser.name}
-                        onChange={(e) => setNewUser({...newUser, name: e.target.value})}
-                        required
-                        placeholder="Enter full name"
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Email *</Form.Label>
-                      <Form.Control
-                        type="email"
-                        value={newUser.email}
-                        onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                        required
-                        placeholder="Enter email address"
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Phone *</Form.Label>
-                      <Form.Control
-                        type="tel"
-                        value={newUser.phone}
-                        onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
-                        required
-                        placeholder="Enter phone number"
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>City *</Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={newUser.city}
-                        onChange={(e) => setNewUser({...newUser, city: e.target.value})}
-                        required
-                        placeholder="Enter city"
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Password *</Form.Label>
-                      <Form.Control
-                        type="password"
-                        value={newUser.password}
-                        onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                        required
-                        placeholder="Enter password"
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <div className="d-flex justify-content-end gap-2">
-                  <Button 
-                    variant="secondary" 
-                    onClick={() => {
-                      setNewUser({
-                        name: '',
-                        email: '',
-                        phone: '',
-                        city: '',
-                        password: '',
-                        profileImage: null,
-                        isActive: true
-                      });
-                    }}
-                  >
-                    Clear Form
-                  </Button>
-                  <Button variant="primary" type="submit">
-                    <i className="bi bi-person-plus me-2"></i>Add User
-                  </Button>
-                </div>
-              </Form>
-            </Card.Body>
-          </Card>
-        );
-
       case 'manage-users':
         return (
           <Card className="border-0 shadow-sm">
@@ -1515,28 +1913,59 @@ function AdminPanel() {
                   value={userSearch}
                   onChange={(e) => {
                     setUserSearch(e.target.value);
-                    fetchUsers(1, e.target.value);
+                    fetchUsers(1, e.target.value, userPerPage);
                   }}
                   style={{ width: '250px' }}
                 />
-                <Button 
-                  variant="primary"
-                  onClick={() => handleMenuClick('add-user')}
-                >
-                  <i className="bi bi-person-plus me-2"></i>Add New User
-                </Button>
+                <CustomPagination
+                currentPage={userPage}
+                totalPages={userTotalPages}
+                totalItems={userTotalItems}
+                itemsPerPage={userPerPage}
+                onPageChange={(page) => {
+                  setUserPage(page);
+                  fetchUsers(page, userSearch, userPerPage);
+                }}
+                onItemsPerPageChange={(perPage) => {
+                  setUserPerPage(perPage);
+                  fetchUsers(1, userSearch, perPage);
+                }}
+                showDownload={true}
+                dataType="users"
+              />
               </div>
             </Card.Header>
             <Card.Body>
+              {selectedUsers.length > 0 && (
+                <Alert variant="light" className="d-flex justify-content-between align-items-center">
+                  <span>{selectedUsers.length} user(s) selected</span>
+                  <Button 
+                    variant="danger" 
+                    size="sm"
+                    onClick={handleBulkDeleteUsers}
+                  >
+                    <i className="bi bi-trash me-2"></i>Delete Selected
+                  </Button>
+                </Alert>
+              )}
+              
               <div className="table-responsive">
                 <Table hover responsive>
                   <thead>
                     <tr>
+                      <th style={{ width: '40px' }}>
+                        <Form.Check
+                          type="checkbox"
+                          checked={selectAllUsers}
+                          onChange={handleSelectAllUsers}
+                        />
+                      </th>
                       <th style={{ width: '80px' }}>Profile</th>
                       <th>Name</th>
                       <th>Email</th>
                       <th>Phone</th>
                       <th>City</th>
+                      <th style={{ width: '150px' }}>Password</th>
                       <th>Joined Date</th>
                       <th style={{ width: '100px' }}>Actions</th>
                     </tr>
@@ -1544,6 +1973,13 @@ function AdminPanel() {
                   <tbody>
                     {users.map((user) => (
                       <tr key={user._id}>
+                        <td>
+                          <Form.Check
+                            type="checkbox"
+                            checked={selectedUsers.includes(user._id)}
+                            onChange={() => handleUserSelect(user._id)}
+                          />
+                        </td>
                         <td>
                           <div style={{ 
                             width: '50px', 
@@ -1583,6 +2019,11 @@ function AdminPanel() {
                         <td>{user.email}</td>
                         <td>{user.phone}</td>
                         <td>{user.city}</td>
+                        <td>
+                          <small className="text-muted" style={{ letterSpacing: '2px', fontFamily: 'monospace' }}>
+                            {displayPassword(user.password)}
+                          </small>
+                        </td>
                         <td>{new Date(user.createdAt).toLocaleDateString()}</td>
                         <td>
                           <Dropdown>
@@ -1590,9 +2031,6 @@ function AdminPanel() {
                               <i className="bi bi-three-dots"></i>
                             </Dropdown.Toggle>
                             <Dropdown.Menu>
-                              <Dropdown.Item>
-                                <i className="bi bi-pencil me-2"></i>Edit
-                              </Dropdown.Item>
                               <Dropdown.Item>
                                 <i className="bi bi-eye me-2"></i>View Details
                               </Dropdown.Item>
@@ -1608,27 +2046,8 @@ function AdminPanel() {
                   </tbody>
                 </Table>
               </div>
-              <div className="d-flex justify-content-center mt-3">
-                <Pagination>
-                  <Pagination.Prev 
-                    onClick={() => userPage > 1 && fetchUsers(userPage - 1, userSearch)} 
-                    disabled={userPage === 1}
-                  />
-                  {[...Array(userTotalPages)].map((_, i) => (
-                    <Pagination.Item 
-                      key={i + 1} 
-                      active={i + 1 === userPage}
-                      onClick={() => fetchUsers(i + 1, userSearch)}
-                    >
-                      {i + 1}
-                    </Pagination.Item>
-                  ))}
-                  <Pagination.Next 
-                    onClick={() => userPage < userTotalPages && fetchUsers(userPage + 1, userSearch)} 
-                    disabled={userPage === userTotalPages}
-                  />
-                </Pagination>
-              </div>
+              
+              
             </Card.Body>
           </Card>
         );
@@ -1745,10 +2164,30 @@ function AdminPanel() {
               </div>
             </Card.Header>
             <Card.Body>
+              {selectedCategories.length > 0 && (
+                <Alert variant="info" className="d-flex justify-content-between align-items-center">
+                  <span>{selectedCategories.length} category(ies) selected</span>
+                  <Button 
+                    variant="danger" 
+                    size="sm"
+                    onClick={handleBulkDeleteCategories}
+                  >
+                    <i className="bi bi-trash me-2"></i>Delete Selected
+                  </Button>
+                </Alert>
+              )}
+              
               <div className="table-responsive">
                 <Table hover responsive>
                   <thead>
                     <tr>
+                      <th style={{ width: '40px' }}>
+                        <Form.Check
+                          type="checkbox"
+                          checked={selectAllCategories}
+                          onChange={handleSelectAllCategories}
+                        />
+                      </th>
                       <th style={{ width: '60px' }}>Icon</th>
                       <th>Name</th>
                       <th>Description</th>
@@ -1760,10 +2199,17 @@ function AdminPanel() {
                   <tbody>
                     {categories.map((category) => (
                       <tr key={category._id}>
-                        <td style={{ fontSize: '24px' }}>{category.icon}</td>
+                        <td>
+                          <Form.Check
+                            type="checkbox"
+                            checked={selectedCategories.includes(category._id)}
+                            onChange={() => handleCategorySelect(category._id)}
+                          />
+                        </td>
+                        <td style={{ fontSize: '24px' }}>{category.icon || '📁'}</td>
                         <td><strong>{category.name}</strong></td>
                         <td>{category.description}</td>
-                        <td>{category.order}</td>
+                        <td>{category.order || 0}</td>
                         <td>
                           <Badge bg={category.isActive ? 'success' : 'secondary'}>
                             {category.isActive ? 'Active' : 'Inactive'}
@@ -1775,8 +2221,9 @@ function AdminPanel() {
                               <i className="bi bi-three-dots"></i>
                             </Dropdown.Toggle>
                             <Dropdown.Menu>
-                              <Dropdown.Item><i className="bi bi-pencil me-2"></i>Edit</Dropdown.Item>
-                              <Dropdown.Item><i className="bi bi-eye me-2"></i>View Services</Dropdown.Item>
+                              <Dropdown.Item>
+                                <i className="bi bi-eye me-2"></i>View Services
+                              </Dropdown.Item>
                               <Dropdown.Divider />
                               <Dropdown.Item className="text-danger" onClick={() => deleteCategory(category._id)}>
                                 <i className="bi bi-trash me-2"></i>Delete
@@ -1891,17 +2338,6 @@ function AdminPanel() {
                   </Col>
                 </Row>
                 <Form.Group className="mb-3">
-                  <Form.Label>Product Image</Form.Label>
-                  <Form.Control
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setProductImage(e.target.files[0])}
-                  />
-                  <Form.Text className="text-muted">
-                    Recommended size: 800x600 px. Max 5MB.
-                  </Form.Text>
-                </Form.Group>
-                <Form.Group className="mb-3">
                   <Form.Check
                     type="checkbox"
                     label="Active Product"
@@ -1922,7 +2358,6 @@ function AdminPanel() {
                         stock: 0,
                         isActive: true
                       });
-                      setProductImage(null);
                     }}
                   >
                     Clear Form
@@ -1961,10 +2396,30 @@ function AdminPanel() {
               </div>
             </Card.Header>
             <Card.Body>
+              {selectedProducts.length > 0 && (
+                <Alert variant="info" className="d-flex justify-content-between align-items-center">
+                  <span>{selectedProducts.length} product(s) selected</span>
+                  <Button 
+                    variant="danger" 
+                    size="sm"
+                    onClick={handleBulkDeleteProducts}
+                  >
+                    <i className="bi bi-trash me-2"></i>Delete Selected
+                  </Button>
+                </Alert>
+              )}
+              
               <div className="table-responsive">
                 <Table hover responsive>
                   <thead>
                     <tr>
+                      <th style={{ width: '40px' }}>
+                        <Form.Check
+                          type="checkbox"
+                          checked={selectAllProducts}
+                          onChange={handleSelectAllProducts}
+                        />
+                      </th>
                       <th style={{ width: '80px' }}>Image</th>
                       <th>Product</th>
                       <th>Category</th>
@@ -1978,26 +2433,39 @@ function AdminPanel() {
                     {products.map((product) => (
                       <tr key={product._id}>
                         <td>
+                          <Form.Check
+                            type="checkbox"
+                            checked={selectedProducts.includes(product._id)}
+                            onChange={() => handleProductSelect(product._id)}
+                          />
+                        </td>
+                        <td>
                           <div style={{ 
                             width: '60px', 
                             height: '60px', 
                             overflow: 'hidden',
                             border: '1px solid #dee2e6'
                           }}>
-                            <img 
-                              src="/assets/default-product.png" 
-                              alt={product.name}
-                              style={{ 
-                                width: '100%', 
-                                height: '100%', 
-                                objectFit: 'cover'
-                              }}
-                            />
+                            {product.img ? (
+                              <img 
+                                src={`http://localhost:5000${product.img}`} 
+                                alt={product.name}
+                                style={{ 
+                                  width: '100%', 
+                                  height: '100%', 
+                                  objectFit: 'cover'
+                                }}
+                              />
+                            ) : (
+                              <div className="bg-light w-100 h-100 d-flex align-items-center justify-content-center">
+                                <i className="bi bi-box" style={{ fontSize: '24px', color: '#6c757d' }}></i>
+                              </div>
+                            )}
                           </div>
                         </td>
                         <td>
                           <div>
-                            <strong>{product.name}</strong>
+                            <strong>{product.name || product.title}</strong>
                             <small className="text-muted d-block">{product.description?.substring(0, 50)}...</small>
                           </div>
                         </td>
@@ -2010,7 +2478,7 @@ function AdminPanel() {
                             )}
                           </div>
                         </td>
-                        <td>{product.stock}</td>
+                        <td>{product.stock || 'N/A'}</td>
                         <td>
                           <Badge bg={product.isActive ? 'success' : 'secondary'}>
                             {product.isActive ? 'Active' : 'Inactive'}
@@ -2022,8 +2490,9 @@ function AdminPanel() {
                               <i className="bi bi-three-dots"></i>
                             </Dropdown.Toggle>
                             <Dropdown.Menu>
-                              <Dropdown.Item><i className="bi bi-pencil me-2"></i>Edit</Dropdown.Item>
-                              <Dropdown.Item><i className="bi bi-eye me-2"></i>View Details</Dropdown.Item>
+                              <Dropdown.Item>
+                                <i className="bi bi-eye me-2"></i>View Details
+                              </Dropdown.Item>
                               <Dropdown.Divider />
                               <Dropdown.Item className="text-danger" onClick={() => deleteProduct(product._id)}>
                                 <i className="bi bi-trash me-2"></i>Delete
@@ -2053,7 +2522,7 @@ function AdminPanel() {
                   value={bookingStatus} 
                   onChange={(e) => {
                     setBookingStatus(e.target.value);
-                    fetchBookings(1, bookingSearch, e.target.value);
+                    fetchBookings(1, bookingSearch, e.target.value, bookingPerPage);
                   }}
                   style={{ width: '150px' }}
                 >
@@ -2073,10 +2542,45 @@ function AdminPanel() {
               </div>
             </Card.Header>
             <Card.Body>
+              {selectedBookings.length > 0 && (
+                <Alert variant="info" className="d-flex justify-content-between align-items-center">
+                  <span>{selectedBookings.length} booking(s) selected</span>
+                  <div className="d-flex gap-2">
+                    <Button 
+                      variant="success" 
+                      size="sm"
+                      onClick={() => {
+                        if (window.confirm(`Confirm ${selectedBookings.length} booking(s)?`)) {
+                          selectedBookings.forEach(id => updateBookingStatus(id, 'Confirmed'));
+                          setSelectedBookings([]);
+                          setSelectAllBookings(false);
+                        }
+                      }}
+                    >
+                      <i className="bi bi-check-circle me-2"></i>Confirm Selected
+                    </Button>
+                    <Button 
+                      variant="danger" 
+                      size="sm"
+                      onClick={handleBulkDeleteBookings}
+                    >
+                      <i className="bi bi-trash me-2"></i>Delete Selected
+                    </Button>
+                  </div>
+                </Alert>
+              )}
+              
               <div className="table-responsive">
                 <Table hover responsive>
                   <thead>
                     <tr>
+                      <th style={{ width: '40px' }}>
+                        <Form.Check
+                          type="checkbox"
+                          checked={selectAllBookings}
+                          onChange={handleSelectAllBookings}
+                        />
+                      </th>
                       <th style={{ width: '120px' }}>Booking ID</th>
                       <th style={{ width: '200px' }}>Customer</th>
                       <th>Service</th>
@@ -2089,6 +2593,13 @@ function AdminPanel() {
                   <tbody>
                     {bookings.map((booking) => (
                       <tr key={booking._id}>
+                        <td>
+                          <Form.Check
+                            type="checkbox"
+                            checked={selectedBookings.includes(booking._id)}
+                            onChange={() => handleBookingSelect(booking._id)}
+                          />
+                        </td>
                         <td><small className="text-muted">{booking._id?.substring(0, 8)}...</small></td>
                         <td>
                           <div className="d-flex align-items-center">
@@ -2144,27 +2655,23 @@ function AdminPanel() {
                   </tbody>
                 </Table>
               </div>
-              <div className="d-flex justify-content-center mt-3">
-                <Pagination>
-                  <Pagination.Prev 
-                    onClick={() => bookingPage > 1 && fetchBookings(bookingPage - 1, bookingSearch, bookingStatus)} 
-                    disabled={bookingPage === 1}
-                  />
-                  {[...Array(bookingTotalPages)].map((_, i) => (
-                    <Pagination.Item 
-                      key={i + 1} 
-                      active={i + 1 === bookingPage}
-                      onClick={() => fetchBookings(i + 1, bookingSearch, bookingStatus)}
-                    >
-                      {i + 1}
-                    </Pagination.Item>
-                  ))}
-                  <Pagination.Next 
-                    onClick={() => bookingPage < bookingTotalPages && fetchBookings(bookingPage + 1, bookingSearch, bookingStatus)} 
-                    disabled={bookingPage === bookingTotalPages}
-                  />
-                </Pagination>
-              </div>
+              
+              <CustomPagination
+                currentPage={bookingPage}
+                totalPages={bookingTotalPages}
+                totalItems={bookingTotalItems}
+                itemsPerPage={bookingPerPage}
+                onPageChange={(page) => {
+                  setBookingPage(page);
+                  fetchBookings(page, bookingSearch, bookingStatus, bookingPerPage);
+                }}
+                onItemsPerPageChange={(perPage) => {
+                  setBookingPerPage(perPage);
+                  fetchBookings(1, bookingSearch, bookingStatus, perPage);
+                }}
+                showDownload={true}
+                dataType="bookings"
+              />
             </Card.Body>
           </Card>
         );
@@ -2249,9 +2756,15 @@ function AdminPanel() {
                     <i className="bi bi-download me-2"></i>Export
                   </Dropdown.Toggle>
                   <Dropdown.Menu>
-                    <Dropdown.Item><i className="bi bi-file-earmark-excel me-2"></i>Export as Excel</Dropdown.Item>
-                    <Dropdown.Item><i className="bi bi-file-earmark-pdf me-2"></i>Export as PDF</Dropdown.Item>
-                    <Dropdown.Item><i className="bi bi-printer me-2"></i>Print Report</Dropdown.Item>
+                    <Dropdown.Item onClick={() => downloadTableAsPDF('reports')}>
+                      <i className="bi bi-file-earmark-pdf me-2"></i>Export as PDF
+                    </Dropdown.Item>
+                    <Dropdown.Item onClick={() => downloadTableAsExcel('reports')}>
+                      <i className="bi bi-file-earmark-excel me-2"></i>Export as Excel
+                    </Dropdown.Item>
+                    <Dropdown.Item onClick={() => downloadTableAsCSV('reports')}>
+                      <i className="bi bi-file-earmark-text me-2"></i>Export as CSV
+                    </Dropdown.Item>
                   </Dropdown.Menu>
                 </Dropdown>
               </Card.Header>
@@ -2435,7 +2948,6 @@ function AdminPanel() {
               <i className="bi bi-speedometer2 me-2"></i>Dashboard
             </Nav.Link>
             
-            {/* Staff Management Dropdown */}
             <Dropdown className="mb-2">
               <Dropdown.Toggle 
                 as={Nav.Link} 
@@ -2464,13 +2976,12 @@ function AdminPanel() {
               </Dropdown.Menu>
             </Dropdown>
             
-            {/* User Management Dropdown */}
             <Dropdown className="mb-2">
               <Dropdown.Toggle 
                 as={Nav.Link} 
                 style={{ 
-                  color: ['add-user', 'manage-users'].includes(activeMenu) ? '#000' : 'white',
-                  background: ['add-user', 'manage-users'].includes(activeMenu) ? 'white' : 'transparent',
+                  color: ['manage-users'].includes(activeMenu) ? '#000' : 'white',
+                  background: [ 'manage-users'].includes(activeMenu) ? 'white' : 'transparent',
                   borderRadius: '8px',
                   padding: '10px 15px',
                   display: 'flex',
@@ -2484,16 +2995,12 @@ function AdminPanel() {
                 <i className="bi bi-chevron-down ms-auto"></i>
               </Dropdown.Toggle>
               <Dropdown.Menu style={{ width: '100%' }}>
-                <Dropdown.Item onClick={() => handleMenuClick('add-user')}>
-                  <i className="bi bi-person-plus me-2"></i>Add User
-                </Dropdown.Item>
                 <Dropdown.Item onClick={() => handleMenuClick('manage-users')}>
                   <i className="bi bi-people-fill me-2"></i>Manage Users
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
             
-            {/* Category Management Dropdown */}
             <Dropdown className="mb-2">
               <Dropdown.Toggle 
                 as={Nav.Link} 
@@ -2522,7 +3029,6 @@ function AdminPanel() {
               </Dropdown.Menu>
             </Dropdown>
             
-            {/* Product Management Dropdown */}
             <Dropdown className="mb-2">
               <Dropdown.Toggle 
                 as={Nav.Link} 
@@ -2613,7 +3119,6 @@ function AdminPanel() {
               <Nav className="align-items-center">
                 <Dropdown>
                   <Dropdown.Toggle variant="light" className="d-flex align-items-center">
-                    
                     <span className="d-none d-md-inline">Admin User</span>
                   </Dropdown.Toggle>
                   <Dropdown.Menu align="end">
@@ -2641,217 +3146,6 @@ function AdminPanel() {
         <Container fluid className="py-4">
           {renderContent()}
         </Container>
-
-        {/* Edit Staff Modal */}
-        <Modal show={editStaffModal} onHide={() => setEditStaffModal(false)} size="lg">
-          <Modal.Header closeButton>
-            <Modal.Title>Edit Staff Member</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            {formError && (
-              <Alert variant="danger" onClose={() => setFormError('')} dismissible>
-                <Alert.Heading>Error!</Alert.Heading>
-                <p>{formError}</p>
-              </Alert>
-            )}
-            
-            <Form onSubmit={handleEditStaffSubmit}>
-              <Row>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Full Name *</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={editStaffData.name}
-                      onChange={(e) => setEditStaffData({...editStaffData, name: e.target.value})}
-                      required
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Email *</Form.Label>
-                    <Form.Control
-                      type="email"
-                      value={editStaffData.email}
-                      onChange={(e) => setEditStaffData({...editStaffData, email: e.target.value})}
-                      required
-                    />
-                  </Form.Group>
-                </Col>
-              </Row>
-              <Row>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Phone *</Form.Label>
-                    <Form.Control
-                      type="tel"
-                      value={editStaffData.phone}
-                      onChange={(e) => setEditStaffData({...editStaffData, phone: e.target.value})}
-                      required
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Designation *</Form.Label>
-                    <Form.Select
-                      value={editStaffData.designation}
-                      onChange={(e) => setEditStaffData({...editStaffData, designation: e.target.value})}
-                      required
-                    >
-                      <option value="">Select Designation</option>
-                      <option value="Manager">Manager</option>
-                      <option value="Supervisor">Supervisor</option>
-                      <option value="Technician">Technician</option>
-                      <option value="Customer Support">Customer Support</option>
-                      <option value="Admin">Admin</option>
-                      <option value="Other">Other</option>
-                    </Form.Select>
-                  </Form.Group>
-                </Col>
-              </Row>
-              
-              <Form.Group className="mb-3">
-                <Form.Label>Profile Picture</Form.Label>
-                <div className="d-flex align-items-center gap-3">
-                  <div style={{ 
-                    width: '100px', 
-                    height: '100px', 
-                    borderRadius: '50%', 
-                    overflow: 'hidden',
-                    border: '2px solid #dee2e6'
-                  }}>
-                    {editProfileImagePreview ? (
-                      <img 
-                        src={editProfileImagePreview} 
-                        alt="New Profile Preview" 
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                    ) : editStaffData.profileImage && editStaffData.profileImage !== '' ? (
-                      <img 
-                        src={`http://localhost:5000${editStaffData.profileImage}`}
-                        alt="Current Profile"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        onError={(e) => {
-                          // Show initials on error
-                          e.target.style.display = 'none';
-                          const parent = e.target.parentElement;
-                          const initials = getInitials(editStaffData.name);
-                          parent.innerHTML = `
-                            <div style="
-                              width: 100%;
-                              height: 100%;
-                              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                              display: flex;
-                              align-items: center;
-                              justify-content: center;
-                              color: white;
-                              font-weight: bold;
-                              font-size: 18px;
-                            ">
-                              ${initials}
-                            </div>
-                          `;
-                        }}
-                      />
-                    ) : (
-                      <div style={{ 
-                        width: '100%', 
-                        height: '100%', 
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontWeight: 'bold',
-                        fontSize: '18px'
-                      }}>
-                        {getInitials(editStaffData.name)}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-grow-1">
-                    <Form.Control
-                      type="file"
-                      accept="image/*"
-                      onChange={handleEditProfileImageChange}
-                      className="mb-2"
-                      id="edit-profile-image-input"
-                    />
-                    <div className="d-flex gap-2">
-                      <Button 
-                        variant="outline-secondary" 
-                        size="sm"
-                        onClick={() => {
-                          setEditProfileImagePreview('');
-                          setEditProfileImageFile(null);
-                        }}
-                        disabled={!editProfileImagePreview}
-                      >
-                        <i className="bi bi-x-circle me-1"></i> Remove New
-                      </Button>
-                      <Button 
-                        variant="outline-primary" 
-                        size="sm"
-                        onClick={() => document.getElementById('edit-profile-image-input').click()}
-                      >
-                        <i className="bi bi-upload me-1"></i> Browse
-                      </Button>
-                    </div>
-                    <Form.Text className="text-muted">
-                      Leave empty to keep current image
-                    </Form.Text>
-                  </div>
-                </div>
-              </Form.Group>
-              
-              <Form.Group className="mb-4">
-                <Form.Label>Permissions</Form.Label>
-                <div className="border p-3 rounded">
-                  <Row>
-                    {Object.keys(editStaffData.permissions || {}).map((permission) => (
-                      <Col md={4} key={permission}>
-                        <Form.Check
-                          type="checkbox"
-                          id={`edit-permission-${permission}`}
-                          label={permission.charAt(0).toUpperCase() + permission.slice(1)}
-                          checked={editStaffData.permissions[permission]}
-                          onChange={(e) => setEditStaffData({
-                            ...editStaffData,
-                            permissions: {
-                              ...editStaffData.permissions,
-                              [permission]: e.target.checked
-                            }
-                          })}
-                          className="mb-2"
-                        />
-                      </Col>
-                    ))}
-                  </Row>
-                </div>
-              </Form.Group>
-              
-              <Form.Group className="mb-4">
-                <Form.Check
-                  type="checkbox"
-                  label="Active Staff Member"
-                  checked={editStaffData.isActive}
-                  onChange={(e) => setEditStaffData({...editStaffData, isActive: e.target.checked})}
-                />
-              </Form.Group>
-              
-              <div className="d-flex justify-content-end gap-2">
-                <Button variant="secondary" onClick={() => setEditStaffModal(false)}>
-                  Cancel
-                </Button>
-                <Button variant="primary" type="submit">
-                  <i className="bi bi-save me-2"></i>Save Changes
-                </Button>
-              </div>
-            </Form>
-          </Modal.Body>
-        </Modal>
 
         {/* Add Category Modal */}
         <Modal show={showAddCategoryModal} onHide={() => setShowAddCategoryModal(false)}>
@@ -2979,7 +3273,12 @@ function AdminPanel() {
                   onChange={(e) => setNewUser({...newUser, password: e.target.value})}
                   required
                   placeholder="Enter password"
+                  className="font-monospace"
+                  style={{ letterSpacing: '1px' }}
                 />
+                <Form.Text className="text-muted">
+                  Will be displayed as •••••• in the user list for security
+                </Form.Text>
               </Form.Group>
               <div className="d-flex justify-content-end gap-2">
                 <Button variant="secondary" onClick={() => setShowAddUserModal(false)}>

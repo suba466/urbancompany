@@ -1,64 +1,28 @@
-// adminRoutes.js
+// adminRoutes.js - Corrected without profile image
 import express from "express";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import multer from "multer";
-import path from "path";
-import { fileURLToPath } from "url";
-import fs from "fs";
 
 const router = express.Router();
 
-// Configure multer for image upload
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, "../assets/staff");
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = `staff-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
-  }
-});
-
-const upload = multer({
-  storage: storage,
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed!'), false);
-    }
-  },
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
-  }
-});
-
-// Staff Schema
+// Staff Schema - No profileImage field
 const staffSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   phone: { type: String, required: true },
-  designation: { type: String, required: true }, 
-  permissions: {
-    dashboard: { type: Boolean, default: false },
-    users: { type: Boolean, default: false },
-    staff: { type: Boolean, default: false },
-    bookings: { type: Boolean, default: false },
-    product: { type: Boolean, default: false },
-    category: { type: Boolean, default: false },
-    reports: { type: Boolean, default: false },
-    settings: { type: Boolean, default: false }
-  },
+  designation: { type: String, required: true },
+  profileImage:{type:String,default:" "},
   isActive: { type: Boolean, default: true },
-  profileImage: { type: String, default: "" },
+  permissions: {
+    Dashboard: { type: Boolean, default: false },
+    Staff: { type: Boolean, default: false },
+    User: { type: Boolean, default: false },
+    Category: { type: Boolean, default: false },
+    Product: { type: Boolean, default: false },
+    Bookings: { type: Boolean, default: false },
+    Reports: { type: Boolean, default: false },
+    Settings: { type: Boolean, default: false }
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -75,19 +39,20 @@ export const initializeStaff = async () => {
         email: "manager@urbancompany.com",
         phone: "9876543210",
         designation: "Manager",
-        profileImage: "",
+        isActive: true,
         permissions: {
-          dashboard: true,
-          users: true,
-          staff: true,
-          bookings: true,
-          category: true,product:true,
-          reports: true,
-          settings: true
+          Dashboard: true,
+          Staff: true,
+          User: true,
+          Category: true,
+          Product: true,
+          Bookings: true,
+          Reports: true,
+          Settings: true
         }
       });
       await staff.save();
-      console.log("✅ Default staff created: manager@urbancompany.com");
+      console.log(" Default staff created: manager@urbancompany.com");
     }
   } catch (error) {
     console.error("Error initializing staff:", error);
@@ -97,7 +62,7 @@ export const initializeStaff = async () => {
 // Get all staff with pagination
 router.get("/staff", async (req, res) => {
   try {
-    const { page = 1, limit = 20, search = ""} = req.query;
+    const { page = 1, limit = 20, search = "" } = req.query;
     const skip = (page - 1) * limit;
 
     let query = {};
@@ -109,8 +74,6 @@ router.get("/staff", async (req, res) => {
         { designation: { $regex: search, $options: "i" } }
       ];
     }
-
-  
 
     const staff = await Staff.find(query)
       .select('-__v')
@@ -158,8 +121,8 @@ router.get("/staff/:id", async (req, res) => {
   }
 });
 
-// Create new staff member with profile image
-router.post("/staff", upload.single("profileImage"), async (req, res) => {
+// Create new staff member WITHOUT profile image
+router.post("/staff", async (req, res) => {
   try {
     const {
       name,
@@ -191,29 +154,23 @@ router.post("/staff", upload.single("profileImage"), async (req, res) => {
       return res.status(400).json({ error: "Staff member with this email already exists" });
     }
 
-    // Handle profile image
-    let profileImageUrl = "";
-    if (req.file) {
-      profileImageUrl = `/assets/staff/${req.file.filename}`;
-    }
-
     // Create new staff
     const staff = new Staff({
       name,
       email,
       phone,
       designation,
-      profileImage: profileImageUrl,
+      isActive: isActive !== undefined ? isActive : true,
       permissions: parsedPermissions || {
-        dashboard: false,
-        users: false,
-        staff: false,
-        bookings: false,
-        category: false,product:false,
-        reports: false,
-        settings: false
-      },
-      isActive: isActive !== undefined ? isActive : true
+        Dashboard: false,
+        Staff: false,
+        User: false,
+        Category: false,
+        Product: false,
+        Bookings: false,
+        Reports: false,
+        Settings: false
+      }
     });
 
     await staff.save();
@@ -236,8 +193,8 @@ router.post("/staff", upload.single("profileImage"), async (req, res) => {
   }
 });
 
-// Update staff member with optional profile image
-router.put("/staff/:id", upload.single("profileImage"), async (req, res) => {
+// Update staff member WITHOUT profile image
+router.put("/staff/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -262,22 +219,6 @@ router.put("/staff/:id", upload.single("profileImage"), async (req, res) => {
     // Parse permissions if it's a string
     if (updateData.permissions && typeof updateData.permissions === 'string') {
       updateData.permissions = JSON.parse(updateData.permissions);
-    }
-
-    // Handle profile image update
-    if (req.file) {
-      // Delete old image if exists
-      if (existingStaff.profileImage && existingStaff.profileImage.startsWith('/assets/staff/')) {
-        try {
-          const oldImagePath = path.join(__dirname, '..', existingStaff.profileImage);
-          if (fs.existsSync(oldImagePath)) {
-            fs.unlinkSync(oldImagePath);
-          }
-        } catch (err) {
-          console.error("Error deleting old profile image:", err);
-        }
-      }
-      updateData.profileImage = `/assets/staff/${req.file.filename}`;
     }
 
     // Update staff
@@ -308,19 +249,6 @@ router.delete("/staff/:id", async (req, res) => {
     if (!staff) {
       return res.status(404).json({ error: "Staff member not found" });
     }
-
-    // Delete profile image if exists
-    if (staff.profileImage && staff.profileImage.startsWith('/assets/staff/')) {
-      try {
-        const imagePath = path.join(__dirname, '..', staff.profileImage);
-        if (fs.existsSync(imagePath)) {
-          fs.unlinkSync(imagePath);
-        }
-      } catch (err) {
-        console.error("Error deleting profile image:", err);
-      }
-    }
-
     await Staff.findByIdAndDelete(id);
 
     res.json({
@@ -334,13 +262,40 @@ router.delete("/staff/:id", async (req, res) => {
   }
 });
 
+// Bulk delete staff members
+router.delete("/staff/bulk-delete", async (req, res) => {
+  try {
+    const { staffIds } = req.body;
+
+    if (!staffIds || !Array.isArray(staffIds) || staffIds.length === 0) {
+      return res.status(400).json({ error: "No staff IDs provided" });
+    }
+
+    const result = await Staff.deleteMany({ _id: { $in: staffIds } });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: "No staff members found to delete" });
+    }
+
+    res.json({
+      success: true,
+      message: `${result.deletedCount} staff member(s) deleted successfully`,
+      deletedCount: result.deletedCount
+    });
+
+  } catch (error) {
+    console.error("Error bulk deleting staff:", error);
+    res.status(500).json({ error: "Failed to delete staff members" });
+  }
+});
+
 // Admin Schema
 const adminSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, default: 'admin' },
-  isActive: { type: Boolean, default: true },
+  isActive: { type: Boolean, default: true }, // Added missing field
   lastLogin: Date,
   createdAt: { type: Date, default: Date.now }
 });
@@ -357,10 +312,11 @@ export const initializeAdmin = async () => {
         username: "admin",
         email: "admin@urbancompany.com",
         password: hashedPassword,
-        role: "superadmin"
+        role: "superadmin",
+        isActive: true
       });
       await admin.save();
-      console.log("✅ Default admin created: admin@urbancompany.com / admin123");
+      console.log("Default admin created: admin@urbancompany.com / admin123");
     }
   } catch (error) {
     console.error("Error initializing admin:", error);
@@ -520,7 +476,7 @@ router.get("/users", async (req, res) => {
     }
 
     const users = await User.find(query)
-      .select('-password')
+      .select('name email phone city profileImage createdAt password') // Include password for display
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
@@ -541,6 +497,34 @@ router.get("/users", async (req, res) => {
   } catch (error) {
     console.error("Error fetching users:", error);
     res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
+// Bulk delete users
+router.delete("/users/bulk-delete", async (req, res) => {
+  try {
+    const { userIds } = req.body;
+
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({ error: "No user IDs provided" });
+    }
+
+    const User = mongoose.model("User");
+    const result = await User.deleteMany({ _id: { $in: userIds } });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: "No users found to delete" });
+    }
+
+    res.json({
+      success: true,
+      message: `${result.deletedCount} user(s) deleted successfully`,
+      deletedCount: result.deletedCount
+    });
+
+  } catch (error) {
+    console.error("Error bulk deleting users:", error);
+    res.status(500).json({ error: "Failed to delete users" });
   }
 });
 
@@ -620,6 +604,34 @@ router.get("/bookings", async (req, res) => {
   }
 });
 
+// Bulk delete bookings
+router.delete("/bookings/bulk-delete", async (req, res) => {
+  try {
+    const { bookingIds } = req.body;
+
+    if (!bookingIds || !Array.isArray(bookingIds) || bookingIds.length === 0) {
+      return res.status(400).json({ error: "No booking IDs provided" });
+    }
+
+    const Booking = mongoose.model("Booking");
+    const result = await Booking.deleteMany({ _id: { $in: bookingIds } });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: "No bookings found to delete" });
+    }
+
+    res.json({
+      success: true,
+      message: `${result.deletedCount} booking(s) deleted successfully`,
+      deletedCount: result.deletedCount
+    });
+
+  } catch (error) {
+    console.error("Error bulk deleting bookings:", error);
+    res.status(500).json({ error: "Failed to delete bookings" });
+  }
+});
+
 // Update booking status
 router.put("/bookings/:id/status", async (req, res) => {
   try {
@@ -658,7 +670,7 @@ router.put("/bookings/:id/status", async (req, res) => {
   }
 });
 
-// Delete booking
+// Delete single booking
 router.delete("/bookings/:id", async (req, res) => {
   try {
     const Booking = mongoose.model("Booking");
