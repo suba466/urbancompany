@@ -7,6 +7,7 @@ import multer from "multer";
 import fs from "fs";
 import bcrypt from "bcryptjs";
 import adminRoutes from "./adminRoutes.js";
+
 const app = express();
 const PORT = 5000;
 
@@ -19,7 +20,7 @@ app.use(express.json());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use("/assets", express.static(path.join(__dirname, "assets")));
-
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // --- Multer Configuration ---
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -54,6 +55,7 @@ const upload = multer({
 mongoose.connect("mongodb://localhost:27017/suba")
   .then(() => console.log(" MongoDB connected"))
   .catch(err => console.error(" MongoDB connection error:", err));
+
 
 // --- SCHEMAS ---
 const bannerSchema = new mongoose.Schema({
@@ -779,19 +781,31 @@ app.delete("/api/banners/:id", async (req, res) => {
   }
 });
 
+// In your server.js file, update the /api/services endpoint
 app.get("/api/services", async (req, res) => {
   try {
+    // Always fetch from MongoDB first
     const services = await Service.find({ isActive: true }).sort({ order: 1 });
+    
     if (services && services.length > 0) {
       return res.json({ services });
     }
+    
+    // Fallback to static data only if no services in MongoDB
+    console.log("No services found in MongoDB, using static data as fallback");
     const staticData = readStaticData();
     if (staticData && staticData.services) {
       return res.json({ services: staticData.services });
     }
+    
     res.status(404).json({ error: "No services found" });
   } catch (error) {
     console.error("Error fetching services:", error);
+    // On error, use static data as fallback
+    const staticData = readStaticData();
+    if (staticData && staticData.services) {
+      return res.json({ services: staticData.services });
+    }
     res.status(500).json({ error: "Failed to fetch services" });
   }
 });

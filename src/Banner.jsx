@@ -33,10 +33,18 @@ function Banner() {
       const res = await fetch("http://localhost:5000/api/services");
       if (!res.ok) throw new Error("Failed to fetch services");
       const data = await res.json();
-      setServices(data.services || []);
+      
+      // Ensure we have services data
+      if (data.services && Array.isArray(data.services)) {
+        setServices(data.services);
+      } else {
+        setServices([]);
+        setError("No services available");
+      }
     } catch (err) {
       console.error("Error fetching services:", err);
       setError("Failed to load services");
+      setServices([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
@@ -47,14 +55,61 @@ function Banner() {
     fetchServices();
   }, []);
 
-  const firstRow = services.slice(0, 2);
-  const secondRow = services.slice(2, 5);
-
+  // Handle service click - now based on category field from MongoDB
   const handleServiceClick = (service) => {
-    if (service.name.toLowerCase().includes("salon")) {
+    // Navigate based on service key or category
+    if (service.key) {
+      switch(service.key.toLowerCase()) {
+        case 'salon':
+          navigate("/salon");
+          break;
+        case 'ac':
+          navigate("/ac-repair");
+          break;
+        case 'clean':
+          navigate("/cleaning");
+          break;
+        case 'electric':
+          navigate("/electrician");
+          break;
+        case 'native':
+          navigate("/water-purifier");
+          break;
+        case 'plumbing':
+          navigate("/plumbing");
+          break;
+        default:
+          navigate("/services");
+      }
+    } else if (service.category) {
+      switch(service.category.toLowerCase()) {
+        case 'salon':
+        case 'beauty':
+          navigate("/salon");
+          break;
+        case 'ac repair':
+        case 'appliance':
+          navigate("/ac-repair");
+          break;
+        case 'cleaning':
+          navigate("/cleaning");
+          break;
+        case 'repair':
+        case 'electrician':
+        case 'plumbing':
+          navigate("/electrician");
+          break;
+        case 'water':
+          navigate("/water-purifier");
+          break;
+        default:
+          navigate("/services");
+      }
+    } else if (service.name.toLowerCase().includes("salon")) {
       navigate("/salon");
+    } else {
+      navigate("/services");
     }
-    // Add more navigation logic for other services
   };
 
   if (loading) {
@@ -66,6 +121,14 @@ function Banner() {
       </Container>
     );
   }
+
+  // Sort services by order if available
+  const sortedServices = [...services].sort((a, b) => (a.order || 0) - (b.order || 0));
+  
+  // First row: first 2 services
+  const firstRow = sortedServices.slice(0, 2);
+  // Second row: next 3 services
+  const secondRow = sortedServices.slice(2, 5);
 
   return (
     <Container className="contain" style={{ marginTop: "50px" }}>
@@ -88,7 +151,7 @@ function Banner() {
             <div className="first-row d-flex">
               {firstRow.map((s, index) => (
                 <div
-                  key={s.key || index}
+                  key={s._id || s.key || index}
                   className="services first-row-item d-flex align-items-center justify-content-between"
                   onClick={() => handleServiceClick(s)}
                   style={{ cursor: "pointer" }}
@@ -110,7 +173,7 @@ function Banner() {
             <div className="first-row d-flex">
               {secondRow.map((s, index) => (
                 <div
-                  key={s.key || index}
+                  key={s._id || s.key || index}
                   className="services second-row-item d-flex flex-column align-items-center position-relative"
                   onClick={() => handleServiceClick(s)}
                   style={{ cursor: "pointer" }}

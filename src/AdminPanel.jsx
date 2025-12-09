@@ -2,15 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { 
   Container, Row, Col, Card, Table, Form, Button, 
   Spinner, Modal, Nav, Navbar, Badge,
-  Dropdown, Pagination, InputGroup, Alert
+  Dropdown,  Alert
 } from 'react-bootstrap';
-import { MdOutlineNoteAlt } from "react-icons/md";
-import { SiCashapp } from "react-icons/si";
-import { FaUserSecret } from "react-icons/fa";
 import { MdModeEdit } from "react-icons/md";
 import { MdOutlineDelete } from "react-icons/md";
 import { FaFileExcel, FaFilePdf, FaFileCsv } from "react-icons/fa";
-
+import { FcBusinessman } from "react-icons/fc";
+import { FcPlanner } from "react-icons/fc";
+import { FcBullish } from "react-icons/fc";
+import { FcSupport } from "react-icons/fc";
 // Import download libraries
 import jsPDF from 'jspdf';
 import html2pdf from 'html2pdf.js';
@@ -97,7 +97,16 @@ function AdminPanel() {
     order: 0,
     isActive: true
   });
-  
+  const [editCategoryId, setEditCategoryId] = useState(null);
+  const [isEditingCategory, setIsEditingCategory] = useState(false);
+  const [editCategory, setEditCategory] = useState({
+    name: '',
+    description: '',
+    category: '',
+    order: 0,
+    isActive: true
+  });
+    
   // Product Management States
   const [products, setProducts] = useState([]);
   const [productSearch, setProductSearch] = useState('');
@@ -183,21 +192,33 @@ function AdminPanel() {
     }
   };
 
-  const fetchDashboardData = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/admin/dashboard', {
-        headers: { 'admin-token': 'admin-secret-token' }
-      });
-      const data = await response.json();
-      if (data.success) {
-        setStats(data.stats);
-        setRecentBookings(data.recentBookings || []);
-        setRecentUsers(data.recentUsers || []);
-      }
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+const fetchDashboardData = async () => {
+  try {
+    const response = await fetch('http://localhost:5000/api/admin/dashboard', {
+      headers: { 'admin-token': 'admin-secret-token' }
+    });
+    const data = await response.json();
+    if (data.success) {
+      setStats(data.stats);
+      
+      // Transform recent bookings to include profile images from users
+      const transformedBookings = data.recentBookings?.map(booking => {
+        // Find matching user from recent users
+        const user = data.recentUsers?.find(u => u.email === booking.userEmail);
+        return {
+          ...booking,
+          userProfileImage: user?.profileImage || '',
+          userName: user?.name || booking.userName
+        };
+      }) || [];
+      
+      setRecentBookings(transformedBookings);
+      setRecentUsers(data.recentUsers || []);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+  }
+};
 
   const fetchStaff = async (page = 1, search = '', perPage = staffPerPage) => {
     try {
@@ -291,27 +312,59 @@ function AdminPanel() {
     }
   };
 
-  const fetchBookings = async (page = 1, search = '', status = '', perPage = bookingPerPage) => {
-    try {
-      let url = `http://localhost:5000/api/admin/bookings?page=${page}&limit=${perPage}&search=${search}`;
-      if (status) url += `&status=${status}`;
+ const fetchBookings = async (page = 1, search = '', status = '', perPage = bookingPerPage) => {
+  try {
+    let url = `http://localhost:5000/api/admin/bookings?page=${page}&limit=${perPage}&search=${search}`;
+    if (status) url += `&status=${status}`;
+    
+    const response = await fetch(url, {
+      headers: { 'admin-token': 'admin-secret-token' }
+    });
+    const data = await response.json();
+    if (data.success) {
+      // Get user emails from bookings
+      const userEmails = data.bookings.map(b => b.userEmail);
       
-      const response = await fetch(url, {
-        headers: { 'admin-token': 'admin-secret-token' }
+      // Fetch user profile images
+      const usersResponse = await fetch(`http://localhost:5000/api/admin/users-by-emails`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'admin-token': 'admin-secret-token'
+        },
+        body: JSON.stringify({ emails: userEmails })
       });
-      const data = await response.json();
-      if (data.success) {
-        setBookings(data.bookings || []);
-        setBookingTotalPages(data.pagination?.pages || 1);
-        setBookingTotalItems(data.pagination?.total || 0);
-        setSelectedBookings([]);
-        setSelectAllBookings(false);
-        setBookingPerPage(perPage);
+      
+      const usersData = await usersResponse.json();
+      const userMap = {};
+      
+      if (usersData.success) {
+        usersData.users.forEach(user => {
+          userMap[user.email] = {
+            name: user.name,
+            profileImage: user.profileImage
+          };
+        });
       }
-    } catch (error) {
-      console.error('Error fetching bookings:', error);
+      
+      // Add profile images to bookings
+      const bookingsWithProfiles = data.bookings.map(booking => ({
+        ...booking,
+        userName: userMap[booking.userEmail]?.name || booking.userName,
+        userProfileImage: userMap[booking.userEmail]?.profileImage || ''
+      }));
+      
+      setBookings(bookingsWithProfiles || []);
+      setBookingTotalPages(data.pagination?.pages || 1);
+      setBookingTotalItems(data.pagination?.total || 0);
+      setSelectedBookings([]);
+      setSelectAllBookings(false);
+      setBookingPerPage(perPage);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching bookings:', error);
+  }
+};
 
   const fetchReports = async () => {
     try {
@@ -370,6 +423,49 @@ function AdminPanel() {
     }
     setSelectAllUsers(!selectAllUsers);
   };
+
+  const updateCategory = async (categoryId, updateData) => {
+  try {
+    const formData = new FormData();
+    
+    // Add all data fields to formData
+    if (updateData.name) formData.append('name', updateData.name);
+    if (updateData.description) formData.append('description', updateData.description);
+    if (updateData.category) formData.append('category', updateData.category);
+    if (updateData.order !== undefined) formData.append('order', updateData.order);
+    if (updateData.isActive !== undefined) formData.append('isActive', updateData.isActive);
+    
+    // Handle image file if provided
+    if (updateData.image && updateData.image instanceof File) {
+      formData.append('image', updateData.image);
+    } else if (updateData.img) {
+      // If it's a string URL, you might want to keep the existing image
+      formData.append('img', updateData.img);
+    }
+    
+    const response = await fetch(`http://localhost:5000/api/admin/services/${categoryId}`, {
+      method: 'PUT',
+      headers: { 
+        'admin-token': 'admin-secret-token'
+      },
+      body: formData
+    });
+    
+    const data = await response.json();
+    if (data.success) {
+      alert('Category updated successfully!');
+      fetchCategories();
+      return true;
+    } else {
+      alert(data.error || 'Failed to update category');
+      return false;
+    }
+  } catch (error) {
+    console.error('Error updating category:', error);
+    alert('Failed to update category');
+    return false;
+  }
+};
 
   const handleCategorySelect = (categoryId) => {
     setSelectedCategories(prev => {
@@ -802,8 +898,6 @@ function AdminPanel() {
     return (
       <div className="d-flex justify-content-between align-items-center mt-3">
         <div className="d-flex align-items-center">
-         
-          
           <Dropdown className="me-3">
             <Dropdown.Toggle style={{backgroundColor:"white",border:"1px solid #000000",color:"black"}} size="sm">
               {itemsPerPage} per page
@@ -847,75 +941,90 @@ function AdminPanel() {
   };
 
   const handleMenuClick = (menu) => {
-    setActiveMenu(menu);
-    setIsEditingStaff(false);
-    setEditStaffId(null);
-    
-    // Reset form when switching away from add-staff
-    if (menu !== 'add-staff') {
-      setNewStaff({
-        name: '',
-        email: '',
-        phone: '',
-        designation: '',
-        password: '',
-        permissions: {
-          Dashboard: false,
-          Staff: false,
-          User: false,
-          Category: false,
-          Product: false,
-          Bookings: false,
-          Reports: false,
-          Settings: false
-        }
-      });
-    }
-    
-    switch(menu) {
-      case 'dashboard':
-        fetchDashboardData();
-        break;
-      case 'add-staff':
-        setShowAddStaffForm(true);
-        fetchStaff();
-        break;
-      case 'manage-staff':
-        setShowAddStaffForm(false);
-        fetchStaff();
-        break;
-      case 'manage-users':
-        setShowAddUserModal(false);
-        fetchUsers();
-        break;
-      case 'add-category':
-        setShowAddCategoryModal(true);
-        fetchCategories();
-        break;
-      case 'manage-categories':
-        setShowAddCategoryModal(false);
-        fetchCategories();
-        break;
-      case 'add-product':
-        setShowAddProductModal(true);
-        fetchProducts();
-        break;
-      case 'manage-products':
-        setShowAddProductModal(false);
-        fetchProducts();
-        break;
-      case 'bookings':
-        fetchBookings();
-        break;
-      case 'reports':
-        fetchReports();
-        break;
-      case 'settings':
-        break;
-      default:
-        break;
-    }
-  };
+  setActiveMenu(menu);
+  setIsEditingStaff(false);
+  setEditStaffId(null);
+  setIsEditingCategory(false); // Add this
+  setEditCategoryId(null); // Add this
+  
+  // Reset form when switching away from add-staff
+  if (menu !== 'add-staff') {
+    setNewStaff({
+      name: '',
+      email: '',
+      phone: '',
+      designation: '',
+      password: '',
+      permissions: {
+        Dashboard: false,
+        Staff: false,
+        User: false,
+        Category: false,
+        Product: false,
+        Bookings: false,
+        Reports: false,
+        Settings: false
+      }
+    });
+  }
+  
+  // Reset category edit state when not in add-category
+  if (menu !== 'add-category') {
+    setIsEditingCategory(false);
+    setEditCategoryId(null);
+    setEditCategory({
+      name: '',
+      description: '',
+      category: '',
+      order: 0,
+      isActive: true
+    });
+  }
+  
+  switch(menu) {
+    case 'dashboard':
+      fetchDashboardData();
+      break;
+    case 'add-staff':
+      setShowAddStaffForm(true);
+      fetchStaff();
+      break;
+    case 'manage-staff':
+      setShowAddStaffForm(false);
+      fetchStaff();
+      break;
+    case 'manage-users':
+      setShowAddUserModal(false);
+      fetchUsers();
+      break;
+    case 'add-category':
+      setShowAddCategoryModal(true);
+      fetchCategories();
+      break;
+    case 'manage-categories':
+      setShowAddCategoryModal(false);
+      fetchCategories();
+      break;
+    case 'add-product':
+      setShowAddProductModal(true);
+      fetchProducts();
+      break;
+    case 'manage-products':
+      setShowAddProductModal(false);
+      fetchProducts();
+      break;
+    case 'bookings':
+      fetchBookings();
+      break;
+    case 'reports':
+      fetchReports();
+      break;
+    case 'settings':
+      break;
+    default:
+      break;
+  }
+};
 
   const handleAddStaff = async (e) => {
     e.preventDefault();
@@ -1204,16 +1313,6 @@ function AdminPanel() {
       .substring(0, 2);
   };
 
-  const viewStaffPermissions = (staffMember) => {
-    const permissions = staffMember.permissions || {};
-    const permissionList = Object.entries(permissions)
-      .filter(([key, value]) => value)
-      .map(([key]) => key.charAt(0).toUpperCase() + key.slice(1))
-      .join(', ');
-    
-    alert(`Permissions for ${staffMember.name}:\n${permissionList || 'No permissions'}`);
-  };
-
   const updateBookingStatus = async (bookingId, status) => {
     try {
       const response = await fetch(`http://localhost:5000/api/admin/bookings/${bookingId}/status`, {
@@ -1320,6 +1419,7 @@ function AdminPanel() {
                       required
                       className="py-2"
                       style={{ borderRadius: "8px", border: "2px solid #000000ff" }}
+                      autoComplete="username"
                     />
                   </Form.Group>
                   
@@ -1332,6 +1432,7 @@ function AdminPanel() {
                       required
                       className="py-2"
                       style={{ borderRadius: "8px", border: "2px solid #000000ff" }}
+                      autoComplete="current-password"
                     />
                   </Form.Group>
                   
@@ -1396,10 +1497,10 @@ function AdminPanel() {
                   <Card.Body className="py-4">
                     <div className="d-flex align-items-center justify-content-center mb-3">
                       <div>
-                        <span style={{ fontSize: "30px" }}><FaUserSecret /></span>
+                        <span style={{ fontSize: "30px" }}><FcBusinessman /></span>
                       </div>
                     </div>
-                    <h5 className="text-muted mb-2">Total Users</h5>
+                    <h6 className="text-muted mb-2">Total Users</h6>
                     <h2 className="mb-0" >{stats?.totalUsers || 0}</h2>
                   </Card.Body>
                 </Card>
@@ -1409,10 +1510,10 @@ function AdminPanel() {
                   <Card.Body className="py-4">
                     <div className="d-flex align-items-center justify-content-center mb-3">
                       <div>
-                        <span style={{ fontSize: "30px" }}><MdOutlineNoteAlt /></span>
+                        <span style={{ fontSize: "30px" }}><FcPlanner /></span>
                       </div>
                     </div>
-                    <h5 className="text-muted mb-2">Total Bookings</h5>
+                    <h6 className="text-muted mb-2">Total Bookings</h6>
                     <h2 className="mb-0" >{stats?.totalBookings || 0}</h2>
                   </Card.Body>
                 </Card>
@@ -1422,10 +1523,10 @@ function AdminPanel() {
                   <Card.Body className="py-4">
                     <div className="d-flex align-items-center justify-content-center mb-3">
                       <div >
-                        <span style={{ fontSize: "30px" }}><SiCashapp /></span>
+                        <span style={{ fontSize: "30px" }}><FcBullish/></span>
                       </div>
                     </div>
-                    <h5 className="text-muted mb-2">Total Revenue</h5>
+                    <h6 className="text-muted mb-2">Total Revenue</h6>
                     <h2 className="mb-0" >₹{stats?.totalRevenue?.toLocaleString() || 0}</h2>
                   </Card.Body>
                 </Card>
@@ -1433,93 +1534,193 @@ function AdminPanel() {
               <Col md={3}>
                 <Card className="text-center border-0 shadow-sm">
                   <Card.Body className="py-4">
-                    <div className="d-flex align-items-center justify-content-center mb-3">
-                      <div className="rounded-circle p-3" style={{ background: "rgba(237, 100, 166, 0.1)" }}>
-                        <span style={{ color: "#ed64a6", fontSize: "24px" }}>🔧</span>
+                    <div className="d-flex align-items-center justify-content-center mb-2">
+                      <div >
+                        <span style={{ fontSize: "30px" }}><FcSupport /></span>
                       </div>
                     </div>
-                    <h5 className="text-muted mb-2">Active Services</h5>
-                    <h2 className="mb-0" style={{ color: "#ed64a6" }}>{stats?.totalServices || 0}</h2>
+                    <h6 className="text-muted ">Total Categories</h6>
+                    <h2 >{stats?.totalCategories || 0}</h2>
                   </Card.Body>
                 </Card>
               </Col>
             </Row>
 
             <Row className="mb-4">
-              <Col md={8}>
-                <Card className="border-0 shadow-sm">
-                  <Card.Header className="border-0">
-                    <h5>Recent Bookings</h5>
-                  </Card.Header>
-                  <Card.Body>
-                    <div className="table-responsive">
-                      <Table hover responsive>
-                        <thead>
-                          <tr>
-                            <th>Customer</th>
-                            <th>Service</th>
-                            <th>Price</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {recentBookings.slice(0, 5).map((booking) => (
-                            <tr key={booking._id}>
-                              <td>
-                                <div className="d-flex align-items-center">
-                                  <div className="rounded-circle bg-light d-flex align-items-center justify-content-center me-3" 
-                                       style={{ width: "40px", height: "40px" }}>
-                                    {booking.userName?.charAt(0) || 'C'}
-                                  </div>
-                                  <div>
-                                    <strong>{booking.userName}</strong><br/>
-                                    <small className="text-muted">{booking.userEmail}</small>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>{booking.serviceName}</td>
-                              <td><strong>₹{booking.servicePrice}</strong></td>
-                              <td>
-                                <Badge bg={
-                                  booking.status === 'Completed' ? 'success' :
-                                  booking.status === 'Confirmed' ? 'primary' :
-                                  booking.status === 'Pending' ? 'warning' : 'danger'
-                                }>
-                                  {booking.status}
-                                </Badge>
-                              </td>
-                              <td>{new Date(booking.createdAt).toLocaleDateString()}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </Table>
+  <Col md={8}>
+    <Card className="border-0 shadow-sm">
+      <Card.Header className="border-0">
+        <h5>Recent Bookings</h5>
+      </Card.Header>
+      <Card.Body>
+        <div className="table-responsive">
+          <Table hover responsive>
+            <thead>
+              <tr>
+                <th style={{ width: '80px' }}>Profile</th>
+                <th>Customer</th>
+                <th>Service</th>
+                <th>Price</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentBookings.slice(0, 5).map((booking) => (
+                <tr key={booking._id}>
+                  <td>
+                    <div style={{ 
+                      width: '50px', 
+                      height: '50px', 
+                      borderRadius: '50%', 
+                      overflow: 'hidden',
+                      border: '2px solid #dee2e6'
+                    }}>
+                      {booking.userProfileImage ? (
+                        <img 
+                          src={`http://localhost:5000${booking.userProfileImage}`} 
+                          alt={booking.userName}
+                          style={{ 
+                            width: '100%', 
+                            height: '100%', 
+                            objectFit: 'cover'
+                          }}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.parentElement.innerHTML = `
+                              <div style="
+                                width: 100%;
+                                height: 100%;
+                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                color: white;
+                                font-weight: bold;
+                                font-size: 16px;
+                              ">
+                                ${getInitials(booking.userName)}
+                              </div>
+                            `;
+                          }}
+                        />
+                      ) : (
+                        <div style={{ 
+                          width: '100%', 
+                          height: '100%', 
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: 'bold',
+                          fontSize: '16px'
+                        }}>
+                          {getInitials(booking.userName)}
+                        </div>
+                      )}
                     </div>
-                  </Card.Body>
-                </Card>
-              </Col>
-              <Col md={4}>
-                <Card className="border-0 shadow-sm">
-                  <Card.Header className="border-0">
-                    <h5>Recent Users</h5>
-                  </Card.Header>
-                  <Card.Body>
-                    {recentUsers.slice(0, 5).map((user) => (
-                      <div key={user._id} className="d-flex align-items-center mb-3">
-                        <div className="rounded-circle bg-light d-flex align-items-center justify-content-center me-3" 
-                             style={{ width: "40px", height: "40px" }}>
-                          {user.name?.charAt(0) || 'U'}
-                        </div>
-                        <div>
-                          <strong>{user.name}</strong><br/>
-                          <small className="text-muted">{user.email}</small>
-                        </div>
+                  </td>
+                  <td>
+                    <div>
+                      <strong>{booking.userName}</strong><br/>
+                      <small className="text-muted">{booking.userEmail}</small>
+                    </div>
+                  </td>
+                  <td>{booking.serviceName}</td>
+                  <td><strong>₹{booking.servicePrice}</strong></td>
+                  <td>
+                    <Badge bg={
+                      booking.status === 'Completed' ? 'success' :
+                      booking.status === 'Confirmed' ? 'primary' :
+                      booking.status === 'Pending' ? 'warning' : 'danger'
+                    }>
+                      {booking.status}
+                    </Badge>
+                  </td>
+                  <td>{new Date(booking.createdAt).toLocaleDateString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </div>
+      </Card.Body>
+    </Card>
+  </Col>
+  <Col md={4}>
+    <Card className="border-0 shadow-sm">
+      <Card.Header className="border-0">
+        <h5>Recent Users</h5>
+      </Card.Header>
+      <Card.Body>
+        {recentUsers.slice(0, 5).map((user) => (
+          <div key={user._id} className="d-flex align-items-center mb-3">
+            <div style={{ 
+              width: '50px', 
+              height: '50px', 
+              borderRadius: '50%', 
+              overflow: 'hidden',
+              border: '2px solid #dee2e6',
+              flexShrink: 0,
+              marginRight: '12px'
+            }}>
+              {user.profileImage ? (
+                <img 
+                  src={`http://localhost:5000${user.profileImage}`} 
+                  alt={user.name}
+                  style={{ 
+                    width: '100%', 
+                    height: '100%', 
+                    objectFit: 'cover'
+                  }}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.parentElement.innerHTML = `
+                      <div style="
+                        width: 100%;
+                        height: 100%;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-weight: bold;
+                        font-size: 16px;
+                      ">
+                        ${getInitials(user.name)}
                       </div>
-                    ))}
-                  </Card.Body>
-                </Card>
-              </Col>
-            </Row>
+                    `;
+                  }}
+                />
+              ) : (
+                <div style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: '16px'
+                }}>
+                  {getInitials(user.name)}
+                </div>
+              )}
+            </div>
+            <div style={{ flexGrow: 1 }}>
+              <strong>{user.name || 'Unknown User'}</strong><br/>
+              <small className="text-muted">{user.email || 'No email'}</small>
+              <small className="d-block text-muted">
+                Joined: {new Date(user.createdAt).toLocaleDateString()}
+              </small>
+            </div>
+          </div>
+        ))}
+      </Card.Body>
+    </Card>
+  </Col>
+</Row>
           </>
         );
       
@@ -1590,6 +1791,7 @@ function AdminPanel() {
                         onChange={(e) => setNewStaff({...newStaff, name: e.target.value})}
                         required
                         placeholder="Enter full name"
+                        autoComplete="name"
                       />
                     </Form.Group>
                   </Col>
@@ -1602,6 +1804,7 @@ function AdminPanel() {
                         onChange={(e) => setNewStaff({...newStaff, email: e.target.value})}
                         required
                         placeholder="Enter email address"
+                        autoComplete="email"
                       />
                     </Form.Group>
                   </Col>
@@ -1616,6 +1819,7 @@ function AdminPanel() {
                         onChange={(e) => setNewStaff({...newStaff, phone: e.target.value})}
                         required
                         placeholder="Enter phone number"
+                        autoComplete="tel"
                       />
                     </Form.Group>
                   </Col>
@@ -1650,6 +1854,7 @@ function AdminPanel() {
                         placeholder="Leave empty to generate random password"
                         className="font-monospace"
                         style={{ letterSpacing: '1px' }}
+                        autoComplete="new-password"
                       />
                       <Form.Text className="text-muted">
                         Will be displayed as •••••• in the staff list for security
@@ -1915,7 +2120,7 @@ function AdminPanel() {
                     setUserSearch(e.target.value);
                     fetchUsers(1, e.target.value, userPerPage);
                   }}
-                  style={{ width: '250px' }}
+                  style={{height:"40px",marginTop:"8px" }}
                 />
                 <CustomPagination
                 currentPage={userPage}
@@ -2026,20 +2231,16 @@ function AdminPanel() {
                         </td>
                         <td>{new Date(user.createdAt).toLocaleDateString()}</td>
                         <td>
-                          <Dropdown>
-                            <Dropdown.Toggle variant="light" size="sm">
-                              <i className="bi bi-three-dots"></i>
-                            </Dropdown.Toggle>
-                            <Dropdown.Menu>
-                              <Dropdown.Item>
-                                <i className="bi bi-eye me-2"></i>View Details
-                              </Dropdown.Item>
-                              <Dropdown.Divider />
-                              <Dropdown.Item className="text-danger" onClick={() => deleteUser(user._id)}>
-                                <i className="bi bi-trash me-2"></i>Delete
-                              </Dropdown.Item>
-                            </Dropdown.Menu>
-                          </Dropdown>
+                           <div className="text-center">
+                            <Button 
+                              variant="danger" 
+                              size="sm"
+                              onClick={() => deleteStaff(staffMember._id)}
+                              title="Delete Staff"
+                            >
+                              <MdOutlineDelete />
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -2051,195 +2252,475 @@ function AdminPanel() {
             </Card.Body>
           </Card>
         );
+case 'add-category':
+  return (
+    <Card className="border-0 shadow-sm">
+      <Card.Header className="border-0 d-flex justify-content-between align-items-center">
+        <div>
+          <h5 className="mb-0">
+            {isEditingCategory ? 'Edit Category' : 'Add New Category'}
+          </h5>
+          <p className="text-muted mb-0">
+            {isEditingCategory ? 'Edit category details' : 'Create a new service category'}
+          </p>
+        </div>
+        <div className="d-flex gap-2">
+          <Button 
+            variant="secondary" 
+            onClick={() => {
+              handleMenuClick('manage-categories');
+              setIsEditingCategory(false);
+              setEditCategoryId(null);
+              setEditCategory({
+                name: '',
+                description: '',
+                category: '',
+                order: 0,
+                isActive: true
+              });
+            }}
+          >
+            <i className="bi bi-arrow-left me-2"></i>
+            {isEditingCategory ? 'Cancel Edit' : 'View All Categories'}
+          </Button>
+        </div>
+      </Card.Header>
+      <Card.Body>
+        <Form onSubmit={async (e) => {
+          e.preventDefault();
+          try {
+            const formData = new FormData();
+            const categoryData = isEditingCategory ? editCategory : newCategory;
+            
+            formData.append('name', categoryData.name);
+            formData.append('description', categoryData.description);
+            formData.append('category', categoryData.category || 'General');
+            formData.append('order', categoryData.order);
+            formData.append('isActive', categoryData.isActive);
+            
+            // Get image file if exists
+            const imageInput = document.getElementById('categoryImage');
+            if (imageInput && imageInput.files[0]) {
+              formData.append('image', imageInput.files[0]);
+            } else if (isEditingCategory && categoryData.img) {
+              // Keep existing image if not uploading new one
+              formData.append('img', categoryData.img);
+            }
 
-      case 'add-category':
-        return (
-          <Card className="border-0 shadow-sm">
-            <Card.Header className="border-0 d-flex justify-content-between align-items-center">
-              <div>
-                <h5 className="mb-0">Add New Category</h5>
-                <p className="text-muted mb-0">Create a new service category</p>
-              </div>
-              <div className="d-flex gap-2">
-                <Button 
-                  variant="secondary" 
-                  onClick={() => handleMenuClick('manage-categories')}
+            const url = isEditingCategory 
+              ? `http://localhost:5000/api/admin/services/${editCategoryId}`
+              : 'http://localhost:5000/api/admin/services';
+            
+            const response = await fetch(url, {
+              method: isEditingCategory ? 'PUT' : 'POST',
+              headers: { 
+                'admin-token': 'admin-secret-token'
+              },
+              body: formData
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+              alert(`Category ${isEditingCategory ? 'updated' : 'added'} successfully!`);
+              
+              // Reset form
+              if (isEditingCategory) {
+                setIsEditingCategory(false);
+                setEditCategoryId(null);
+                setEditCategory({
+                  name: '',
+                  description: '',
+                  category: '',
+                  order: 0,
+                  isActive: true
+                });
+              } else {
+                setNewCategory({ 
+                  name: '', 
+                  description: '', 
+                  category: '', 
+                  order: 0, 
+                  isActive: true 
+                });
+              }
+              
+              // Clear file input
+              if (imageInput) {
+                imageInput.value = '';
+              }
+              
+              fetchCategories();
+              handleMenuClick('manage-categories');
+            } else {
+              alert(data.error || `Failed to ${isEditingCategory ? 'update' : 'add'} category`);
+            }
+          } catch (error) {
+            console.error(`Error ${isEditingCategory ? 'updating' : 'adding'} category:`, error);
+            alert(`Failed to ${isEditingCategory ? 'update' : 'add'} category`);
+          }
+        }}>
+          <Row>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label>Category Name *</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={isEditingCategory ? editCategory.name : newCategory.name}
+                  onChange={(e) => isEditingCategory 
+                    ? setEditCategory({...editCategory, name: e.target.value})
+                    : setNewCategory({...newCategory, name: e.target.value})
+                  }
+                  required
+                  placeholder="Enter category name"
+                />
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label>Category Type</Form.Label>
+                <Form.Select
+                  value={isEditingCategory ? editCategory.category : newCategory.category}
+                  onChange={(e) => isEditingCategory
+                    ? setEditCategory({...editCategory, category: e.target.value})
+                    : setNewCategory({...newCategory, category: e.target.value})
+                  }
                 >
-                  <i className="bi bi-arrow-left me-2"></i>View All Categories
-                </Button>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              <Form onSubmit={handleAddCategory}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Category Name *</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={newCategory.name}
-                    onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
-                    required
-                    placeholder="Enter category name"
-                  />
-                </Form.Group>
-                <Form.Group className="mb-3">
-                  <Form.Label>Description</Form.Label>
-                  <Form.Control
-                    as="textarea"
-                    rows={3}
-                    value={newCategory.description}
-                    onChange={(e) => setNewCategory({...newCategory, description: e.target.value})}
-                    placeholder="Enter category description"
-                  />
-                </Form.Group>
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Icon</Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={newCategory.icon}
-                        onChange={(e) => setNewCategory({...newCategory, icon: e.target.value})}
-                        placeholder="e.g., ✂️, 🔧, 🧹"
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Display Order</Form.Label>
-                      <Form.Control
-                        type="number"
-                        value={newCategory.order}
-                        onChange={(e) => setNewCategory({...newCategory, order: parseInt(e.target.value)})}
-                        placeholder="0"
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Form.Group className="mb-3">
+                  <option value="">Select Category Type</option>
+                  <option value="Salon for women">Salon for women</option>
+                  <option value="AC & Appliance Repair">AC & Appliance Repair</option>
+                  <option value="Cleaning">Cleaning</option>
+                  <option value="Electrician, Plumber & Carpenters">Electrician, Plumber & Carpenters</option>
+                  <option value="Native Water Purifier">Native Water Purifier</option>
+                  <option value="General">General</option>
+                </Form.Select>
+              </Form.Group>
+            </Col>
+          </Row>
+          
+          <Form.Group className="mb-3">
+            <Form.Label>Description</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={3}
+              value={isEditingCategory ? editCategory.description : newCategory.description}
+              onChange={(e) => isEditingCategory
+                ? setEditCategory({...editCategory, description: e.target.value})
+                : setNewCategory({...newCategory, description: e.target.value})
+              }
+              placeholder="Enter category description"
+            />
+          </Form.Group>
+          
+          <Row>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label>Category Image {!isEditingCategory && '*'}</Form.Label>
+                <Form.Control
+                  type="file"
+                  id="categoryImage"
+                  accept="image/*"
+                  required={!isEditingCategory}
+                />
+                <Form.Text className="text-muted">
+                  {isEditingCategory 
+                    ? 'Upload a new image or leave empty to keep existing'
+                    : 'Upload a representative image for this category (max 5MB)'
+                  }
+                </Form.Text>
+                {isEditingCategory && editCategory.img && (
+                  <div className="mt-2">
+                    <small className="text-muted">Current Image:</small><br />
+                    <img 
+                      src={`http://localhost:5000${editCategory.img}`} 
+                      alt={editCategory.name}
+                      style={{ 
+                        width: '60px', 
+                        height: '60px', 
+                        objectFit: 'cover',
+                        borderRadius: '4px',
+                        border: '1px solid #dee2e6'
+                      }}
+                    />
+                  </div>
+                )}
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label>Display Order</Form.Label>
+                <Form.Control
+                  type="number"
+                  value={isEditingCategory ? editCategory.order : newCategory.order}
+                  onChange={(e) => isEditingCategory
+                    ? setEditCategory({...editCategory, order: parseInt(e.target.value) || 0})
+                    : setNewCategory({...newCategory, order: parseInt(e.target.value) || 0})
+                  }
+                  placeholder="0"
+                />
+                <Form.Text className="text-muted">
+                  Lower numbers appear first
+                </Form.Text>
+              </Form.Group>
+            </Col>
+          </Row>
+          
+          <Form.Group className="mb-3">
+            <Form.Check
+              type="checkbox"
+              label="Active Category"
+              checked={isEditingCategory ? editCategory.isActive : newCategory.isActive}
+              onChange={(e) => isEditingCategory
+                ? setEditCategory({...editCategory, isActive: e.target.checked})
+                : setNewCategory({...newCategory, isActive: e.target.checked})
+              }
+            />
+          </Form.Group>
+          
+          <div className="d-flex justify-content-end gap-2">
+            <Button 
+              variant="secondary" 
+              onClick={() => {
+                if (isEditingCategory) {
+                  setIsEditingCategory(false);
+                  setEditCategoryId(null);
+                  setEditCategory({
+                    name: '',
+                    description: '',
+                    category: '',
+                    order: 0,
+                    isActive: true
+                  });
+                } else {
+                  setNewCategory({ 
+                    name: '', 
+                    description: '', 
+                    category: '', 
+                    order: 0, 
+                    isActive: true 
+                  });
+                }
+                // Clear file input
+                const imageInput = document.getElementById('categoryImage');
+                if (imageInput) {
+                  imageInput.value = '';
+                }
+              }}
+            >
+              Clear Form
+            </Button>
+            <Button variant={isEditingCategory ? "warning" : "primary"} type="submit">
+              <i className={`bi ${isEditingCategory ? 'bi-pencil' : 'bi-plus-circle'} me-2`}></i>
+              {isEditingCategory ? 'Update Category' : 'Add Category'}
+            </Button>
+          </div>
+        </Form>
+      </Card.Body>
+    </Card>
+  );
+
+    case 'manage-categories':
+  return (
+    <Card className="border-0 shadow-sm">
+      <Card.Header className="border-0 d-flex justify-content-between align-items-center">
+        <div>
+          <h5 className="mb-0">Manage Categories</h5>
+          <p className="text-muted mb-0">View and manage all service categories</p>
+        </div>
+        <div className="d-flex gap-2">
+          <Form.Control
+            type="search"
+            placeholder="Search categories..."
+            style={{ width: '250px' }}
+            onChange={(e) => {
+              // Add search functionality here if needed
+            }}
+          />
+          <CustomPagination
+          currentPage={bookingPage}
+          totalPages={bookingTotalPages}
+          totalItems={bookingTotalItems}
+          itemsPerPage={bookingPerPage}
+          onPageChange={(page) => {
+            setBookingPage(page);
+            fetchBookings(page, bookingSearch, bookingStatus, bookingPerPage);
+          }}
+          onItemsPerPageChange={(perPage) => {
+            setBookingPerPage(perPage);
+            fetchBookings(1, bookingSearch, bookingStatus, perPage);
+          }}
+          showDownload={true}
+          dataType="bookings"
+        />
+         
+        </div>
+      </Card.Header>
+      <Card.Body>
+        {selectedCategories.length > 0 && (
+          <Alert variant="info" className="d-flex justify-content-between align-items-center">
+            <span>{selectedCategories.length} category(ies) selected</span>
+            <Button 
+              variant="danger" 
+              size="sm"
+              onClick={handleBulkDeleteCategories}
+            >
+              <i className="bi bi-trash me-2"></i>Delete Selected
+            </Button>
+          </Alert>
+        )}
+        
+        <div className="table-responsive">
+          <Table hover responsive>
+            <thead>
+              <tr>
+                <th style={{ width: '40px' }}>
                   <Form.Check
                     type="checkbox"
-                    label="Active Category"
-                    checked={newCategory.isActive}
-                    onChange={(e) => setNewCategory({...newCategory, isActive: e.target.checked})}
+                    checked={selectAllCategories}
+                    onChange={handleSelectAllCategories}
                   />
-                </Form.Group>
-                <div className="d-flex justify-content-end gap-2">
-                  <Button 
-                    variant="secondary" 
-                    onClick={() => {
-                      setNewCategory({ name: '', description: '', icon: '', order: 0, isActive: true });
-                    }}
-                  >
-                    Clear Form
-                  </Button>
-                  <Button variant="primary" type="submit">
-                    Add Category
-                  </Button>
-                </div>
-              </Form>
-            </Card.Body>
-          </Card>
-        );
-
-      case 'manage-categories':
-        return (
-          <Card className="border-0 shadow-sm">
-            <Card.Header className="border-0 d-flex justify-content-between align-items-center">
-              <div>
-                <h5 className="mb-0">Manage Categories</h5>
-                <p className="text-muted mb-0">View and manage all service categories</p>
-              </div>
-              <div className="d-flex gap-2">
-                <Form.Control
-                  type="search"
-                  placeholder="Search categories..."
-                  style={{ width: '250px' }}
-                />
-                <Button 
-                  variant="primary"
-                  onClick={() => handleMenuClick('add-category')}
-                >
-                  <i className="bi bi-plus-circle me-2"></i>Add New Category
-                </Button>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              {selectedCategories.length > 0 && (
-                <Alert variant="info" className="d-flex justify-content-between align-items-center">
-                  <span>{selectedCategories.length} category(ies) selected</span>
-                  <Button 
-                    variant="danger" 
-                    size="sm"
-                    onClick={handleBulkDeleteCategories}
-                  >
-                    <i className="bi bi-trash me-2"></i>Delete Selected
-                  </Button>
-                </Alert>
-              )}
-              
-              <div className="table-responsive">
-                <Table hover responsive>
-                  <thead>
-                    <tr>
-                      <th style={{ width: '40px' }}>
-                        <Form.Check
-                          type="checkbox"
-                          checked={selectAllCategories}
-                          onChange={handleSelectAllCategories}
+                </th>
+                <th style={{ width: '80px' }}>Image</th>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Category</th>
+                <th style={{ width: '80px' }}>Order</th>
+                <th style={{ width: '100px' }}>Status</th>
+                <th style={{ width: '120px' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {categories.map((category) => (
+                <tr key={category._id}>
+                  <td>
+                    <Form.Check
+                      type="checkbox"
+                      checked={selectedCategories.includes(category._id)}
+                      onChange={() => handleCategorySelect(category._id)}
+                    />
+                  </td>
+                  <td>
+                    <div style={{ 
+                      width: '60px', 
+                      height: '60px', 
+                      overflow: 'hidden',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '8px'
+                    }}>
+                      {category.img ? (
+                        <img 
+                          src={`http://localhost:5000${category.img}`} 
+                          alt={category.name}
+                          
+                          
                         />
-                      </th>
-                      <th style={{ width: '60px' }}>Icon</th>
-                      <th>Name</th>
-                      <th>Description</th>
-                      <th style={{ width: '80px' }}>Order</th>
-                      <th style={{ width: '100px' }}>Status</th>
-                      <th style={{ width: '100px' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {categories.map((category) => (
-                      <tr key={category._id}>
-                        <td>
-                          <Form.Check
-                            type="checkbox"
-                            checked={selectedCategories.includes(category._id)}
-                            onChange={() => handleCategorySelect(category._id)}
-                          />
-                        </td>
-                        <td style={{ fontSize: '24px' }}>{category.icon || '📁'}</td>
-                        <td><strong>{category.name}</strong></td>
-                        <td>{category.description}</td>
-                        <td>{category.order || 0}</td>
-                        <td>
-                          <Badge bg={category.isActive ? 'success' : 'secondary'}>
-                            {category.isActive ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </td>
-                        <td>
-                          <Dropdown>
-                            <Dropdown.Toggle variant="light" size="sm">
-                              <i className="bi bi-three-dots"></i>
-                            </Dropdown.Toggle>
-                            <Dropdown.Menu>
-                              <Dropdown.Item>
-                                <i className="bi bi-eye me-2"></i>View Services
-                              </Dropdown.Item>
-                              <Dropdown.Divider />
-                              <Dropdown.Item className="text-danger" onClick={() => deleteCategory(category._id)}>
-                                <i className="bi bi-trash me-2"></i>Delete
-                              </Dropdown.Item>
-                            </Dropdown.Menu>
-                          </Dropdown>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </div>
-            </Card.Body>
-          </Card>
-        );
-
+                      ) : (
+                        <div style={{ 
+                          width: '100%', 
+                          height: '100%', 
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: 'bold',
+                          fontSize: '20px'
+                        }}>
+                          {category.name ? category.name.charAt(0).toUpperCase() : 'C'}
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td>
+                    <div>
+                      <strong>{category.name}</strong>
+                      {category.key && (
+                        <small className="text-muted d-block">Key: {category.key}</small>
+                      )}
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ maxWidth: '200px' }}>
+                      {category.description || 'No description'}
+                    </div>
+                  </td>
+                  <td>
+                    <Badge bg="secondary">
+                      {category.category || 'General'}
+                    </Badge>
+                  </td>
+                  <td>
+                    <span className="badge bg-light text-dark">
+                      {category.order || 0}
+                    </span>
+                  </td>
+                  <td>
+                    <Form.Check
+                      type="switch"
+                      id={`category-active-${category._id}`}
+                      checked={category.isActive}
+                      onChange={async (e) => {
+                        try {
+                          const response = await fetch(`http://localhost:5000/api/admin/services/${category._id}/toggle-status`, {
+                            method: 'PUT',
+                            headers: { 
+                              'Content-Type': 'application/json',
+                              'admin-token': 'admin-secret-token'
+                            },
+                            body: JSON.stringify({ isActive: e.target.checked })
+                          });
+                          const data = await response.json();
+                          if (data.success) {
+                            fetchCategories();
+                          }
+                        } catch (error) {
+                          console.error('Error toggling category status:', error);
+                        }
+                      }}
+                      label={category.isActive ? 'Enable' : 'Disable'}
+                    />
+                  </td>
+                  <td>
+                    <div className="d-flex gap-1">
+                      <Button 
+                        variant="warning" 
+                        size="sm"
+                        onClick={() => {
+                          // Set edit mode
+                          setIsEditingCategory(true);
+                          setEditCategoryId(category._id);
+                          setEditCategory({
+                            name: category.name || '',
+                            description: category.description || '',
+                            category: category.category || '',
+                            order: category.order || 0,
+                            isActive: category.isActive !== undefined ? category.isActive : true,
+                            img: category.img || ''
+                          });
+                          // Navigate to add-category form in edit mode
+                          handleMenuClick('add-category');
+                        }}
+                        title="Edit Category"
+                      >
+                        <MdModeEdit/>
+                      </Button>
+                      <Button 
+                        variant="danger" 
+                        size="sm"
+                        onClick={() => deleteCategory(category._id)}
+                        title="Delete Category"
+                      >
+                        <MdOutlineDelete/>
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </div>
+      </Card.Body>
+    </Card>
+  );
       case 'add-product':
         return (
           <Card className="border-0 shadow-sm">
@@ -2510,171 +2991,206 @@ function AdminPanel() {
         );
 
       case 'bookings':
-        return (
-          <Card className="border-0 shadow-sm">
-            <Card.Header className="border-0 d-flex justify-content-between align-items-center">
-              <div>
-                <h5 className="mb-0">Booking Management</h5>
-                <p className="text-muted mb-0">Manage all customer bookings</p>
-              </div>
-              <div className="d-flex gap-2">
-                <Form.Select 
-                  value={bookingStatus} 
-                  onChange={(e) => {
-                    setBookingStatus(e.target.value);
-                    fetchBookings(1, bookingSearch, e.target.value, bookingPerPage);
-                  }}
-                  style={{ width: '150px' }}
-                >
-                  <option value="">All Status</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Confirmed">Confirmed</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Cancelled">Cancelled</option>
-                </Form.Select>
-                <Form.Control
-                  type="search"
-                  placeholder="Search bookings..."
-                  value={bookingSearch}
-                  onChange={(e) => setBookingSearch(e.target.value)}
-                  style={{ width: '250px' }}
-                />
-              </div>
-            </Card.Header>
-            <Card.Body>
-              {selectedBookings.length > 0 && (
-                <Alert variant="info" className="d-flex justify-content-between align-items-center">
-                  <span>{selectedBookings.length} booking(s) selected</span>
-                  <div className="d-flex gap-2">
-                    <Button 
-                      variant="success" 
-                      size="sm"
-                      onClick={() => {
-                        if (window.confirm(`Confirm ${selectedBookings.length} booking(s)?`)) {
-                          selectedBookings.forEach(id => updateBookingStatus(id, 'Confirmed'));
-                          setSelectedBookings([]);
-                          setSelectAllBookings(false);
-                        }
-                      }}
-                    >
-                      <i className="bi bi-check-circle me-2"></i>Confirm Selected
-                    </Button>
-                    <Button 
-                      variant="danger" 
-                      size="sm"
-                      onClick={handleBulkDeleteBookings}
-                    >
-                      <i className="bi bi-trash me-2"></i>Delete Selected
-                    </Button>
-                  </div>
-                </Alert>
-              )}
-              
-              <div className="table-responsive">
-                <Table hover responsive>
-                  <thead>
-                    <tr>
-                      <th style={{ width: '40px' }}>
-                        <Form.Check
-                          type="checkbox"
-                          checked={selectAllBookings}
-                          onChange={handleSelectAllBookings}
+  return (
+    <Card className="border-0 shadow-sm">
+      <Card.Header className="border-0 d-flex justify-content-between align-items-center">
+        <div>
+          <h5 className="mb-0">Booking Management</h5>
+          <p className="text-muted mb-0">Manage all customer bookings</p>
+        </div>
+        <div className="d-flex gap-2">
+          <Form.Select 
+            value={bookingStatus} 
+            onChange={(e) => {
+              setBookingStatus(e.target.value);
+              fetchBookings(1, bookingSearch, e.target.value, bookingPerPage);
+            }}
+            style={{ width: '150px' }}
+          >
+            <option value="">All Status</option>
+            <option value="Pending">Pending</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+          </Form.Select>
+          <Form.Control
+            type="search"
+            placeholder="Search bookings..."
+            value={bookingSearch}
+            onChange={(e) => setBookingSearch(e.target.value)}
+            style={{ width: '250px' }}
+          />
+        </div>
+      </Card.Header>
+      <Card.Body>
+        {selectedBookings.length > 0 && (
+          <Alert variant="info" className="d-flex justify-content-between align-items-center">
+            <span>{selectedBookings.length} booking(s) selected</span>
+            <div className="d-flex gap-2">
+              <Button 
+                variant="success" 
+                size="sm"
+                onClick={() => {
+                  if (window.confirm(`Confirm ${selectedBookings.length} booking(s)?`)) {
+                    selectedBookings.forEach(id => updateBookingStatus(id, 'Confirmed'));
+                    setSelectedBookings([]);
+                    setSelectAllBookings(false);
+                  }
+                }}
+              >
+                <i className="bi bi-check-circle me-2"></i>Confirm Selected
+              </Button>
+              <Button 
+                variant="danger" 
+                size="sm"
+                onClick={handleBulkDeleteBookings}
+              >
+                <i className="bi bi-trash me-2"></i>Delete Selected
+              </Button>
+            </div>
+          </Alert>
+        )}
+        
+        <div className="table-responsive">
+          <Table hover responsive>
+            <thead>
+              <tr>
+                <th style={{ width: '40px' }}>
+                  <Form.Check
+                    type="checkbox"
+                    checked={selectAllBookings}
+                    onChange={handleSelectAllBookings}
+                  />
+                </th>
+                <th style={{ width: '80px' }}>Profile</th>
+                <th style={{ width: '120px' }}>Booking ID</th>
+                <th style={{ width: '180px' }}>Customer</th>
+                <th>Service</th>
+                <th style={{ width: '100px' }}>Price</th>
+                <th style={{ width: '120px' }}>Status</th>
+                <th style={{ width: '120px' }}>Date</th>
+                <th style={{ width: '100px' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bookings.map((booking) => (
+                <tr key={booking._id}>
+                  <td>
+                    <Form.Check
+                      type="checkbox"
+                      checked={selectedBookings.includes(booking._id)}
+                      onChange={() => handleBookingSelect(booking._id)}
+                    />
+                  </td>
+                  <td>
+                    <div style={{ 
+                      width: '40px', 
+                      height: '40px', 
+                      borderRadius: '50%', 
+                      overflow: 'hidden',
+                      border: '2px solid #dee2e6'
+                    }}>
+                      {booking.userProfileImage ? (
+                        <img 
+                          src={`http://localhost:5000${booking.userProfileImage}`} 
+                          alt={booking.userName}
+                          style={{ 
+                            width: '100%', 
+                            height: '100%', 
+                            objectFit: 'cover'
+                          }}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.parentElement.innerHTML = `
+                              <div style="
+                                width: 100%;
+                                height: 100%;
+                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                color: white;
+                                font-weight: bold;
+                                font-size: 12px;
+                              ">
+                                ${getInitials(booking.userName)}
+                              </div>
+                            `;
+                          }}
                         />
-                      </th>
-                      <th style={{ width: '120px' }}>Booking ID</th>
-                      <th style={{ width: '200px' }}>Customer</th>
-                      <th>Service</th>
-                      <th style={{ width: '100px' }}>Price</th>
-                      <th style={{ width: '120px' }}>Status</th>
-                      <th style={{ width: '120px' }}>Date</th>
-                      <th style={{ width: '100px' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {bookings.map((booking) => (
-                      <tr key={booking._id}>
-                        <td>
-                          <Form.Check
-                            type="checkbox"
-                            checked={selectedBookings.includes(booking._id)}
-                            onChange={() => handleBookingSelect(booking._id)}
-                          />
-                        </td>
-                        <td><small className="text-muted">{booking._id?.substring(0, 8)}...</small></td>
-                        <td>
-                          <div className="d-flex align-items-center">
-                            <div className="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" 
-                                 style={{ width: "30px", height: "30px" }}>
-                              {booking.userName?.charAt(0) || 'C'}
-                            </div>
-                            <div>
-                              <strong>{booking.userName}</strong><br/>
-                              <small className="text-muted">{booking.userEmail}</small>
-                            </div>
+                      ) : (
+                        <div style={{ 
+                          width: '100%', 
+                          height: '100%', 
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: 'bold',
+                          fontSize: '12px'
+                        }}>
+                          {getInitials(booking.userName)}
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td><small className="text-muted">{booking._id?.substring(0, 8)}...</small></td>
+                  <td>
+                    <div>
+                      <strong>{booking.userName}</strong><br/>
+                      <small className="text-muted">{booking.userEmail}</small>
+                    </div>
+                  </td>
+                  <td>{booking.serviceName}</td>
+                  <td><strong>₹{booking.servicePrice}</strong></td>
+                  <td>
+                    <Badge bg={
+                      booking.status === 'Completed' ? 'success' :
+                      booking.status === 'Confirmed' ? 'primary' :
+                      booking.status === 'Pending' ? 'warning' : 'danger'
+                    }>
+                      {booking.status}
+                    </Badge>
+                  </td>
+                  <td>{new Date(booking.createdAt).toLocaleDateString()}</td>
+                  <td>
+                    <div className="text-center">
+                            <Button 
+                              variant="danger" 
+                              size="sm"
+                              onClick={() => deleteStaff(staffMember._id)}
+                              title="Delete Staff"
+                            >
+                              <MdOutlineDelete />
+                            </Button>
                           </div>
-                        </td>
-                        <td>{booking.serviceName}</td>
-                        <td><strong>₹{booking.servicePrice}</strong></td>
-                        <td>
-                          <Badge bg={
-                            booking.status === 'Completed' ? 'success' :
-                            booking.status === 'Confirmed' ? 'primary' :
-                            booking.status === 'Pending' ? 'warning' : 'danger'
-                          }>
-                            {booking.status}
-                          </Badge>
-                        </td>
-                        <td>{new Date(booking.createdAt).toLocaleDateString()}</td>
-                        <td>
-                          <Dropdown>
-                            <Dropdown.Toggle variant="light" size="sm">
-                              <i className="bi bi-three-dots"></i>
-                            </Dropdown.Toggle>
-                            <Dropdown.Menu>
-                              <Dropdown.Item onClick={() => updateBookingStatus(booking._id, 'Confirmed')}>
-                                <i className="bi bi-check-circle me-2"></i>Confirm
-                              </Dropdown.Item>
-                              <Dropdown.Item onClick={() => updateBookingStatus(booking._id, 'Completed')}>
-                                <i className="bi bi-check-all me-2"></i>Complete
-                              </Dropdown.Item>
-                              <Dropdown.Item onClick={() => updateBookingStatus(booking._id, 'Cancelled')}>
-                                <i className="bi bi-x-circle me-2"></i>Cancel
-                              </Dropdown.Item>
-                              <Dropdown.Divider />
-                              <Dropdown.Item>
-                                <i className="bi bi-eye me-2"></i>View Details
-                              </Dropdown.Item>
-                              <Dropdown.Item className="text-danger" onClick={() => deleteBooking(booking._id)}>
-                                <i className="bi bi-trash me-2"></i>Delete
-                              </Dropdown.Item>
-                            </Dropdown.Menu>
-                          </Dropdown>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </div>
-              
-              <CustomPagination
-                currentPage={bookingPage}
-                totalPages={bookingTotalPages}
-                totalItems={bookingTotalItems}
-                itemsPerPage={bookingPerPage}
-                onPageChange={(page) => {
-                  setBookingPage(page);
-                  fetchBookings(page, bookingSearch, bookingStatus, bookingPerPage);
-                }}
-                onItemsPerPageChange={(perPage) => {
-                  setBookingPerPage(perPage);
-                  fetchBookings(1, bookingSearch, bookingStatus, perPage);
-                }}
-                showDownload={true}
-                dataType="bookings"
-              />
-            </Card.Body>
-          </Card>
-        );
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </div>
+        
+        <CustomPagination
+          currentPage={bookingPage}
+          totalPages={bookingTotalPages}
+          totalItems={bookingTotalItems}
+          itemsPerPage={bookingPerPage}
+          onPageChange={(page) => {
+            setBookingPage(page);
+            fetchBookings(page, bookingSearch, bookingStatus, bookingPerPage);
+          }}
+          onItemsPerPageChange={(perPage) => {
+            setBookingPerPage(perPage);
+            fetchBookings(1, bookingSearch, bookingStatus, perPage);
+          }}
+          showDownload={true}
+          dataType="bookings"
+        />
+      </Card.Body>
+    </Card>
+  );
 
       case 'reports':
         return (
@@ -2851,6 +3367,7 @@ function AdminPanel() {
                         type="email"
                         value={settings.contactEmail}
                         onChange={(e) => setSettings({...settings, contactEmail: e.target.value})}
+                        autoComplete="email"
                       />
                     </Form.Group>
                   </Col>
@@ -2863,6 +3380,7 @@ function AdminPanel() {
                         type="text"
                         value={settings.contactPhone}
                         onChange={(e) => setSettings({...settings, contactPhone: e.target.value})}
+                        autoComplete="tel"
                       />
                     </Form.Group>
                   </Col>
@@ -2873,6 +3391,7 @@ function AdminPanel() {
                         type="text"
                         value={settings.address}
                         onChange={(e) => setSettings({...settings, address: e.target.value})}
+                        autoComplete="street-address"
                       />
                     </Form.Group>
                   </Col>
@@ -3147,77 +3666,6 @@ function AdminPanel() {
           {renderContent()}
         </Container>
 
-        {/* Add Category Modal */}
-        <Modal show={showAddCategoryModal} onHide={() => setShowAddCategoryModal(false)}>
-          <Modal.Header closeButton>
-            <Modal.Title>Add New Category</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <Form onSubmit={handleAddCategory}>
-              <Form.Group className="mb-3">
-                <Form.Label>Category Name *</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={newCategory.name}
-                  onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
-                  required
-                  placeholder="Enter category name"
-                />
-              </Form.Group>
-              <Form.Group className="mb-3">
-                <Form.Label>Description</Form.Label>
-                <Form.Control
-                  as="textarea"
-                  rows={3}
-                  value={newCategory.description}
-                  onChange={(e) => setNewCategory({...newCategory, description: e.target.value})}
-                  placeholder="Enter category description"
-                />
-              </Form.Group>
-              <Row>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Icon</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={newCategory.icon}
-                      onChange={(e) => setNewCategory({...newCategory, icon: e.target.value})}
-                      placeholder="e.g., ✂️, 🔧, 🧹"
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Display Order</Form.Label>
-                    <Form.Control
-                      type="number"
-                      value={newCategory.order}
-                      onChange={(e) => setNewCategory({...newCategory, order: parseInt(e.target.value)})}
-                      placeholder="0"
-                    />
-                  </Form.Group>
-                </Col>
-              </Row>
-              <Form.Group className="mb-3">
-                <Form.Check
-                  type="checkbox"
-                  label="Active Category"
-                  checked={newCategory.isActive}
-                  onChange={(e) => setNewCategory({...newCategory, isActive: e.target.checked})}
-                />
-              </Form.Group>
-              <div className="d-flex justify-content-end gap-2">
-                <Button variant="secondary" onClick={() => setShowAddCategoryModal(false)}>
-                  Cancel
-                </Button>
-                <Button variant="primary" type="submit">
-                  Add Category
-                </Button>
-              </div>
-            </Form>
-          </Modal.Body>
-        </Modal>
-
         {/* Add User Modal */}
         <Modal show={showAddUserModal} onHide={() => setShowAddUserModal(false)}>
           <Modal.Header closeButton>
@@ -3233,6 +3681,7 @@ function AdminPanel() {
                   onChange={(e) => setNewUser({...newUser, name: e.target.value})}
                   required
                   placeholder="Enter full name"
+                  autoComplete="name"
                 />
               </Form.Group>
               <Form.Group className="mb-3">
@@ -3243,6 +3692,7 @@ function AdminPanel() {
                   onChange={(e) => setNewUser({...newUser, email: e.target.value})}
                   required
                   placeholder="Enter email address"
+                  autoComplete="email"
                 />
               </Form.Group>
               <Form.Group className="mb-3">
@@ -3253,6 +3703,7 @@ function AdminPanel() {
                   onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
                   required
                   placeholder="Enter phone number"
+                  autoComplete="tel"
                 />
               </Form.Group>
               <Form.Group className="mb-3">
@@ -3275,6 +3726,7 @@ function AdminPanel() {
                   placeholder="Enter password"
                   className="font-monospace"
                   style={{ letterSpacing: '1px' }}
+                  autoComplete="new-password"
                 />
                 <Form.Text className="text-muted">
                   Will be displayed as •••••• in the user list for security

@@ -1,9 +1,44 @@
-// adminRoutes.js - Corrected without profile image
 import express from "express";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import multer from "multer";
+import path from "path";
+import { fileURLToPath } from 'url';
+import fs from "fs";
 
 const router = express.Router();
+
+// Setup multer for file uploads
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, "../assets");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname);
+    cb(null, uniqueName);
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB
+  }
+});
 
 // Staff Schema - No profileImage field
 const staffSchema = new mongoose.Schema({
@@ -29,35 +64,7 @@ const staffSchema = new mongoose.Schema({
 
 const Staff = mongoose.model("Staff", staffSchema);
 
-// Initialize default staff
-export const initializeStaff = async () => {
-  try {
-    const staffExists = await Staff.findOne({ email: "manager@urbancompany.com" });
-    if (!staffExists) {
-      const staff = new Staff({
-        name: "Manager",
-        email: "manager@urbancompany.com",
-        phone: "9876543210",
-        designation: "Manager",
-        isActive: true,
-        permissions: {
-          Dashboard: true,
-          Staff: true,
-          User: true,
-          Category: true,
-          Product: true,
-          Bookings: true,
-          Reports: true,
-          Settings: true
-        }
-      });
-      await staff.save();
-      console.log(" Default staff created: manager@urbancompany.com");
-    }
-  } catch (error) {
-    console.error("Error initializing staff:", error);
-  }
-};
+
 
 // Get all staff with pagination
 router.get("/staff", async (req, res) => {
@@ -369,6 +376,7 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ error: "Failed to login" });
   }
 });
+// In adminRoutes.js - update the dashboard endpoint
 
 // Admin Dashboard Statistics
 router.get("/dashboard", async (req, res) => {
@@ -380,7 +388,7 @@ router.get("/dashboard", async (req, res) => {
 
     const totalUsers = await User.countDocuments();
     const totalBookings = await Booking.countDocuments();
-    const totalServices = await Service.countDocuments();
+    const totalCategories = await Service.countDocuments();
     const totalPackages = await Package.countDocuments();
     
     const totalRevenue = await Booking.aggregate([
@@ -392,15 +400,43 @@ router.get("/dashboard", async (req, res) => {
       }
     ]);
 
+    // Get recent bookings with user details
     const recentBookings = await Booking.find()
       .sort({ createdAt: -1 })
       .limit(10)
-      .select('userName userEmail serviceName servicePrice status createdAt');
-
+      .lean(); // Use lean() for plain JavaScript objects
+    
+    // Get user emails from bookings
+    const userEmails = recentBookings.map(b => b.userEmail);
+    
+    // Get users with profile images
+    const users = await User.find({ email: { $in: userEmails } })
+      .select('email name profileImage')
+      .lean();
+    
+    // Create a user map for quick lookup
+    const userMap = {};
+    users.forEach(user => {
+      userMap[user.email] = {
+        name: user.name,
+        profileImage: user.profileImage
+      };
+    });
+    
+    // Add user details to bookings
+    const recentBookingsWithUserDetails = recentBookings.map(booking => {
+      const userDetails = userMap[booking.userEmail] || {};
+      return {
+        ...booking,
+        userName: userDetails.name || booking.userName,
+        userProfileImage: userDetails.profileImage || ''
+      };
+    });
+    
     const recentUsers = await User.find()
       .sort({ createdAt: -1 })
       .limit(10)
-      .select('name email phone city createdAt');
+      .select('name email phone city profileImage createdAt');
 
     const monthlyRevenue = await Booking.aggregate([
       {
@@ -440,11 +476,11 @@ router.get("/dashboard", async (req, res) => {
       stats: {
         totalUsers,
         totalBookings,
-        totalServices,
+        totalCategories,
         totalPackages,
         totalRevenue: totalRevenue[0]?.total || 0
       },
-      recentBookings,
+      recentBookings: recentBookingsWithUserDetails,
       recentUsers,
       monthlyRevenue,
       topServices
@@ -453,6 +489,30 @@ router.get("/dashboard", async (req, res) => {
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
     res.status(500).json({ error: "Failed to fetch dashboard statistics" });
+  }
+});
+
+// Get users by emails
+router.post("/users-by-emails", async (req, res) => {
+  try {
+    const { emails } = req.body;
+    
+    if (!emails || !Array.isArray(emails)) {
+      return res.status(400).json({ error: "Emails array is required" });
+    }
+    
+    const User = mongoose.model("User");
+    const users = await User.find({ email: { $in: emails } })
+      .select('name email profileImage');
+    
+    res.json({
+      success: true,
+      users
+    });
+    
+  } catch (error) {
+    console.error("Error fetching users by emails:", error);
+    res.status(500).json({ error: "Failed to fetch users" });
   }
 });
 
@@ -691,8 +751,7 @@ router.delete("/bookings/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to delete booking" });
   }
 });
-
-// Get all services
+// In adminRoutes.js - update the get services endpoint:
 router.get("/services", async (req, res) => {
   try {
     const Service = mongoose.model("Service");
@@ -778,6 +837,186 @@ router.get("/packages", async (req, res) => {
   }
 });
 
+router.put("/services/:id/toggle-status", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+    
+    const Service = mongoose.model("Service");
+    const service = await Service.findById(id);
+    if (!service) {
+      return res.status(404).json({ error: "Service not found" });
+    }
+    
+    service.isActive = isActive !== undefined ? isActive : !service.isActive;
+    await service.save();
+    
+    res.json({
+      success: true,
+      message: `Service ${service.isActive ? 'enabled' : 'disabled'} successfully`,
+      service
+    });
+    
+  } catch (error) {
+    console.error("Error toggling service status:", error);
+    res.status(500).json({ error: "Failed to update service status" });
+  }
+});
+
+// Update service/category WITH image upload
+router.put("/services/:id", upload.single('image'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const Service = mongoose.model("Service");
+    const service = await Service.findById(id);
+    if (!service) {
+      return res.status(404).json({ error: "Service not found" });
+    }
+
+    // Handle image upload
+    if (req.file) {
+      updateData.img = `/assets/${req.file.filename}`;
+    }
+
+    const updatedService = await Service.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    res.json({
+      success: true,
+      message: "Service updated successfully",
+      service: updatedService
+    });
+
+  } catch (error) {
+    console.error("Error updating service:", error);
+    res.status(500).json({ error: "Failed to update service" });
+  }
+});
+
+// Create new service WITH image upload
+router.post("/services", upload.single('image'), async (req, res) => {
+  try {
+    const { name, description, category, order, isActive = true } = req.body;
+
+    // Handle image upload
+    let imageUrl = "/assets/default-category.png";
+    if (req.file) {
+      imageUrl = `/assets/${req.file.filename}`;
+    }
+
+    if (!name) {
+      return res.status(400).json({ error: "Service name is required" });
+    }
+
+    const Service = mongoose.model("Service");
+    const service = new Service({
+      name,
+      description: description || "",
+      category: category || "General",
+      img: imageUrl,
+      order: order || 0,
+      isActive: isActive !== undefined ? isActive : true
+    });
+
+    await service.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Service created successfully",
+      service
+    });
+
+  } catch (error) {
+    console.error("Error creating service:", error);
+    res.status(500).json({ error: "Failed to create service" });
+  }
+});
+
+// Update service WITH image upload
+router.put("/services/:id", upload.single('image'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const Service = mongoose.model("Service");
+    const service = await Service.findById(id);
+    if (!service) {
+      return res.status(404).json({ error: "Service not found" });
+    }
+
+    // Handle image upload
+    if (req.file) {
+      updateData.img = `/assets/${req.file.filename}`;
+      
+      // Optional: Delete old image if not default
+      if (service.img && service.img !== "/assets/default-category.png") {
+        const oldImagePath = path.join(__dirname, '..', service.img);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      }
+    }
+
+    const updatedService = await Service.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    res.json({
+      success: true,
+      message: "Service updated successfully",
+      service: updatedService
+    });
+
+  } catch (error) {
+    console.error("Error updating service:", error);
+    res.status(500).json({ error: "Failed to update service" });
+  }
+});
+// In adminRoutes.js - add bulk delete
+router.delete("/services/bulk-delete", async (req, res) => {
+  try {
+    const { serviceIds } = req.body;
+
+    if (!serviceIds || !Array.isArray(serviceIds) || serviceIds.length === 0) {
+      return res.status(400).json({ error: "No service IDs provided" });
+    }
+
+    const Service = mongoose.model("Service");
+    
+    // Get services to delete images
+    const services = await Service.find({ _id: { $in: serviceIds } });
+    
+    // Delete image files
+    services.forEach(service => {
+      if (service.img && service.img !== "/assets/default-category.png") {
+        const imagePath = path.join(__dirname, '..', service.img);
+        if (fs.existsSync(imagePath)) {
+          fs.unlinkSync(imagePath);
+        }
+      }
+    });
+
+    const result = await Service.deleteMany({ _id: { $in: serviceIds } });
+
+    res.json({
+      success: true,
+      message: `${result.deletedCount} service(s) deleted successfully`,
+      deletedCount: result.deletedCount
+    });
+
+  } catch (error) {
+    console.error("Error bulk deleting services:", error);
+    res.status(500).json({ error: "Failed to delete services" });
+  }
+});
+
 // Admin middleware for authentication
 const adminAuth = (req, res, next) => {
   const adminToken = req.headers['admin-token'];
@@ -793,6 +1032,8 @@ const adminAuth = (req, res, next) => {
   
   next();
 };
+
+
 
 // Apply admin auth middleware to all routes except login
 router.use((req, res, next) => {
