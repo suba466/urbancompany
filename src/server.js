@@ -6,21 +6,23 @@ import mongoose from "mongoose";
 import multer from "multer";
 import fs from "fs";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken"; // ADD THIS
 import adminRoutes from "./adminRoutes.js";
 
 const app = express();
 const PORT = 5000;
+const JWT_SECRET = "your-jwt-secret-key-change-this"; // CHANGE IN PRODUCTION
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-
 
 // __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use("/assets", express.static(path.join(__dirname, "assets")));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // --- Multer Configuration ---
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -49,7 +51,6 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024 // 5MB limit
   }
 });
-
 
 // --- MongoDB Connection ---
 mongoose.connect("mongodb://localhost:27017/suba")
@@ -163,13 +164,36 @@ const Booking = mongoose.model("Booking", bookingSchema);
 app.use("/api/admin", adminRoutes);
 
 
+const verifyToken = (req, res, next) => {
+  const token = req.headers['authorization']?.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({ error: "Access denied. No token provided." });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+};
+
+const verifyAdmin = (req, res, next) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ error: "Admin access required" });
+  }
+  next();
+};
+
+app.use("/api/admin", adminRoutes);
 // User Registration with Image Upload
 app.post("/api/register", upload.single('profileImage'), async (req, res) => {
   try {
     const { name, email, phone, city, password } = req.body;
     
     console.log(" Registration attempt:", { email, name, phone, city });
-    console.log(" Uploaded file:", req.file);
     
     // Validation
     if (!name || !email || !phone || !city || !password) {
@@ -224,7 +248,7 @@ app.post("/api/register", upload.single('profileImage'), async (req, res) => {
       success: true,
       message: "User registered successfully",
       user: {
-        id: user._id,  // Change this line - was: data.user.id
+        id: user._id,
         name: user.name,
         email: user.email,
         phone: user.phone,
@@ -242,7 +266,8 @@ app.post("/api/register", upload.single('profileImage'), async (req, res) => {
     res.status(500).json({ error: "Failed to register user" });
   }
 });
-// User Login
+
+// User Login with JWT
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -266,19 +291,32 @@ app.post("/api/login", async (req, res) => {
       return res.status(400).json({ error: "Invalid email or password" });
     }
 
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        id: user._id,
+        email: user.email,
+        role: 'user'
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
     console.log(` User logged in: ${email}`);
 
     res.json({
       success: true,
       message: "Login successful",
+      token,
       user: {
-        id: user._id,  // Change this line - was: data.user.id
+        id: user._id,
         name: user.name,
         email: user.email,
         phone: user.phone,
         city: user.city,
         profileImage: user.profileImage,
-        title: user.title
+        title: user.title,
+        role: 'user'
       }
     });
 
@@ -1213,11 +1251,5 @@ app.use((error, req, res, next) => {
 app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ error: "Route not found" });
-});
-
-
 
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

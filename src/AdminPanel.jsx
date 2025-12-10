@@ -2,31 +2,32 @@ import React, { useState, useEffect } from 'react';
 import { 
   Container, Row, Col, Card, Table, Form, Button, 
   Spinner, Modal, Nav, Navbar, Badge,
-  Dropdown,  Alert
+  Dropdown, Alert, Tabs, Tab
 } from 'react-bootstrap';
 import { MdModeEdit } from "react-icons/md";
 import { MdOutlineDelete } from "react-icons/md";
 import { FaFileExcel, FaFilePdf, FaFileCsv } from "react-icons/fa";
-import { FcBusinessman } from "react-icons/fc";
-import { FcPlanner } from "react-icons/fc";
-import { FcBullish } from "react-icons/fc";
-import { FcSupport } from "react-icons/fc";
-// Import download libraries
+import { FcBusinessman, FcPlanner, FcBullish, FcSupport } from "react-icons/fc";
 import jsPDF from 'jspdf';
 import html2pdf from 'html2pdf.js';
 import * as XLSX from 'xlsx';
 import Categories from './Categories';
 import CategoryForm from './CategoryForm';
 import { IoEyeSharp } from "react-icons/io5";
-import "./Urbancom.css"; 
+import "./Urbancom.css";
+
 function AdminPanel() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState(null);
+  const [userPermissions, setUserPermissions] = useState(null);
   const [loginData, setLoginData] = useState({ email: '', password: '' });
+  const [loginType, setLoginType] = useState('admin'); // 'admin' or 'staff'
   const [loading, setLoading] = useState(false);
   const [adminLogo, setAdminLogo] = useState('/assets/Uc.png');
   const [activeMenu, setActiveMenu] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [confirmPassword, setConfirmPassword] = useState('');
+  
   // Dashboard States
   const [stats, setStats] = useState(null);
   const [recentBookings, setRecentBookings] = useState([]);
@@ -67,8 +68,9 @@ function AdminPanel() {
   const [formError, setFormError] = useState('');
   const [editStaffId, setEditStaffId] = useState(null);
   const [isEditingStaff, setIsEditingStaff] = useState(false);
-  const [showStaffDetails, setShowStaffDetails]=useState(false);
+  const [showStaffDetails, setShowStaffDetails] = useState(false);
   const [selectedStaffDetails, setSelectedStaffDetails] = useState(null);
+  
   // User Management States
   const [users, setUsers] = useState([]);
   const [userSearch, setUserSearch] = useState('');
@@ -110,7 +112,7 @@ function AdminPanel() {
     order: 0,
     isActive: true
   });
-    
+  
   // Product Management States
   const [products, setProducts] = useState([]);
   const [productSearch, setProductSearch] = useState('');
@@ -155,7 +157,27 @@ function AdminPanel() {
     address: '123 Business Street, City, Country'
   });
 
-  // Fetch functions
+  // Check if user has permission
+  const hasPermission = (permission) => {
+    if (!userPermissions) return false;
+    if (userRole === 'admin') return true; // Admin has all permissions
+    return userPermissions[permission] === true;
+  };
+
+  // Get JWT token from localStorage
+  const getAuthToken = () => {
+    return localStorage.getItem('authToken');
+  };
+
+  // Set authentication headers
+  const getAuthHeaders = () => {
+    const token = getAuthToken();
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
+  };
+
   const fetchAdminLogo = async () => {
     try {
       const response = await fetch('http://localhost:5000/api/static-data');
@@ -171,15 +193,19 @@ function AdminPanel() {
   };
 
   const handleViewStaff = (staffMember) => {
-  setSelectedStaffDetails(staffMember);
-  setShowStaffDetails(true);
-};
+    setSelectedStaffDetails(staffMember);
+    setShowStaffDetails(true);
+  };
 
-  const handleAdminLogin = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/admin/login', {
+      const endpoint = loginType === 'admin' 
+        ? 'http://localhost:5000/api/admin/login'
+        : 'http://localhost:5000/api/admin/staff-login';
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(loginData)
@@ -188,53 +214,66 @@ function AdminPanel() {
       const data = await response.json();
       if (data.success) {
         setIsLoggedIn(true);
-        localStorage.setItem('adminToken', 'admin-secret-token');
+        
+        // Store token and user info
+        localStorage.setItem('authToken', data.token);
+        
+        if (loginType === 'admin') {
+          localStorage.setItem('userRole', 'admin');
+          localStorage.setItem('userPermissions', JSON.stringify(data.admin.permissions));
+          setUserRole('admin');
+          setUserPermissions(data.admin.permissions);
+        } else {
+          localStorage.setItem('userRole', 'staff');
+          localStorage.setItem('userPermissions', JSON.stringify(data.staff.permissions));
+          setUserRole('staff');
+          setUserPermissions(data.staff.permissions);
+        }
+        
         fetchDashboardData();
       } else {
         alert(data.error || 'Login failed');
       }
     } catch (error) {
-      console.error('Admin login error:', error);
+      console.error('Login error:', error);
       alert('Login failed');
     } finally {
       setLoading(false);
     }
   };
 
-const fetchDashboardData = async () => {
-  try {
-    const response = await fetch('http://localhost:5000/api/admin/dashboard', {
-      headers: { 'admin-token': 'admin-secret-token' }
-    });
-    const data = await response.json();
-    if (data.success) {
-      setStats(data.stats);
-      
-      // Transform recent bookings to include profile images from users
-      const transformedBookings = data.recentBookings?.map(booking => {
-        // Find matching user from recent users
-        const user = data.recentUsers?.find(u => u.email === booking.userEmail);
-        return {
-          ...booking,
-          userProfileImage: user?.profileImage || '',
-          userName: user?.name || booking.userName
-        };
-      }) || [];
-      
-      setRecentBookings(transformedBookings);
-      setRecentUsers(data.recentUsers || []);
+  const fetchDashboardData = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/admin/dashboard', {
+        headers: getAuthHeaders()
+      });
+      const data = await response.json();
+      if (data.success) {
+        setStats(data.stats);
+        
+        const transformedBookings = data.recentBookings?.map(booking => {
+          const user = data.recentUsers?.find(u => u.email === booking.userEmail);
+          return {
+            ...booking,
+            userProfileImage: user?.profileImage || '',
+            userName: user?.name || booking.userName
+          };
+        }) || [];
+        
+        setRecentBookings(transformedBookings);
+        setRecentUsers(data.recentUsers || []);
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
     }
-  } catch (error) {
-    console.error('Error fetching dashboard data:', error);
-  }
-};
+  };
 
   const fetchStaff = async (page = 1, search = '', perPage = staffPerPage) => {
     try {
       let url = `http://localhost:5000/api/admin/staff?page=${page}&limit=${perPage}&search=${search}`;
       
       const response = await fetch(url, {
-        headers: { 'admin-token': 'admin-secret-token' }
+        headers: getAuthHeaders()
       });
       const data = await response.json();
       if (data.success) {
@@ -255,7 +294,7 @@ const fetchDashboardData = async () => {
       let url = `http://localhost:5000/api/admin/users?page=${page}&limit=${perPage}&search=${search}`;
       
       const response = await fetch(url, {
-        headers: { 'admin-token': 'admin-secret-token' }
+        headers: getAuthHeaders()
       });
       const data = await response.json();
       if (data.success) {
@@ -271,57 +310,46 @@ const fetchDashboardData = async () => {
     }
   };
 
- const fetchCategories = async () => {
-  try {
-    console.log("🔍 Fetching categories from admin API...");
-    const response = await fetch('http://localhost:5000/api/admin/services', {
-      headers: { 'admin-token': 'admin-secret-token' }
-    });
-    
-    if (!response.ok) {
-      console.error("Failed to fetch categories:", response.status);
-      setCategories([]);
-      return;
-    }
-    
-    const data = await response.json();
-    console.log("Categories API response:", data);
-    
-    if (data.success && data.services && Array.isArray(data.services)) {
-      console.log(`Found ${data.services.length} categories`);
-      
-      // Log each category with its image
-      data.services.forEach((service, index) => {
-        console.log(`Category ${index + 1}:`, {
-          name: service.name,
-          img: service.img,
-          hasImg: !!service.img,
-          fullUrl: `http://localhost:5000${service.img}`
-        });
+  const fetchCategories = async () => {
+    try {
+      console.log("🔍 Fetching categories from admin API...");
+      const response = await fetch('http://localhost:5000/api/admin/services', {
+        headers: getAuthHeaders()
       });
       
-      // Ensure each service has proper img field
-      const formattedCategories = data.services.map(service => ({
-        ...service,
-        img: service.img || '/assets/default-category.png'
-      }));
+      if (!response.ok) {
+        console.error("Failed to fetch categories:", response.status);
+        setCategories([]);
+        return;
+      }
       
-      console.log("Setting categories state");
-      setCategories(formattedCategories);
-    } else {
-      console.error("Invalid response format:", data);
+      const data = await response.json();
+      console.log("Categories API response:", data);
+      
+      if (data.success && data.services && Array.isArray(data.services)) {
+        console.log(`Found ${data.services.length} categories`);
+        
+        const formattedCategories = data.services.map(service => ({
+          ...service,
+          img: service.img || '/assets/default-category.png'
+        }));
+        
+        console.log("Setting categories state");
+        setCategories(formattedCategories);
+      } else {
+        console.error("Invalid response format:", data);
+        setCategories([]);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
       setCategories([]);
     }
-  } catch (error) {
-    console.error('Error fetching categories:', error);
-    setCategories([]);
-  }
-};
+  };
 
   const fetchProducts = async () => {
     try {
       const response = await fetch('http://localhost:5000/api/admin/packages', {
-        headers: { 'admin-token': 'admin-secret-token' }
+        headers: getAuthHeaders()
       });
       const data = await response.json();
       if (data.success) {
@@ -342,59 +370,56 @@ const fetchDashboardData = async () => {
     }
   };
 
- const fetchBookings = async (page = 1, search = '', status = '', perPage = bookingPerPage) => {
-  try {
-    let url = `http://localhost:5000/api/admin/bookings?page=${page}&limit=${perPage}&search=${search}`;
-    if (status) url += `&status=${status}`;
-    
-    const response = await fetch(url, {
-      headers: { 'admin-token': 'admin-secret-token' }
-    });
-    const data = await response.json();
-    if (data.success) {
-      // Get user emails from bookings
-      const userEmails = data.bookings.map(b => b.userEmail);
+  const fetchBookings = async (page = 1, search = '', status = '', perPage = bookingPerPage) => {
+    try {
+      let url = `http://localhost:5000/api/admin/bookings?page=${page}&limit=${perPage}&search=${search}`;
+      if (status) url += `&status=${status}`;
       
-      // Fetch user profile images
-      const usersResponse = await fetch(`http://localhost:5000/api/admin/users-by-emails`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'admin-token': 'admin-secret-token'
-        },
-        body: JSON.stringify({ emails: userEmails })
+      const response = await fetch(url, {
+        headers: getAuthHeaders()
       });
-      
-      const usersData = await usersResponse.json();
-      const userMap = {};
-      
-      if (usersData.success) {
-        usersData.users.forEach(user => {
-          userMap[user.email] = {
-            name: user.name,
-            profileImage: user.profileImage
-          };
+      const data = await response.json();
+      if (data.success) {
+        // Get user emails from bookings
+        const userEmails = data.bookings.map(b => b.userEmail);
+        
+        // Fetch user profile images
+        const usersResponse = await fetch(`http://localhost:5000/api/admin/users-by-emails`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ emails: userEmails })
         });
+        
+        const usersData = await usersResponse.json();
+        const userMap = {};
+        
+        if (usersData.success) {
+          usersData.users.forEach(user => {
+            userMap[user.email] = {
+              name: user.name,
+              profileImage: user.profileImage
+            };
+          });
+        }
+        
+        // Add profile images to bookings
+        const bookingsWithProfiles = data.bookings.map(booking => ({
+          ...booking,
+          userName: userMap[booking.userEmail]?.name || booking.userName,
+          userProfileImage: userMap[booking.userEmail]?.profileImage || ''
+        }));
+        
+        setBookings(bookingsWithProfiles || []);
+        setBookingTotalPages(data.pagination?.pages || 1);
+        setBookingTotalItems(data.pagination?.total || 0);
+        setSelectedBookings([]);
+        setSelectAllBookings(false);
+        setBookingPerPage(perPage);
       }
-      
-      // Add profile images to bookings
-      const bookingsWithProfiles = data.bookings.map(booking => ({
-        ...booking,
-        userName: userMap[booking.userEmail]?.name || booking.userName,
-        userProfileImage: userMap[booking.userEmail]?.profileImage || ''
-      }));
-      
-      setBookings(bookingsWithProfiles || []);
-      setBookingTotalPages(data.pagination?.pages || 1);
-      setBookingTotalItems(data.pagination?.total || 0);
-      setSelectedBookings([]);
-      setSelectAllBookings(false);
-      setBookingPerPage(perPage);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
     }
-  } catch (error) {
-    console.error('Error fetching bookings:', error);
-  }
-};
+  };
 
   const fetchReports = async () => {
     try {
@@ -455,28 +480,23 @@ const fetchDashboardData = async () => {
   };
 
   const updateCategory = async (categoryId, updateData) => {
-  try {
-    const response = await fetch(`http://localhost:5000/api/admin/services/${categoryId}`, {
-      method: 'PUT',
-      headers: { 
-        'Content-Type': 'application/json',
-        'admin-token': 'admin-secret-token'
-      },
-      body: JSON.stringify(updateData)
-    });
-    
-    const data = await response.json();
-    if (data.success) {
-      fetchCategories(); // Refresh the list
-    } else {
-      console.error("Failed to update category:", data.error);
+    try {
+      const response = await fetch(`http://localhost:5000/api/admin/services/${categoryId}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(updateData)
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        fetchCategories();
+      } else {
+        console.error("Failed to update category:", data.error);
+      }
+    } catch (error) {
+      console.error('Error updating category:', error);
     }
-  } catch (error) {
-    console.error('Error updating category:', error);
-  }
-};
-
- 
+  };
 
   const handleProductSelect = (productId) => {
     setSelectedProducts(prev => {
@@ -516,86 +536,83 @@ const fetchDashboardData = async () => {
     setSelectAllBookings(!selectAllBookings);
   };
 
- // Common bulk delete function
-const handleBulkDelete = async (entity, selectedIds) => {
-  if (selectedIds.length === 0) return;
-  
-  const entityNames = {
-    'staff': 'staff member(s)',
-    'users': 'user(s)',
-    'categories': 'category(ies)',
-    'products': 'product(s)',
-    'bookings': 'booking(s)'
-  };
+  // Common bulk delete function
+  const handleBulkDelete = async (entity, selectedIds) => {
+    if (selectedIds.length === 0) return;
+    
+    const entityNames = {
+      'staff': 'staff member(s)',
+      'users': 'user(s)',
+      'categories': 'category(ies)',
+      'products': 'product(s)',
+      'bookings': 'booking(s)'
+    };
 
-  // Map frontend entity names to backend entity names
-  const backendEntityMap = {
-    'staff': 'staff',
-    'users': 'users',
-    'categories': 'services',
-    'products': 'packages', 
-    'bookings': 'bookings'
-  };
+    // Map frontend entity names to backend entity names
+    const backendEntityMap = {
+      'staff': 'staff',
+      'users': 'users',
+      'categories': 'services',
+      'products': 'packages', 
+      'bookings': 'bookings'
+    };
 
-  const backendEntity = backendEntityMap[entity];
-  
-  if (window.confirm(`Are you sure you want to delete ${selectedIds.length} ${entityNames[entity]}?`)) {
-    try {
-      const response = await fetch('http://localhost:5000/api/admin/bulk-delete', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'admin-token': 'admin-secret-token' 
-        },
-        body: JSON.stringify({ 
-          entity: backendEntity, // Use backend entity name
-          ids: selectedIds 
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        alert(data.message);
+    const backendEntity = backendEntityMap[entity];
+    
+    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} ${entityNames[entity]}?`)) {
+      try {
+        const response = await fetch('http://localhost:5000/api/admin/bulk-delete', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ 
+            entity: backendEntity,
+            ids: selectedIds 
+          })
+        });
         
-        // Reset selection and refresh data
-        switch(entity) {
-          case 'staff':
-            setSelectedStaff([]);
-            setSelectAllStaff(false);
-            fetchStaff(staffPage, staffSearch, staffPerPage);
-            break;
-          case 'users':
-            setSelectedUsers([]);
-            setSelectAllUsers(false);
-            fetchUsers(userPage, userSearch, userPerPage);
-            break;
-          case 'categories':
-            setSelectedCategories([]);
-            setSelectAllCategories(false);
-            fetchCategories();
-            break;
-          case 'products':
-            setSelectedProducts([]);
-            setSelectAllProducts(false);
-            fetchProducts();
-            break;
-          case 'bookings':
-            setSelectedBookings([]);
-            setSelectAllBookings(false);
-            fetchBookings(bookingPage, bookingSearch, bookingStatus, bookingPerPage);
-            fetchDashboardData();
-            break;
+        const data = await response.json();
+        
+        if (data.success) {
+          alert(data.message);
+          
+          // Reset selection and refresh data
+          switch(entity) {
+            case 'staff':
+              setSelectedStaff([]);
+              setSelectAllStaff(false);
+              fetchStaff(staffPage, staffSearch, staffPerPage);
+              break;
+            case 'users':
+              setSelectedUsers([]);
+              setSelectAllUsers(false);
+              fetchUsers(userPage, userSearch, userPerPage);
+              break;
+            case 'categories':
+              setSelectedCategories([]);
+              setSelectAllCategories(false);
+              fetchCategories();
+              break;
+            case 'products':
+              setSelectedProducts([]);
+              setSelectAllProducts(false);
+              fetchProducts();
+              break;
+            case 'bookings':
+              setSelectedBookings([]);
+              setSelectAllBookings(false);
+              fetchBookings(bookingPage, bookingSearch, bookingStatus, bookingPerPage);
+              fetchDashboardData();
+              break;
+          }
+        } else {
+          alert(data.error || `Failed to delete ${entity}`);
         }
-      } else {
-        alert(data.error || `Failed to delete ${entity}`);
+      } catch (error) {
+        console.error(`Error deleting ${entity}:`, error);
+        alert(`Failed to delete ${entity}`);
       }
-    } catch (error) {
-      console.error(`Error deleting ${entity}:`, error);
-      alert(`Failed to delete ${entity}`);
     }
-  }
-};
+  };
 
   // Helper function to display password (always shows 6 dots)
   const displayPassword = () => {
@@ -851,7 +868,7 @@ const handleBulkDelete = async (entity, selectedIds) => {
                 <FaFileExcel className="text-secondary" />
               </Button>
               <Button 
-                 style={{backgroundColor:"white",border:"1px solid #000000"}}
+                style={{backgroundColor:"white",border:"1px solid #000000"}}
                 onClick={() => downloadTableAsCSV(dataType)}
                 title="Download as CSV"
               >
@@ -865,98 +882,126 @@ const handleBulkDelete = async (entity, selectedIds) => {
   };
 
   const handleMenuClick = (menu) => {
-  setActiveMenu(menu);
-  setIsEditingStaff(false);
-  setEditStaffId(null);
-  setIsEditingCategory(false); // Add this
-  setEditCategoryId(null); // Add this
-  
-  // Reset form when switching away from add-staff
-  if (menu !== 'add-staff') {
-    setNewStaff({
-      name: '',
-      email: '',
-      phone: '',
-      designation: '',
-      password: '',
-      permissions: {
-        Dashboard: false,
-        Staff: false,
-        User: false,
-        Category: false,
-        Product: false,
-        Bookings: false,
-        Reports: false,
-        Settings: false
-      }
-    });
-  }
-  
-  // Reset category edit state when not in add-category
-  if (menu !== 'add-category') {
+    // Check permission before switching menu
+    const permissionMap = {
+      'dashboard': 'Dashboard',
+      'add-staff': 'Staff',
+      'manage-staff': 'Staff',
+      'manage-users': 'User',
+      'add-category': 'Category',
+      'manage-categories': 'Category',
+      'add-product': 'Product',
+      'manage-products': 'Product',
+      'bookings': 'Bookings',
+      'reports': 'Reports',
+      'settings': 'Settings'
+    };
+
+    const requiredPermission = permissionMap[menu];
+    if (requiredPermission && !hasPermission(requiredPermission)) {
+      alert("You don't have permission to access this section");
+      return;
+    }
+
+    setActiveMenu(menu);
+    setIsEditingStaff(false);
+    setEditStaffId(null);
     setIsEditingCategory(false);
     setEditCategoryId(null);
-    setEditCategory({
-      name: '',
-      description: '',
-      category: '',
-      order: 0,
-      isActive: true
-    });
-  }
-  
-  switch(menu) {
-    case 'dashboard':
-      fetchDashboardData();
-      break;
-    case 'add-staff':
-      setShowAddStaffForm(true);
-      fetchStaff();
-      break;
-    case 'manage-staff':
-      setShowAddStaffForm(false);
-      fetchStaff();
-      break;
-    case 'manage-users':
-      setShowAddUserModal(false);
-      fetchUsers();
-      break;
-    case 'add-category':
-      setShowAddCategoryModal(true);
-      fetchCategories();
-      break;
-    case 'manage-categories':
-      setShowAddCategoryModal(false);
-      fetchCategories();
-      break;
-    case 'add-product':
-      setShowAddProductModal(true);
-      fetchProducts();
-      break;
-    case 'manage-products':
-      setShowAddProductModal(false);
-      fetchProducts();
-      break;
-    case 'bookings':
-      fetchBookings();
-      break;
-    case 'reports':
-      fetchReports();
-      break;
-    case 'settings':
-      break;
-    default:
-      break;
-  }
-};
+    
+    // Reset forms when switching away
+    if (menu !== 'add-staff') {
+      setNewStaff({
+        name: '',
+        email: '',
+        phone: '',
+        designation: '',
+        password: '',
+        permissions: {
+          Dashboard: false,
+          Staff: false,
+          User: false,
+          Category: false,
+          Product: false,
+          Bookings: false,
+          Reports: false,
+          Settings: false
+        }
+      });
+      setConfirmPassword('');
+    }
+    
+    // Reset category edit state
+    if (menu !== 'add-category') {
+      setIsEditingCategory(false);
+      setEditCategoryId(null);
+      setEditCategory({
+        name: '',
+        description: '',
+        category: '',
+        order: 0,
+        isActive: true
+      });
+    }
+    
+    // Fetch data based on menu
+    switch(menu) {
+      case 'dashboard':
+        fetchDashboardData();
+        break;
+      case 'add-staff':
+        setShowAddStaffForm(true);
+        fetchStaff();
+        break;
+      case 'manage-staff':
+        setShowAddStaffForm(false);
+        fetchStaff();
+        break;
+      case 'manage-users':
+        setShowAddUserModal(false);
+        fetchUsers();
+        break;
+      case 'add-category':
+        setShowAddCategoryModal(true);
+        fetchCategories();
+        break;
+      case 'manage-categories':
+        setShowAddCategoryModal(false);
+        fetchCategories();
+        break;
+      case 'add-product':
+        setShowAddProductModal(true);
+        fetchProducts();
+        break;
+      case 'manage-products':
+        setShowAddProductModal(false);
+        fetchProducts();
+        break;
+      case 'bookings':
+        fetchBookings();
+        break;
+      case 'reports':
+        fetchReports();
+        break;
+      case 'settings':
+        break;
+      default:
+        break;
+    }
+  };
 
   const handleAddStaff = async (e) => {
     e.preventDefault();
     setFormError('');
     setFormSuccess(false);
     
-    if (!newStaff.name || !newStaff.email || !newStaff.phone || !newStaff.designation) {
+    if (!newStaff.name || !newStaff.email || !newStaff.phone || !newStaff.designation || !newStaff.password) {
       setFormError("Please fill all required fields");
+      return;
+    }
+    
+    if (newStaff.password !== confirmPassword) {
+      setFormError("Passwords do not match");
       return;
     }
     
@@ -969,10 +1014,7 @@ const handleBulkDelete = async (entity, selectedIds) => {
       
       const response = await fetch(url, {
         method: method,
-        headers: { 
-          'Content-Type': 'application/json',
-          'admin-token': 'admin-secret-token'
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(newStaff)
       });
       
@@ -999,6 +1041,7 @@ const handleBulkDelete = async (entity, selectedIds) => {
             Settings: false
           }
         });
+        setConfirmPassword('');
         
         // Reset editing state
         setEditStaffId(null);
@@ -1051,10 +1094,7 @@ const handleBulkDelete = async (entity, selectedIds) => {
     try {
       const response = await fetch('http://localhost:5000/api/admin/services', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'admin-token': 'admin-secret-token'
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(newCategory)
       });
       
@@ -1077,10 +1117,7 @@ const handleBulkDelete = async (entity, selectedIds) => {
     try {
       const response = await fetch('http://localhost:5000/api/admin/packages', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'admin-token': 'admin-secret-token'
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(newProduct)
       });
       
@@ -1147,7 +1184,7 @@ const handleBulkDelete = async (entity, selectedIds) => {
       try {
         const response = await fetch(`http://localhost:5000/api/admin/staff/${staffId}`, {
           method: 'DELETE',
-          headers: { 'admin-token': 'admin-secret-token' }
+          headers: getAuthHeaders()
         });
         const data = await response.json();
         if (data.success) {
@@ -1168,7 +1205,7 @@ const handleBulkDelete = async (entity, selectedIds) => {
       try {
         const response = await fetch(`http://localhost:5000/api/admin/users/${userId}`, {
           method: 'DELETE',
-          headers: { 'admin-token': 'admin-secret-token' }
+          headers: getAuthHeaders()
         });
         const data = await response.json();
         if (data.success) {
@@ -1189,7 +1226,7 @@ const handleBulkDelete = async (entity, selectedIds) => {
       try {
         const response = await fetch(`http://localhost:5000/api/admin/services/${categoryId}`, {
           method: 'DELETE',
-          headers: { 'admin-token': 'admin-secret-token' }
+          headers: getAuthHeaders()
         });
         
         if (response.ok) {
@@ -1210,7 +1247,7 @@ const handleBulkDelete = async (entity, selectedIds) => {
       try {
         const response = await fetch(`http://localhost:5000/api/admin/packages/${productId}`, {
           method: 'DELETE',
-          headers: { 'admin-token': 'admin-secret-token' }
+          headers: getAuthHeaders()
         });
         
         if (response.ok) {
@@ -1241,10 +1278,7 @@ const handleBulkDelete = async (entity, selectedIds) => {
     try {
       const response = await fetch(`http://localhost:5000/api/admin/bookings/${bookingId}/status`, {
         method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'admin-token': 'admin-secret-token'
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ status })
       });
       const data = await response.json();
@@ -1266,7 +1300,7 @@ const handleBulkDelete = async (entity, selectedIds) => {
       try {
         const response = await fetch(`http://localhost:5000/api/admin/bookings/${bookingId}`, {
           method: 'DELETE',
-          headers: { 'admin-token': 'admin-secret-token' }
+          headers: getAuthHeaders()
         });
         const data = await response.json();
         if (data.success) {
@@ -1284,11 +1318,20 @@ const handleBulkDelete = async (entity, selectedIds) => {
   };
 
   useEffect(() => {
-    fetchAdminLogo();
-    if (isLoggedIn) {
+    // Check if user is already logged in
+    const token = localStorage.getItem('authToken');
+    const role = localStorage.getItem('userRole');
+    const permissions = localStorage.getItem('userPermissions');
+    
+    if (token && role && permissions) {
+      setIsLoggedIn(true);
+      setUserRole(role);
+      setUserPermissions(JSON.parse(permissions));
       fetchDashboardData();
     }
-  }, [isLoggedIn]);
+    
+    fetchAdminLogo();
+  }, []);
 
   if (!isLoggedIn) {
     return (
@@ -1329,15 +1372,32 @@ const handleBulkDelete = async (entity, selectedIds) => {
           <Col xs={12} md={6} className="p-5">
             <Card style={{ border: "0px", boxShadow: "none", backgroundColor: "transparent" }}>
               <Card.Body className="p-0">
-                <div className=" mb-4">
-                 <h6 className='fw-semibold'>Log in as a admin user</h6>
-                 </div>
+                <div className="mb-4">
+                  <h6 className='fw-semibold'>Log in as {loginType === 'admin' ? 'Admin' : 'Staff'}</h6>
+                </div>
                 
-                <Form onSubmit={handleAdminLogin}>
+                <Tabs
+                  activeKey={loginType}
+                  onSelect={(k) => setLoginType(k)}
+                  className="mb-3"
+                >
+                  <Tab eventKey="admin" title="Admin Login">
+                    <div className="mt-3">
+                      <small className="text-muted">Default: admin@urbancompany.com / admin123</small>
+                    </div>
+                  </Tab>
+                  <Tab eventKey="staff" title="Staff Login">
+                    <div className="mt-3">
+                      <small className="text-muted">Use credentials created by admin</small>
+                    </div>
+                  </Tab>
+                </Tabs>
+                
+                <Form onSubmit={handleLogin}>
                   <Form.Group className="mb-3">   
                     <Form.Control
                       type="email"
-                      placeholder="username"
+                      placeholder="Email address"
                       value={loginData.email}
                       onChange={(e) => setLoginData({...loginData, email: e.target.value})}
                       required
@@ -1350,7 +1410,7 @@ const handleBulkDelete = async (entity, selectedIds) => {
                   <Form.Group className="mb-4">
                     <Form.Control
                       type="password"
-                      placeholder="password "
+                      placeholder="Password"
                       value={loginData.password}
                       onChange={(e) => setLoginData({...loginData, password: e.target.value})}
                       required
@@ -1378,29 +1438,8 @@ const handleBulkDelete = async (entity, selectedIds) => {
                         <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
                         <span className="ms-2">Signing in...</span>
                       </>
-                    ) : 'Sign In'}
+                    ) : `Sign In as ${loginType === 'admin' ? 'Admin' : 'Staff'}`}
                   </Button>
-                  
-                  <div className="text-center mt-4 pt-3" style={{ borderTop: "1px solid #eee" }}>
-                    <p className="text-muted mb-2">
-                      <small>
-                        Default Admin Credentials
-                      </small>
-                    </p>
-                    <div style={{ 
-                      background: "#f8f9fa", 
-                      padding: "10px", 
-                      borderRadius: "6px",
-                      fontSize: "14px"
-                    }}>
-                      <div className="mb-1">
-                        <strong>Email:</strong> admin@urbancompany.com
-                      </div>
-                      <div>
-                        <strong>Password:</strong> admin123
-                      </div>
-                    </div>
-                  </div>
                 </Form>
               </Card.Body>
             </Card>
@@ -1410,7 +1449,287 @@ const handleBulkDelete = async (entity, selectedIds) => {
     );
   }
 
+  // Render sidebar with permission checks
+  const renderSidebar = () => {
+    return (
+      <div style={{ 
+        width: '250px', 
+        background: '#000000',
+        color: 'white',
+        padding: '20px 0',
+        position: 'fixed',
+        height: '100vh',
+        zIndex: 1000,
+        overflowY: 'auto'
+      }}>
+        <div className="text-center mb-4 px-3">
+          <img 
+            src={`http://localhost:5000${adminLogo}`} 
+            alt="Urban Company" 
+            style={{ 
+              width: '80px', 
+              height: '80px', 
+              objectFit: 'contain',
+              backgroundColor: 'white',
+              borderRadius: '50%',
+              padding: '10px'
+            }}
+          />
+          <h5 className="mt-3 mb-0">Urban Company</h5>
+          <small className="text-muted">
+            {userRole === 'admin' ? 'Admin Panel' : 'Staff Panel'}
+          </small>
+          <div className="mt-2">
+            <Badge bg={userRole === 'admin' ? 'success' : 'info'}>
+              {userRole === 'admin' ? 'Administrator' : 'Staff'}
+            </Badge>
+          </div>
+        </div>
+
+        <Nav className="flex-column px-3">
+          {/* Dashboard */}
+          {hasPermission('Dashboard') && (
+            <Nav.Link 
+              className={`mb-2 ${activeMenu === 'dashboard' ? 'active' : ''}`}
+              onClick={() => handleMenuClick('dashboard')}
+              style={{ 
+                color: activeMenu === 'dashboard' ? '#000' : 'white',
+                background: activeMenu === 'dashboard' ? 'white' : 'transparent',
+                borderRadius: '8px',
+                padding: '10px 15px'
+              }}
+            >
+              <i className="bi bi-speedometer2 me-2"></i>Dashboard
+            </Nav.Link>
+          )}
+          
+          {/* User Management - Only for admin and staff with Staff permission */}
+          {(userRole === 'admin' || hasPermission('Staff')) && (
+            <Dropdown className="mb-2">
+              <Dropdown.Toggle 
+                as={Nav.Link} 
+                style={{ 
+                  color: ['add-staff', 'manage-staff'].includes(activeMenu) ? '#000' : 'white',
+                  background: ['add-staff', 'manage-staff'].includes(activeMenu) ? 'white' : 'transparent',
+                  borderRadius: '8px',
+                  padding: '10px 15px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <span>
+                  <i className="bi bi-people me-2"></i>User Management
+                </span>
+                <i className="bi bi-chevron-down ms-auto"></i>
+              </Dropdown.Toggle>
+              <Dropdown.Menu style={{ width: '100%' }}>
+                {userRole === 'admin' && (
+                  <Dropdown.Item onClick={() => handleMenuClick('add-staff')}>
+                    <i className="bi bi-person-plus me-2"></i>Add user
+                  </Dropdown.Item>
+                )}
+                <Dropdown.Item onClick={() => handleMenuClick('manage-staff')}>
+                  <i className="bi bi-people-fill me-2"></i>Manage user
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+          )}
+          
+          {/* Customer Management - Only for admin and staff with User permission */}
+          {(userRole === 'admin' || hasPermission('User')) && (
+            <Dropdown className="mb-2">
+              <Dropdown.Toggle 
+                as={Nav.Link} 
+                style={{ 
+                  color: ['manage-users'].includes(activeMenu) ? '#000' : 'white',
+                  background: ['manage-users'].includes(activeMenu) ? 'white' : 'transparent',
+                  borderRadius: '8px',
+                  padding: '10px 15px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <span>
+                  <i className="bi bi-person-badge me-2"></i>Customer Management
+                </span>
+                <i className="bi bi-chevron-down ms-auto"></i>
+              </Dropdown.Toggle>
+              <Dropdown.Menu style={{ width: '100%' }}>
+                <Dropdown.Item onClick={() => handleMenuClick('manage-users')}>
+                  <i className="bi bi-people-fill me-2"></i>Manage customer
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+          )}
+          
+          {/* Category Management */}
+          {(userRole === 'admin' || hasPermission('Category')) && (
+            <Dropdown className="mb-2">
+              <Dropdown.Toggle 
+                as={Nav.Link} 
+                style={{ 
+                  color: ['add-category', 'manage-categories'].includes(activeMenu) ? '#000' : 'white',
+                  background: ['add-category', 'manage-categories'].includes(activeMenu) ? 'white' : 'transparent',
+                  borderRadius: '8px',
+                  padding: '10px 15px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <span>
+                  <i className="bi bi-tags me-2"></i>Category
+                </span>
+                <i className="bi bi-chevron-down ms-auto"></i>
+              </Dropdown.Toggle>
+              <Dropdown.Menu style={{ width: '100%' }}>
+                {userRole === 'admin' && (
+                  <Dropdown.Item onClick={() => handleMenuClick('add-category')}>
+                    <i className="bi bi-folder-plus me-2"></i>Add Category
+                  </Dropdown.Item>
+                )}
+                <Dropdown.Item onClick={() => handleMenuClick('manage-categories')}>
+                  <i className="bi bi-folder-fill me-2"></i>Manage Categories
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+          )}
+          
+          {/* Product Management */}
+          {(userRole === 'admin' || hasPermission('Product')) && (
+            <Dropdown className="mb-2">
+              <Dropdown.Toggle 
+                as={Nav.Link} 
+                style={{ 
+                  color: ['add-product', 'manage-products'].includes(activeMenu) ? '#000' : 'white',
+                  background: ['add-product', 'manage-products'].includes(activeMenu) ? 'white' : 'transparent',
+                  borderRadius: '8px',
+                  padding: '10px 15px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <span>
+                  <i className="bi bi-box-seam me-2"></i>Product
+                </span>
+                <i className="bi bi-chevron-down ms-auto"></i>
+              </Dropdown.Toggle>
+              <Dropdown.Menu style={{ width: '100%' }}>
+                {userRole === 'admin' && (
+                  <Dropdown.Item onClick={() => handleMenuClick('add-product')}>
+                    <i className="bi bi-plus-circle me-2"></i>Add Product
+                  </Dropdown.Item>
+                )}
+                <Dropdown.Item onClick={() => handleMenuClick('manage-products')}>
+                  <i className="bi bi-box-seam me-2"></i>Manage Products
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+          )}
+          
+          {/* Bookings */}
+          {(userRole === 'admin' || hasPermission('Bookings')) && (
+            <Nav.Link 
+              className={`mb-2 ${activeMenu === 'bookings' ? 'active' : ''}`}
+              onClick={() => handleMenuClick('bookings')}
+              style={{ 
+                color: activeMenu === 'bookings' ? '#000' : 'white',
+                background: activeMenu === 'bookings' ? 'white' : 'transparent',
+                borderRadius: '8px',
+                padding: '10px 15px'
+              }}
+            >
+              <i className="bi bi-calendar-check me-2"></i>Bookings
+            </Nav.Link>
+          )}
+          
+          {/* Reports */}
+          {(userRole === 'admin' || hasPermission('Reports')) && (
+            <Nav.Link 
+              className={`mb-2 ${activeMenu === 'reports' ? 'active' : ''}`}
+              onClick={() => handleMenuClick('reports')}
+              style={{ 
+                color: activeMenu === 'reports' ? '#000' : 'white',
+                background: activeMenu === 'reports' ? 'white' : 'transparent',
+                borderRadius: '8px',
+                padding: '10px 15px'
+              }}
+            >
+              <i className="bi bi-graph-up me-2"></i>Reports
+            </Nav.Link>
+          )}
+          
+          {/* Settings */}
+          {(userRole === 'admin' || hasPermission('Settings')) && (
+            <Nav.Link 
+              className={`mb-2 ${activeMenu === 'settings' ? 'active' : ''}`}
+              onClick={() => handleMenuClick('settings')}
+              style={{ 
+                color: activeMenu === 'settings' ? '#000' : 'white',
+                background: activeMenu === 'settings' ? 'white' : 'transparent',
+                borderRadius: '8px',
+                padding: '10px 15px'
+              }}
+            >
+              <i className="bi bi-gear me-2"></i>Settings
+            </Nav.Link>
+          )}
+        </Nav>
+        
+        <div className="px-3 mt-4">
+          <Button 
+            variant="outline-light" 
+            className="w-100"
+            onClick={() => {
+              localStorage.clear();
+              setIsLoggedIn(false);
+              setUserRole(null);
+              setUserPermissions(null);
+            }}
+          >
+            <i className="bi bi-box-arrow-left me-2"></i>Logout
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = () => {
+    // Check permission for current menu
+    const permissionMap = {
+      'dashboard': 'Dashboard',
+      'add-staff': 'Staff',
+      'manage-staff': 'Staff',
+      'manage-users': 'User',
+      'add-category': 'Category',
+      'manage-categories': 'Category',
+      'add-product': 'Product',
+      'manage-products': 'Product',
+      'bookings': 'Bookings',
+      'reports': 'Reports',
+      'settings': 'Settings'
+    };
+
+    const requiredPermission = permissionMap[activeMenu];
+    if (requiredPermission && !hasPermission(requiredPermission)) {
+      return (
+        <Container className="text-center py-5">
+          <Card className="border-0 shadow-sm">
+            <Card.Body>
+              <h3 className="text-danger">Access Denied</h3>
+              <p>You don't have permission to access this section.</p>
+              <Button variant="primary" onClick={() => handleMenuClick('dashboard')}>
+                Go to Dashboard
+              </Button>
+            </Card.Body>
+          </Card>
+        </Container>
+      );
+    }
+
     switch(activeMenu) {
       case 'dashboard':
         return (
@@ -1471,359 +1790,414 @@ const handleBulkDelete = async (entity, selectedIds) => {
             </Row>
 
             <Row className="mb-4">
-  <Col md={8}>
-    <Card className="border-0 shadow-sm">
-      <Card.Header className="border-0">
-        <h5>Recent Bookings</h5>
-      </Card.Header>
-      <Card.Body>
-        <div className="table-responsive">
-          <Table striped bordered hover variant="light">
-            <thead>
-              <tr>
-                <th style={{ width: '80px' }}>Profile</th>
-                <th>Customer</th>
-                <th>Service</th>
-                <th>Price</th>
-                <th>Status</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentBookings.slice(0, 5).map((booking) => (
-                <tr key={booking._id}>
-                  <td>
-                    <div style={{ 
-                      width: '50px', 
-                      height: '50px', 
-                      borderRadius: '50%', 
-                      overflow: 'hidden',
-                      border: '2px solid #dee2e6'
-                    }}>
-                      {booking.userProfileImage ? (
-                        <img 
-                          src={`http://localhost:5000${booking.userProfileImage}`} 
-                          alt={booking.userName}
-                          style={{ 
-                            width: '100%', 
-                            height: '100%', 
-                            objectFit: 'cover'
-                          }}
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.parentElement.innerHTML = `
-                              <div style="
-                                width: 100%;
-                                height: 100%;
-                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                color: white;
-                                font-weight: bold;
-                                font-size: 16px;
-                              ">
-                                ${getInitials(booking.userName)}
-                              </div>
-                            `;
-                          }}
-                        />
-                      ) : (
+              <Col md={8}>
+                <Card className="border-0 shadow-sm">
+                  <Card.Header className="border-0">
+                    <h5>Recent Bookings</h5>
+                  </Card.Header>
+                  <Card.Body>
+                    <div className="table-responsive">
+                      <Table striped bordered hover variant="light">
+                        <thead>
+                          <tr>
+                            <th style={{ width: '80px' }}>Profile</th>
+                            <th>Customer</th>
+                            <th>Service</th>
+                            <th>Price</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recentBookings.slice(0, 5).map((booking) => (
+                            <tr key={booking._id}>
+                              <td>
+                                <div style={{ 
+                                  width: '50px', 
+                                  height: '50px', 
+                                  borderRadius: '50%', 
+                                  overflow: 'hidden',
+                                  border: '2px solid #dee2e6'
+                                }}>
+                                  {booking.userProfileImage ? (
+                                    <img 
+                                      src={`http://localhost:5000${booking.userProfileImage}`} 
+                                      alt={booking.userName}
+                                      style={{ 
+                                        width: '100%', 
+                                        height: '100%', 
+                                        objectFit: 'cover'
+                                      }}
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        e.target.parentElement.innerHTML = `
+                                          <div style="
+                                            width: 100%;
+                                            height: 100%;
+                                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                            display: flex;
+                                            align-items: center;
+                                            justify-content: center;
+                                            color: white;
+                                            font-weight: bold;
+                                            font-size: 16px;
+                                          ">
+                                            ${getInitials(booking.userName)}
+                                          </div>
+                                        `;
+                                      }}
+                                    />
+                                  ) : (
+                                    <div style={{ 
+                                      width: '100%', 
+                                      height: '100%', 
+                                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      color: 'white',
+                                      fontWeight: 'bold',
+                                      fontSize: '16px'
+                                    }}>
+                                      {getInitials(booking.userName)}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td>
+                                <div>
+                                  <strong>{booking.userName}</strong><br/>
+                                  <small className="text-muted">{booking.userEmail}</small>
+                                </div>
+                              </td>
+                              <td>{booking.serviceName}</td>
+                              <td><strong>₹{booking.servicePrice}</strong></td>
+                              <td>
+                                <Badge bg={
+                                  booking.status === 'Completed' ? 'success' :
+                                  booking.status === 'Confirmed' ? 'primary' :
+                                  booking.status === 'Pending' ? 'warning' : 'danger'
+                                }>
+                                  {booking.status}
+                                </Badge>
+                              </td>
+                              <td>{new Date(booking.createdAt).toLocaleDateString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </Table>
+                    </div>
+                  </Card.Body>
+                </Card>
+              </Col>
+              <Col md={4}>
+                <Card className="border-0 shadow-sm">
+                  <Card.Header className="border-0">
+                    <h5>Recent Users</h5>
+                  </Card.Header>
+                  <Card.Body>
+                    {recentUsers.slice(0, 5).map((user) => (
+                      <div key={user._id} className="d-flex align-items-center mb-3">
                         <div style={{ 
-                          width: '100%', 
-                          height: '100%', 
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontWeight: 'bold',
-                          fontSize: '16px'
+                          width: '50px', 
+                          height: '50px', 
+                          borderRadius: '50%', 
+                          overflow: 'hidden',
+                          border: '2px solid #dee2e6',
+                          flexShrink: 0,
+                          marginRight: '12px'
                         }}>
-                          {getInitials(booking.userName)}
+                          {user.profileImage ? (
+                            <img 
+                              src={`http://localhost:5000${user.profileImage}`} 
+                              alt={user.name}
+                              style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                objectFit: 'cover'
+                              }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.parentElement.innerHTML = `
+                                  <div style="
+                                    width: 100%;
+                                    height: 100%;
+                                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    color: white;
+                                    font-weight: bold;
+                                    font-size: 16px;
+                                  ">
+                                    ${getInitials(user.name)}
+                                  </div>
+                                `;
+                              }}
+                            />
+                          ) : (
+                            <div style={{ 
+                              width: '100%', 
+                              height: '100%', 
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                              fontWeight: 'bold',
+                              fontSize: '16px'
+                            }}>
+                              {getInitials(user.name)}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </td>
-                  <td>
-                    <div>
-                      <strong>{booking.userName}</strong><br/>
-                      <small className="text-muted">{booking.userEmail}</small>
-                    </div>
-                  </td>
-                  <td>{booking.serviceName}</td>
-                  <td><strong>₹{booking.servicePrice}</strong></td>
-                  <td>
-                    <Badge bg={
-                      booking.status === 'Completed' ? 'success' :
-                      booking.status === 'Confirmed' ? 'primary' :
-                      booking.status === 'Pending' ? 'warning' : 'danger'
-                    }>
-                      {booking.status}
-                    </Badge>
-                  </td>
-                  <td>{new Date(booking.createdAt).toLocaleDateString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        </div>
-      </Card.Body>
-    </Card>
-  </Col>
-  <Col md={4}>
-    <Card className="border-0 shadow-sm">
-      <Card.Header className="border-0">
-        <h5>Recent Users</h5>
-      </Card.Header>
-      <Card.Body>
-        {recentUsers.slice(0, 5).map((user) => (
-          <div key={user._id} className="d-flex align-items-center mb-3">
-            <div style={{ 
-              width: '50px', 
-              height: '50px', 
-              borderRadius: '50%', 
-              overflow: 'hidden',
-              border: '2px solid #dee2e6',
-              flexShrink: 0,
-              marginRight: '12px'
-            }}>
-              {user.profileImage ? (
-                <img 
-                  src={`http://localhost:5000${user.profileImage}`} 
-                  alt={user.name}
-                  style={{ 
-                    width: '100%', 
-                    height: '100%', 
-                    objectFit: 'cover'
-                  }}
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.parentElement.innerHTML = `
-                      <div style="
-                        width: 100%;
-                        height: 100%;
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: white;
-                        font-weight: bold;
-                        font-size: 16px;
-                      ">
-                        ${getInitials(user.name)}
+                        <div style={{ flexGrow: 1 }}>
+                          <strong>{user.name || 'Unknown User'}</strong><br/>
+                          <small className="text-muted">{user.email || 'No email'}</small>
+                          <small className="d-block text-muted">
+                            Joined: {new Date(user.createdAt).toLocaleDateString()}
+                          </small>
+                        </div>
                       </div>
-                    `;
-                  }}
-                />
-              ) : (
-                <div style={{ 
-                  width: '100%', 
-                  height: '100%', 
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  fontSize: '16px'
-                }}>
-                  {getInitials(user.name)}
-                </div>
-              )}
-            </div>
-            <div style={{ flexGrow: 1 }}>
-              <strong>{user.name || 'Unknown User'}</strong><br/>
-              <small className="text-muted">{user.email || 'No email'}</small>
-              <small className="d-block text-muted">
-                Joined: {new Date(user.createdAt).toLocaleDateString()}
-              </small>
-            </div>
-          </div>
-        ))}
-      </Card.Body>
-    </Card>
-  </Col>
-</Row>
+                    ))}
+                  </Card.Body>
+                </Card>
+              </Col>
+            </Row>
           </>
         );
- case 'add-staff':
-  return (
-    <div className="p-3">
-      <Card className="shadow-lg p-3">
-        <Card.Body>
-          <h5 className="mb-0 fw-semibold">
-            {isEditingStaff ? 'Edit Staff' : (
-              <>
-                User Management
-                <span className="text-muted mx-2" style={{fontSize:"14px",fontWeight:"normal"}}>•</span>
-                <span className="text-muted " style={{fontSize:"14px",fontWeight:"normal"}}>New User</span>
-              </>
-            )}
-          </h5>
-        </Card.Body>
-      </Card>
-      
-      <br />
-      
-      <Card className="shadow-lg p-3">
-        <Card.Body className="">
-          {formSuccess && (
-            <Alert variant="success" onClose={() => setFormSuccess(false)} dismissible>
-              <Alert.Heading>Success!</Alert.Heading>
-              <p>{isEditingStaff ? 'Staff member updated successfully' : 'Staff member has been added successfully'}</p>
-            </Alert>
-          )}
-          
-          {formError && (
-            <Alert variant="danger" onClose={() => setFormError('')} dismissible>
-              <Alert.Heading>Error!</Alert.Heading>
-              <p>{formError}</p>
-            </Alert>
-          )}
 
-           <div className="mb-4">
-            {isEditingStaff ? 'Edit Staff' : (
-              <>
-                <h6 className="fw-semibold mb-1">New user </h6>
-                <p className='text-muted' style={{fontSize:"12px"}}>Use the below form to update the profile</p>
-              </>
-            )}
-          </div>
-          
-          <Form onSubmit={handleAddStaff} className="pt-2">
-           
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label className="mb-1 fw-medium">Name</Form.Label>
-                      <Form.Control
-                        type="text" 
-                        style={{border:"2px solid",height:"50px"}}
-                        value={newStaff.name}
-                        onChange={(e) => setNewStaff({...newStaff, name: e.target.value})}
-                        required
-                        placeholder="Enter full name"
-                        autoComplete="name"
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6} >
-                    <Form.Group className="mb-3">
-                      <Form.Label className="mb-1 fw-medium">E-mail</Form.Label>
-                      <Form.Control
-                        type="email" 
-                        style={{border:"2px solid",height:"50px"}}
-                        value={newStaff.email}
-                        onChange={(e) => setNewStaff({...newStaff, email: e.target.value})}
-                        required
-                        placeholder="Enter email address"
-                        autoComplete="email"
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label className="mb-1 fw-medium">Contact Number</Form.Label>
-                      <Form.Control
-                        type="tel" 
-                        style={{border:"2px solid",height:"50px"}}
-                        value={newStaff.phone}
-                        onChange={(e) => setNewStaff({...newStaff, phone: e.target.value})}
-                        required
-                        placeholder="Enter phone number"
-                        autoComplete="tel"
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label className="mb-1 fw-medium">Designation</Form.Label>
-                      <Form.Select
-                        value={newStaff.designation} 
-                        style={{border:"2px solid",height:"50px"}}
-                        onChange={(e) => setNewStaff({...newStaff, designation: e.target.value})}
-                        required
-                      >
-                        <option value="">Select Designation</option>
-                        <option value="Manager">Manager</option>
-                        <option value="Supervisor">Supervisor</option>
-                        <option value="Technician">Technician</option>
-                        <option value="Customer Support">Customer Support</option>
-                        <option value="Admin">Admin</option>
-                        <option value="Other">Other</option>
-                      </Form.Select>
-                    </Form.Group>
-                  </Col>
-                </Row>
+      case 'add-staff':
+        if (!hasPermission('Staff')) {
+          return (
+            <Card className="border-0 shadow-sm">
+              <Card.Body className="text-center py-5">
+                <h3 className="text-danger">Access Denied</h3>
+                <p>You don't have permission to add staff members.</p>
+              </Card.Body>
+            </Card>
+          );
+        }
+        
+        return (
+          <div className="p-3">
+            <Card className="shadow-lg p-2">
+              <Card.Body>
+                <h6 className="mb-0 fw-semibold">
+                  {isEditingStaff ? 'Edit Staff' : (
+                    <>
+                      User Management
+                      <span className="text-muted mx-2" style={{fontSize:"14px",fontWeight:"normal"}}>•</span>
+                      <span className="text-muted " style={{fontSize:"14px",fontWeight:"normal"}}>New User</span>
+                    </>
+                  )}
+                </h6>
+              </Card.Body>
+            </Card>
+            
+            <br />
+            
+            <Card className="shadow-lg">
+              <Card.Body className="p-4">
+                {formSuccess && (
+                  <Alert variant="success" onClose={() => setFormSuccess(false)} dismissible>
+                    <Alert.Heading>Success!</Alert.Heading>
+                    <p>{isEditingStaff ? 'Staff member updated successfully' : 'Staff member has been added successfully'}</p>
+                  </Alert>
+                )}
                 
-                {/* Only show password fields when not editing */}
-                {!isEditingStaff && (
-                  <Row>
+                {formError && (
+                  <Alert variant="danger" onClose={() => setFormError('')} dismissible>
+                    <Alert.Heading>Error!</Alert.Heading>
+                    <p>{formError}</p>
+                  </Alert>
+                )}
+
+                <div className="mb-4">
+                  {isEditingStaff ? (
+                    <>
+                      <h6 className="fw-semibold mb-1">Edit user</h6>
+                      <p className='text-muted' style={{fontSize:"12px"}}>Update the staff member profile</p>
+                    </>
+                  ) : (
+                    <>
+                      <h6 className="fw-semibold mb-1">New user </h6>
+                      <p className='text-muted' style={{fontSize:"12px"}}>Use the below form to create a new profile</p>
+                    </>
+                  )}
+                </div>
+                
+                <Form onSubmit={handleAddStaff} className="pt-2">
+                  {/* First Row with Name and Email */}
+                  <Row className="gx-5 mb-3">
                     <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label className="mb-1 fw-medium">Password</Form.Label>
+                      <Form.Group>
                         <Form.Control
-                          type="password"
-                          value={newStaff.password} 
-                          onChange={(e) => setNewStaff({...newStaff, password: e.target.value})}
-                          placeholder="Enter password"
-                          className="font-monospace"
-                          style={{ letterSpacing: '1px',border:"2px solid",height:"50px" }}
-                          autoComplete="new-password"
-                          required={!isEditingStaff}
+                          type="text" 
+                          style={{
+                            border:"2px solid",
+                            height:"50px",
+                            fontSize: "14px",
+                            width: "100%"
+                          }}
+                          value={newStaff.name}
+                          onChange={(e) => setNewStaff({...newStaff, name: e.target.value})}
+                          required
+                          placeholder="Name"
+                          autoComplete="name"
                         />
                       </Form.Group>
                     </Col>
                     <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label className="mb-1 fw-medium">Confirm Password</Form.Label>
+                      <Form.Group>
                         <Form.Control
-                          type="password"
-                          value={confirmPassword} 
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          placeholder="Confirm password"
-                          className="font-monospace"
-                          style={{ letterSpacing: '1px',border:"2px solid",height:"50px" }}
-                          autoComplete="new-password"
-                          required={!isEditingStaff}
+                          type="email" 
+                          style={{
+                            border:"2px solid",
+                            height:"50px",
+                            fontSize: "14px",
+                            width: "100%"
+                          }}
+                          value={newStaff.email}
+                          onChange={(e) => setNewStaff({...newStaff, email: e.target.value})}
+                          required
+                          placeholder="E-mail"
+                          autoComplete="email"
                         />
-                        {confirmPassword && newStaff.password !== confirmPassword && (
-                          <small className="text-danger">Passwords do not match</small>
-                        )}
                       </Form.Group>
                     </Col>
                   </Row>
-                )}
-                
-                <Form.Group className="mb-4">
-                  <Form.Label className='fw-semibold mb-3'>Permissions</Form.Label>
-                  <div className="px-1">
-                    <Row>
-                      {Object.keys(newStaff.permissions || {}).map((permission) => (
-                        <Col xs={6} sm={4} md={3} lg={2} key={permission}>
-                          <div 
-                            className="d-flex align-items-center mb-2 p-2 rounded"
+                  
+                  {/* Second Row with Contact Number and Designation */}
+                  <Row className="gx-5 mb-3">
+                    <Col md={6}>
+                      <Form.Group>
+                        <Form.Control
+                          type="tel" 
+                          style={{
+                            border:"2px solid",
+                            height:"50px",
+                            fontSize: "14px",
+                            width: "100%"
+                          }}
+                          value={newStaff.phone}
+                          onChange={(e) => setNewStaff({...newStaff, phone: e.target.value})}
+                          required
+                          placeholder="Contact number"
+                          autoComplete="tel"
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      <Form.Group>
+                        <Form.Select
+                          value={newStaff.designation} 
+                          style={{
+                            border:"2px solid",
+                            height:"50px",
+                            fontSize: "14px",
+                            width: "100%"
+                          }}
+                          onChange={(e) => setNewStaff({...newStaff, designation: e.target.value})}
+                          required
+                        >
+                          <option value="">Select Designation</option>
+                          <option value="Manager">Manager</option>
+                          <option value="Supervisor">Supervisor</option>
+                          <option value="Technician">Technician</option>
+                          <option value="Customer Support">Customer Support</option>
+                          <option value="Admin">Admin</option>
+                          <option value="Other">Other</option>
+                        </Form.Select>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+                  
+                  {/* Password Fields - Only when not editing */}
+                  {!isEditingStaff && (
+                    <Row className="gx-5 mb-3">
+                      <Col md={6}>
+                        <Form.Group>
+                          <Form.Control
+                            type="password"
+                            value={newStaff.password} 
+                            onChange={(e) => setNewStaff({...newStaff, password: e.target.value})}
+                            placeholder="Password"
                             style={{
-                              cursor: 'pointer',
-                              transition: 'all 0.2s'
+                              border:"2px solid",
+                              height:"50px",
+                              fontSize: "14px",
+                              letterSpacing: '1px',
+                              fontFamily: 'monospace',
+                              width: "100%"
                             }}
-                            onClick={() => setNewStaff({
-                              ...newStaff,
-                              permissions: {
-                                ...newStaff.permissions,
-                                [permission]: !newStaff.permissions[permission]
-                              }
-                            })}
-                          >
-                            <div className="flex-grow-1">
+                            autoComplete="new-password"
+                            required
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={6}>
+                        <Form.Group>
+                          <Form.Control
+                            type="password"
+                            value={confirmPassword} 
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="Confirm password"
+                            style={{
+                              border:"2px solid",
+                              height:"50px",
+                              fontSize: "14px",
+                              letterSpacing: '1px',
+                              fontFamily: 'monospace',
+                              width: "100%"
+                            }}
+                            autoComplete="new-password"
+                            required
+                          />
+                          {confirmPassword && newStaff.password !== confirmPassword && (
+                            <small className="text-danger mt-1 d-block">Passwords do not match</small>
+                          )}
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                  )}
+                  
+                  {/* Permissions Section */}
+                  <Form.Group className="my-4">
+                    <Form.Label className='fw-semibold mb-3'>Permissions</Form.Label>
+                    <div className="px-1">
+                      <Row className="gx-5 gy-2">
+                        {[
+                          'Dashboard',
+                          'Staff', 
+                          'User',
+                          'Category',
+                          'Product',
+                          'Bookings',
+                          'Reports',
+                          'Settings'
+                        ].map((permission) => (
+                          <Col xs={6} sm={4} md={3} lg={2} key={permission}>
+                            <div 
+                              className="d-flex align-items-center p-2 rounded"
+                              style={{
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                backgroundColor: newStaff.permissions[permission] ? '#e9ecef' : 'transparent'
+                              }}
+                              onClick={() => setNewStaff({
+                                ...newStaff,
+                                permissions: {
+                                  ...newStaff.permissions,
+                                  [permission]: !newStaff.permissions[permission]
+                                }
+                              })}
+                            >
                               <Form.Check
                                 type="checkbox"
                                 id={`permission-${permission}`}
-                                label={permission.charAt(0).toUpperCase() + permission.slice(1)}
-                                checked={newStaff.permissions[permission]}
+                                label={permission}
+                                checked={newStaff.permissions[permission] || false}
                                 onChange={(e) => setNewStaff({
                                   ...newStaff,
                                   permissions: {
@@ -1832,87 +2206,79 @@ const handleBulkDelete = async (entity, selectedIds) => {
                                   }
                                 })}
                                 className="mb-0"
+                                style={{ fontSize: "13px" }}
                               />
                             </div>
-                          </div>
-                        </Col>
-                      ))}
-                    </Row>
-                    
-                    {/* Summary of selected permissions */}
-                    {Object.values(newStaff.permissions).filter(v => v).length > 0 && (
-                      <div className="mt-3 pt-3 border-top">
-                        <small className="text-muted d-block mb-2">Selected Permissions:</small>
-                        <div>
-                          {Object.entries(newStaff.permissions)
-                            .filter(([key, value]) => value)
-                            .map(([permission], index, arr) => (
-                              <span key={permission}>
-                                {permission.charAt(0).toUpperCase() + permission.slice(1)}
-                                {index < arr.length - 1 ? ', ' : ''}
-                              </span>
-                            ))}
-                        </div>
-                        <small className="text-muted mt-2 d-block">
-                          {Object.values(newStaff.permissions).filter(v => v).length} permission(s) selected
-                        </small>
-                      </div>
-                    )}
+                          </Col>
+                        ))}
+                      </Row>
+                    </div>
+                  </Form.Group>
+                  
+                  {/* Action Buttons */}
+                  <div className="d-flex justify-content-center gap-3 mt-4">
+                    <Button 
+                      variant="outline-secondary" 
+                      onClick={() => {
+                        handleMenuClick('manage-staff');
+                        setNewStaff({
+                          name: '',
+                          email: '',
+                          phone: '',
+                          designation: '',
+                          password: '',
+                          permissions: {
+                            Dashboard: false,
+                            Staff: false,
+                            User: false,
+                            Category: false,
+                            Product: false,
+                            Bookings: false,
+                            Reports: false,
+                            Settings: false
+                          }
+                        });
+                        setConfirmPassword('');
+                        if (isEditingStaff) {
+                          setEditStaffId(null);
+                          setIsEditingStaff(false);
+                        }
+                      }}
+                      style={{ minWidth: '100px' }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      variant={isEditingStaff ? "warning" : "dark"} 
+                      type="submit"
+                      style={{ minWidth: '100px' }}
+                    >
+                      <i className={`bi ${isEditingStaff ? 'bi-pencil' : 'bi-person-plus'} me-2`}></i>
+                      {isEditingStaff ? 'Update' : 'Submit'}
+                    </Button>
                   </div>
-                </Form.Group>
-                
-                <div className="d-flex justify-content-end gap-2 mt-4">
-                 <div className="d-flex justify-content-center gap-3 mt-4">
-                <Button 
-                  variant="secondary" 
-                  onClick={() => {
-                    // Go back to previous page (manage-staff)
-                    handleMenuClick('manage-staff');
-                    // Reset form
-                    setNewStaff({
-                      name: '',
-                      email: '',
-                      phone: '',
-                      designation: '',
-                      password: '',
-                      permissions: {
-                        Dashboard: false,
-                        Staff: false,
-                        User: false,
-                        Category: false,
-                        Product: false,
-                        Bookings: false,
-                        Reports: false,
-                        Settings: false
-                      }
-                    });
-                    setConfirmPassword('');
-                    if (isEditingStaff) {
-                      setEditStaffId(null);
-                      setIsEditingStaff(false);
-                    }
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button variant={isEditingStaff ? "warning" : "dark"} type="submit">
-                  <i className={`bi ${isEditingStaff ? 'bi-pencil' : 'bi-person-plus'} me-2`}></i>
-                  Submit
-                </Button>
-              </div>
-                </div>
-             
-          </Form>
-        </Card.Body>
-      </Card>
-    </div>
-  );
+                </Form>
+              </Card.Body>
+            </Card>
+          </div>
+        );
 
       case 'manage-staff':
+        if (!hasPermission('Staff')) {
+          return (
+            <Card className="border-0 shadow-sm">
+              <Card.Body className="text-center py-5">
+                <h3 className="text-danger">Access Denied</h3>
+                <p>You don't have permission to manage staff.</p>
+              </Card.Body>
+            </Card>
+          );
+        }
+        
         return (
           <div>
             <Card>
-                <Card className="shadow-lg p-3">
+              <Card className="shadow-lg p-3">
                 <Card.Body>
                   <h5 className="mb-0 fw-semibold">
                     {isEditingStaff ? 'Edit Staff' : (
@@ -1924,149 +2290,160 @@ const handleBulkDelete = async (entity, selectedIds) => {
                     )}
                   </h5>
                 </Card.Body>
-           </Card>
+            </Card>
             </Card><br />
-          <Card className="shadow-lg  p-3" style={{border:"5px"}}>
-            <Card.Header className="border-0 ">
-              <Row><Col><h5 className="mb-1 fw-semibold">Manage user</h5>
-              <p className='text-muted' style={{fontSize:"12px"}}>Use this form to update your profile</p></Col>
-              <Col>
-              <div className="d-flex gap-2">
-                <Form.Control
-                  type="search"
-                  placeholder="Search staff..."
-                  value={staffSearch}
-                  onChange={(e) => {
-                    setStaffSearch(e.target.value);
-                    fetchStaff(1, e.target.value, staffPerPage);
-                  }}
-                  style={{ width: '250px', height: "40px", marginTop: "10px" }}
-                />
-                 <CustomPagination
-                currentPage={staffPage}
-                totalPages={staffTotalPages}
-                totalItems={staffTotalItems}
-                itemsPerPage={staffPerPage}
-                onPageChange={(page) => {
-                  setStaffPage(page);
-                  fetchStaff(page, staffSearch, staffPerPage);
-                }}
-                onItemsPerPageChange={(perPage) => {
-                  setStaffPerPage(perPage);
-                  fetchStaff(1, staffSearch, perPage);
-                }}
-                showDownload={true}
-                dataType="staff"
-              />
-              </div></Col></Row>
-            </Card.Header>
-            <Card.Body>
-              {formSuccess && (
-                <Alert variant="success" onClose={() => setFormSuccess(false)} dismissible>
-                  <Alert.Heading>Success!</Alert.Heading>
-                  <p>Staff member updated successfully!</p>
-                </Alert>
-              )}
-              
-              {selectedStaff.length > 0 && (
-                <Alert variant="info" className="d-flex justify-content-between align-items-center">
-                  <span>{selectedStaff.length} staff member(s) selected</span>
-                  <Button 
-                    variant="danger" 
-                    size="sm"
-                    onClick={()=>handleBulkDelete('staff',selectedStaff)}
-                  >
-                    <i className="bi bi-trash me-2"></i>Delete Selected
-                  </Button>
-                </Alert>
-              )}
-              
-              <div className="table-responsive">
-                <Table striped bordered hover style={{border:"2px solid"}}>
-                  <thead>
-                    <tr>
-                      <th style={{ width: '40px' }}>
-                        <Form.Check
-                          type="checkbox"
-                          checked={selectAllStaff}
-                          onChange={handleSelectAllStaff}
-                        />
-                      </th>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Contact no</th>
-                      <th>Password</th>
-                      <th>Permissions</th>
-                      <th style={{ width: '100px' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {staff.map((staffMember) => (
-                      <tr key={staffMember._id}>
-                        <td>
+            <Card className="shadow-lg  p-3" style={{border:"5px"}}>
+              <Card.Header className="border-0 ">
+                <Row><Col><h5 className="mb-1 fw-semibold">Manage user</h5>
+                <p className='text-muted' style={{fontSize:"12px"}}>Use this form to update your profile</p></Col>
+                <Col>
+                <div className="d-flex gap-2">
+                  <Form.Control
+                    type="search"
+                    placeholder="Search staff..."
+                    value={staffSearch}
+                    onChange={(e) => {
+                      setStaffSearch(e.target.value);
+                      fetchStaff(1, e.target.value, staffPerPage);
+                    }}
+                    style={{ width: '250px', height: "40px", marginTop: "10px" }}
+                  />
+                  <CustomPagination
+                    currentPage={staffPage}
+                    totalPages={staffTotalPages}
+                    totalItems={staffTotalItems}
+                    itemsPerPage={staffPerPage}
+                    onPageChange={(page) => {
+                      setStaffPage(page);
+                      fetchStaff(page, staffSearch, staffPerPage);
+                    }}
+                    onItemsPerPageChange={(perPage) => {
+                      setStaffPerPage(perPage);
+                      fetchStaff(1, staffSearch, perPage);
+                    }}
+                    showDownload={true}
+                    dataType="staff"
+                  />
+                </div></Col></Row>
+              </Card.Header>
+              <Card.Body>
+                {formSuccess && (
+                  <Alert variant="success" onClose={() => setFormSuccess(false)} dismissible>
+                    <Alert.Heading>Success!</Alert.Heading>
+                    <p>Staff member updated successfully!</p>
+                  </Alert>
+                )}
+                
+                {selectedStaff.length > 0 && (
+                  <Alert variant="info" className="d-flex justify-content-between align-items-center">
+                    <span>{selectedStaff.length} staff member(s) selected</span>
+                    <Button 
+                      variant="danger" 
+                      size="sm"
+                      onClick={()=>handleBulkDelete('staff',selectedStaff)}
+                    >
+                      <i className="bi bi-trash me-2"></i>Delete Selected
+                    </Button>
+                  </Alert>
+                )}
+                
+                <div className="table-responsive">
+                  <Table striped bordered hover style={{border:"2px solid"}}>
+                    <thead>
+                      <tr>
+                        <th style={{ width: '40px' }}>
                           <Form.Check
                             type="checkbox"
-                            checked={selectedStaff.includes(staffMember._id)}
-                            onChange={() => handleStaffSelect(staffMember._id)}
+                            checked={selectAllStaff}
+                            onChange={handleSelectAllStaff}
                           />
-                        </td>
-                        
-                        <td>
-                          <strong>{staffMember.name}</strong>
-                        </td>
-                        <td>
-                          <div className="text-truncate" style={{ maxWidth: '200px' }}>
-                            {staffMember.email}
-                          </div>
-                        </td>
-                        <td>{staffMember.phone}</td>
-                        <td>
-                          {displayPassword(staffMember.password)}
-                        </td>
-                        <td>
-                          <div style={{ maxWidth: '200px' }}>
-                            {formatPermissions(staffMember.permissions)}
-                          </div>
-                        </td>
-                        <td>
-                          <div className="d-flex gap-1">
-                            <Button 
-                              variant="warning" 
-                              size="sm"
-                              onClick={() => handleEditStaff(staffMember)}
-                              title="Edit Staff"
-                            >
-                              <MdModeEdit />
-                            </Button>
-                            <Button 
-                              variant="danger" 
-                              size="sm"
-                              onClick={() => deleteStaff(staffMember._id)}
-                              title="Delete Staff"
-                            >
-                              <MdOutlineDelete />
-                            </Button>
-                            <Button 
-                            variant="dark" 
-                            size="sm"
-                            onClick={() => handleViewStaff(staffMember)}
-                            title="View Staff Details"
-                          >
-                            <IoEyeSharp /> 
-                          </Button>
-                          </div>
-                        </td>
+                        </th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Contact no</th>
+                        <th>Password</th>
+                        <th>Permissions</th>
+                        <th style={{ width: '100px' }}>Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </div>
-              
-             
-            </Card.Body>
-          </Card></div>
+                    </thead>
+                    <tbody>
+                      {staff.map((staffMember) => (
+                        <tr key={staffMember._id}>
+                          <td>
+                            <Form.Check
+                              type="checkbox"
+                              checked={selectedStaff.includes(staffMember._id)}
+                              onChange={() => handleStaffSelect(staffMember._id)}
+                            />
+                          </td>
+                          
+                          <td>
+                            <strong>{staffMember.name}</strong>
+                          </td>
+                          <td>
+                            <div className="text-truncate" style={{ maxWidth: '200px' }}>
+                              {staffMember.email}
+                            </div>
+                          </td>
+                          <td>{staffMember.phone}</td>
+                          <td>
+                            {displayPassword(staffMember.password)}
+                          </td>
+                          <td>
+                            <div style={{ maxWidth: '200px' }}>
+                              {formatPermissions(staffMember.permissions)}
+                            </div>
+                          </td>
+                          <td>
+                            <div className="d-flex gap-1">
+                              <Button 
+                                variant="warning" 
+                                size="sm"
+                                onClick={() => handleEditStaff(staffMember)}
+                                title="Edit Staff"
+                              >
+                                <MdModeEdit />
+                              </Button>
+                              <Button 
+                                variant="danger" 
+                                size="sm"
+                                onClick={() => deleteStaff(staffMember._id)}
+                                title="Delete Staff"
+                              >
+                                <MdOutlineDelete />
+                              </Button>
+                              <Button 
+                                variant="dark" 
+                                size="sm"
+                                onClick={() => handleViewStaff(staffMember)}
+                                title="View Staff Details"
+                              >
+                                <IoEyeSharp /> 
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
+              </Card.Body>
+            </Card>
+          </div>
         );
+        
       case 'manage-users':
+        if (!hasPermission('User')) {
+          return (
+            <Card className="border-0 shadow-sm">
+              <Card.Body className="text-center py-5">
+                <h3 className="text-danger">Access Denied</h3>
+                <p>You don't have permission to manage users.</p>
+              </Card.Body>
+            </Card>
+          );
+        }
+        
         return (
           <Card className="border-0 shadow-sm">
             <Card.Header className="border-0 d-flex justify-content-between align-items-center">
@@ -2086,21 +2463,21 @@ const handleBulkDelete = async (entity, selectedIds) => {
                   style={{height:"40px",marginTop:"8px" }}
                 />
                 <CustomPagination
-                currentPage={userPage}
-                totalPages={userTotalPages}
-                totalItems={userTotalItems}
-                itemsPerPage={userPerPage}
-                onPageChange={(page) => {
-                  setUserPage(page);
-                  fetchUsers(page, userSearch, userPerPage);
-                }}
-                onItemsPerPageChange={(perPage) => {
-                  setUserPerPage(perPage);
-                  fetchUsers(1, userSearch, perPage);
-                }}
-                showDownload={true}
-                dataType="users"
-              />
+                  currentPage={userPage}
+                  totalPages={userTotalPages}
+                  totalItems={userTotalItems}
+                  itemsPerPage={userPerPage}
+                  onPageChange={(page) => {
+                    setUserPage(page);
+                    fetchUsers(page, userSearch, userPerPage);
+                  }}
+                  onItemsPerPageChange={(perPage) => {
+                    setUserPerPage(perPage);
+                    fetchUsers(1, userSearch, perPage);
+                  }}
+                  showDownload={true}
+                  dataType="users"
+                />
               </div>
             </Card.Header>
             <Card.Body>
@@ -2194,12 +2571,12 @@ const handleBulkDelete = async (entity, selectedIds) => {
                         </td>
                         <td>{new Date(user.createdAt).toLocaleDateString()}</td>
                         <td>
-                           <div className="text-center">
+                          <div className="text-center">
                             <Button 
                               variant="danger" 
                               size="sm"
-                              onClick={() => deleteStaff(staffMember._id)}
-                              title="Delete Staff"
+                              onClick={() => deleteUser(user._id)}
+                              title="Delete User"
                             >
                               <MdOutlineDelete />
                             </Button>
@@ -2210,96 +2587,130 @@ const handleBulkDelete = async (entity, selectedIds) => {
                   </tbody>
                 </Table>
               </div>
-              
-              
             </Card.Body>
           </Card>
         );
-case 'manage-categories':
-  return (
-    <Categories 
-      categories={categories}
-      onEdit={(category) => {
-        // Set edit mode
-        setIsEditingCategory(true);
-        setEditCategoryId(category._id);
-        setEditCategory(category);
-        // Navigate to add-category form in edit mode
-        setActiveMenu('add-category');
-      }}
-      onDelete={(categoryId) => {
-        if (window.confirm('Are you sure you want to delete this category?')) {
-          handleBulkDelete('categories', [categoryId]);
+        
+      case 'manage-categories':
+        if (!hasPermission('Category')) {
+          return (
+            <Card className="border-0 shadow-sm">
+              <Card.Body className="text-center py-5">
+                <h3 className="text-danger">Access Denied</h3>
+                <p>You don't have permission to manage categories.</p>
+              </Card.Body>
+            </Card>
+          );
         }
-      }}
-      onBulkDelete={(selectedIds) => {
-        handleBulkDelete('categories', selectedIds);
-      }}
-      onToggleStatus={(categoryId, isActive) => {
-        // Update category status
-        updateCategory(categoryId, { isActive });
-      }}
-    />
-  );
-
-case 'add-category':
-  return (
-    <CategoryForm 
-      isEditing={isEditingCategory}
-      categoryData={editCategory}
-      onSubmit={async (formData, imageFile) => {
-        try {
-          const formDataToSend = new FormData();
-          formDataToSend.append('name', formData.name);
-          formDataToSend.append('description', formData.description);
-          formDataToSend.append('category', formData.category || 'General');
-          formDataToSend.append('order', formData.order);
-          formDataToSend.append('isActive', formData.isActive);
-          
-          if (imageFile) {
-            formDataToSend.append('image', imageFile);
-          } else if (isEditingCategory && editCategory.img) {
-            formDataToSend.append('img', editCategory.img);
-          }
-
-          const url = isEditingCategory 
-            ? `http://localhost:5000/api/admin/services/${editCategoryId}`
-            : 'http://localhost:5000/api/admin/services';
-          
-          const response = await fetch(url, {
-            method: isEditingCategory ? 'PUT' : 'POST',
-            headers: { 'admin-token': 'admin-secret-token' },
-            body: formDataToSend
-          });
-          
-          const data = await response.json();
-          if (data.success) {
-            alert(`Category ${isEditingCategory ? 'updated' : 'added'} successfully!`);
-            
-            // Reset form and navigate back
-            setIsEditingCategory(false);
-            setEditCategoryId(null);
-            setEditCategory(null);
-            fetchCategories();
-            handleMenuClick('manage-categories');
-          } else {
-            alert(data.error || `Failed to ${isEditingCategory ? 'update' : 'add'} category`);
-          }
-        } catch (error) {
-          console.error(`Error ${isEditingCategory ? 'updating' : 'adding'} category:`, error);
-          alert(`Failed to ${isEditingCategory ? 'update' : 'add'} category`);
+        
+        return (
+          <Categories 
+            categories={categories}
+            onEdit={(category) => {
+              // Set edit mode
+              setIsEditingCategory(true);
+              setEditCategoryId(category._id);
+              setEditCategory(category);
+              // Navigate to add-category form in edit mode
+              setActiveMenu('add-category');
+            }}
+            onDelete={(categoryId) => {
+              if (window.confirm('Are you sure you want to delete this category?')) {
+                handleBulkDelete('categories', [categoryId]);
+              }
+            }}
+            onBulkDelete={(selectedIds) => {
+              handleBulkDelete('categories', selectedIds);
+            }}
+            onToggleStatus={(categoryId, isActive) => {
+              // Update category status
+              updateCategory(categoryId, { isActive });
+            }}
+          />
+        );
+        
+      case 'add-category':
+        if (!hasPermission('Category')) {
+          return (
+            <Card className="border-0 shadow-sm">
+              <Card.Body className="text-center py-5">
+                <h3 className="text-danger">Access Denied</h3>
+                <p>You don't have permission to add categories.</p>
+              </Card.Body>
+            </Card>
+          );
         }
-      }}
-      onCancel={() => {
-        setIsEditingCategory(false);
-        setEditCategoryId(null);
-        setEditCategory(null);
-        handleMenuClick('manage-categories');
-      }}
-    />
-  );
+        
+        return (
+          <CategoryForm 
+            isEditing={isEditingCategory}
+            categoryData={editCategory}
+            onSubmit={async (formData, imageFile) => {
+              try {
+                const formDataToSend = new FormData();
+                formDataToSend.append('name', formData.name);
+                formDataToSend.append('description', formData.description);
+                formDataToSend.append('category', formData.category || 'General');
+                formDataToSend.append('order', formData.order);
+                formDataToSend.append('isActive', formData.isActive);
+                
+                if (imageFile) {
+                  formDataToSend.append('image', imageFile);
+                } else if (isEditingCategory && editCategory.img) {
+                  formDataToSend.append('img', editCategory.img);
+                }
 
+                const url = isEditingCategory 
+                  ? `http://localhost:5000/api/admin/services/${editCategoryId}`
+                  : 'http://localhost:5000/api/admin/services';
+                
+                const response = await fetch(url, {
+                  method: isEditingCategory ? 'PUT' : 'POST',
+                  headers: { 
+                    'Authorization': `Bearer ${getAuthToken()}`
+                  },
+                  body: formDataToSend
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                  alert(`Category ${isEditingCategory ? 'updated' : 'added'} successfully!`);
+                  
+                  // Reset form and navigate back
+                  setIsEditingCategory(false);
+                  setEditCategoryId(null);
+                  setEditCategory(null);
+                  fetchCategories();
+                  handleMenuClick('manage-categories');
+                } else {
+                  alert(data.error || `Failed to ${isEditingCategory ? 'update' : 'add'} category`);
+                }
+              } catch (error) {
+                console.error(`Error ${isEditingCategory ? 'updating' : 'adding'} category:`, error);
+                alert(`Failed to ${isEditingCategory ? 'update' : 'add'} category`);
+              }
+            }}
+            onCancel={() => {
+              setIsEditingCategory(false);
+              setEditCategoryId(null);
+              setEditCategory(null);
+              handleMenuClick('manage-categories');
+            }}
+          />
+        );
+        
       case 'add-product':
+        if (!hasPermission('Product')) {
+          return (
+            <Card className="border-0 shadow-sm">
+              <Card.Body className="text-center py-5">
+                <h3 className="text-danger">Access Denied</h3>
+                <p>You don't have permission to add products.</p>
+              </Card.Body>
+            </Card>
+          );
+        }
+        
         return (
           <Card className="border-0 shadow-sm">
             <Card.Header className="border-0 d-flex justify-content-between align-items-center">
@@ -2431,6 +2842,17 @@ case 'add-category':
         );
 
       case 'manage-products':
+        if (!hasPermission('Product')) {
+          return (
+            <Card className="border-0 shadow-sm">
+              <Card.Body className="text-center py-5">
+                <h3 className="text-danger">Access Denied</h3>
+                <p>You don't have permission to manage products.</p>
+              </Card.Body>
+            </Card>
+          );
+        }
+        
         return (
           <Card className="border-0 shadow-sm">
             <Card.Header className="border-0 d-flex justify-content-between align-items-center">
@@ -2569,209 +2991,229 @@ case 'add-category':
         );
 
       case 'bookings':
-  return (
-    <Card className="border-0 shadow-sm">
-      <Card.Header className="border-0 d-flex justify-content-between align-items-center">
-        <div>
-          <h5 className="mb-0">Booking Management</h5>
-          <p className="text-muted mb-0">Manage all customer bookings</p>
-        </div>
-        <div className="d-flex gap-2">
-          <Form.Select 
-            value={bookingStatus} 
-            onChange={(e) => {
-              setBookingStatus(e.target.value);
-              fetchBookings(1, bookingSearch, e.target.value, bookingPerPage);
-            }}
-            style={{ height:"40px", marginTop:"10px"}}
-          >
-            <option value="">All Status</option>
-            <option value="Pending">Pending</option>
-            <option value="Confirmed">Confirmed</option>
-            <option value="Completed">Completed</option>
-            <option value="Cancelled">Cancelled</option>
-          </Form.Select>
-          <Form.Control
-            type="search"
-            placeholder="Search bookings..."
-            value={bookingSearch}
-            onChange={(e) => setBookingSearch(e.target.value)}
-            style={{width:"250px", height:"40px", marginTop:"10px"}}
-          />
-          <CustomPagination
-          currentPage={bookingPage}
-          totalPages={bookingTotalPages}
-          totalItems={bookingTotalItems}
-          itemsPerPage={bookingPerPage}
-          onPageChange={(page) => {
-            setBookingPage(page);
-            fetchBookings(page, bookingSearch, bookingStatus, bookingPerPage);
-          }}
-          onItemsPerPageChange={(perPage) => {
-            setBookingPerPage(perPage);
-            fetchBookings(1, bookingSearch, bookingStatus, perPage);
-          }}
-          showDownload={true}
-          dataType="bookings"
-        />
-        </div>
-      </Card.Header>
-      <Card.Body>
-        {selectedBookings.length > 0 && (
-          <Alert variant="info" className="d-flex justify-content-between align-items-center">
-            <span>{selectedBookings.length} booking(s) selected</span>
-            <div className="d-flex gap-2">
-              <Button 
-                variant="success" 
-                size="sm"
-                onClick={() => {
-                  if (window.confirm(`Confirm ${selectedBookings.length} booking(s)?`)) {
-                    selectedBookings.forEach(id => updateBookingStatus(id, 'Confirmed'));
-                    setSelectedBookings([]);
-                    setSelectAllBookings(false);
-                  }
-                }}
-              >
-                <i className="bi bi-check-circle me-2"></i>Confirm Selected
-              </Button>
-              <Button 
-                variant="danger" 
-                size="sm"
-                onClick={() => handleBulkDelete('bookings', selectedBookings)}
-              >
-                <i className="bi bi-trash me-2"></i>Delete Selected
-              </Button>
-            </div>
-          </Alert>
-        )}
+        if (!hasPermission('Bookings')) {
+          return (
+            <Card className="border-0 shadow-sm">
+              <Card.Body className="text-center py-5">
+                <h3 className="text-danger">Access Denied</h3>
+                <p>You don't have permission to manage bookings.</p>
+              </Card.Body>
+            </Card>
+          );
+        }
         
-        <div className="table-responsive">
-          <Table hover responsive>
-            <thead>
-              <tr>
-                <th style={{ width: '40px' }}>
-                  <Form.Check
-                    type="checkbox"
-                    checked={selectAllBookings}
-                    onChange={handleSelectAllBookings}
-                  />
-                </th>
-                <th style={{ width: '80px' }}>Profile</th>
-                <th style={{ width: '120px' }}>Booking ID</th>
-                <th style={{ width: '180px' }}>Customer</th>
-                <th>Service</th>
-                <th style={{ width: '100px' }}>Price</th>
-                <th style={{ width: '120px' }}>Status</th>
-                <th style={{ width: '120px' }}>Date</th>
-                <th style={{ width: '100px' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bookings.map((booking) => (
-                <tr key={booking._id}>
-                  <td>
-                    <Form.Check
-                      type="checkbox"
-                      checked={selectedBookings.includes(booking._id)}
-                      onChange={() => handleBookingSelect(booking._id)}
-                    />
-                  </td>
-                  <td>
-                    <div style={{ 
-                      width: '40px', 
-                      height: '40px', 
-                      borderRadius: '50%', 
-                      overflow: 'hidden',
-                      border: '2px solid #dee2e6'
-                    }}>
-                      {booking.userProfileImage ? (
-                        <img 
-                          src={`http://localhost:5000${booking.userProfileImage}`} 
-                          alt={booking.userName}
-                          style={{ 
-                            width: '100%', 
-                            height: '100%', 
-                            objectFit: 'cover'
-                          }}
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.parentElement.innerHTML = `
-                              <div style="
-                                width: 100%;
-                                height: 100%;
-                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                color: white;
-                                font-weight: bold;
-                                font-size: 12px;
-                              ">
-                                ${getInitials(booking.userName)}
-                              </div>
-                            `;
-                          }}
+        return (
+          <Card className="border-0 shadow-sm">
+            <Card.Header className="border-0 d-flex justify-content-between align-items-center">
+              <div>
+                <h5 className="mb-0">Booking Management</h5>
+                <p className="text-muted mb-0">Manage all customer bookings</p>
+              </div>
+              <div className="d-flex gap-2">
+                <Form.Select 
+                  value={bookingStatus} 
+                  onChange={(e) => {
+                    setBookingStatus(e.target.value);
+                    fetchBookings(1, bookingSearch, e.target.value, bookingPerPage);
+                  }}
+                  style={{ height:"40px", marginTop:"10px"}}
+                >
+                  <option value="">All Status</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Confirmed">Confirmed</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Cancelled">Cancelled</option>
+                </Form.Select>
+                <Form.Control
+                  type="search"
+                  placeholder="Search bookings..."
+                  value={bookingSearch}
+                  onChange={(e) => setBookingSearch(e.target.value)}
+                  style={{width:"250px", height:"40px", marginTop:"10px"}}
+                />
+                <CustomPagination
+                  currentPage={bookingPage}
+                  totalPages={bookingTotalPages}
+                  totalItems={bookingTotalItems}
+                  itemsPerPage={bookingPerPage}
+                  onPageChange={(page) => {
+                    setBookingPage(page);
+                    fetchBookings(page, bookingSearch, bookingStatus, bookingPerPage);
+                  }}
+                  onItemsPerPageChange={(perPage) => {
+                    setBookingPerPage(perPage);
+                    fetchBookings(1, bookingSearch, bookingStatus, perPage);
+                  }}
+                  showDownload={true}
+                  dataType="bookings"
+                />
+              </div>
+            </Card.Header>
+            <Card.Body>
+              {selectedBookings.length > 0 && (
+                <Alert variant="info" className="d-flex justify-content-between align-items-center">
+                  <span>{selectedBookings.length} booking(s) selected</span>
+                  <div className="d-flex gap-2">
+                    <Button 
+                      variant="success" 
+                      size="sm"
+                      onClick={() => {
+                        if (window.confirm(`Confirm ${selectedBookings.length} booking(s)?`)) {
+                          selectedBookings.forEach(id => updateBookingStatus(id, 'Confirmed'));
+                          setSelectedBookings([]);
+                          setSelectAllBookings(false);
+                        }
+                      }}
+                    >
+                      <i className="bi bi-check-circle me-2"></i>Confirm Selected
+                    </Button>
+                    <Button 
+                      variant="danger" 
+                      size="sm"
+                      onClick={() => handleBulkDelete('bookings', selectedBookings)}
+                    >
+                      <i className="bi bi-trash me-2"></i>Delete Selected
+                    </Button>
+                  </div>
+                </Alert>
+              )}
+              
+              <div className="table-responsive">
+                <Table hover responsive>
+                  <thead>
+                    <tr>
+                      <th style={{ width: '40px' }}>
+                        <Form.Check
+                          type="checkbox"
+                          checked={selectAllBookings}
+                          onChange={handleSelectAllBookings}
                         />
-                      ) : (
-                        <div style={{ 
-                          width: '100%', 
-                          height: '100%', 
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontWeight: 'bold',
-                          fontSize: '12px'
-                        }}>
-                          {getInitials(booking.userName)}
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td><small className="text-muted">{booking._id?.substring(0, 8)}...</small></td>
-                  <td>
-                    <div>
-                      <strong>{booking.userName}</strong><br/>
-                      <small className="text-muted">{booking.userEmail}</small>
-                    </div>
-                  </td>
-                  <td>{booking.serviceName}</td>
-                  <td><strong>₹{booking.servicePrice}</strong></td>
-                  <td>
-                    <Badge bg={
-                      booking.status === 'Completed' ? 'success' :
-                      booking.status === 'Confirmed' ? 'primary' :
-                      booking.status === 'Pending' ? 'warning' : 'danger'
-                    }>
-                      {booking.status}
-                    </Badge>
-                  </td>
-                  <td>{new Date(booking.createdAt).toLocaleDateString()}</td>
-                  <td>
-                    <div className="text-center">
+                      </th>
+                      <th style={{ width: '80px' }}>Profile</th>
+                      <th style={{ width: '120px' }}>Booking ID</th>
+                      <th style={{ width: '180px' }}>Customer</th>
+                      <th>Service</th>
+                      <th style={{ width: '100px' }}>Price</th>
+                      <th style={{ width: '120px' }}>Status</th>
+                      <th style={{ width: '120px' }}>Date</th>
+                      <th style={{ width: '100px' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bookings.map((booking) => (
+                      <tr key={booking._id}>
+                        <td>
+                          <Form.Check
+                            type="checkbox"
+                            checked={selectedBookings.includes(booking._id)}
+                            onChange={() => handleBookingSelect(booking._id)}
+                          />
+                        </td>
+                        <td>
+                          <div style={{ 
+                            width: '40px', 
+                            height: '40px', 
+                            borderRadius: '50%', 
+                            overflow: 'hidden',
+                            border: '2px solid #dee2e6'
+                          }}>
+                            {booking.userProfileImage ? (
+                              <img 
+                                src={`http://localhost:5000${booking.userProfileImage}`} 
+                                alt={booking.userName}
+                                style={{ 
+                                  width: '100%', 
+                                  height: '100%', 
+                                  objectFit: 'cover'
+                                }}
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  e.target.parentElement.innerHTML = `
+                                    <div style="
+                                      width: 100%;
+                                      height: 100%;
+                                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                      display: flex;
+                                      align-items: center;
+                                      justify-content: center;
+                                      color: white;
+                                      font-weight: bold;
+                                      font-size: 12px;
+                                    ">
+                                      ${getInitials(booking.userName)}
+                                    </div>
+                                  `;
+                                }}
+                              />
+                            ) : (
+                              <div style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                fontWeight: 'bold',
+                                fontSize: '12px'
+                              }}>
+                                {getInitials(booking.userName)}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td><small className="text-muted">{booking._id?.substring(0, 8)}...</small></td>
+                        <td>
+                          <div>
+                            <strong>{booking.userName}</strong><br/>
+                            <small className="text-muted">{booking.userEmail}</small>
+                          </div>
+                        </td>
+                        <td>{booking.serviceName}</td>
+                        <td><strong>₹{booking.servicePrice}</strong></td>
+                        <td>
+                          <Badge bg={
+                            booking.status === 'Completed' ? 'success' :
+                            booking.status === 'Confirmed' ? 'primary' :
+                            booking.status === 'Pending' ? 'warning' : 'danger'
+                          }>
+                            {booking.status}
+                          </Badge>
+                        </td>
+                        <td>{new Date(booking.createdAt).toLocaleDateString()}</td>
+                        <td>
+                          <div className="text-center">
                             <Button 
                               variant="danger" 
                               size="sm"
-                              onClick={() => deleteStaff(staffMember._id)}
-                              title="Delete Staff"
+                              onClick={() => deleteBooking(booking._id)}
+                              title="Delete Booking"
                             >
                               <MdOutlineDelete />
                             </Button>
                           </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        </div>
-        
-        
-      </Card.Body>
-    </Card>
-  );
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+            </Card.Body>
+          </Card>
+        );
 
       case 'reports':
+        if (!hasPermission('Reports')) {
+          return (
+            <Card className="border-0 shadow-sm">
+              <Card.Body className="text-center py-5">
+                <h3 className="text-danger">Access Denied</h3>
+                <p>You don't have permission to view reports.</p>
+              </Card.Body>
+            </Card>
+          );
+        }
+        
         return (
           <>
             <Row className="mb-4">
@@ -2919,6 +3361,17 @@ case 'add-category':
         );
 
       case 'settings':
+        if (!hasPermission('Settings')) {
+          return (
+            <Card className="border-0 shadow-sm">
+              <Card.Body className="text-center py-5">
+                <h3 className="text-danger">Access Denied</h3>
+                <p>You don't have permission to access settings.</p>
+              </Card.Body>
+            </Card>
+          );
+        }
+        
         return (
           <Card className="border-0 shadow-sm">
             <Card.Header className="border-0">
@@ -3004,201 +3457,7 @@ case 'add-category':
   return (
     <div className="d-flex" style={{ minHeight: '100vh', overflowX: 'hidden',backgroundColor:"#acacacff" }}>
       {/* Sidebar */}
-      {sidebarOpen && (
-        <div style={{ 
-          width: '250px', 
-          background: '#000000',
-          color: 'white',
-          padding: '20px 0',
-          position: 'fixed',
-          height: '100vh',
-          zIndex: 1000,
-          overflowY: 'auto'
-        }}>
-          <div className="text-center mb-4 px-3">
-            <img 
-              src={`http://localhost:5000${adminLogo}`} 
-              alt="Urban Company" 
-              style={{ 
-                width: '80px', 
-                height: '80px', 
-                objectFit: 'contain',
-                backgroundColor: 'white',
-                borderRadius: '50%',
-                padding: '10px'
-              }}
-            />
-            <h5 className="mt-3 mb-0">Urban Company</h5>
-            <small className="text-muted">Admin Panel</small>
-          </div>
-
-          <Nav className="flex-column px-3">
-            <Nav.Link 
-              className={`mb-2 ${activeMenu === 'dashboard' ? 'active' : ''}`}
-              onClick={() => handleMenuClick('dashboard')}
-              style={{ 
-                color: activeMenu === 'dashboard' ? '#000' : 'white',
-                background: activeMenu === 'dashboard' ? 'white' : 'transparent',
-                borderRadius: '8px',
-                padding: '10px 15px'
-              }}
-            >
-              <i className="bi bi-speedometer2 me-2"></i>Dashboard
-            </Nav.Link>
-            
-            <Dropdown className="mb-2">
-              <Dropdown.Toggle 
-                as={Nav.Link} 
-                style={{ 
-                  color: ['add-staff', 'manage-staff'].includes(activeMenu) ? '#000' : 'white',
-                  background: ['add-staff', 'manage-staff'].includes(activeMenu) ? 'white' : 'transparent',
-                  borderRadius: '8px',
-                  padding: '10px 15px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <span>
-                  <i className="bi bi-people me-2"></i>User Management
-                </span>
-                <i className="bi bi-chevron-down ms-auto"></i>
-              </Dropdown.Toggle>
-              <Dropdown.Menu style={{ width: '100%' }}>
-                <Dropdown.Item onClick={() => handleMenuClick('add-staff')}>
-                  <i className="bi bi-person-plus me-2"></i>Add user
-                </Dropdown.Item>
-                <Dropdown.Item onClick={() => handleMenuClick('manage-staff')}>
-                  <i className="bi bi-people-fill me-2"></i>Manage user
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-            
-           
-            
-            <Dropdown className="mb-2">
-              <Dropdown.Toggle 
-                as={Nav.Link} 
-                style={{ 
-                  color: ['add-category', 'manage-categories'].includes(activeMenu) ? '#000' : 'white',
-                  background: ['add-category', 'manage-categories'].includes(activeMenu) ? 'white' : 'transparent',
-                  borderRadius: '8px',
-                  padding: '10px 15px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <span>
-                  <i className="bi bi-tags me-2"></i>Category
-                </span>
-                <i className="bi bi-chevron-down ms-auto"></i>
-              </Dropdown.Toggle>
-              <Dropdown.Menu style={{ width: '100%' }}>
-                <Dropdown.Item onClick={() => handleMenuClick('add-category')}>
-                  <i className="bi bi-folder-plus me-2"></i>Add Category
-                </Dropdown.Item>
-                <Dropdown.Item onClick={() => handleMenuClick('manage-categories')}>
-                  <i className="bi bi-folder-fill me-2"></i>Manage Categories
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-            
-            <Dropdown className="mb-2">
-              <Dropdown.Toggle 
-                as={Nav.Link} 
-                style={{ 
-                  color: ['add-product', 'manage-products'].includes(activeMenu) ? '#000' : 'white',
-                  background: ['add-product', 'manage-products'].includes(activeMenu) ? 'white' : 'transparent',
-                  borderRadius: '8px',
-                  padding: '10px 15px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <span>
-                  <i className="bi bi-box-seam me-2"></i>Product
-                </span>
-                <i className="bi bi-chevron-down ms-auto"></i>
-              </Dropdown.Toggle>
-              <Dropdown.Menu style={{ width: '100%' }}>
-                <Dropdown.Item onClick={() => handleMenuClick('add-product')}>
-                  <i className="bi bi-plus-circle me-2"></i>Add Product
-                </Dropdown.Item>
-                <Dropdown.Item onClick={() => handleMenuClick('manage-products')}>
-                  <i className="bi bi-box-seam me-2"></i>Manage Products
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-            
-            <Nav.Link 
-              className={`mb-2 ${activeMenu === 'bookings' ? 'active' : ''}`}
-              onClick={() => handleMenuClick('bookings')}
-              style={{ 
-                color: activeMenu === 'bookings' ? '#000' : 'white',
-                background: activeMenu === 'bookings' ? 'white' : 'transparent',
-                borderRadius: '8px',
-                padding: '10px 15px'
-              }}
-            >
-              <i className="bi bi-calendar-check me-2"></i>Bookings
-            </Nav.Link>
-            
-             <Dropdown className="mb-2">
-              <Dropdown.Toggle 
-                as={Nav.Link} 
-                style={{ 
-                  color: ['manage-users'].includes(activeMenu) ? '#000' : 'white',
-                  background: [ 'manage-users'].includes(activeMenu) ? 'white' : 'transparent',
-                  borderRadius: '8px',
-                  padding: '10px 15px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <span>
-                  <i className="bi bi-person-badge me-2"></i>Customer Management
-                </span>
-                <i className="bi bi-chevron-down ms-auto"></i>
-              </Dropdown.Toggle>
-              <Dropdown.Menu style={{ width: '100%' }}>
-                <Dropdown.Item onClick={() => handleMenuClick('manage-users')}>
-                  <i className="bi bi-people-fill me-2"></i>Manage customer
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-
-            <Nav.Link 
-              className={`mb-2 ${activeMenu === 'reports' ? 'active' : ''}`}
-              onClick={() => handleMenuClick('reports')}
-              style={{ 
-                color: activeMenu === 'reports' ? '#000' : 'white',
-                background: activeMenu === 'reports' ? 'white' : 'transparent',
-                borderRadius: '8px',
-                padding: '10px 15px'
-              }}
-            >
-              <i className="bi bi-graph-up me-2"></i>Reports
-            </Nav.Link>
-            
-            <Nav.Link 
-              className={`mb-2 ${activeMenu === 'settings' ? 'active' : ''}`}
-              onClick={() => handleMenuClick('settings')}
-              style={{ 
-                color: activeMenu === 'settings' ? '#000' : 'white',
-                background: activeMenu === 'settings' ? 'white' : 'transparent',
-                borderRadius: '8px',
-                padding: '10px 15px'
-              }}
-            >
-              <i className="bi bi-gear me-2"></i>Settings
-            </Nav.Link>
-          </Nav>
-          
-        </div>
-      )}
+      {sidebarOpen && renderSidebar()}
 
       {/* Main Content */}
       <div style={{ 
@@ -3213,26 +3472,38 @@ case 'add-category':
             <Button variant="light" onClick={() => setSidebarOpen(!sidebarOpen)} className="me-3">
               <i className={`bi bi-${sidebarOpen ? 'chevron-left' : 'chevron-right'}`}></i>
             </Button>
-            <Navbar.Brand className="fw-bold">Urban Company Admin</Navbar.Brand>
+            <Navbar.Brand className="fw-bold">
+              Urban Company {userRole === 'admin' ? 'Admin' : 'Staff'} Panel
+              <Badge bg={userRole === 'admin' ? 'success' : 'info'} className="ms-2">
+                {userRole}
+              </Badge>
+            </Navbar.Brand>
             
             <Navbar.Toggle aria-controls="navbar-nav" />
             <Navbar.Collapse id="navbar-nav" className="justify-content-end">
               <Nav className="align-items-center">
                 <Dropdown>
                   <Dropdown.Toggle variant="light" className="d-flex align-items-center">
-                    <span className="d-none d-md-inline">Admin User</span>
+                    <i className="bi bi-person-circle me-2"></i>
+                    <span className="d-none d-md-inline">
+                      {userRole === 'admin' ? 'Admin User' : 'Staff User'}
+                    </span>
                   </Dropdown.Toggle>
                   <Dropdown.Menu align="end">
-                    <Dropdown.Item>
-                      <i className="bi bi-person me-2"></i>Profile
+                    <Dropdown.Item disabled>
+                      <i className="bi bi-person me-2"></i>
+                      {userRole === 'admin' ? 'Administrator' : 'Staff Member'}
                     </Dropdown.Item>
-                    <Dropdown.Item>
-                      <i className="bi bi-gear me-2"></i>Settings
+                    <Dropdown.Item disabled>
+                      <i className="bi bi-shield-check me-2"></i>
+                      Permissions: {Object.keys(userPermissions || {}).filter(k => userPermissions[k]).length} enabled
                     </Dropdown.Item>
                     <Dropdown.Divider />
                     <Dropdown.Item onClick={() => {
-                      localStorage.removeItem('adminToken');
+                      localStorage.clear();
                       setIsLoggedIn(false);
+                      setUserRole(null);
+                      setUserPermissions(null);
                     }}>
                       <i className="bi bi-box-arrow-right me-2"></i>Logout
                     </Dropdown.Item>
@@ -3248,119 +3519,62 @@ case 'add-category':
           {renderContent()}
         </Container>
         
-        <Modal show={showStaffDetails} onHide={() => setShowStaffDetails(false)} size="lg">
-            <Modal.Header className='closebtn' closeButton>
-              
-            </Modal.Header>
-            <Modal.Body>
-              {selectedStaffDetails && (
-                <div>
-                  <Row className="mb-4">
-                    <Col md={9}>
-                      <h4>{selectedStaffDetails.name}</h4>
-                      <p className="text-muted mb-1">
-                        <i className="bi bi-envelope me-2"></i>
-                        {selectedStaffDetails.email}
-                      </p>
-                      <p className="text-muted mb-1">
-                        <i className="bi bi-telephone me-2"></i>
-                        {selectedStaffDetails.phone}
-                      </p>
-                      <p className="text-muted mb-0">
-                        <i className="bi bi-briefcase me-2"></i>
-                        {selectedStaffDetails.designation}
-                      </p>
-                    </Col>
-                  </Row>
-
-                  <Row>
-                    <Col md={6}>
-                      <Card className="mb-3">
-                        <Card.Body>
-                          <h6 className="mb-3">Contact Information</h6>
-                          <div className="mb-2">
-                            <strong>Email:</strong>
-                            <p className="text-muted mb-0">{selectedStaffDetails.email}</p>
-                          </div>
-                          <div className="mb-2">
-                            <strong>Phone:</strong>
-                            <p className="text-muted mb-0">{selectedStaffDetails.phone}</p>
-                          </div>
-                          <div>
-                            <strong>Designation:</strong>
-                            <p className="text-muted mb-0">{selectedStaffDetails.designation}</p>
-                          </div>
-                        </Card.Body>
-                      </Card>
-                    </Col>
-                    <Col md={6}>
-                      <Card className="mb-3">
-                        <Card.Body>
-                          <h6 className="mb-3">Account Information</h6>
-                          <div className="mb-2">
-                            <strong>Account Created:</strong>
-                            <p className="text-muted mb-0">
-                              {selectedStaffDetails.createdAt ? new Date(selectedStaffDetails.createdAt).toLocaleDateString() : 'N/A'}
-                            </p>
-                          </div>
-                          <div className="mb-2">
-                            <strong>Last Updated:</strong>
-                            <p className="text-muted mb-0">
-                              {selectedStaffDetails.updatedAt ? new Date(selectedStaffDetails.updatedAt).toLocaleDateString() : 'N/A'}
-                            </p>
-                          </div>
-                          <div>
-                            <strong>Password:</strong>
-                            <p className="text-muted mb-0" style={{ letterSpacing: '2px', fontFamily: 'monospace' }}>
-                              {displayPassword()}
-                            </p>
-                          </div>
-                        </Card.Body>
-                      </Card>
-                    </Col>
-                  </Row>
-
-                  <Card>
-                    <Card.Body>
-                      <h6 className="mb-3">Permissions</h6>
-                      <Row>
-                        {selectedStaffDetails.permissions && Object.entries(selectedStaffDetails.permissions).map(([permission, hasPermission]) => (
-                          <Col md={4} key={permission}>
-                            <div className="d-flex align-items-center mb-2">
-                              <Badge 
-                                bg={hasPermission ? "success" : "secondary"} 
-                                className="me-2"
-                                style={{ width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                              >
-                                {hasPermission ? '✓' : '✗'}
-                              </Badge>
-                              <span>{permission.charAt(0).toUpperCase() + permission.slice(1)}</span>
-                            </div>
-                          </Col>
-                        ))}
-                      </Row>
-                      <div className="mt-3 pt-3 border-top">
-                        <small className="text-muted">
-                          Total permissions granted: {Object.values(selectedStaffDetails.permissions || {}).filter(v => v).length} out of {Object.keys(selectedStaffDetails.permissions || {}).length}
-                        </small>
-                      </div>
-                    </Card.Body>
-                  </Card>
+        {/* Staff Details Modal */}
+        <Modal show={showStaffDetails} onHide={() => setShowStaffDetails(false)} centered>
+          <Modal.Header >
+            <Modal.Title className="fw-semibold fs-6">Staff Details</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {selectedStaffDetails && (
+              <div>
+                <div className="text-center mb-4">
+                  <h5 className="mb-1">{selectedStaffDetails.name}</h5>
+                  <p className="text-muted mb-3">{selectedStaffDetails.designation}</p>
                 </div>
-              )}
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="secondary" onClick={() => setShowStaffDetails(false)}>
-                Close
-              </Button>
-              <Button variant="warning" onClick={() => {
+
+                <div className="list-group list-group-flush">
+                  <div className="list-group-item px-0 border-top-0">
+                    <small className="text-muted d-block">Email</small>
+                    <span>{selectedStaffDetails.email}</span>
+                  </div>
+                  <div className="list-group-item px-0">
+                    <small className="text-muted d-block">Phone</small>
+                    <span>{selectedStaffDetails.phone}</span>
+                  </div>
+                  <div className="list-group-item px-0">
+                    <small className="text-muted d-block">Active Permissions</small>
+                    <span>
+                      {Object.entries(selectedStaffDetails.permissions || {})
+                        .filter(([key, value]) => value)
+                        .map(([permission]) => permission)
+                        .join(', ')}
+                    </span>
+                  </div>
+                  <div className="list-group-item px-0 border-bottom-0">
+                    <small className="text-muted d-block">Member Since</small>
+                    <span>
+                      {selectedStaffDetails.createdAt ? new Date(selectedStaffDetails.createdAt).toLocaleDateString() : 'N/A'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </Modal.Body>
+          <Modal.Footer className="border-0">
+            <Button variant="secondary" onClick={() => setShowStaffDetails(false)}>
+              Close
+            </Button>
+            <Button 
+              variant="warning" 
+              onClick={() => {
                 setShowStaffDetails(false);
                 handleEditStaff(selectedStaffDetails);
-              }}>
-                <i className="bi bi-pencil me-2"></i>Edit Staff
-              </Button>
-            </Modal.Footer>
-          </Modal>
+              }}
+            >
+              Edit
+            </Button>
+          </Modal.Footer>
+        </Modal>
 
         {/* Add User Modal */}
         <Modal show={showAddUserModal} onHide={() => setShowAddUserModal(false)}>

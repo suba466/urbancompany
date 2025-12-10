@@ -1,12 +1,14 @@
 import express from "express";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import multer from "multer";
 import path from "path";
 import { fileURLToPath } from 'url';
 import fs from "fs";
 
 const router = express.Router();
+const JWT_SECRET = "your-jwt-secret-key-change-this";
 
 // Setup multer for file uploads
 const __filename = fileURLToPath(import.meta.url);
@@ -40,13 +42,14 @@ const upload = multer({
   }
 });
 
-// Staff Schema - No profileImage field
+// Staff Schema
 const staffSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   phone: { type: String, required: true },
   designation: { type: String, required: true },
-  profileImage:{type:String,default:" "},
+  password: { type: String, required: true },
+  profileImage: { type: String, default: "" },
   isActive: { type: Boolean, default: true },
   permissions: {
     Dashboard: { type: Boolean, default: false },
@@ -64,220 +67,13 @@ const staffSchema = new mongoose.Schema({
 
 const Staff = mongoose.model("Staff", staffSchema);
 
-
-
-// Get all staff with pagination
-router.get("/staff", async (req, res) => {
-  try {
-    const { page = 1, limit = 20, search = "" } = req.query;
-    const skip = (page - 1) * limit;
-
-    let query = {};
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-        { phone: { $regex: search, $options: "i" } },
-        { designation: { $regex: search, $options: "i" } }
-      ];
-    }
-
-    const staff = await Staff.find(query)
-      .select('-__v')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
-
-    const total = await Staff.countDocuments(query);
-
-    res.json({
-      success: true,
-      staff,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / limit)
-      }
-    });
-
-  } catch (error) {
-    console.error("Error fetching staff:", error);
-    res.status(500).json({ error: "Failed to fetch staff" });
-  }
-});
-
-// Get single staff member
-router.get("/staff/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const staff = await Staff.findById(id).select('-__v');
-    
-    if (!staff) {
-      return res.status(404).json({ error: "Staff member not found" });
-    }
-
-    res.json({
-      success: true,
-      staff
-    });
-
-  } catch (error) {
-    console.error("Error fetching staff:", error);
-    res.status(500).json({ error: "Failed to fetch staff" });
-  }
-});
-
-// Create new staff member WITHOUT profile image
-router.post("/staff", async (req, res) => {
-  try {
-    const {
-      name,
-      email,
-      phone,
-      designation,
-      permissions,
-      isActive
-    } = req.body;
-
-    // Parse permissions if it's a string
-    let parsedPermissions = {};
-    if (permissions) {
-      if (typeof permissions === 'string') {
-        parsedPermissions = JSON.parse(permissions);
-      } else {
-        parsedPermissions = permissions;
-      }
-    }
-
-    // Validate required fields
-    if (!name || !email || !phone || !designation) {
-      return res.status(400).json({ error: "All required fields must be provided" });
-    }
-
-    // Check if email already exists
-    const existingStaff = await Staff.findOne({ email });
-    if (existingStaff) {
-      return res.status(400).json({ error: "Staff member with this email already exists" });
-    }
-
-    // Create new staff
-    const staff = new Staff({
-      name,
-      email,
-      phone,
-      designation,
-      isActive: isActive !== undefined ? isActive : true,
-      permissions: parsedPermissions || {
-        Dashboard: false,
-        Staff: false,
-        User: false,
-        Category: false,
-        Product: false,
-        Bookings: false,
-        Reports: false,
-        Settings: false
-      }
-    });
-
-    await staff.save();
-
-    res.status(201).json({
-      success: true,
-      message: "Staff member created successfully",
-      staff
-    });
-
-  } catch (error) {
-    console.error("Error creating staff:", error);
-    if (error.code === 11000) {
-      return res.status(400).json({ error: "Email already exists" });
-    }
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({ error: error.message });
-    }
-    res.status(500).json({ error: "Failed to create staff member" });
-  }
-});
-
-// Update staff member WITHOUT profile image
-router.put("/staff/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updateData = req.body;
-
-    // Find existing staff
-    const existingStaff = await Staff.findById(id);
-    if (!existingStaff) {
-      return res.status(404).json({ error: "Staff member not found" });
-    }
-
-    // Don't allow email update to existing email
-    if (updateData.email && updateData.email !== existingStaff.email) {
-      const emailExists = await Staff.findOne({ 
-        email: updateData.email, 
-        _id: { $ne: id } 
-      });
-      if (emailExists) {
-        return res.status(400).json({ error: "Email already exists" });
-      }
-    }
-
-    // Parse permissions if it's a string
-    if (updateData.permissions && typeof updateData.permissions === 'string') {
-      updateData.permissions = JSON.parse(updateData.permissions);
-    }
-
-    // Update staff
-    const staff = await Staff.findByIdAndUpdate(
-      id,
-      { ...updateData, updatedAt: new Date() },
-      { new: true, runValidators: true }
-    ).select('-__v');
-
-    res.json({
-      success: true,
-      message: "Staff member updated successfully",
-      staff
-    });
-
-  } catch (error) {
-    console.error("Error updating staff:", error);
-    res.status(500).json({ error: "Failed to update staff member" });
-  }
-});
-
-// Delete staff member
-router.delete("/staff/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const staff = await Staff.findById(id);
-    if (!staff) {
-      return res.status(404).json({ error: "Staff member not found" });
-    }
-    await Staff.findByIdAndDelete(id);
-
-    res.json({
-      success: true,
-      message: "Staff member deleted successfully"
-    });
-
-  } catch (error) {
-    console.error("Error deleting staff:", error);
-    res.status(500).json({ error: "Failed to delete staff member" });
-  }
-});
-
-
-
 // Admin Schema
 const adminSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, default: 'admin' },
-  isActive: { type: Boolean, default: true }, // Added missing field
+  isActive: { type: Boolean, default: true },
   lastLogin: Date,
   createdAt: { type: Date, default: Date.now }
 });
@@ -305,7 +101,56 @@ export const initializeAdmin = async () => {
   }
 };
 
-// Admin Login
+// ==================== AUTHENTICATION MIDDLEWARE ====================
+
+// JWT Authentication Middleware
+const verifyToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  
+  if (!authHeader) {
+    return res.status(401).json({ error: "Access denied. No token provided." });
+  }
+  
+  const token = authHeader.split(' ')[1]; // Remove "Bearer " prefix
+  
+  if (!token) {
+    return res.status(401).json({ error: "Access denied. No token provided." });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    console.error("JWT verification error:", error);
+    return res.status(401).json({ error: "Invalid or expired token" });
+  }
+};
+
+// Permission checking middleware
+const checkPermission = (permission) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    // Admin has all permissions
+    if (req.user.role === 'admin') {
+      return next();
+    }
+
+    // Staff needs specific permission
+    if (req.user.role === 'staff' && req.user.permissions && req.user.permissions[permission]) {
+      return next();
+    }
+
+    return res.status(403).json({ error: "You don't have permission to access this resource" });
+  };
+};
+
+// ==================== PUBLIC ROUTES (NO AUTH NEEDED) ====================
+
+// Admin Login with JWT
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -333,16 +178,48 @@ router.post("/login", async (req, res) => {
     admin.lastLogin = new Date();
     await admin.save();
 
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        id: admin._id,
+        email: admin.email,
+        role: 'admin',
+        permissions: {
+          Dashboard: true,
+          Staff: true,
+          User: true,
+          Category: true,
+          Product: true,
+          Bookings: true,
+          Reports: true,
+          Settings: true
+        }
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
     console.log(`Admin logged in: ${email}`);
 
     res.json({
       success: true,
       message: "Admin login successful",
+      token,
       admin: {
         id: admin._id,
         username: admin.username,
         email: admin.email,
-        role: admin.role
+        role: admin.role,
+        permissions: {
+          Dashboard: true,
+          Staff: true,
+          User: true,
+          Category: true,
+          Product: true,
+          Bookings: true,
+          Reports: true,
+          Settings: true
+        }
       }
     });
 
@@ -351,10 +228,77 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ error: "Failed to login" });
   }
 });
-// In adminRoutes.js - update the dashboard endpoint
+
+// Staff Login with JWT
+router.post("/staff-login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    console.log("Staff login attempt:", { email });
+    
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    const staff = await Staff.findOne({ email });
+    if (!staff) {
+      return res.status(400).json({ error: "Invalid email or password" });
+    }
+
+    if (!staff.isActive) {
+      return res.status(400).json({ error: "Account is deactivated" });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, staff.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ error: "Invalid email or password" });
+    }
+
+    staff.lastLogin = new Date();
+    await staff.save();
+
+    // Generate JWT token for staff
+    const token = jwt.sign(
+      {
+        id: staff._id,
+        email: staff.email,
+        role: 'staff',
+        permissions: staff.permissions
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    console.log(`Staff logged in: ${email}`);
+
+    res.json({
+      success: true,
+      message: "Staff login successful",
+      token,
+      staff: {
+        id: staff._id,
+        name: staff.name,
+        email: staff.email,
+        phone: staff.phone,
+        designation: staff.designation,
+        permissions: staff.permissions,
+        role: 'staff'
+      }
+    });
+
+  } catch (error) {
+    console.error("Error in staff login:", error);
+    res.status(500).json({ error: "Failed to login" });
+  }
+});
+
+// ==================== PROTECTED ROUTES (REQUIRE AUTH) ====================
+
+// Apply JWT authentication middleware to all routes below
+router.use(verifyToken);
 
 // Admin Dashboard Statistics
-router.get("/dashboard", async (req, res) => {
+router.get("/dashboard", checkPermission('Dashboard'), async (req, res) => {
   try {
     const User = mongoose.model("User");
     const Booking = mongoose.model("Booking");
@@ -379,7 +323,7 @@ router.get("/dashboard", async (req, res) => {
     const recentBookings = await Booking.find()
       .sort({ createdAt: -1 })
       .limit(10)
-      .lean(); // Use lean() for plain JavaScript objects
+      .lean();
     
     // Get user emails from bookings
     const userEmails = recentBookings.map(b => b.userEmail);
@@ -467,8 +411,231 @@ router.get("/dashboard", async (req, res) => {
   }
 });
 
+// Get all staff with pagination
+router.get("/staff", checkPermission('Staff'), async (req, res) => {
+  try {
+    const { page = 1, limit = 20, search = "" } = req.query;
+    const skip = (page - 1) * limit;
+
+    let query = {};
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { phone: { $regex: search, $options: "i" } },
+        { designation: { $regex: search, $options: "i" } }
+      ];
+    }
+
+    const staff = await Staff.find(query)
+      .select('-password -__v')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Staff.countDocuments(query);
+
+    res.json({
+      success: true,
+      staff,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error("Error fetching staff:", error);
+    res.status(500).json({ error: "Failed to fetch staff" });
+  }
+});
+
+// Get single staff member
+router.get("/staff/:id", checkPermission('Staff'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const staff = await Staff.findById(id).select('-password -__v');
+    
+    if (!staff) {
+      return res.status(404).json({ error: "Staff member not found" });
+    }
+
+    res.json({
+      success: true,
+      staff
+    });
+
+  } catch (error) {
+    console.error("Error fetching staff:", error);
+    res.status(500).json({ error: "Failed to fetch staff" });
+  }
+});
+
+// Create new staff member WITH PASSWORD
+router.post("/staff", checkPermission('Staff'), async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      phone,
+      designation,
+      password,
+      permissions,
+      isActive
+    } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !phone || !designation || !password) {
+      return res.status(400).json({ error: "All required fields must be provided" });
+    }
+
+    // Check if email already exists
+    const existingStaff = await Staff.findOne({ email });
+    if (existingStaff) {
+      return res.status(400).json({ error: "Staff member with this email already exists" });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Parse permissions
+    let parsedPermissions = {};
+    if (permissions) {
+      if (typeof permissions === 'string') {
+        parsedPermissions = JSON.parse(permissions);
+      } else {
+        parsedPermissions = permissions;
+      }
+    } else {
+      parsedPermissions = {
+        Dashboard: false,
+        Staff: false,
+        User: false,
+        Category: false,
+        Product: false,
+        Bookings: false,
+        Reports: false,
+        Settings: false
+      };
+    }
+
+    // Create new staff
+    const staff = new Staff({
+      name,
+      email,
+      phone,
+      designation,
+      password: hashedPassword,
+      isActive: isActive !== undefined ? isActive : true,
+      permissions: parsedPermissions
+    });
+
+    await staff.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Staff member created successfully",
+      staff: {
+        id: staff._id,
+        name: staff.name,
+        email: staff.email,
+        phone: staff.phone,
+        designation: staff.designation,
+        permissions: staff.permissions,
+        isActive: staff.isActive
+      }
+    });
+
+  } catch (error) {
+    console.error("Error creating staff:", error);
+    if (error.code === 11000) {
+      return res.status(400).json({ error: "Email already exists" });
+    }
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: "Failed to create staff member" });
+  }
+});
+
+// Update staff member
+router.put("/staff/:id", checkPermission('Staff'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    // Find existing staff
+    const existingStaff = await Staff.findById(id);
+    if (!existingStaff) {
+      return res.status(404).json({ error: "Staff member not found" });
+    }
+
+    // Don't allow email update to existing email
+    if (updateData.email && updateData.email !== existingStaff.email) {
+      const emailExists = await Staff.findOne({ 
+        email: updateData.email, 
+        _id: { $ne: id } 
+      });
+      if (emailExists) {
+        return res.status(400).json({ error: "Email already exists" });
+      }
+    }
+
+    // Handle password update
+    if (updateData.password) {
+      updateData.password = await bcrypt.hash(updateData.password, 10);
+    }
+
+    // Parse permissions if it's a string
+    if (updateData.permissions && typeof updateData.permissions === 'string') {
+      updateData.permissions = JSON.parse(updateData.permissions);
+    }
+
+    // Update staff
+    const staff = await Staff.findByIdAndUpdate(
+      id,
+      { ...updateData, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    ).select('-password -__v');
+
+    res.json({
+      success: true,
+      message: "Staff member updated successfully",
+      staff
+    });
+
+  } catch (error) {
+    console.error("Error updating staff:", error);
+    res.status(500).json({ error: "Failed to update staff member" });
+  }
+});
+
+// Delete staff member
+router.delete("/staff/:id", checkPermission('Staff'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const staff = await Staff.findById(id);
+    if (!staff) {
+      return res.status(404).json({ error: "Staff member not found" });
+    }
+    await Staff.findByIdAndDelete(id);
+
+    res.json({
+      success: true,
+      message: "Staff member deleted successfully"
+    });
+
+  } catch (error) {
+    console.error("Error deleting staff:", error);
+    res.status(500).json({ error: "Failed to delete staff member" });
+  }
+});
+
 // Get users by emails
-router.post("/users-by-emails", async (req, res) => {
+router.post("/users-by-emails", checkPermission('User'), async (req, res) => {
   try {
     const { emails } = req.body;
     
@@ -492,7 +659,7 @@ router.post("/users-by-emails", async (req, res) => {
 });
 
 // Get all users with pagination
-router.get("/users", async (req, res) => {
+router.get("/users", checkPermission('User'), async (req, res) => {
   try {
     const User = mongoose.model("User");
     const { page = 1, limit = 20, search = "", sort = "-createdAt" } = req.query;
@@ -511,7 +678,7 @@ router.get("/users", async (req, res) => {
     }
 
     const users = await User.find(query)
-      .select('name email phone city profileImage createdAt password') // Include password for display
+      .select('name email phone city profileImage createdAt password')
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
@@ -535,7 +702,8 @@ router.get("/users", async (req, res) => {
   }
 });
 
-router.get("/services", async (req, res) => {
+// Services (Categories) routes
+router.get("/services", checkPermission('Category'), async (req, res) => {
   try {
     const Service = mongoose.model("Service");
     const { page = 1, limit = 20, search = "", category = "" } = req.query;
@@ -578,24 +746,15 @@ router.get("/services", async (req, res) => {
 });
 
 // Create new service WITH image upload
-router.post("/services", upload.single('image'), async (req, res) => {
+router.post("/services", checkPermission('Category'), upload.single('image'), async (req, res) => {
   try {
     const { name, description, category, order, isActive = true, key } = req.body;
 
     // Handle image upload
     let imageUrl = "/assets/default-category.png";
     if (req.file) {
-      // Make sure the path is correct and starts with /assets/
       imageUrl = `/assets/${req.file.filename}`;
       console.log("Uploaded new category image:", imageUrl);
-      
-      // Verify the file exists
-      const filePath = path.join(__dirname, '..', imageUrl);
-      if (!fs.existsSync(filePath)) {
-        console.error("File doesn't exist at:", filePath);
-      } else {
-        console.log("File exists at:", filePath);
-      }
     }
 
     if (!name) {
@@ -608,18 +767,14 @@ router.post("/services", upload.single('image'), async (req, res) => {
       key: key || name.toLowerCase().replace(/ /g, '-'),
       description: description || "",
       category: category || "General",
-      img: imageUrl, // Ensure this is set
+      img: imageUrl,
       order: order || 0,
       isActive: isActive !== undefined ? isActive : true
     });
 
     await service.save();
 
-    console.log("Service created successfully:", {
-      name: service.name,
-      img: service.img,
-      _id: service._id
-    });
+    console.log("Service created successfully");
 
     res.status(201).json({
       success: true,
@@ -634,7 +789,7 @@ router.post("/services", upload.single('image'), async (req, res) => {
 });
 
 // Update service WITH image upload
-router.put("/services/:id", upload.single('image'), async (req, res) => {
+router.put("/services/:id", checkPermission('Category'), upload.single('image'), async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -655,7 +810,7 @@ router.put("/services/:id", upload.single('image'), async (req, res) => {
         const oldImagePath = path.join(__dirname, '..', service.img);
         if (fs.existsSync(oldImagePath)) {
           fs.unlinkSync(oldImagePath);
-          console.log("🗑️ Deleted old image:", oldImagePath);
+          console.log("Deleted old image:", oldImagePath);
         }
       }
     }
@@ -666,10 +821,7 @@ router.put("/services/:id", upload.single('image'), async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    console.log("Service updated successfully:", {
-      name: updatedService.name,
-      img: updatedService.img
-    });
+    console.log("Service updated successfully");
 
     res.json({
       success: true,
@@ -678,13 +830,13 @@ router.put("/services/:id", upload.single('image'), async (req, res) => {
     });
 
   } catch (error) {
-    console.error("❌ Error updating service:", error);
+    console.error("Error updating service:", error);
     res.status(500).json({ error: "Failed to update service" });
   }
 });
 
 // Toggle service status
-router.put("/services/:id/toggle-status", async (req, res) => {
+router.put("/services/:id/toggle-status", checkPermission('Category'), async (req, res) => {
   try {
     const { id } = req.params;
     const { isActive } = req.body;
@@ -711,7 +863,7 @@ router.put("/services/:id/toggle-status", async (req, res) => {
 });
 
 // Delete service
-router.delete("/services/:id", async (req, res) => {
+router.delete("/services/:id", checkPermission('Category'), async (req, res) => {
   try {
     const Service = mongoose.model("Service");
     const service = await Service.findById(req.params.id);
@@ -741,7 +893,7 @@ router.delete("/services/:id", async (req, res) => {
 });
 
 // Get all bookings with filters
-router.get("/bookings", async (req, res) => {
+router.get("/bookings", checkPermission('Bookings'), async (req, res) => {
   try {
     const Booking = mongoose.model("Booking");
     const { 
@@ -816,10 +968,8 @@ router.get("/bookings", async (req, res) => {
   }
 });
 
-
-
 // Update booking status
-router.put("/bookings/:id/status", async (req, res) => {
+router.put("/bookings/:id/status", checkPermission('Bookings'), async (req, res) => {
   try {
     const Booking = mongoose.model("Booking");
     const { id } = req.params;
@@ -857,7 +1007,7 @@ router.put("/bookings/:id/status", async (req, res) => {
 });
 
 // Delete single booking
-router.delete("/bookings/:id", async (req, res) => {
+router.delete("/bookings/:id", checkPermission('Bookings'), async (req, res) => {
   try {
     const Booking = mongoose.model("Booking");
     const { id } = req.params;
@@ -878,9 +1028,8 @@ router.delete("/bookings/:id", async (req, res) => {
   }
 });
 
-
 // Get all packages
-router.get("/packages", async (req, res) => {
+router.get("/packages", checkPermission('Product'), async (req, res) => {
   try {
     const Package = mongoose.model("Package");
     const { page = 1, limit = 20, search = "", category = "" } = req.query;
@@ -922,7 +1071,7 @@ router.get("/packages", async (req, res) => {
   }
 });
 
-// In adminRoutes.js - Add this generic bulk delete route
+// Bulk delete
 router.post("/bulk-delete", async (req, res) => {
   try {
     const { entity, ids } = req.body;
@@ -931,6 +1080,27 @@ router.post("/bulk-delete", async (req, res) => {
       return res.status(400).json({ 
         error: "Entity type and IDs array are required" 
       });
+    }
+
+    // Check permission based on entity
+    const permissionMap = {
+      'staff': 'Staff',
+      'users': 'User',
+      'services': 'Category',
+      'packages': 'Product',
+      'bookings': 'Bookings'
+    };
+
+    const requiredPermission = permissionMap[entity];
+    if (!requiredPermission) {
+      return res.status(400).json({ error: "Invalid entity type" });
+    }
+
+    // Admin bypasses permission check
+    if (req.user.role !== 'admin') {
+      if (!req.user.permissions || !req.user.permissions[requiredPermission]) {
+        return res.status(403).json({ error: "You don't have permission to delete this entity" });
+      }
     }
 
     let model;
@@ -998,32 +1168,6 @@ router.post("/bulk-delete", async (req, res) => {
       error: `Failed to delete ${entity}` 
     });
   }
-});
-
-// Admin middleware for authentication
-const adminAuth = (req, res, next) => {
-  const adminToken = req.headers['admin-token'];
-  
-  if (!adminToken) {
-    return res.status(401).json({ error: "Admin authentication required" });
-  }
-  
-  // Simple check - in real app, verify JWT
-  if (adminToken !== "admin-secret-token") {
-    return res.status(401).json({ error: "Invalid admin token" });
-  }
-  
-  next();
-};
-
-
-
-// Apply admin auth middleware to all routes except login
-router.use((req, res, next) => {
-  if (req.path === '/login') {
-    return next();
-  }
-  adminAuth(req, res, next);
 });
 
 export default router;
