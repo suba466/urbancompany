@@ -269,32 +269,7 @@ router.delete("/staff/:id", async (req, res) => {
   }
 });
 
-// Bulk delete staff members
-router.delete("/staff/bulk-delete", async (req, res) => {
-  try {
-    const { staffIds } = req.body;
 
-    if (!staffIds || !Array.isArray(staffIds) || staffIds.length === 0) {
-      return res.status(400).json({ error: "No staff IDs provided" });
-    }
-
-    const result = await Staff.deleteMany({ _id: { $in: staffIds } });
-
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ error: "No staff members found to delete" });
-    }
-
-    res.json({
-      success: true,
-      message: `${result.deletedCount} staff member(s) deleted successfully`,
-      deletedCount: result.deletedCount
-    });
-
-  } catch (error) {
-    console.error("Error bulk deleting staff:", error);
-    res.status(500).json({ error: "Failed to delete staff members" });
-  }
-});
 
 // Admin Schema
 const adminSchema = new mongoose.Schema({
@@ -560,31 +535,208 @@ router.get("/users", async (req, res) => {
   }
 });
 
-// Bulk delete users
-router.delete("/users/bulk-delete", async (req, res) => {
+router.get("/services", async (req, res) => {
   try {
-    const { userIds } = req.body;
+    const Service = mongoose.model("Service");
+    const { page = 1, limit = 20, search = "", category = "" } = req.query;
+    const skip = (page - 1) * limit;
 
-    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
-      return res.status(400).json({ error: "No user IDs provided" });
+    let query = {};
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } }
+      ];
+    }
+    
+    if (category) {
+      query.category = category;
     }
 
-    const User = mongoose.model("User");
-    const result = await User.deleteMany({ _id: { $in: userIds } });
+    const services = await Service.find(query)
+      .sort({ order: 1 })
+      .skip(skip)
+      .limit(parseInt(limit));
 
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ error: "No users found to delete" });
-    }
+    const total = await Service.countDocuments(query);
 
     res.json({
       success: true,
-      message: `${result.deletedCount} user(s) deleted successfully`,
-      deletedCount: result.deletedCount
+      services,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
     });
 
   } catch (error) {
-    console.error("Error bulk deleting users:", error);
-    res.status(500).json({ error: "Failed to delete users" });
+    console.error("Error fetching services:", error);
+    res.status(500).json({ error: "Failed to fetch services" });
+  }
+});
+
+// Create new service WITH image upload
+router.post("/services", upload.single('image'), async (req, res) => {
+  try {
+    const { name, description, category, order, isActive = true, key } = req.body;
+
+    // Handle image upload
+    let imageUrl = "/assets/default-category.png";
+    if (req.file) {
+      // Make sure the path is correct and starts with /assets/
+      imageUrl = `/assets/${req.file.filename}`;
+      console.log("Uploaded new category image:", imageUrl);
+      
+      // Verify the file exists
+      const filePath = path.join(__dirname, '..', imageUrl);
+      if (!fs.existsSync(filePath)) {
+        console.error("File doesn't exist at:", filePath);
+      } else {
+        console.log("File exists at:", filePath);
+      }
+    }
+
+    if (!name) {
+      return res.status(400).json({ error: "Service name is required" });
+    }
+
+    const Service = mongoose.model("Service");
+    const service = new Service({
+      name,
+      key: key || name.toLowerCase().replace(/ /g, '-'),
+      description: description || "",
+      category: category || "General",
+      img: imageUrl, // Ensure this is set
+      order: order || 0,
+      isActive: isActive !== undefined ? isActive : true
+    });
+
+    await service.save();
+
+    console.log("Service created successfully:", {
+      name: service.name,
+      img: service.img,
+      _id: service._id
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Service created successfully",
+      service
+    });
+
+  } catch (error) {
+    console.error("Error creating service:", error);
+    res.status(500).json({ error: "Failed to create service" });
+  }
+});
+
+// Update service WITH image upload
+router.put("/services/:id", upload.single('image'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const Service = mongoose.model("Service");
+    const service = await Service.findById(id);
+    if (!service) {
+      return res.status(404).json({ error: "Service not found" });
+    }
+
+    // Handle image upload
+    if (req.file) {
+      updateData.img = `/assets/${req.file.filename}`;
+      console.log("Updated category image:", updateData.img);
+      
+      // Optional: Delete old image if not default
+      if (service.img && service.img !== "/assets/default-category.png") {
+        const oldImagePath = path.join(__dirname, '..', service.img);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+          console.log("🗑️ Deleted old image:", oldImagePath);
+        }
+      }
+    }
+
+    const updatedService = await Service.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    console.log("Service updated successfully:", {
+      name: updatedService.name,
+      img: updatedService.img
+    });
+
+    res.json({
+      success: true,
+      message: "Service updated successfully",
+      service: updatedService
+    });
+
+  } catch (error) {
+    console.error("❌ Error updating service:", error);
+    res.status(500).json({ error: "Failed to update service" });
+  }
+});
+
+// Toggle service status
+router.put("/services/:id/toggle-status", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+    
+    const Service = mongoose.model("Service");
+    const service = await Service.findById(id);
+    if (!service) {
+      return res.status(404).json({ error: "Service not found" });
+    }
+    
+    service.isActive = isActive !== undefined ? isActive : !service.isActive;
+    await service.save();
+    
+    res.json({
+      success: true,
+      message: `Service ${service.isActive ? 'enabled' : 'disabled'} successfully`,
+      service
+    });
+    
+  } catch (error) {
+    console.error("Error toggling service status:", error);
+    res.status(500).json({ error: "Failed to update service status" });
+  }
+});
+
+// Delete service
+router.delete("/services/:id", async (req, res) => {
+  try {
+    const Service = mongoose.model("Service");
+    const service = await Service.findById(req.params.id);
+    if (!service) {
+      return res.status(404).json({ error: "Service not found" });
+    }
+
+    // Delete image file if exists and is not default
+    if (service.img && service.img !== "/assets/default-category.png") {
+      const imagePath = path.join(__dirname, '..', service.img);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+        console.log("Deleted service image:", imagePath);
+      }
+    }
+
+    await Service.findByIdAndDelete(req.params.id);
+    res.json({ 
+      success: true,
+      message: "Service deleted successfully" 
+    });
+
+  } catch (error) {
+    console.error("Error deleting service:", error);
+    res.status(500).json({ error: "Failed to delete service" });
   }
 });
 
@@ -664,33 +816,7 @@ router.get("/bookings", async (req, res) => {
   }
 });
 
-// Bulk delete bookings
-router.delete("/bookings/bulk-delete", async (req, res) => {
-  try {
-    const { bookingIds } = req.body;
 
-    if (!bookingIds || !Array.isArray(bookingIds) || bookingIds.length === 0) {
-      return res.status(400).json({ error: "No booking IDs provided" });
-    }
-
-    const Booking = mongoose.model("Booking");
-    const result = await Booking.deleteMany({ _id: { $in: bookingIds } });
-
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ error: "No bookings found to delete" });
-    }
-
-    res.json({
-      success: true,
-      message: `${result.deletedCount} booking(s) deleted successfully`,
-      deletedCount: result.deletedCount
-    });
-
-  } catch (error) {
-    console.error("Error bulk deleting bookings:", error);
-    res.status(500).json({ error: "Failed to delete bookings" });
-  }
-});
 
 // Update booking status
 router.put("/bookings/:id/status", async (req, res) => {
@@ -751,48 +877,7 @@ router.delete("/bookings/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to delete booking" });
   }
 });
-// In adminRoutes.js - update the get services endpoint:
-router.get("/services", async (req, res) => {
-  try {
-    const Service = mongoose.model("Service");
-    const { page = 1, limit = 20, search = "", category = "" } = req.query;
-    const skip = (page - 1) * limit;
 
-    let query = {};
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } }
-      ];
-    }
-    
-    if (category) {
-      query.category = category;
-    }
-
-    const services = await Service.find(query)
-      .sort({ order: 1 })
-      .skip(skip)
-      .limit(parseInt(limit));
-
-    const total = await Service.countDocuments(query);
-
-    res.json({
-      success: true,
-      services,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / limit)
-      }
-    });
-
-  } catch (error) {
-    console.error("Error fetching services:", error);
-    res.status(500).json({ error: "Failed to fetch services" });
-  }
-});
 
 // Get all packages
 router.get("/packages", async (req, res) => {
@@ -837,183 +922,81 @@ router.get("/packages", async (req, res) => {
   }
 });
 
-router.put("/services/:id/toggle-status", async (req, res) => {
+// In adminRoutes.js - Add this generic bulk delete route
+router.post("/bulk-delete", async (req, res) => {
   try {
-    const { id } = req.params;
-    const { isActive } = req.body;
+    const { entity, ids } = req.body;
     
-    const Service = mongoose.model("Service");
-    const service = await Service.findById(id);
-    if (!service) {
-      return res.status(404).json({ error: "Service not found" });
-    }
-    
-    service.isActive = isActive !== undefined ? isActive : !service.isActive;
-    await service.save();
-    
-    res.json({
-      success: true,
-      message: `Service ${service.isActive ? 'enabled' : 'disabled'} successfully`,
-      service
-    });
-    
-  } catch (error) {
-    console.error("Error toggling service status:", error);
-    res.status(500).json({ error: "Failed to update service status" });
-  }
-});
-
-// Update service/category WITH image upload
-router.put("/services/:id", upload.single('image'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updateData = req.body;
-
-    const Service = mongoose.model("Service");
-    const service = await Service.findById(id);
-    if (!service) {
-      return res.status(404).json({ error: "Service not found" });
+    if (!entity || !ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ 
+        error: "Entity type and IDs array are required" 
+      });
     }
 
-    // Handle image upload
-    if (req.file) {
-      updateData.img = `/assets/${req.file.filename}`;
+    let model;
+    let deletedCount = 0;
+    let message = "";
+
+    switch(entity) {
+      case 'staff':
+        model = Staff;
+        message = "staff member(s)";
+        break;
+      case 'users':
+        model = mongoose.model("User");
+        message = "user(s)";
+        break;
+      case 'services':
+        model = mongoose.model("Service");
+        message = "service(s)";
+        break;
+      case 'packages':
+        model = mongoose.model("Package");
+        message = "package(s)";
+        break;
+      case 'bookings':
+        model = mongoose.model("Booking");
+        message = "booking(s)";
+        break;
+      default:
+        return res.status(400).json({ error: "Invalid entity type" });
     }
 
-    const updatedService = await Service.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    );
-
-    res.json({
-      success: true,
-      message: "Service updated successfully",
-      service: updatedService
-    });
-
-  } catch (error) {
-    console.error("Error updating service:", error);
-    res.status(500).json({ error: "Failed to update service" });
-  }
-});
-
-// Create new service WITH image upload
-router.post("/services", upload.single('image'), async (req, res) => {
-  try {
-    const { name, description, category, order, isActive = true } = req.body;
-
-    // Handle image upload
-    let imageUrl = "/assets/default-category.png";
-    if (req.file) {
-      imageUrl = `/assets/${req.file.filename}`;
-    }
-
-    if (!name) {
-      return res.status(400).json({ error: "Service name is required" });
-    }
-
-    const Service = mongoose.model("Service");
-    const service = new Service({
-      name,
-      description: description || "",
-      category: category || "General",
-      img: imageUrl,
-      order: order || 0,
-      isActive: isActive !== undefined ? isActive : true
-    });
-
-    await service.save();
-
-    res.status(201).json({
-      success: true,
-      message: "Service created successfully",
-      service
-    });
-
-  } catch (error) {
-    console.error("Error creating service:", error);
-    res.status(500).json({ error: "Failed to create service" });
-  }
-});
-
-// Update service WITH image upload
-router.put("/services/:id", upload.single('image'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updateData = req.body;
-
-    const Service = mongoose.model("Service");
-    const service = await Service.findById(id);
-    if (!service) {
-      return res.status(404).json({ error: "Service not found" });
-    }
-
-    // Handle image upload
-    if (req.file) {
-      updateData.img = `/assets/${req.file.filename}`;
+    // Get records to handle file deletion if needed
+    if (entity === 'services') {
+      const services = await model.find({ _id: { $in: ids } });
       
-      // Optional: Delete old image if not default
-      if (service.img && service.img !== "/assets/default-category.png") {
-        const oldImagePath = path.join(__dirname, '..', service.img);
-        if (fs.existsSync(oldImagePath)) {
-          fs.unlinkSync(oldImagePath);
+      // Delete image files
+      services.forEach(service => {
+        if (service.img && service.img !== "/assets/default-category.png") {
+          const imagePath = path.join(__dirname, '..', service.img);
+          if (fs.existsSync(imagePath)) {
+            fs.unlinkSync(imagePath);
+          }
         }
-      }
+      });
     }
 
-    const updatedService = await Service.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    );
+    const result = await model.deleteMany({ _id: { $in: ids } });
+    deletedCount = result.deletedCount;
+
+    if (deletedCount === 0) {
+      return res.status(404).json({ 
+        error: `No ${entity} found to delete` 
+      });
+    }
 
     res.json({
       success: true,
-      message: "Service updated successfully",
-      service: updatedService
+      message: `${deletedCount} ${message} deleted successfully`,
+      deletedCount
     });
 
   } catch (error) {
-    console.error("Error updating service:", error);
-    res.status(500).json({ error: "Failed to update service" });
-  }
-});
-// In adminRoutes.js - add bulk delete
-router.delete("/services/bulk-delete", async (req, res) => {
-  try {
-    const { serviceIds } = req.body;
-
-    if (!serviceIds || !Array.isArray(serviceIds) || serviceIds.length === 0) {
-      return res.status(400).json({ error: "No service IDs provided" });
-    }
-
-    const Service = mongoose.model("Service");
-    
-    // Get services to delete images
-    const services = await Service.find({ _id: { $in: serviceIds } });
-    
-    // Delete image files
-    services.forEach(service => {
-      if (service.img && service.img !== "/assets/default-category.png") {
-        const imagePath = path.join(__dirname, '..', service.img);
-        if (fs.existsSync(imagePath)) {
-          fs.unlinkSync(imagePath);
-        }
-      }
+    console.error(`Error bulk deleting ${entity}:`, error);
+    res.status(500).json({ 
+      error: `Failed to delete ${entity}` 
     });
-
-    const result = await Service.deleteMany({ _id: { $in: serviceIds } });
-
-    res.json({
-      success: true,
-      message: `${result.deletedCount} service(s) deleted successfully`,
-      deletedCount: result.deletedCount
-    });
-
-  } catch (error) {
-    console.error("Error bulk deleting services:", error);
-    res.status(500).json({ error: "Failed to delete services" });
   }
 });
 

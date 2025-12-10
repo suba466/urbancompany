@@ -15,7 +15,10 @@ import { FcSupport } from "react-icons/fc";
 import jsPDF from 'jspdf';
 import html2pdf from 'html2pdf.js';
 import * as XLSX from 'xlsx';
-
+import Categories from './Categories';
+import CategoryForm from './CategoryForm';
+import { IoEyeSharp } from "react-icons/io5";
+import "./Urbancom.css"; 
 function AdminPanel() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginData, setLoginData] = useState({ email: '', password: '' });
@@ -23,13 +26,13 @@ function AdminPanel() {
   const [adminLogo, setAdminLogo] = useState('/assets/Uc.png');
   const [activeMenu, setActiveMenu] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  
+  const [confirmPassword, setConfirmPassword] = useState('');
   // Dashboard States
   const [stats, setStats] = useState(null);
   const [recentBookings, setRecentBookings] = useState([]);
   const [recentUsers, setRecentUsers] = useState([]);
   
-  // Staff Management States
+  // User Management States
   const [staff, setStaff] = useState([]);
   const [staffSearch, setStaffSearch] = useState('');
   const [staffPage, setStaffPage] = useState(1);
@@ -64,7 +67,8 @@ function AdminPanel() {
   const [formError, setFormError] = useState('');
   const [editStaffId, setEditStaffId] = useState(null);
   const [isEditingStaff, setIsEditingStaff] = useState(false);
-
+  const [showStaffDetails, setShowStaffDetails]=useState(false);
+  const [selectedStaffDetails, setSelectedStaffDetails] = useState(null);
   // User Management States
   const [users, setUsers] = useState([]);
   const [userSearch, setUserSearch] = useState('');
@@ -166,6 +170,11 @@ function AdminPanel() {
     }
   };
 
+  const handleViewStaff = (staffMember) => {
+  setSelectedStaffDetails(staffMember);
+  setShowStaffDetails(true);
+};
+
   const handleAdminLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -262,31 +271,52 @@ const fetchDashboardData = async () => {
     }
   };
 
-  const fetchCategories = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/admin/services', {
-        headers: { 'admin-token': 'admin-secret-token' }
-      });
-      const data = await response.json();
-      if (data.success) {
-        setCategories(data.services || []);
-        setSelectedCategories([]);
-        setSelectAllCategories(false);
-      } else {
-        // Fallback to mock data
-        const mockCategories = [
-          { _id: '1', name: 'Salon for Women', description: 'Beauty services', icon: '✂️', order: 1, isActive: true },
-          { _id: '2', name: 'AC Repair', description: 'Appliance services', icon: '❄️', order: 2, isActive: true },
-          { _id: '3', name: 'Cleaning', description: 'Home cleaning', icon: '🧹', order: 3, isActive: true },
-          { _id: '4', name: 'Plumbing', description: 'Plumber services', icon: '🔧', order: 4, isActive: true },
-          { _id: '5', name: 'Electrician', description: 'Electrical services', icon: '💡', order: 5, isActive: true }
-        ];
-        setCategories(mockCategories);
-      }
-    } catch (error) {
-      console.error('Error fetching categories:', error);
+ const fetchCategories = async () => {
+  try {
+    console.log("🔍 Fetching categories from admin API...");
+    const response = await fetch('http://localhost:5000/api/admin/services', {
+      headers: { 'admin-token': 'admin-secret-token' }
+    });
+    
+    if (!response.ok) {
+      console.error("Failed to fetch categories:", response.status);
+      setCategories([]);
+      return;
     }
-  };
+    
+    const data = await response.json();
+    console.log("Categories API response:", data);
+    
+    if (data.success && data.services && Array.isArray(data.services)) {
+      console.log(`Found ${data.services.length} categories`);
+      
+      // Log each category with its image
+      data.services.forEach((service, index) => {
+        console.log(`Category ${index + 1}:`, {
+          name: service.name,
+          img: service.img,
+          hasImg: !!service.img,
+          fullUrl: `http://localhost:5000${service.img}`
+        });
+      });
+      
+      // Ensure each service has proper img field
+      const formattedCategories = data.services.map(service => ({
+        ...service,
+        img: service.img || '/assets/default-category.png'
+      }));
+      
+      console.log("Setting categories state");
+      setCategories(formattedCategories);
+    } else {
+      console.error("Invalid response format:", data);
+      setCategories([]);
+    }
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    setCategories([]);
+  }
+};
 
   const fetchProducts = async () => {
     try {
@@ -426,65 +456,27 @@ const fetchDashboardData = async () => {
 
   const updateCategory = async (categoryId, updateData) => {
   try {
-    const formData = new FormData();
-    
-    // Add all data fields to formData
-    if (updateData.name) formData.append('name', updateData.name);
-    if (updateData.description) formData.append('description', updateData.description);
-    if (updateData.category) formData.append('category', updateData.category);
-    if (updateData.order !== undefined) formData.append('order', updateData.order);
-    if (updateData.isActive !== undefined) formData.append('isActive', updateData.isActive);
-    
-    // Handle image file if provided
-    if (updateData.image && updateData.image instanceof File) {
-      formData.append('image', updateData.image);
-    } else if (updateData.img) {
-      // If it's a string URL, you might want to keep the existing image
-      formData.append('img', updateData.img);
-    }
-    
     const response = await fetch(`http://localhost:5000/api/admin/services/${categoryId}`, {
       method: 'PUT',
       headers: { 
+        'Content-Type': 'application/json',
         'admin-token': 'admin-secret-token'
       },
-      body: formData
+      body: JSON.stringify(updateData)
     });
     
     const data = await response.json();
     if (data.success) {
-      alert('Category updated successfully!');
-      fetchCategories();
-      return true;
+      fetchCategories(); // Refresh the list
     } else {
-      alert(data.error || 'Failed to update category');
-      return false;
+      console.error("Failed to update category:", data.error);
     }
   } catch (error) {
     console.error('Error updating category:', error);
-    alert('Failed to update category');
-    return false;
   }
 };
 
-  const handleCategorySelect = (categoryId) => {
-    setSelectedCategories(prev => {
-      if (prev.includes(categoryId)) {
-        return prev.filter(id => id !== categoryId);
-      } else {
-        return [...prev, categoryId];
-      }
-    });
-  };
-
-  const handleSelectAllCategories = () => {
-    if (selectAllCategories) {
-      setSelectedCategories([]);
-    } else {
-      setSelectedCategories(categories.map(c => c._id));
-    }
-    setSelectAllCategories(!selectAllCategories);
-  };
+ 
 
   const handleProductSelect = (productId) => {
     setSelectedProducts(prev => {
@@ -524,154 +516,86 @@ const fetchDashboardData = async () => {
     setSelectAllBookings(!selectAllBookings);
   };
 
-  // Bulk delete functions
-  const handleBulkDeleteStaff = async () => {
-    if (selectedStaff.length === 0) return;
-    
-    if (window.confirm(`Are you sure you want to delete ${selectedStaff.length} staff member(s)?`)) {
-      try {
-        const response = await fetch('http://localhost:5000/api/admin/staff/bulk-delete', {
-          method: 'DELETE',
-          headers: { 
-            'Content-Type': 'application/json',
-            'admin-token': 'admin-secret-token' 
-          },
-          body: JSON.stringify({ staffIds: selectedStaff })
-        });
-        const data = await response.json();
-        if (data.success) {
-          alert(`${selectedStaff.length} staff member(s) deleted successfully`);
-          setSelectedStaff([]);
-          setSelectAllStaff(false);
-          fetchStaff(staffPage, staffSearch, staffPerPage);
-        } else {
-          alert(data.error || 'Failed to delete staff members');
-        }
-      } catch (error) {
-        console.error('Error deleting staff:', error);
-        alert('Failed to delete staff members');
-      }
-    }
+ // Common bulk delete function
+const handleBulkDelete = async (entity, selectedIds) => {
+  if (selectedIds.length === 0) return;
+  
+  const entityNames = {
+    'staff': 'staff member(s)',
+    'users': 'user(s)',
+    'categories': 'category(ies)',
+    'products': 'product(s)',
+    'bookings': 'booking(s)'
   };
 
-  const handleBulkDeleteUsers = async () => {
-    if (selectedUsers.length === 0) return;
-    
-    if (window.confirm(`Are you sure you want to delete ${selectedUsers.length} user(s)?`)) {
-      try {
-        const response = await fetch('http://localhost:5000/api/admin/users/bulk-delete', {
-          method: 'DELETE',
-          headers: { 
-            'Content-Type': 'application/json',
-            'admin-token': 'admin-secret-token' 
-          },
-          body: JSON.stringify({ userIds: selectedUsers })
-        });
-        const data = await response.json();
-        if (data.success) {
-          alert(`${selectedUsers.length} user(s) deleted successfully`);
-          setSelectedUsers([]);
-          setSelectAllUsers(false);
-          fetchUsers(userPage, userSearch, userPerPage);
-        } else {
-          alert(data.error || 'Failed to delete users');
-        }
-      } catch (error) {
-        console.error('Error deleting users:', error);
-        alert('Failed to delete users');
-      }
-    }
+  // Map frontend entity names to backend entity names
+  const backendEntityMap = {
+    'staff': 'staff',
+    'users': 'users',
+    'categories': 'services',
+    'products': 'packages', 
+    'bookings': 'bookings'
   };
 
-  const handleBulkDeleteCategories = async () => {
-    if (selectedCategories.length === 0) return;
-    
-    if (window.confirm(`Are you sure you want to delete ${selectedCategories.length} category(ies)?`)) {
-      try {
-        // This should be implemented in your backend API
-        const response = await fetch('http://localhost:5000/api/admin/services/bulk-delete', {
-          method: 'DELETE',
-          headers: { 
-            'Content-Type': 'application/json',
-            'admin-token': 'admin-secret-token' 
-          },
-          body: JSON.stringify({ categoryIds: selectedCategories })
-        });
+  const backendEntity = backendEntityMap[entity];
+  
+  if (window.confirm(`Are you sure you want to delete ${selectedIds.length} ${entityNames[entity]}?`)) {
+    try {
+      const response = await fetch('http://localhost:5000/api/admin/bulk-delete', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'admin-token': 'admin-secret-token' 
+        },
+        body: JSON.stringify({ 
+          entity: backendEntity, // Use backend entity name
+          ids: selectedIds 
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(data.message);
         
-        if (response.ok) {
-          alert(`${selectedCategories.length} category(ies) deleted successfully`);
-          setSelectedCategories([]);
-          setSelectAllCategories(false);
-          fetchCategories();
-        } else {
-          alert('Failed to delete categories');
+        // Reset selection and refresh data
+        switch(entity) {
+          case 'staff':
+            setSelectedStaff([]);
+            setSelectAllStaff(false);
+            fetchStaff(staffPage, staffSearch, staffPerPage);
+            break;
+          case 'users':
+            setSelectedUsers([]);
+            setSelectAllUsers(false);
+            fetchUsers(userPage, userSearch, userPerPage);
+            break;
+          case 'categories':
+            setSelectedCategories([]);
+            setSelectAllCategories(false);
+            fetchCategories();
+            break;
+          case 'products':
+            setSelectedProducts([]);
+            setSelectAllProducts(false);
+            fetchProducts();
+            break;
+          case 'bookings':
+            setSelectedBookings([]);
+            setSelectAllBookings(false);
+            fetchBookings(bookingPage, bookingSearch, bookingStatus, bookingPerPage);
+            fetchDashboardData();
+            break;
         }
-      } catch (error) {
-        console.error('Error deleting categories:', error);
-        alert('Failed to delete categories');
+      } else {
+        alert(data.error || `Failed to delete ${entity}`);
       }
+    } catch (error) {
+      console.error(`Error deleting ${entity}:`, error);
+      alert(`Failed to delete ${entity}`);
     }
-  };
-
-  const handleBulkDeleteProducts = async () => {
-    if (selectedProducts.length === 0) return;
-    
-    if (window.confirm(`Are you sure you want to delete ${selectedProducts.length} product(s)?`)) {
-      try {
-        // This should be implemented in your backend API
-        const response = await fetch('http://localhost:5000/api/admin/packages/bulk-delete', {
-          method: 'DELETE',
-          headers: { 
-            'Content-Type': 'application/json',
-            'admin-token': 'admin-secret-token' 
-          },
-          body: JSON.stringify({ productIds: selectedProducts })
-        });
-        
-        if (response.ok) {
-          alert(`${selectedProducts.length} product(s) deleted successfully`);
-          setSelectedProducts([]);
-          setSelectAllProducts(false);
-          fetchProducts();
-        } else {
-          alert('Failed to delete products');
-        }
-      } catch (error) {
-        console.error('Error deleting products:', error);
-        alert('Failed to delete products');
-      }
-    }
-  };
-
-  const handleBulkDeleteBookings = async () => {
-    if (selectedBookings.length === 0) return;
-    
-    if (window.confirm(`Are you sure you want to delete ${selectedBookings.length} booking(s)?`)) {
-      try {
-        const response = await fetch('http://localhost:5000/api/admin/bookings/bulk-delete', {
-          method: 'DELETE',
-          headers: { 
-            'Content-Type': 'application/json',
-            'admin-token': 'admin-secret-token' 
-          },
-          body: JSON.stringify({ bookingIds: selectedBookings })
-        });
-        const data = await response.json();
-        if (data.success) {
-          alert(`${selectedBookings.length} booking(s) deleted successfully`);
-          setSelectedBookings([]);
-          setSelectAllBookings(false);
-          fetchBookings(bookingPage, bookingSearch, bookingStatus, bookingPerPage);
-          fetchDashboardData();
-        } else {
-          alert(data.error || 'Failed to delete bookings');
-        }
-      } catch (error) {
-        console.error('Error deleting bookings:', error);
-        alert('Failed to delete bookings');
-      }
-    }
-  };
+  }
+};
 
   // Helper function to display password (always shows 6 dots)
   const displayPassword = () => {
@@ -1554,7 +1478,7 @@ const fetchDashboardData = async () => {
       </Card.Header>
       <Card.Body>
         <div className="table-responsive">
-          <Table hover responsive>
+          <Table striped bordered hover variant="light">
             <thead>
               <tr>
                 <th style={{ width: '80px' }}>Profile</th>
@@ -1723,70 +1647,59 @@ const fetchDashboardData = async () => {
 </Row>
           </>
         );
+ case 'add-staff':
+  return (
+    <div className="p-3">
+      <Card className="shadow-lg p-3">
+        <Card.Body>
+          <h5 className="mb-0 fw-semibold">
+            {isEditingStaff ? 'Edit Staff' : (
+              <>
+                User Management
+                <span className="text-muted mx-2" style={{fontSize:"14px",fontWeight:"normal"}}>•</span>
+                <span className="text-muted " style={{fontSize:"14px",fontWeight:"normal"}}>New User</span>
+              </>
+            )}
+          </h5>
+        </Card.Body>
+      </Card>
       
-      case 'add-staff':
-        return (
-          <Card className="border-0 shadow-sm">
-            <Card.Header className="border-0 d-flex justify-content-between align-items-center">
-              <div>
-                <h5 className="mb-0">{isEditingStaff ? 'Edit Staff Member' : 'Add New Staff'}</h5>
-                <p className="text-muted mb-0">
-                  {isEditingStaff ? 'Edit staff member details' : 'Add new staff members to the system'}
-                </p>
-              </div>
-              <div className="d-flex gap-2">
-                <Button 
-                  variant="secondary" 
-                  onClick={() => {
-                    handleMenuClick('manage-staff');
-                    setEditStaffId(null);
-                    setIsEditingStaff(false);
-                    setNewStaff({
-                      name: '',
-                      email: '',
-                      phone: '',
-                      designation: '',
-                      password: '',
-                      permissions: {
-                        Dashboard: false,
-                        Staff: false,
-                        User: false,
-                        Category: false,
-                        Product: false,
-                        Bookings: false,
-                        Reports: false,
-                        Settings: false
-                      }
-                    });
-                  }}
-                >
-                  <i className="bi bi-arrow-left me-2"></i>
-                  {isEditingStaff ? 'Cancel Edit' : 'View All Staff'}
-                </Button>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              {formSuccess && (
-                <Alert variant="success" onClose={() => setFormSuccess(false)} dismissible>
-                  <Alert.Heading>Success!</Alert.Heading>
-                  <p>{isEditingStaff ? 'Staff member updated successfully' : 'Staff member has been added successfully'}</p>
-                </Alert>
-              )}
-              
-              {formError && (
-                <Alert variant="danger" onClose={() => setFormError('')} dismissible>
-                  <Alert.Heading>Error!</Alert.Heading>
-                  <p>{formError}</p>
-                </Alert>
-              )}
-              
-              <Form onSubmit={handleAddStaff}>
+      <br />
+      
+      <Card className="shadow-lg p-3">
+        <Card.Body className="">
+          {formSuccess && (
+            <Alert variant="success" onClose={() => setFormSuccess(false)} dismissible>
+              <Alert.Heading>Success!</Alert.Heading>
+              <p>{isEditingStaff ? 'Staff member updated successfully' : 'Staff member has been added successfully'}</p>
+            </Alert>
+          )}
+          
+          {formError && (
+            <Alert variant="danger" onClose={() => setFormError('')} dismissible>
+              <Alert.Heading>Error!</Alert.Heading>
+              <p>{formError}</p>
+            </Alert>
+          )}
+
+           <div className="mb-4">
+            {isEditingStaff ? 'Edit Staff' : (
+              <>
+                <h6 className="fw-semibold mb-1">New user </h6>
+                <p className='text-muted' style={{fontSize:"12px"}}>Use the below form to update the profile</p>
+              </>
+            )}
+          </div>
+          
+          <Form onSubmit={handleAddStaff} className="pt-2">
+           
                 <Row>
                   <Col md={6}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Full Name *</Form.Label>
+                      <Form.Label className="mb-1 fw-medium">Name</Form.Label>
                       <Form.Control
-                        type="text"
+                        type="text" 
+                        style={{border:"2px solid",height:"50px"}}
                         value={newStaff.name}
                         onChange={(e) => setNewStaff({...newStaff, name: e.target.value})}
                         required
@@ -1795,11 +1708,12 @@ const fetchDashboardData = async () => {
                       />
                     </Form.Group>
                   </Col>
-                  <Col md={6}>
+                  <Col md={6} >
                     <Form.Group className="mb-3">
-                      <Form.Label>Email *</Form.Label>
+                      <Form.Label className="mb-1 fw-medium">E-mail</Form.Label>
                       <Form.Control
-                        type="email"
+                        type="email" 
+                        style={{border:"2px solid",height:"50px"}}
                         value={newStaff.email}
                         onChange={(e) => setNewStaff({...newStaff, email: e.target.value})}
                         required
@@ -1812,9 +1726,10 @@ const fetchDashboardData = async () => {
                 <Row>
                   <Col md={6}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Phone *</Form.Label>
+                      <Form.Label className="mb-1 fw-medium">Contact Number</Form.Label>
                       <Form.Control
-                        type="tel"
+                        type="tel" 
+                        style={{border:"2px solid",height:"50px"}}
                         value={newStaff.phone}
                         onChange={(e) => setNewStaff({...newStaff, phone: e.target.value})}
                         required
@@ -1825,9 +1740,10 @@ const fetchDashboardData = async () => {
                   </Col>
                   <Col md={6}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Designation *</Form.Label>
+                      <Form.Label className="mb-1 fw-medium">Designation</Form.Label>
                       <Form.Select
-                        value={newStaff.designation}
+                        value={newStaff.designation} 
+                        style={{border:"2px solid",height:"50px"}}
                         onChange={(e) => setNewStaff({...newStaff, designation: e.target.value})}
                         required
                       >
@@ -1843,68 +1759,84 @@ const fetchDashboardData = async () => {
                   </Col>
                 </Row>
                 
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Password</Form.Label>
-                      <Form.Control
-                        type="password"
-                        value={newStaff.password}
-                        onChange={(e) => setNewStaff({...newStaff, password: e.target.value})}
-                        placeholder="Leave empty to generate random password"
-                        className="font-monospace"
-                        style={{ letterSpacing: '1px' }}
-                        autoComplete="new-password"
-                      />
-                      <Form.Text className="text-muted">
-                        Will be displayed as •••••• in the staff list for security
-                      </Form.Text>
-                    </Form.Group>
-                  </Col>
-                </Row>
+                {/* Only show password fields when not editing */}
+                {!isEditingStaff && (
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="mb-1 fw-medium">Password</Form.Label>
+                        <Form.Control
+                          type="password"
+                          value={newStaff.password} 
+                          onChange={(e) => setNewStaff({...newStaff, password: e.target.value})}
+                          placeholder="Enter password"
+                          className="font-monospace"
+                          style={{ letterSpacing: '1px',border:"2px solid",height:"50px" }}
+                          autoComplete="new-password"
+                          required={!isEditingStaff}
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="mb-1 fw-medium">Confirm Password</Form.Label>
+                        <Form.Control
+                          type="password"
+                          value={confirmPassword} 
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder="Confirm password"
+                          className="font-monospace"
+                          style={{ letterSpacing: '1px',border:"2px solid",height:"50px" }}
+                          autoComplete="new-password"
+                          required={!isEditingStaff}
+                        />
+                        {confirmPassword && newStaff.password !== confirmPassword && (
+                          <small className="text-danger">Passwords do not match</small>
+                        )}
+                      </Form.Group>
+                    </Col>
+                  </Row>
+                )}
                 
                 <Form.Group className="mb-4">
-                  <Form.Label>Permissions</Form.Label>
-                  <p className="text-muted mb-2">Select permissions for this staff member.</p>
-                  <div className="border p-3 rounded">
+                  <Form.Label className='fw-semibold mb-3'>Permissions</Form.Label>
+                  <div className="px-1">
                     <Row>
-                      {Object.keys(newStaff.permissions || {}).map((permission) => {
-                        return (
-                          <Col md={4} key={permission}>
-                            <div 
-                              className="d-flex align-items-center mb-2 p-2 rounded"
-                              style={{
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                              }}
-                              onClick={() => setNewStaff({
-                                ...newStaff,
-                                permissions: {
-                                  ...newStaff.permissions,
-                                  [permission]: !newStaff.permissions[permission]
-                                }
-                              })}
-                            >
-                              <div className="flex-grow-1">
-                                <Form.Check
-                                  type="checkbox"
-                                  id={`permission-${permission}`}
-                                  label={permission.charAt(0).toUpperCase() + permission.slice(1)}
-                                  checked={newStaff.permissions[permission]}
-                                  onChange={(e) => setNewStaff({
-                                    ...newStaff,
-                                    permissions: {
-                                      ...newStaff.permissions,
-                                      [permission]: e.target.checked
-                                    }
-                                  })}
-                                  className="mb-0"
-                                />
-                              </div>
+                      {Object.keys(newStaff.permissions || {}).map((permission) => (
+                        <Col xs={6} sm={4} md={3} lg={2} key={permission}>
+                          <div 
+                            className="d-flex align-items-center mb-2 p-2 rounded"
+                            style={{
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                            onClick={() => setNewStaff({
+                              ...newStaff,
+                              permissions: {
+                                ...newStaff.permissions,
+                                [permission]: !newStaff.permissions[permission]
+                              }
+                            })}
+                          >
+                            <div className="flex-grow-1">
+                              <Form.Check
+                                type="checkbox"
+                                id={`permission-${permission}`}
+                                label={permission.charAt(0).toUpperCase() + permission.slice(1)}
+                                checked={newStaff.permissions[permission]}
+                                onChange={(e) => setNewStaff({
+                                  ...newStaff,
+                                  permissions: {
+                                    ...newStaff.permissions,
+                                    [permission]: e.target.checked
+                                  }
+                                })}
+                                className="mb-0"
+                              />
                             </div>
-                          </Col>
-                        );
-                      })}
+                          </div>
+                        </Col>
+                      ))}
                     </Row>
                     
                     {/* Summary of selected permissions */}
@@ -1929,53 +1861,76 @@ const fetchDashboardData = async () => {
                   </div>
                 </Form.Group>
                 
-                <div className="d-flex justify-content-end gap-2">
-                  <Button 
-                    variant="secondary" 
-                    onClick={() => {
-                      setNewStaff({
-                        name: '',
-                        email: '',
-                        phone: '',
-                        designation: '',
-                        password: '',
-                        permissions: {
-                          Dashboard: false,
-                          Staff: false,
-                          User: false,
-                          Category: false,
-                          Product: false,
-                          Bookings: false,
-                          Reports: false,
-                          Settings: false
-                        }
-                      });
-                      if (isEditingStaff) {
-                        setEditStaffId(null);
-                        setIsEditingStaff(false);
+                <div className="d-flex justify-content-end gap-2 mt-4">
+                 <div className="d-flex justify-content-center gap-3 mt-4">
+                <Button 
+                  variant="secondary" 
+                  onClick={() => {
+                    // Go back to previous page (manage-staff)
+                    handleMenuClick('manage-staff');
+                    // Reset form
+                    setNewStaff({
+                      name: '',
+                      email: '',
+                      phone: '',
+                      designation: '',
+                      password: '',
+                      permissions: {
+                        Dashboard: false,
+                        Staff: false,
+                        User: false,
+                        Category: false,
+                        Product: false,
+                        Bookings: false,
+                        Reports: false,
+                        Settings: false
                       }
-                    }}
-                  >
-                    Clear Form
-                  </Button>
-                  <Button variant={isEditingStaff ? "warning" : "primary"} type="submit">
-                    <i className={`bi ${isEditingStaff ? 'bi-pencil' : 'bi-person-plus'} me-2`}></i>
-                    {isEditingStaff ? 'Update Staff' : 'Add Staff'}
-                  </Button>
+                    });
+                    setConfirmPassword('');
+                    if (isEditingStaff) {
+                      setEditStaffId(null);
+                      setIsEditingStaff(false);
+                    }
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button variant={isEditingStaff ? "warning" : "dark"} type="submit">
+                  <i className={`bi ${isEditingStaff ? 'bi-pencil' : 'bi-person-plus'} me-2`}></i>
+                  Submit
+                </Button>
+              </div>
                 </div>
-              </Form>
-            </Card.Body>
-          </Card>
-        );
+             
+          </Form>
+        </Card.Body>
+      </Card>
+    </div>
+  );
 
       case 'manage-staff':
         return (
-          <Card className="border-0 shadow-sm">
-            <Card.Header className="border-0 d-flex justify-content-between align-items-center">
-              <div>
-                <h5 className="mb-0">Manage Staff</h5>
-                <p className="text-muted mb-0">View and manage all staff members</p>
-              </div>
+          <div>
+            <Card>
+                <Card className="shadow-lg p-3">
+                <Card.Body>
+                  <h5 className="mb-0 fw-semibold">
+                    {isEditingStaff ? 'Edit Staff' : (
+                      <>
+                        User Management
+                        <span className="text-muted mx-2" style={{fontSize:"14px",fontWeight:"normal"}}>•</span>
+                        <span className="text-muted " style={{fontSize:"14px",fontWeight:"normal"}}>Manage User</span>
+                      </>
+                    )}
+                  </h5>
+                </Card.Body>
+           </Card>
+            </Card><br />
+          <Card className="shadow-lg  p-3" style={{border:"5px"}}>
+            <Card.Header className="border-0 ">
+              <Row><Col><h5 className="mb-1 fw-semibold">Manage user</h5>
+              <p className='text-muted' style={{fontSize:"12px"}}>Use this form to update your profile</p></Col>
+              <Col>
               <div className="d-flex gap-2">
                 <Form.Control
                   type="search"
@@ -2003,7 +1958,7 @@ const fetchDashboardData = async () => {
                 showDownload={true}
                 dataType="staff"
               />
-              </div>
+              </div></Col></Row>
             </Card.Header>
             <Card.Body>
               {formSuccess && (
@@ -2019,7 +1974,7 @@ const fetchDashboardData = async () => {
                   <Button 
                     variant="danger" 
                     size="sm"
-                    onClick={handleBulkDeleteStaff}
+                    onClick={()=>handleBulkDelete('staff',selectedStaff)}
                   >
                     <i className="bi bi-trash me-2"></i>Delete Selected
                   </Button>
@@ -2027,7 +1982,7 @@ const fetchDashboardData = async () => {
               )}
               
               <div className="table-responsive">
-                <Table hover responsive style={{ minWidth: '800px' }}>
+                <Table striped bordered hover style={{border:"2px solid"}}>
                   <thead>
                     <tr>
                       <th style={{ width: '40px' }}>
@@ -2091,6 +2046,14 @@ const fetchDashboardData = async () => {
                             >
                               <MdOutlineDelete />
                             </Button>
+                            <Button 
+                            variant="dark" 
+                            size="sm"
+                            onClick={() => handleViewStaff(staffMember)}
+                            title="View Staff Details"
+                          >
+                            <IoEyeSharp /> 
+                          </Button>
                           </div>
                         </td>
                       </tr>
@@ -2101,7 +2064,7 @@ const fetchDashboardData = async () => {
               
              
             </Card.Body>
-          </Card>
+          </Card></div>
         );
       case 'manage-users':
         return (
@@ -2147,7 +2110,7 @@ const fetchDashboardData = async () => {
                   <Button 
                     variant="danger" 
                     size="sm"
-                    onClick={handleBulkDeleteUsers}
+                    onClick={() => handleBulkDelete('users', selectedUsers)}
                   >
                     <i className="bi bi-trash me-2"></i>Delete Selected
                   </Button>
@@ -2252,475 +2215,90 @@ const fetchDashboardData = async () => {
             </Card.Body>
           </Card>
         );
+case 'manage-categories':
+  return (
+    <Categories 
+      categories={categories}
+      onEdit={(category) => {
+        // Set edit mode
+        setIsEditingCategory(true);
+        setEditCategoryId(category._id);
+        setEditCategory(category);
+        // Navigate to add-category form in edit mode
+        setActiveMenu('add-category');
+      }}
+      onDelete={(categoryId) => {
+        if (window.confirm('Are you sure you want to delete this category?')) {
+          handleBulkDelete('categories', [categoryId]);
+        }
+      }}
+      onBulkDelete={(selectedIds) => {
+        handleBulkDelete('categories', selectedIds);
+      }}
+      onToggleStatus={(categoryId, isActive) => {
+        // Update category status
+        updateCategory(categoryId, { isActive });
+      }}
+    />
+  );
+
 case 'add-category':
   return (
-    <Card className="border-0 shadow-sm">
-      <Card.Header className="border-0 d-flex justify-content-between align-items-center">
-        <div>
-          <h5 className="mb-0">
-            {isEditingCategory ? 'Edit Category' : 'Add New Category'}
-          </h5>
-          <p className="text-muted mb-0">
-            {isEditingCategory ? 'Edit category details' : 'Create a new service category'}
-          </p>
-        </div>
-        <div className="d-flex gap-2">
-          <Button 
-            variant="secondary" 
-            onClick={() => {
-              handleMenuClick('manage-categories');
-              setIsEditingCategory(false);
-              setEditCategoryId(null);
-              setEditCategory({
-                name: '',
-                description: '',
-                category: '',
-                order: 0,
-                isActive: true
-              });
-            }}
-          >
-            <i className="bi bi-arrow-left me-2"></i>
-            {isEditingCategory ? 'Cancel Edit' : 'View All Categories'}
-          </Button>
-        </div>
-      </Card.Header>
-      <Card.Body>
-        <Form onSubmit={async (e) => {
-          e.preventDefault();
-          try {
-            const formData = new FormData();
-            const categoryData = isEditingCategory ? editCategory : newCategory;
-            
-            formData.append('name', categoryData.name);
-            formData.append('description', categoryData.description);
-            formData.append('category', categoryData.category || 'General');
-            formData.append('order', categoryData.order);
-            formData.append('isActive', categoryData.isActive);
-            
-            // Get image file if exists
-            const imageInput = document.getElementById('categoryImage');
-            if (imageInput && imageInput.files[0]) {
-              formData.append('image', imageInput.files[0]);
-            } else if (isEditingCategory && categoryData.img) {
-              // Keep existing image if not uploading new one
-              formData.append('img', categoryData.img);
-            }
-
-            const url = isEditingCategory 
-              ? `http://localhost:5000/api/admin/services/${editCategoryId}`
-              : 'http://localhost:5000/api/admin/services';
-            
-            const response = await fetch(url, {
-              method: isEditingCategory ? 'PUT' : 'POST',
-              headers: { 
-                'admin-token': 'admin-secret-token'
-              },
-              body: formData
-            });
-            
-            const data = await response.json();
-            if (data.success) {
-              alert(`Category ${isEditingCategory ? 'updated' : 'added'} successfully!`);
-              
-              // Reset form
-              if (isEditingCategory) {
-                setIsEditingCategory(false);
-                setEditCategoryId(null);
-                setEditCategory({
-                  name: '',
-                  description: '',
-                  category: '',
-                  order: 0,
-                  isActive: true
-                });
-              } else {
-                setNewCategory({ 
-                  name: '', 
-                  description: '', 
-                  category: '', 
-                  order: 0, 
-                  isActive: true 
-                });
-              }
-              
-              // Clear file input
-              if (imageInput) {
-                imageInput.value = '';
-              }
-              
-              fetchCategories();
-              handleMenuClick('manage-categories');
-            } else {
-              alert(data.error || `Failed to ${isEditingCategory ? 'update' : 'add'} category`);
-            }
-          } catch (error) {
-            console.error(`Error ${isEditingCategory ? 'updating' : 'adding'} category:`, error);
-            alert(`Failed to ${isEditingCategory ? 'update' : 'add'} category`);
+    <CategoryForm 
+      isEditing={isEditingCategory}
+      categoryData={editCategory}
+      onSubmit={async (formData, imageFile) => {
+        try {
+          const formDataToSend = new FormData();
+          formDataToSend.append('name', formData.name);
+          formDataToSend.append('description', formData.description);
+          formDataToSend.append('category', formData.category || 'General');
+          formDataToSend.append('order', formData.order);
+          formDataToSend.append('isActive', formData.isActive);
+          
+          if (imageFile) {
+            formDataToSend.append('image', imageFile);
+          } else if (isEditingCategory && editCategory.img) {
+            formDataToSend.append('img', editCategory.img);
           }
-        }}>
-          <Row>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>Category Name *</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={isEditingCategory ? editCategory.name : newCategory.name}
-                  onChange={(e) => isEditingCategory 
-                    ? setEditCategory({...editCategory, name: e.target.value})
-                    : setNewCategory({...newCategory, name: e.target.value})
-                  }
-                  required
-                  placeholder="Enter category name"
-                />
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>Category Type</Form.Label>
-                <Form.Select
-                  value={isEditingCategory ? editCategory.category : newCategory.category}
-                  onChange={(e) => isEditingCategory
-                    ? setEditCategory({...editCategory, category: e.target.value})
-                    : setNewCategory({...newCategory, category: e.target.value})
-                  }
-                >
-                  <option value="">Select Category Type</option>
-                  <option value="Salon for women">Salon for women</option>
-                  <option value="AC & Appliance Repair">AC & Appliance Repair</option>
-                  <option value="Cleaning">Cleaning</option>
-                  <option value="Electrician, Plumber & Carpenters">Electrician, Plumber & Carpenters</option>
-                  <option value="Native Water Purifier">Native Water Purifier</option>
-                  <option value="General">General</option>
-                </Form.Select>
-              </Form.Group>
-            </Col>
-          </Row>
+
+          const url = isEditingCategory 
+            ? `http://localhost:5000/api/admin/services/${editCategoryId}`
+            : 'http://localhost:5000/api/admin/services';
           
-          <Form.Group className="mb-3">
-            <Form.Label>Description</Form.Label>
-            <Form.Control
-              as="textarea"
-              rows={3}
-              value={isEditingCategory ? editCategory.description : newCategory.description}
-              onChange={(e) => isEditingCategory
-                ? setEditCategory({...editCategory, description: e.target.value})
-                : setNewCategory({...newCategory, description: e.target.value})
-              }
-              placeholder="Enter category description"
-            />
-          </Form.Group>
+          const response = await fetch(url, {
+            method: isEditingCategory ? 'PUT' : 'POST',
+            headers: { 'admin-token': 'admin-secret-token' },
+            body: formDataToSend
+          });
           
-          <Row>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>Category Image {!isEditingCategory && '*'}</Form.Label>
-                <Form.Control
-                  type="file"
-                  id="categoryImage"
-                  accept="image/*"
-                  required={!isEditingCategory}
-                />
-                <Form.Text className="text-muted">
-                  {isEditingCategory 
-                    ? 'Upload a new image or leave empty to keep existing'
-                    : 'Upload a representative image for this category (max 5MB)'
-                  }
-                </Form.Text>
-                {isEditingCategory && editCategory.img && (
-                  <div className="mt-2">
-                    <small className="text-muted">Current Image:</small><br />
-                    <img 
-                      src={`http://localhost:5000${editCategory.img}`} 
-                      alt={editCategory.name}
-                      style={{ 
-                        width: '60px', 
-                        height: '60px', 
-                        objectFit: 'cover',
-                        borderRadius: '4px',
-                        border: '1px solid #dee2e6'
-                      }}
-                    />
-                  </div>
-                )}
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>Display Order</Form.Label>
-                <Form.Control
-                  type="number"
-                  value={isEditingCategory ? editCategory.order : newCategory.order}
-                  onChange={(e) => isEditingCategory
-                    ? setEditCategory({...editCategory, order: parseInt(e.target.value) || 0})
-                    : setNewCategory({...newCategory, order: parseInt(e.target.value) || 0})
-                  }
-                  placeholder="0"
-                />
-                <Form.Text className="text-muted">
-                  Lower numbers appear first
-                </Form.Text>
-              </Form.Group>
-            </Col>
-          </Row>
-          
-          <Form.Group className="mb-3">
-            <Form.Check
-              type="checkbox"
-              label="Active Category"
-              checked={isEditingCategory ? editCategory.isActive : newCategory.isActive}
-              onChange={(e) => isEditingCategory
-                ? setEditCategory({...editCategory, isActive: e.target.checked})
-                : setNewCategory({...newCategory, isActive: e.target.checked})
-              }
-            />
-          </Form.Group>
-          
-          <div className="d-flex justify-content-end gap-2">
-            <Button 
-              variant="secondary" 
-              onClick={() => {
-                if (isEditingCategory) {
-                  setIsEditingCategory(false);
-                  setEditCategoryId(null);
-                  setEditCategory({
-                    name: '',
-                    description: '',
-                    category: '',
-                    order: 0,
-                    isActive: true
-                  });
-                } else {
-                  setNewCategory({ 
-                    name: '', 
-                    description: '', 
-                    category: '', 
-                    order: 0, 
-                    isActive: true 
-                  });
-                }
-                // Clear file input
-                const imageInput = document.getElementById('categoryImage');
-                if (imageInput) {
-                  imageInput.value = '';
-                }
-              }}
-            >
-              Clear Form
-            </Button>
-            <Button variant={isEditingCategory ? "warning" : "primary"} type="submit">
-              <i className={`bi ${isEditingCategory ? 'bi-pencil' : 'bi-plus-circle'} me-2`}></i>
-              {isEditingCategory ? 'Update Category' : 'Add Category'}
-            </Button>
-          </div>
-        </Form>
-      </Card.Body>
-    </Card>
+          const data = await response.json();
+          if (data.success) {
+            alert(`Category ${isEditingCategory ? 'updated' : 'added'} successfully!`);
+            
+            // Reset form and navigate back
+            setIsEditingCategory(false);
+            setEditCategoryId(null);
+            setEditCategory(null);
+            fetchCategories();
+            handleMenuClick('manage-categories');
+          } else {
+            alert(data.error || `Failed to ${isEditingCategory ? 'update' : 'add'} category`);
+          }
+        } catch (error) {
+          console.error(`Error ${isEditingCategory ? 'updating' : 'adding'} category:`, error);
+          alert(`Failed to ${isEditingCategory ? 'update' : 'add'} category`);
+        }
+      }}
+      onCancel={() => {
+        setIsEditingCategory(false);
+        setEditCategoryId(null);
+        setEditCategory(null);
+        handleMenuClick('manage-categories');
+      }}
+    />
   );
 
-    case 'manage-categories':
-  return (
-    <Card className="border-0 shadow-sm">
-      <Card.Header className="border-0 d-flex justify-content-between align-items-center">
-        <div>
-          <h5 className="mb-0">Manage Categories</h5>
-          <p className="text-muted mb-0">View and manage all service categories</p>
-        </div>
-        <div className="d-flex gap-2">
-          <Form.Control
-            type="search"
-            placeholder="Search categories..."
-            style={{ width: '250px' }}
-            onChange={(e) => {
-              // Add search functionality here if needed
-            }}
-          />
-          <CustomPagination
-          currentPage={bookingPage}
-          totalPages={bookingTotalPages}
-          totalItems={bookingTotalItems}
-          itemsPerPage={bookingPerPage}
-          onPageChange={(page) => {
-            setBookingPage(page);
-            fetchBookings(page, bookingSearch, bookingStatus, bookingPerPage);
-          }}
-          onItemsPerPageChange={(perPage) => {
-            setBookingPerPage(perPage);
-            fetchBookings(1, bookingSearch, bookingStatus, perPage);
-          }}
-          showDownload={true}
-          dataType="bookings"
-        />
-         
-        </div>
-      </Card.Header>
-      <Card.Body>
-        {selectedCategories.length > 0 && (
-          <Alert variant="info" className="d-flex justify-content-between align-items-center">
-            <span>{selectedCategories.length} category(ies) selected</span>
-            <Button 
-              variant="danger" 
-              size="sm"
-              onClick={handleBulkDeleteCategories}
-            >
-              <i className="bi bi-trash me-2"></i>Delete Selected
-            </Button>
-          </Alert>
-        )}
-        
-        <div className="table-responsive">
-          <Table hover responsive>
-            <thead>
-              <tr>
-                <th style={{ width: '40px' }}>
-                  <Form.Check
-                    type="checkbox"
-                    checked={selectAllCategories}
-                    onChange={handleSelectAllCategories}
-                  />
-                </th>
-                <th style={{ width: '80px' }}>Image</th>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Category</th>
-                <th style={{ width: '80px' }}>Order</th>
-                <th style={{ width: '100px' }}>Status</th>
-                <th style={{ width: '120px' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {categories.map((category) => (
-                <tr key={category._id}>
-                  <td>
-                    <Form.Check
-                      type="checkbox"
-                      checked={selectedCategories.includes(category._id)}
-                      onChange={() => handleCategorySelect(category._id)}
-                    />
-                  </td>
-                  <td>
-                    <div style={{ 
-                      width: '60px', 
-                      height: '60px', 
-                      overflow: 'hidden',
-                      border: '1px solid #dee2e6',
-                      borderRadius: '8px'
-                    }}>
-                      {category.img ? (
-                        <img 
-                          src={`http://localhost:5000${category.img}`} 
-                          alt={category.name}
-                          
-                          
-                        />
-                      ) : (
-                        <div style={{ 
-                          width: '100%', 
-                          height: '100%', 
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontWeight: 'bold',
-                          fontSize: '20px'
-                        }}>
-                          {category.name ? category.name.charAt(0).toUpperCase() : 'C'}
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td>
-                    <div>
-                      <strong>{category.name}</strong>
-                      {category.key && (
-                        <small className="text-muted d-block">Key: {category.key}</small>
-                      )}
-                    </div>
-                  </td>
-                  <td>
-                    <div style={{ maxWidth: '200px' }}>
-                      {category.description || 'No description'}
-                    </div>
-                  </td>
-                  <td>
-                    <Badge bg="secondary">
-                      {category.category || 'General'}
-                    </Badge>
-                  </td>
-                  <td>
-                    <span className="badge bg-light text-dark">
-                      {category.order || 0}
-                    </span>
-                  </td>
-                  <td>
-                    <Form.Check
-                      type="switch"
-                      id={`category-active-${category._id}`}
-                      checked={category.isActive}
-                      onChange={async (e) => {
-                        try {
-                          const response = await fetch(`http://localhost:5000/api/admin/services/${category._id}/toggle-status`, {
-                            method: 'PUT',
-                            headers: { 
-                              'Content-Type': 'application/json',
-                              'admin-token': 'admin-secret-token'
-                            },
-                            body: JSON.stringify({ isActive: e.target.checked })
-                          });
-                          const data = await response.json();
-                          if (data.success) {
-                            fetchCategories();
-                          }
-                        } catch (error) {
-                          console.error('Error toggling category status:', error);
-                        }
-                      }}
-                      label={category.isActive ? 'Enable' : 'Disable'}
-                    />
-                  </td>
-                  <td>
-                    <div className="d-flex gap-1">
-                      <Button 
-                        variant="warning" 
-                        size="sm"
-                        onClick={() => {
-                          // Set edit mode
-                          setIsEditingCategory(true);
-                          setEditCategoryId(category._id);
-                          setEditCategory({
-                            name: category.name || '',
-                            description: category.description || '',
-                            category: category.category || '',
-                            order: category.order || 0,
-                            isActive: category.isActive !== undefined ? category.isActive : true,
-                            img: category.img || ''
-                          });
-                          // Navigate to add-category form in edit mode
-                          handleMenuClick('add-category');
-                        }}
-                        title="Edit Category"
-                      >
-                        <MdModeEdit/>
-                      </Button>
-                      <Button 
-                        variant="danger" 
-                        size="sm"
-                        onClick={() => deleteCategory(category._id)}
-                        title="Delete Category"
-                      >
-                        <MdOutlineDelete/>
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        </div>
-      </Card.Body>
-    </Card>
-  );
       case 'add-product':
         return (
           <Card className="border-0 shadow-sm">
@@ -2883,7 +2461,7 @@ case 'add-category':
                   <Button 
                     variant="danger" 
                     size="sm"
-                    onClick={handleBulkDeleteProducts}
+                    onClick={() => handleBulkDelete('products', selectedProducts)}
                   >
                     <i className="bi bi-trash me-2"></i>Delete Selected
                   </Button>
@@ -3005,7 +2583,7 @@ case 'add-category':
               setBookingStatus(e.target.value);
               fetchBookings(1, bookingSearch, e.target.value, bookingPerPage);
             }}
-            style={{ width: '150px' }}
+            style={{ height:"40px", marginTop:"10px"}}
           >
             <option value="">All Status</option>
             <option value="Pending">Pending</option>
@@ -3018,8 +2596,24 @@ case 'add-category':
             placeholder="Search bookings..."
             value={bookingSearch}
             onChange={(e) => setBookingSearch(e.target.value)}
-            style={{ width: '250px' }}
+            style={{width:"250px", height:"40px", marginTop:"10px"}}
           />
+          <CustomPagination
+          currentPage={bookingPage}
+          totalPages={bookingTotalPages}
+          totalItems={bookingTotalItems}
+          itemsPerPage={bookingPerPage}
+          onPageChange={(page) => {
+            setBookingPage(page);
+            fetchBookings(page, bookingSearch, bookingStatus, bookingPerPage);
+          }}
+          onItemsPerPageChange={(perPage) => {
+            setBookingPerPage(perPage);
+            fetchBookings(1, bookingSearch, bookingStatus, perPage);
+          }}
+          showDownload={true}
+          dataType="bookings"
+        />
         </div>
       </Card.Header>
       <Card.Body>
@@ -3043,7 +2637,7 @@ case 'add-category':
               <Button 
                 variant="danger" 
                 size="sm"
-                onClick={handleBulkDeleteBookings}
+                onClick={() => handleBulkDelete('bookings', selectedBookings)}
               >
                 <i className="bi bi-trash me-2"></i>Delete Selected
               </Button>
@@ -3172,22 +2766,7 @@ case 'add-category':
           </Table>
         </div>
         
-        <CustomPagination
-          currentPage={bookingPage}
-          totalPages={bookingTotalPages}
-          totalItems={bookingTotalItems}
-          itemsPerPage={bookingPerPage}
-          onPageChange={(page) => {
-            setBookingPage(page);
-            fetchBookings(page, bookingSearch, bookingStatus, bookingPerPage);
-          }}
-          onItemsPerPageChange={(perPage) => {
-            setBookingPerPage(perPage);
-            fetchBookings(1, bookingSearch, bookingStatus, perPage);
-          }}
-          showDownload={true}
-          dataType="bookings"
-        />
+        
       </Card.Body>
     </Card>
   );
@@ -3423,7 +3002,7 @@ case 'add-category':
   };
 
   return (
-    <div className="d-flex" style={{ minHeight: '100vh', overflowX: 'hidden' }}>
+    <div className="d-flex" style={{ minHeight: '100vh', overflowX: 'hidden',backgroundColor:"#acacacff" }}>
       {/* Sidebar */}
       {sidebarOpen && (
         <div style={{ 
@@ -3481,44 +3060,21 @@ case 'add-category':
                 }}
               >
                 <span>
-                  <i className="bi bi-people me-2"></i>Staff Management
+                  <i className="bi bi-people me-2"></i>User Management
                 </span>
                 <i className="bi bi-chevron-down ms-auto"></i>
               </Dropdown.Toggle>
               <Dropdown.Menu style={{ width: '100%' }}>
                 <Dropdown.Item onClick={() => handleMenuClick('add-staff')}>
-                  <i className="bi bi-person-plus me-2"></i>Add Staff
+                  <i className="bi bi-person-plus me-2"></i>Add user
                 </Dropdown.Item>
                 <Dropdown.Item onClick={() => handleMenuClick('manage-staff')}>
-                  <i className="bi bi-people-fill me-2"></i>Manage Staff
+                  <i className="bi bi-people-fill me-2"></i>Manage user
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
             
-            <Dropdown className="mb-2">
-              <Dropdown.Toggle 
-                as={Nav.Link} 
-                style={{ 
-                  color: ['manage-users'].includes(activeMenu) ? '#000' : 'white',
-                  background: [ 'manage-users'].includes(activeMenu) ? 'white' : 'transparent',
-                  borderRadius: '8px',
-                  padding: '10px 15px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <span>
-                  <i className="bi bi-person-badge me-2"></i>User Management
-                </span>
-                <i className="bi bi-chevron-down ms-auto"></i>
-              </Dropdown.Toggle>
-              <Dropdown.Menu style={{ width: '100%' }}>
-                <Dropdown.Item onClick={() => handleMenuClick('manage-users')}>
-                  <i className="bi bi-people-fill me-2"></i>Manage Users
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
+           
             
             <Dropdown className="mb-2">
               <Dropdown.Toggle 
@@ -3589,6 +3145,31 @@ case 'add-category':
               <i className="bi bi-calendar-check me-2"></i>Bookings
             </Nav.Link>
             
+             <Dropdown className="mb-2">
+              <Dropdown.Toggle 
+                as={Nav.Link} 
+                style={{ 
+                  color: ['manage-users'].includes(activeMenu) ? '#000' : 'white',
+                  background: [ 'manage-users'].includes(activeMenu) ? 'white' : 'transparent',
+                  borderRadius: '8px',
+                  padding: '10px 15px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <span>
+                  <i className="bi bi-person-badge me-2"></i>Customer Management
+                </span>
+                <i className="bi bi-chevron-down ms-auto"></i>
+              </Dropdown.Toggle>
+              <Dropdown.Menu style={{ width: '100%' }}>
+                <Dropdown.Item onClick={() => handleMenuClick('manage-users')}>
+                  <i className="bi bi-people-fill me-2"></i>Manage customer
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+
             <Nav.Link 
               className={`mb-2 ${activeMenu === 'reports' ? 'active' : ''}`}
               onClick={() => handleMenuClick('reports')}
@@ -3615,6 +3196,7 @@ case 'add-category':
               <i className="bi bi-gear me-2"></i>Settings
             </Nav.Link>
           </Nav>
+          
         </div>
       )}
 
@@ -3665,6 +3247,120 @@ case 'add-category':
         <Container fluid className="py-4">
           {renderContent()}
         </Container>
+        
+        <Modal show={showStaffDetails} onHide={() => setShowStaffDetails(false)} size="lg">
+            <Modal.Header className='closebtn' closeButton>
+              
+            </Modal.Header>
+            <Modal.Body>
+              {selectedStaffDetails && (
+                <div>
+                  <Row className="mb-4">
+                    <Col md={9}>
+                      <h4>{selectedStaffDetails.name}</h4>
+                      <p className="text-muted mb-1">
+                        <i className="bi bi-envelope me-2"></i>
+                        {selectedStaffDetails.email}
+                      </p>
+                      <p className="text-muted mb-1">
+                        <i className="bi bi-telephone me-2"></i>
+                        {selectedStaffDetails.phone}
+                      </p>
+                      <p className="text-muted mb-0">
+                        <i className="bi bi-briefcase me-2"></i>
+                        {selectedStaffDetails.designation}
+                      </p>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6}>
+                      <Card className="mb-3">
+                        <Card.Body>
+                          <h6 className="mb-3">Contact Information</h6>
+                          <div className="mb-2">
+                            <strong>Email:</strong>
+                            <p className="text-muted mb-0">{selectedStaffDetails.email}</p>
+                          </div>
+                          <div className="mb-2">
+                            <strong>Phone:</strong>
+                            <p className="text-muted mb-0">{selectedStaffDetails.phone}</p>
+                          </div>
+                          <div>
+                            <strong>Designation:</strong>
+                            <p className="text-muted mb-0">{selectedStaffDetails.designation}</p>
+                          </div>
+                        </Card.Body>
+                      </Card>
+                    </Col>
+                    <Col md={6}>
+                      <Card className="mb-3">
+                        <Card.Body>
+                          <h6 className="mb-3">Account Information</h6>
+                          <div className="mb-2">
+                            <strong>Account Created:</strong>
+                            <p className="text-muted mb-0">
+                              {selectedStaffDetails.createdAt ? new Date(selectedStaffDetails.createdAt).toLocaleDateString() : 'N/A'}
+                            </p>
+                          </div>
+                          <div className="mb-2">
+                            <strong>Last Updated:</strong>
+                            <p className="text-muted mb-0">
+                              {selectedStaffDetails.updatedAt ? new Date(selectedStaffDetails.updatedAt).toLocaleDateString() : 'N/A'}
+                            </p>
+                          </div>
+                          <div>
+                            <strong>Password:</strong>
+                            <p className="text-muted mb-0" style={{ letterSpacing: '2px', fontFamily: 'monospace' }}>
+                              {displayPassword()}
+                            </p>
+                          </div>
+                        </Card.Body>
+                      </Card>
+                    </Col>
+                  </Row>
+
+                  <Card>
+                    <Card.Body>
+                      <h6 className="mb-3">Permissions</h6>
+                      <Row>
+                        {selectedStaffDetails.permissions && Object.entries(selectedStaffDetails.permissions).map(([permission, hasPermission]) => (
+                          <Col md={4} key={permission}>
+                            <div className="d-flex align-items-center mb-2">
+                              <Badge 
+                                bg={hasPermission ? "success" : "secondary"} 
+                                className="me-2"
+                                style={{ width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              >
+                                {hasPermission ? '✓' : '✗'}
+                              </Badge>
+                              <span>{permission.charAt(0).toUpperCase() + permission.slice(1)}</span>
+                            </div>
+                          </Col>
+                        ))}
+                      </Row>
+                      <div className="mt-3 pt-3 border-top">
+                        <small className="text-muted">
+                          Total permissions granted: {Object.values(selectedStaffDetails.permissions || {}).filter(v => v).length} out of {Object.keys(selectedStaffDetails.permissions || {}).length}
+                        </small>
+                      </div>
+                    </Card.Body>
+                  </Card>
+                </div>
+              )}
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="secondary" onClick={() => setShowStaffDetails(false)}>
+                Close
+              </Button>
+              <Button variant="warning" onClick={() => {
+                setShowStaffDetails(false);
+                handleEditStaff(selectedStaffDetails);
+              }}>
+                <i className="bi bi-pencil me-2"></i>Edit Staff
+              </Button>
+            </Modal.Footer>
+          </Modal>
 
         {/* Add User Modal */}
         <Modal show={showAddUserModal} onHide={() => setShowAddUserModal(false)}>

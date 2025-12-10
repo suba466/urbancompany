@@ -101,7 +101,7 @@ const Cart = mongoose.model("Cart", cartSchema);
 const serviceSchema = new mongoose.Schema({
   name: String,
   key: String,
-  img: String,
+  img: {type:String,default:"/assets/default-category.png"},
   description: String,
   category: String,
   isActive: { type: Boolean, default: true },
@@ -1217,6 +1217,7 @@ app.use((req, res) => {
 app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
+
 
 
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
