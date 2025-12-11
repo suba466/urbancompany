@@ -81,21 +81,23 @@ function Categories({ categories, onEdit, onDelete, onBulkDelete, onToggleStatus
   }, [categories]);
 
   return (
-    <Card className="border-0 shadow-sm">
-      <Card.Header className="border-0 d-flex justify-content-between align-items-center">
+    <div>
+      <Card>
+        <Card.Body className="border-0 d-flex justify-content-between align-items-center">
         <div>
-          <h5 className="mb-0">Manage Categories</h5>
-          <p className="text-muted mb-0">View and manage all service categories</p>
+          <h5 className="mb-0">Category management</h5>
+          
         </div>
         <div className="d-flex gap-2">
           <Form.Control
             type="search"
             placeholder="Search categories..."
-            style={{ width: '250px' }}
+            style={{ border:"2px solid ",width: '250px', height: "40px", marginTop: "10px" }}
           />
         </div>
-      </Card.Header>
-      
+      </Card.Body>
+      </Card>
+    <Card className="border-0 shadow-sm">
       <Card.Body>
         {selectedCategories.length > 0 && (
           <Alert variant="dark" className="d-flex justify-content-between align-items-center">
@@ -229,7 +231,7 @@ function Categories({ categories, onEdit, onDelete, onBulkDelete, onToggleStatus
                             onToggleStatus(category._id, e.target.checked);
                           }
                         }}
-                        label={category.isActive ? 'Active' : 'Inactive'}
+                        label={category.isActive ? 'Enable' : 'Disable'}
                       />
                     </td>
                     <td>
@@ -272,7 +274,7 @@ function Categories({ categories, onEdit, onDelete, onBulkDelete, onToggleStatus
           </div>
         )}
       </Card.Body>
-    </Card>
+    </Card></div>
   );
 }
 

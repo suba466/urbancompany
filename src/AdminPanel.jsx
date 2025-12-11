@@ -1811,33 +1811,7 @@ const handleEditStaff = (staffMember) => {
             </Dropdown>
           )}
           
-          {/* Customer Management - Only for admin and staff with User permission */}
-          {(userRole === 'admin' || hasPermission('User')) && (
-            <Dropdown className="mb-2">
-              <Dropdown.Toggle 
-                as={Nav.Link} 
-                style={{ 
-                  color: ['manage-users'].includes(activeMenu) ? '#000' : 'white',
-                  background: ['manage-users'].includes(activeMenu) ? 'white' : 'transparent',
-                  borderRadius: '8px',
-                  padding: '10px 15px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <span>
-                  <i className="bi bi-person-badge me-2"></i>Customer Management
-                </span>
-                <i className="bi bi-chevron-down ms-auto"></i>
-              </Dropdown.Toggle>
-              <Dropdown.Menu style={{ width: '100%' }}>
-                <Dropdown.Item onClick={() => handleMenuClick('manage-users')}>
-                  <i className="bi bi-people-fill me-2"></i>Manage customer
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-          )}
+          
           
           {/* Category Management */}
           {(userRole === 'admin' || hasPermission('Category')) && (
@@ -1920,6 +1894,8 @@ const handleEditStaff = (staffMember) => {
               <i className="bi bi-calendar-check me-2"></i>Bookings
             </Nav.Link>
           )}
+
+          
           
           {/* Reports */}
           {(userRole === 'admin' || hasPermission('Reports')) && (
@@ -2449,7 +2425,7 @@ const handleEditStaff = (staffMember) => {
             <br />
             
             <Card className="shadow-lg">
-              <Card.Body className="p-4">
+              <Card.Body className="p-6">
                 {formSuccess && (
                   <Alert variant="success" onClose={() => setFormSuccess(false)} dismissible>
                     <Alert.Heading>Success!</Alert.Heading>
@@ -2479,61 +2455,21 @@ const handleEditStaff = (staffMember) => {
                 </div>
                 
                 <Form onSubmit={handleAddStaff} className="pt-2">
-                  {/* Profile Picture Upload */}
-                  <Row className="mb-4">
-                    <Col md={12}>
-                      <Form.Group>
-                        <Form.Label>Profile Picture</Form.Label>
-                        <Form.Control
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files[0];
-                            if (file) {
-                              setProfileImage(file);
-                              setProfileImagePreview(URL.createObjectURL(file));
-                            }
-                          }}
-                          className="py-2"
-                          style={getFieldStyle('staff', 'profileImage', profileImage)}
-                        />
-                        <Form.Text className="text-muted">
-                          Upload a profile picture (Max 5MB, JPG/PNG format)
-                        </Form.Text>
-                        {profileImagePreview && (
-                          <div className="mt-2 text-center">
-                            <img 
-                              src={profileImagePreview} 
-                              alt="Preview" 
-                              style={{ 
-                                width: '100px', 
-                                height: '100px', 
-                                objectFit: 'cover',
-                                borderRadius: '50%',
-                                border: '2px solid #dee2e6'
-                              }}
-                            />
-                            <p className="text-muted mt-1" style={{fontSize:"12px"}}>Preview</p>
-                          </div>
-                        )}
-                      </Form.Group>
-                    </Col>
-                  </Row>
-
+                 
                   {/* First Row with Name and Email */}
                   <Row style={{ "--bs-gutter-x": "5.5rem" }} className="mb-3">
                     <Col md={6}>
                       <Form.Group>
                         <Form.Control
                           type="text" 
-                          style={getFieldStyle('staff', 'name', newStaff.name)}
+                          style={{borderRadius:"5px",border:"2px solid #000000",height:"45px"}}
                           value={newStaff.name}
                           onChange={(e) => setNewStaff({...newStaff, name: e.target.value})}
                           onBlur={() => handleFieldBlur('staff', 'name')}
                           required
                           placeholder="Name"
                           autoComplete="name"
-                          className="py-3"
+                          className="py-3 "
                         />
                         {touchedFields.staff?.name && formErrors.staff?.name && (
                           <small className="text-danger d-block mt-1">{formErrors.staff.name}</small>
@@ -2544,7 +2480,7 @@ const handleEditStaff = (staffMember) => {
                       <Form.Group>
                         <Form.Control
                           type="email" 
-                          style={getFieldStyle('staff', 'email', newStaff.email)}
+                          style={{borderRadius:"5px",border:"2px solid #000000",height:"45px"}}
                           value={newStaff.email}
                           onChange={(e) => setNewStaff({...newStaff, email: e.target.value})}
                           onBlur={() => handleFieldBlur('staff', 'email')}
@@ -2566,7 +2502,7 @@ const handleEditStaff = (staffMember) => {
                       <Form.Group>
                         <Form.Control
                           type="tel" 
-                          style={getFieldStyle('staff', 'phone', newStaff.phone)}
+                          style={{borderRadius:"5px",border:"2px solid #000000",height:"45px"}}
                           value={newStaff.phone}
                           onChange={(e) => setNewStaff({...newStaff, phone: e.target.value})}
                           onBlur={() => handleFieldBlur('staff', 'phone')}
@@ -2584,7 +2520,7 @@ const handleEditStaff = (staffMember) => {
                       <Form.Group>
                         <Form.Select
                           value={newStaff.designation} 
-                          style={getFieldStyle('staff', 'designation', newStaff.designation)}
+                          style={{borderRadius:"5px",border:"2px solid #000000",height:"45px"}}
                           onChange={(e) => setNewStaff({...newStaff, designation: e.target.value})}
                           onBlur={() => handleFieldBlur('staff', 'designation')}
                           required
@@ -2616,7 +2552,7 @@ const handleEditStaff = (staffMember) => {
                             onChange={(e) => setNewStaff({...newStaff, password: e.target.value})}
                             onBlur={() => handleFieldBlur('staff', 'password')}
                             placeholder="Password"
-                            style={getFieldStyle('staff', 'password', newStaff.password)}
+                            style={{borderRadius:"5px",border:"2px solid #000000",height:"45px"}}
                             autoComplete="new-password"
                             required
                             className="py-3"
@@ -2626,7 +2562,7 @@ const handleEditStaff = (staffMember) => {
                           )}
                         </Form.Group>
                       </Col>
-                      <Col md={6}>
+                      <Col md={6} className="mb-3">
                         <Form.Group>
                           <Form.Control
                             type="password"
@@ -2634,7 +2570,7 @@ const handleEditStaff = (staffMember) => {
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             onBlur={() => handleFieldBlur('staff', 'confirmPassword')}
                             placeholder="Confirm password"
-                            style={getFieldStyle('staff', 'confirmPassword', confirmPassword)}
+                            style={{borderRadius:"5px",border:"2px solid #000000",height:"45px"}}
                             autoComplete="new-password"
                             required
                             className="py-3"
@@ -2644,6 +2580,40 @@ const handleEditStaff = (staffMember) => {
                           )}
                         </Form.Group>
                       </Col>
+                      <Col md={6} >
+                      <Form.Group>
+                       <Form.Control
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                              setProfileImage(file);
+                              setProfileImagePreview(URL.createObjectURL(file));
+                            }
+                          }}
+                          className="py-2"
+                          style={{borderRadius:"5px",border:"2px solid #000000",height:"45px"}}
+                        />
+                        
+                        {profileImagePreview && (
+                          <div className="mt-2 text-center">
+                            <img 
+                              src={profileImagePreview} 
+                              alt="Preview" 
+                              style={{ 
+                                width: '100px', 
+                                height: '100px', 
+                                objectFit: 'cover',
+                                borderRadius: '10px',
+                                border: '2px solid #dee2e6'
+                              }}
+                            />
+                            
+                          </div>
+                        )}
+                      </Form.Group>
+                    </Col>
                     </Row>
                   )}
 

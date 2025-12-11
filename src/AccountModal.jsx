@@ -1558,6 +1558,7 @@ const renderBookingsView = () => {
               <Col xs={2}></Col>
             </Row>
           </Container>
+          <Button type="button" onClick={() => setShowSlotModal(false)} className="position-absolute border-0 justify-content-center closebtn p-0">X</Button>
         </Modal.Header>
         
         <Modal.Body>
