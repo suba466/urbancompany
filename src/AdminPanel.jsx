@@ -27,7 +27,21 @@ function AdminPanel() {
   const [activeMenu, setActiveMenu] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [confirmPassword, setConfirmPassword] = useState('');
-  
+  const [formErrors, setFormErrors] = useState({
+    staff: {},
+    user: {},
+    product: {},
+    category: {},
+    settings: {}
+  });
+
+  const [touchedFields, setTouchedFields] = useState({
+    staff: {},
+    user: {},
+    product: {},
+    category: {},
+    settings: {}
+  });
   // Dashboard States
   const [stats, setStats] = useState(null);
   const [recentBookings, setRecentBookings] = useState([]);
@@ -160,6 +174,186 @@ const [uploadingImage, setUploadingImage] = useState(false);
     address: '123 Business Street, City, Country'
   });
 
+ // Dark gradient badges with high contrast
+const formatPermissions = (permissions) => {
+  if (!permissions) return <Badge bg="dark" className="me-1">None</Badge>;
+  
+  const activePermissions = Object.entries(permissions)
+    .filter(([key, value]) => value)
+    .map(([key]) => key);
+  
+  if (activePermissions.length === 0) return <Badge bg="dark" className="me-1">None</Badge>;
+  
+  // Dark gradient colors
+  const permissionGradients = {
+    'Dashboard': 'linear-gradient(135deg, #141E30 0%, #243B55 100%)', // Dark navy
+    'Staff': 'linear-gradient(135deg, #0F2027 0%, #203A43 100%)', // Dark teal
+    'User': 'linear-gradient(135deg, #1A2980 0%, #26D0CE 100%)', // Navy to teal
+    'Category': 'linear-gradient(135deg, #232526 0%, #414345 100%)', // Charcoal
+    'Product': 'linear-gradient(135deg, #8E0E00 0%, #1F1C18 100%)', // Dark red to black
+    'Bookings': 'linear-gradient(135deg, #3A1C71 0%, #d82739ff 50%, #FFAF7B 100%)', // Purple to orange
+    'Reports': 'linear-gradient(135deg, #16222A 0%, #3A6073 100%)', // Steel blue
+    'Settings': 'linear-gradient(135deg, #000000 0%, #434343 100%)' // Black to gray
+  };
+
+  
+  return (
+    <div className="d-flex flex-wrap gap-2">
+      {activePermissions.map((permission) => {
+        const gradient = permissionGradients[permission] || 'linear-gradient(135deg, #2C3E50 0%, #4CA1AF 100%)';
+        const textColor = '#ffffff';
+        
+        return (
+          <span
+            key={permission}
+            className="badge"
+            style={{
+              background: gradient,
+              color: textColor,
+              borderRadius: '15px',fontSize:"13px",
+              boxShadow: '0 3px 8px rgba(0,0,0,0.3)',
+              }}>
+            {permission}
+          </span>
+        );
+      })}
+    </div>
+  );
+};
+  // Validation functions
+const validateStaffForm = () => {
+  const errors = {};
+  
+  if (!newStaff.name.trim()) {
+    errors.name = 'Name is required';
+  }
+  
+  if (!newStaff.email.trim()) {
+    errors.email = 'Email is required';
+  } else if (!/\S+@\S+\.\S+/.test(newStaff.email)) {
+    errors.email = 'Email is invalid';
+  }
+  
+  if (!newStaff.phone.trim()) {
+    errors.phone = 'Phone is required';
+  } else if (!/^\d{10}$/.test(newStaff.phone.replace(/\D/g, ''))) {
+    errors.phone = 'Phone must be 10 digits';
+  }
+  
+  if (!newStaff.designation) {
+    errors.designation = 'Designation is required';
+  }
+  
+  if (!isEditingStaff) {
+    if (!newStaff.password) {
+      errors.password = 'Password is required';
+    } else if (newStaff.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+    
+    if (!confirmPassword) {
+      errors.confirmPassword = 'Please confirm password';
+    } else if (newStaff.password !== confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+  }
+  
+  setFormErrors(prev => ({ ...prev, staff: errors }));
+  return Object.keys(errors).length === 0;
+};
+
+const validateUserForm = () => {
+  const errors = {};
+  
+  if (!newUser.name.trim()) {
+    errors.name = 'Name is required';
+  }
+  
+  if (!newUser.email.trim()) {
+    errors.email = 'Email is required';
+  } else if (!/\S+@\S+\.\S+/.test(newUser.email)) {
+    errors.email = 'Email is invalid';
+  }
+  
+  if (!newUser.phone.trim()) {
+    errors.phone = 'Phone is required';
+  }
+  
+  if (!newUser.city.trim()) {
+    errors.city = 'City is required';
+  }
+  
+  if (!newUser.password) {
+    errors.password = 'Password is required';
+  } else if (newUser.password.length < 6) {
+    errors.password = 'Password must be at least 6 characters';
+  }
+  
+  setFormErrors(prev => ({ ...prev, user: errors }));
+  return Object.keys(errors).length === 0;
+};
+
+const validateProductForm = () => {
+  const errors = {};
+  
+  if (!newProduct.name.trim()) {
+    errors.name = 'Product name is required';
+  }
+  
+  if (!newProduct.category) {
+    errors.category = 'Category is required';
+  }
+  
+  if (!newProduct.price) {
+    errors.price = 'Price is required';
+  } else if (parseFloat(newProduct.price) <= 0) {
+    errors.price = 'Price must be greater than 0';
+  }
+  
+  if (newProduct.stock === '' || newProduct.stock < 0) {
+    errors.stock = 'Stock quantity is required';
+  }
+  
+  setFormErrors(prev => ({ ...prev, product: errors }));
+  return Object.keys(errors).length === 0;
+};
+
+// Handle field blur for immediate feedback
+const handleFieldBlur = (formType, fieldName) => {
+  setTouchedFields(prev => ({
+    ...prev,
+    [formType]: {
+      ...prev[formType],
+      [fieldName]: true
+    }
+  }));
+  
+  // Trigger validation for the specific field
+  if (formType === 'staff') {
+    validateStaffForm();
+  } else if (formType === 'user') {
+    validateUserForm();
+  } else if (formType === 'product') {
+    validateProductForm();
+  }
+};
+
+// Helper function to get field styling
+const getFieldStyle = (formType, fieldName, currentValue) => {
+  const isTouched = touchedFields[formType]?.[fieldName];
+  const hasError = formErrors[formType]?.[fieldName];
+  
+  if (isTouched && hasError && !currentValue) {
+    return {
+      border: '2px solid #000000',
+      backgroundColor: '#fff8f8'
+    };
+  }
+  return {
+    border: '2px solid #000000',
+    backgroundColor: 'white'
+  };
+};
  // Function to handle image upload
 const uploadProfileImage = async (file) => {
   try {
@@ -717,27 +911,6 @@ const [staffProfile, setStaffProfile] = useState(null);
     return '••••••';
   };
 
-  // Helper function to format permissions as comma-separated text
-  const formatPermissions = (permissions) => {
-    if (!permissions) return <span className="text-muted">None</span>;
-    
-    const activePermissions = Object.entries(permissions)
-      .filter(([key, value]) => value)
-      .map(([key]) => key);
-    
-    if (activePermissions.length === 0) return <span className="text-muted">None</span>;
-    
-    return (
-      <div>
-        {activePermissions.map((permission, index) => (
-          <span key={permission}>
-            {permission.charAt(0).toUpperCase() + permission.slice(1)}
-            {index < activePermissions.length - 1 ? ', ' : ''}
-          </span>
-        ))}
-      </div>
-    );
-  };
 
   // Download functions for tables
   const downloadTableAsPDF = (dataType = '') => {
@@ -1089,22 +1262,29 @@ const [staffProfile, setStaffProfile] = useState(null);
     }
   };
 
-  // Update handleAddStaff function
-const handleAddStaff = async (e) => {
+ const handleAddStaff = async (e) => {
   e.preventDefault();
   setFormError('');
   setFormSuccess(false);
   
-  if (!newStaff.name || !newStaff.email || !newStaff.phone || !newStaff.designation || !newStaff.password) {
-    setFormError("Please fill all required fields");
+  // Mark all fields as touched
+  const touched = {};
+  Object.keys(newStaff).forEach(key => {
+    if (key !== 'permissions') touched[key] = true;
+  });
+  if (!isEditingStaff) {
+    touched.password = true;
+    touched.confirmPassword = true;
+  }
+  setTouchedFields(prev => ({ ...prev, staff: touched }));
+  
+  // Validate form
+  if (!validateStaffForm()) {
+    setFormError("Please fix the errors in the form");
     return;
   }
   
-  if (newStaff.password !== confirmPassword) {
-    setFormError("Passwords do not match");
-    return;
-  }
-  
+  // Rest of your existing code...
   try {
     let staffData = { ...newStaff };
     
@@ -1139,7 +1319,7 @@ const handleAddStaff = async (e) => {
     if (data.success) {
       setFormSuccess(true);
       
-      // Reset form
+      // Reset form and errors
       setNewStaff({
         name: '',
         email: '',
@@ -1160,6 +1340,8 @@ const handleAddStaff = async (e) => {
       setConfirmPassword('');
       setProfileImage(null);
       setProfileImagePreview("");
+      setFormErrors(prev => ({ ...prev, staff: {} }));
+      setTouchedFields(prev => ({ ...prev, staff: {} }));
       
       // Reset editing state
       setEditStaffId(null);
@@ -1240,34 +1422,48 @@ const handleAddStaff = async (e) => {
   };
 
   const handleAddUser = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await fetch('http://localhost:5000/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newUser)
+  e.preventDefault();
+  
+  // Mark all fields as touched
+  const touched = {};
+  Object.keys(newUser).forEach(key => touched[key] = true);
+  setTouchedFields(prev => ({ ...prev, user: touched }));
+  
+  // Validate form
+  if (!validateUserForm()) {
+    alert("Please fix the errors in the form");
+    return;
+  }
+  
+  try {
+    const response = await fetch('http://localhost:5000/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newUser)
+    });
+    
+    const data = await response.json();
+    if (data.success) {
+      alert('User added successfully!');
+      setShowAddUserModal(false);
+      setNewUser({
+        name: '',
+        email: '',
+        phone: '',
+        city: '',
+        password: ''
       });
-      
-      const data = await response.json();
-      if (data.success) {
-        alert('User added successfully!');
-        setShowAddUserModal(false);
-        setNewUser({
-          name: '',
-          email: '',
-          phone: '',
-          city: '',
-          password: ''
-        });
-        fetchUsers();
-      } else {
-        alert(data.error || 'Failed to add user');
-      }
-    } catch (error) {
-      console.error('Error adding user:', error);
-      alert('Failed to add user');
+      setFormErrors(prev => ({ ...prev, user: {} }));
+      setTouchedFields(prev => ({ ...prev, user: {} }));
+      fetchUsers();
+    } else {
+      alert(data.error || 'Failed to add user');
     }
-  };
+  } catch (error) {
+    console.error('Error adding user:', error);
+    alert('Failed to add user');
+  }
+};
 
   const handleSaveSettings = async (e) => {
     e.preventDefault();
@@ -2213,7 +2409,7 @@ case 'profile':
           <div className="p-3">
             <Card className="shadow-lg p-2">
               <Card.Body>
-                <h6 className="mb-0 fw-semibold">
+                <h5 className="mb-0 fw-semibold">
                   {isEditingStaff ? 'Edit Staff' : (
                     <>
                       User Management
@@ -2221,7 +2417,7 @@ case 'profile':
                       <span className="text-muted " style={{fontSize:"14px",fontWeight:"normal"}}>New User</span>
                     </>
                   )}
-                </h6>
+                </h5>
               </Card.Body>
             </Card>
             
@@ -2246,12 +2442,12 @@ case 'profile':
                 <div className="mb-4">
                   {isEditingStaff ? (
                     <>
-                      <h6 className="fw-semibold mb-1">Edit user</h6>
+                      <h5 className="fw-semibold mb-1">Edit user</h5>
                       <p className='text-muted' style={{fontSize:"12px"}}>Update the staff member profile</p>
                     </>
                   ) : (
                     <>
-                      <h6 className="fw-semibold mb-1">New user </h6>
+                      <h5 className="fw-semibold mb-1">New user </h5>
                       <p className='text-muted' style={{fontSize:"12px"}}>Use the below form to create a new profile</p>
                     </>
                   )}
@@ -2259,78 +2455,74 @@ case 'profile':
                 
                 <Form onSubmit={handleAddStaff} className="pt-2">
                   {/* First Row with Name and Email */}
-                  <Row  style={{ "--bs-gutter-x": "5.5rem" } } className=" mb-3">
+                  <Row style={{ "--bs-gutter-x": "5.5rem" }} className="mb-3">
                     <Col md={6}>
                       <Form.Group>
                         <Form.Control
                           type="text" 
-                          style={{
-                            border:"2px solid",
-                            height:"50px",
-                            fontSize: "14px",
-                            width: "100%"
-                          }}
+                          style={getFieldStyle('staff', 'name', newStaff.name)}
                           value={newStaff.name}
                           onChange={(e) => setNewStaff({...newStaff, name: e.target.value})}
+                          onBlur={() => handleFieldBlur('staff', 'name')}
                           required
                           placeholder="Name"
                           autoComplete="name"
+                          className="py-3"
                         />
-                        
+                        {touchedFields.staff?.name && formErrors.staff?.name && (
+                          <small className="text-danger d-block mt-1">{formErrors.staff.name}</small>
+                        )}
                       </Form.Group>
                     </Col>
                     <Col md={6}>
                       <Form.Group>
                         <Form.Control
                           type="email" 
-                          style={{
-                            border:"2px solid",
-                            height:"50px",
-                            fontSize: "14px",
-                            width: "100%"
-                          }}
+                          style={getFieldStyle('staff', 'email', newStaff.email)}
                           value={newStaff.email}
                           onChange={(e) => setNewStaff({...newStaff, email: e.target.value})}
+                          onBlur={() => handleFieldBlur('staff', 'email')}
                           required
                           placeholder="E-mail"
                           autoComplete="email"
+                          className="py-3"
                         />
+                        {touchedFields.staff?.email && formErrors.staff?.email && (
+                          <small className="text-danger d-block mt-1">{formErrors.staff.email}</small>
+                        )}
                       </Form.Group>
                     </Col>
                   </Row>
-                  
+
                   {/* Second Row with Contact Number and Designation */}
-                  <Row style={{ "--bs-gutter-x": "5.5rem" } } className=" mb-3">
+                  <Row style={{ "--bs-gutter-x": "5.5rem" }} className="mb-3">
                     <Col md={6}>
                       <Form.Group>
                         <Form.Control
                           type="tel" 
-                          style={{
-                            border:"2px solid",
-                            height:"50px",
-                            fontSize: "14px",
-                            width: "100%"
-                          }}
+                          style={getFieldStyle('staff', 'phone', newStaff.phone)}
                           value={newStaff.phone}
                           onChange={(e) => setNewStaff({...newStaff, phone: e.target.value})}
+                          onBlur={() => handleFieldBlur('staff', 'phone')}
                           required
                           placeholder="Contact number"
                           autoComplete="tel"
+                          className="py-3"
                         />
+                        {touchedFields.staff?.phone && formErrors.staff?.phone && (
+                          <small className="text-danger d-block mt-1">{formErrors.staff.phone}</small>
+                        )}
                       </Form.Group>
                     </Col>
                     <Col md={6}>
                       <Form.Group>
                         <Form.Select
                           value={newStaff.designation} 
-                          style={{
-                            border:"2px solid",
-                            height:"50px",
-                            fontSize: "14px",
-                            width: "100%"
-                          }}
+                          style={getFieldStyle('staff', 'designation', newStaff.designation)}
                           onChange={(e) => setNewStaff({...newStaff, designation: e.target.value})}
+                          onBlur={() => handleFieldBlur('staff', 'designation')}
                           required
+                          className="py-3"
                         >
                           <option value="">Select Designation</option>
                           <option value="Manager">Manager</option>
@@ -2340,31 +2532,32 @@ case 'profile':
                           <option value="Admin">Admin</option>
                           <option value="Other">Other</option>
                         </Form.Select>
+                        {touchedFields.staff?.designation && formErrors.staff?.designation && (
+                          <small className="text-danger d-block mt-1">{formErrors.staff.designation}</small>
+                        )}
                       </Form.Group>
                     </Col>
                   </Row>
-                  
+
                   {/* Password Fields - Only when not editing */}
                   {!isEditingStaff && (
-                    <Row style={{ "--bs-gutter-x": "5.5rem" } } className=" mb-3">
+                    <Row style={{ "--bs-gutter-x": "5.5rem" }} className="mb-3">
                       <Col md={6}>
                         <Form.Group>
                           <Form.Control
                             type="password"
                             value={newStaff.password} 
                             onChange={(e) => setNewStaff({...newStaff, password: e.target.value})}
+                            onBlur={() => handleFieldBlur('staff', 'password')}
                             placeholder="Password"
-                            style={{
-                              border:"2px solid",
-                              height:"50px",
-                              fontSize: "14px",
-                              letterSpacing: '1px',
-                              fontFamily: 'monospace',
-                              width: "100%"
-                            }}
+                            style={getFieldStyle('staff', 'password', newStaff.password)}
                             autoComplete="new-password"
                             required
+                            className="py-3"
                           />
+                          {touchedFields.staff?.password && formErrors.staff?.password && (
+                            <small className="text-danger d-block mt-1">{formErrors.staff.password}</small>
+                          )}
                         </Form.Group>
                       </Col>
                       <Col md={6}>
@@ -2373,26 +2566,20 @@ case 'profile':
                             type="password"
                             value={confirmPassword} 
                             onChange={(e) => setConfirmPassword(e.target.value)}
+                            onBlur={() => handleFieldBlur('staff', 'confirmPassword')}
                             placeholder="Confirm password"
-                            style={{
-                              border:"2px solid",
-                              height:"50px",
-                              fontSize: "14px",
-                              letterSpacing: '1px',
-                              fontFamily: 'monospace',
-                              width: "100%"
-                            }}
+                            style={getFieldStyle('staff', 'confirmPassword', confirmPassword)}
                             autoComplete="new-password"
                             required
+                            className="py-3"
                           />
-                          {confirmPassword && newStaff.password !== confirmPassword && (
-                            <small className="text-danger mt-1 d-block">Passwords do not match</small>
+                          {touchedFields.staff?.confirmPassword && formErrors.staff?.confirmPassword && (
+                            <small className="text-danger d-block mt-1">{formErrors.staff.confirmPassword}</small>
                           )}
                         </Form.Group>
                       </Col>
                     </Row>
                   )}
-                  
                   {/* Permissions Section */}
                   <Form.Group className="my-4">
                     <Form.Label className='fw-semibold mb-3'>Permissions</Form.Label>
@@ -2480,13 +2667,13 @@ case 'profile':
                       Cancel
                     </Button>
                     <Button 
-                      variant={isEditingStaff ? "warning" : "dark"} 
-                      type="submit"
-                      style={{ minWidth: '100px' }}
-                    >
-                      <i className={`bi ${isEditingStaff ? 'bi-pencil' : 'bi-person-plus'} me-2`}></i>
-                      {isEditingStaff ? 'Update' : 'Submit'}
-                    </Button>
+                    variant="dark" 
+                    type="submit"
+                    style={{ minWidth: '100px' }}
+                  >
+                    <i className={`bi ${isEditingStaff ? 'bi-pencil' : 'bi-person-plus'} me-2`}></i>
+                   Submit
+                  </Button>
                   </div>
                 </Form>
               </Card.Body>
@@ -3706,9 +3893,7 @@ case 'profile':
             </Button>
             <Navbar.Brand className="fw-bold">
               Urban Company {userRole === 'admin' ? 'Admin' : 'Staff'} Panel
-              <Badge bg={userRole === 'admin' ? 'success' : 'info'} className="ms-2">
-                {userRole}
-              </Badge>
+              
             </Navbar.Brand>
             
             <Navbar.Toggle aria-controls="navbar-nav" />
@@ -3762,7 +3947,8 @@ case 'profile':
         {/* Staff Details Modal */}
         <Modal show={showStaffDetails} onHide={() => setShowStaffDetails(false)} centered>
           <Modal.Header >
-            <Modal.Title className="fw-semibold fs-6">Staff Details</Modal.Title>
+            <Modal.Title className="fw-semibold fs-6">User Details</Modal.Title>
+            <Button type="button" onClick={() => setShowSlotModal(false)} className="position-absolute border-0 justify-content-center closebtn p-0">X</Button>
           </Modal.Header>
           <Modal.Body>
             {selectedStaffDetails && (
@@ -3805,7 +3991,7 @@ case 'profile':
               Close
             </Button>
             <Button 
-              variant="warning" 
+              variant="dark" 
               onClick={() => {
                 setShowStaffDetails(false);
                 handleEditStaff(selectedStaffDetails);
@@ -3814,164 +4000,6 @@ case 'profile':
               Edit
             </Button>
           </Modal.Footer>
-        </Modal>
-
-        {/* Add User Modal */}
-        <Modal show={showAddUserModal} onHide={() => setShowAddUserModal(false)}>
-          <Modal.Header closeButton>
-            <Modal.Title>Add New User</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <Form onSubmit={handleAddUser}>
-              <Form.Group className="mb-3">
-                <Form.Label>Full Name *</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={newUser.name}
-                  onChange={(e) => setNewUser({...newUser, name: e.target.value})}
-                  required
-                  placeholder="Enter full name"
-                  autoComplete="name"
-                />
-              </Form.Group>
-              <Form.Group className="mb-3">
-                <Form.Label>Email *</Form.Label>
-                <Form.Control
-                  type="email"
-                  value={newUser.email}
-                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                  required
-                  placeholder="Enter email address"
-                  autoComplete="email"
-                />
-              </Form.Group>
-              <Form.Group className="mb-3">
-                <Form.Label>Phone *</Form.Label>
-                <Form.Control
-                  type="tel"
-                  value={newUser.phone}
-                  onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
-                  required
-                  placeholder="Enter phone number"
-                  autoComplete="tel"
-                />
-              </Form.Group>
-              <Form.Group className="mb-3">
-                <Form.Label>City *</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={newUser.city}
-                  onChange={(e) => setNewUser({...newUser, city: e.target.value})}
-                  required
-                  placeholder="Enter city"
-                />
-              </Form.Group>
-              <Form.Group className="mb-3">
-                <Form.Label>Password *</Form.Label>
-                <Form.Control
-                  type="password"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                  required
-                  placeholder="Enter password"
-                  className="font-monospace"
-                  style={{ letterSpacing: '1px' }}
-                  autoComplete="new-password"
-                />
-                <Form.Text className="text-muted">
-                  Will be displayed as •••••• in the user list for security
-                </Form.Text>
-              </Form.Group>
-              <div className="d-flex justify-content-end gap-2">
-                <Button variant="secondary" onClick={() => setShowAddUserModal(false)}>
-                  Cancel
-                </Button>
-                <Button variant="primary" type="submit">
-                  Add User
-                </Button>
-              </div>
-            </Form>
-          </Modal.Body>
-        </Modal>
-
-        {/* Add Product Modal */}
-        <Modal show={showAddProductModal} onHide={() => setShowAddProductModal(false)}>
-          <Modal.Header closeButton>
-            <Modal.Title>Add New Product</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <Form onSubmit={handleAddProduct}>
-              <Form.Group className="mb-3">
-                <Form.Label>Product Name *</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={newProduct.name}
-                  onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
-                  required
-                  placeholder="Enter product name"
-                />
-              </Form.Group>
-              <Form.Group className="mb-3">
-                <Form.Label>Category *</Form.Label>
-                <Form.Select
-                  value={newProduct.category}
-                  onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
-                  required
-                >
-                  <option value="">Select Category</option>
-                  <option value="Salon">Salon</option>
-                  <option value="Cleaning">Cleaning</option>
-                  <option value="Repair">Repair</option>
-                  <option value="Plumbing">Plumbing</option>
-                  <option value="Electrician">Electrician</option>
-                </Form.Select>
-              </Form.Group>
-              <Form.Group className="mb-3">
-                <Form.Label>Description</Form.Label>
-                <Form.Control
-                  as="textarea"
-                  rows={3}
-                  value={newProduct.description}
-                  onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
-                  placeholder="Enter product description"
-                />
-              </Form.Group>
-              <Row>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Price (₹) *</Form.Label>
-                    <Form.Control
-                      type="number"
-                      value={newProduct.price}
-                      onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
-                      required
-                      placeholder="Enter price"
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Stock Quantity *</Form.Label>
-                    <Form.Control
-                      type="number"
-                      value={newProduct.stock}
-                      onChange={(e) => setNewProduct({...newProduct, stock: parseInt(e.target.value)})}
-                      required
-                      placeholder="Enter stock quantity"
-                    />
-                  </Form.Group>
-                </Col>
-              </Row>
-              <div className="d-flex justify-content-end gap-2">
-                <Button variant="secondary" onClick={() => setShowAddProductModal(false)}>
-                  Cancel
-                </Button>
-                <Button variant="primary" type="submit">
-                  Add Product
-                </Button>
-              </div>
-            </Form>
-          </Modal.Body>
         </Modal>
       </div>
     </div>
