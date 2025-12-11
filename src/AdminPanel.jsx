@@ -21,7 +21,7 @@ function AdminPanel() {
   const [userRole, setUserRole] = useState(null);
   const [userPermissions, setUserPermissions] = useState(null);
   const [loginData, setLoginData] = useState({ email: '', password: '' });
-  const [loginType, setLoginType] = useState('admin'); // 'admin' or 'staff'
+  const [loginType, setLoginType] = useState('admin');
   const [loading, setLoading] = useState(false);
   const [adminLogo, setAdminLogo] = useState('/assets/Uc.png');
   const [activeMenu, setActiveMenu] = useState('dashboard');
@@ -42,6 +42,7 @@ function AdminPanel() {
     category: {},
     settings: {}
   });
+  
   // Dashboard States
   const [stats, setStats] = useState(null);
   const [recentBookings, setRecentBookings] = useState([]);
@@ -72,9 +73,11 @@ function AdminPanel() {
       Settings: false
     }
   });
-const [profileImage, setProfileImage] = useState(null);
-const [profileImagePreview, setProfileImagePreview] = useState("");
-const [uploadingImage, setUploadingImage] = useState(false);
+  
+  // Profile Image States
+  const [profileImage, setProfileImage] = useState(null);
+  const [profileImagePreview, setProfileImagePreview] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
   
   // Staff Bulk Selection
   const [selectedStaff, setSelectedStaff] = useState([]);
@@ -174,7 +177,11 @@ const [uploadingImage, setUploadingImage] = useState(false);
     address: '123 Business Street, City, Country'
   });
 
- // Dark gradient badges with high contrast
+  // Profile States
+  const [adminProfile, setAdminProfile] = useState(null);
+  const [staffProfile, setStaffProfile] = useState(null);
+
+ // Format permissions with badges
 const formatPermissions = (permissions) => {
   if (!permissions) return <Badge bg="dark" className="me-1">None</Badge>;
   
@@ -184,19 +191,17 @@ const formatPermissions = (permissions) => {
   
   if (activePermissions.length === 0) return <Badge bg="dark" className="me-1">None</Badge>;
   
-  // Dark gradient colors
   const permissionGradients = {
-    'Dashboard': 'linear-gradient(135deg, #141E30 0%, #243B55 100%)', // Dark navy
-    'Staff': 'linear-gradient(135deg, #0F2027 0%, #203A43 100%)', // Dark teal
-    'User': 'linear-gradient(135deg, #1A2980 0%, #26D0CE 100%)', // Navy to teal
-    'Category': 'linear-gradient(135deg, #232526 0%, #414345 100%)', // Charcoal
-    'Product': 'linear-gradient(135deg, #8E0E00 0%, #1F1C18 100%)', // Dark red to black
-    'Bookings': 'linear-gradient(135deg, #3A1C71 0%, #d82739ff 50%, #FFAF7B 100%)', // Purple to orange
-    'Reports': 'linear-gradient(135deg, #16222A 0%, #3A6073 100%)', // Steel blue
-    'Settings': 'linear-gradient(135deg, #000000 0%, #434343 100%)' // Black to gray
+    'Dashboard': 'linear-gradient(135deg, #141E30 0%, #243B55 100%)',
+    'Staff': 'linear-gradient(135deg, #0F2027 0%, #203A43 100%)',
+    'User': 'linear-gradient(135deg, #1A2980 0%, #26D0CE 100%)',
+    'Category': 'linear-gradient(135deg, #232526 0%, #414345 100%)',
+    'Product': 'linear-gradient(135deg, #8E0E00 0%, #1F1C18 100%)',
+    'Bookings': 'linear-gradient(135deg, #3A1C71 0%, #d82739ff 50%, #FFAF7B 100%)',
+    'Reports': 'linear-gradient(135deg, #16222A 0%, #3A6073 100%)',
+    'Settings': 'linear-gradient(135deg, #000000 0%, #434343 100%)'
   };
 
-  
   return (
     <div className="d-flex flex-wrap gap-2">
       {activePermissions.map((permission) => {
@@ -210,9 +215,10 @@ const formatPermissions = (permissions) => {
             style={{
               background: gradient,
               color: textColor,
-              borderRadius: '15px',fontSize:"13px",
+              borderRadius: '15px',
+              fontSize: "13px",
               boxShadow: '0 3px 8px rgba(0,0,0,0.3)',
-              }}>
+            }}>
             {permission}
           </span>
         );
@@ -220,7 +226,7 @@ const formatPermissions = (permissions) => {
     </div>
   );
 };
-  // Validation functions
+
 const validateStaffForm = () => {
   const errors = {};
   
@@ -244,10 +250,22 @@ const validateStaffForm = () => {
     errors.designation = 'Designation is required';
   }
   
+  // Skip password validation when editing (unless password is being changed)
   if (!isEditingStaff) {
     if (!newStaff.password) {
       errors.password = 'Password is required';
     } else if (newStaff.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+    
+    if (!confirmPassword) {
+      errors.confirmPassword = 'Please confirm password';
+    } else if (newStaff.password !== confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+  } else if (newStaff.password !== '********' && newStaff.password.length > 0) {
+    // If editing and password is being changed (not placeholder)
+    if (newStaff.password.length < 6) {
       errors.password = 'Password must be at least 6 characters';
     }
     
@@ -354,35 +372,6 @@ const getFieldStyle = (formType, fieldName, currentValue) => {
     backgroundColor: 'white'
   };
 };
- // Function to handle image upload
-const uploadProfileImage = async (file) => {
-  try {
-    setUploadingImage(true);
-    const formData = new FormData();
-    formData.append('profileImage', file);
-
-    const response = await fetch('http://localhost:5000/api/upload/upload-profile', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`
-      },
-      body: formData
-    });
-
-    const data = await response.json();
-    if (data.success) {
-      return data.imageUrl;
-    } else {
-      throw new Error(data.error || 'Failed to upload image');
-    }
-  } catch (error) {
-    console.error('Error uploading image:', error);
-    throw error;
-  } finally {
-    setUploadingImage(false);
-  }
-};
-
 
   const fetchAdminProfile = async () => {
   try {
@@ -412,14 +401,10 @@ const fetchStaffProfile = async () => {
   }
 };
 
-// Add new state for profiles
-const [adminProfile, setAdminProfile] = useState(null);
-const [staffProfile, setStaffProfile] = useState(null);
-
   // Check if user has permission
   const hasPermission = (permission) => {
     if (!userPermissions) return false;
-    if (userRole === 'admin') return true; // Admin has all permissions
+    if (userRole === 'admin') return true;
     return userPermissions[permission] === true;
   };
 
@@ -911,6 +896,16 @@ const [staffProfile, setStaffProfile] = useState(null);
     return '••••••';
   };
 
+  // Function to get initials from name
+  const getInitials = (name) => {
+    if (!name) return 'NA';
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
 
   // Download functions for tables
   const downloadTableAsPDF = (dataType = '') => {
@@ -943,6 +938,7 @@ const [staffProfile, setStaffProfile] = useState(null);
           'Email': s.email,
           'Phone': s.phone,
           'Designation': s.designation,
+          'Profile Image': s.profileImage ? `http://localhost:5000${s.profileImage}` : 'No Image',
           'Permissions': Object.entries(s.permissions || {})
             .filter(([key, value]) => value)
             .map(([key]) => key.charAt(0).toUpperCase() + key.slice(1))
@@ -956,6 +952,7 @@ const [staffProfile, setStaffProfile] = useState(null);
           'Email': u.email,
           'Phone': u.phone,
           'City': u.city,
+          'Profile Image': u.profileImage ? `http://localhost:5000${u.profileImage}` : 'No Image',
           'Joined Date': new Date(u.createdAt).toLocaleDateString()
         }));
         break;
@@ -964,6 +961,7 @@ const [staffProfile, setStaffProfile] = useState(null);
         data = bookings.map(b => ({
           'Customer': b.userName,
           'Email': b.userEmail,
+          'Profile Image': b.userProfileImage ? `http://localhost:5000${b.userProfileImage}` : 'No Image',
           'Service': b.serviceName,
           'Price': `₹${b.servicePrice}`,
           'Status': b.status,
@@ -977,14 +975,13 @@ const [staffProfile, setStaffProfile] = useState(null);
         if (table) {
           headers = Array.from(table.querySelectorAll('thead th'))
             .map(th => th.textContent.trim())
-            .filter(h => h); // Remove empty headers
+            .filter(h => h);
           
           const rows = table.querySelectorAll('tbody tr');
           data = Array.from(rows).map(row => {
             const cells = row.querySelectorAll('td');
             return Array.from(cells).reduce((obj, cell, index) => {
               if (headers[index]) {
-                // Remove checkbox content
                 const text = cell.textContent.trim();
                 obj[headers[index]] = text.includes('checkbox') ? '' : text;
               }
@@ -1013,12 +1010,13 @@ const [staffProfile, setStaffProfile] = useState(null);
     // Get data based on current active menu
     switch(activeMenu) {
       case 'manage-staff':
-        headers = ['Name', 'Email', 'Phone', 'Designation', 'Permissions'];
+        headers = ['Name', 'Email', 'Phone', 'Designation', 'Profile Image URL', 'Permissions'];
         data = staff.map(s => [
           s.name,
           s.email,
           s.phone,
           s.designation,
+          s.profileImage ? `http://localhost:5000${s.profileImage}` : 'No Image',
           Object.entries(s.permissions || {})
             .filter(([key, value]) => value)
             .map(([key]) => key.charAt(0).toUpperCase() + key.slice(1))
@@ -1027,21 +1025,23 @@ const [staffProfile, setStaffProfile] = useState(null);
         break;
         
       case 'manage-users':
-        headers = ['Name', 'Email', 'Phone', 'City', 'Joined Date'];
+        headers = ['Name', 'Email', 'Phone', 'City', 'Profile Image URL', 'Joined Date'];
         data = users.map(u => [
           u.name,
           u.email,
           u.phone,
           u.city,
+          u.profileImage ? `http://localhost:5000${u.profileImage}` : 'No Image',
           new Date(u.createdAt).toLocaleDateString()
         ]);
         break;
         
       case 'bookings':
-        headers = ['Customer', 'Email', 'Service', 'Price', 'Status', 'Date'];
+        headers = ['Customer', 'Email', 'Profile Image URL', 'Service', 'Price', 'Status', 'Date'];
         data = bookings.map(b => [
           b.userName,
           b.userEmail,
+          b.userProfileImage ? `http://localhost:5000${b.userProfileImage}` : 'No Image',
           b.serviceName,
           `₹${b.servicePrice}`,
           b.status,
@@ -1055,7 +1055,7 @@ const [staffProfile, setStaffProfile] = useState(null);
         if (table) {
           headers = Array.from(table.querySelectorAll('thead th'))
             .map(th => th.textContent.trim())
-            .filter(h => h && !h.includes('checkbox')); // Remove empty headers and checkboxes
+            .filter(h => h && !h.includes('checkbox'));
           
           const rows = table.querySelectorAll('tbody tr');
           data = Array.from(rows).map(row => {
@@ -1066,7 +1066,7 @@ const [staffProfile, setStaffProfile] = useState(null);
                 return '';
               }
               return cell.textContent.trim();
-            }).filter((_, index) => headers[index]); // Only include columns with headers
+            }).filter((_, index) => headers[index]);
           });
         }
     }
@@ -1105,7 +1105,7 @@ const [staffProfile, setStaffProfile] = useState(null);
     onPageChange, 
     onItemsPerPageChange,
     showDownload = true,
-    dataType = '' // 'staff', 'users', 'bookings', etc.
+    dataType = ''
   }) => {
     return (
       <div className="d-flex justify-content-between align-items-center mt-3">
@@ -1201,6 +1201,8 @@ const [staffProfile, setStaffProfile] = useState(null);
         }
       });
       setConfirmPassword('');
+      setProfileImage(null);
+      setProfileImagePreview("");
     }
     
     // Reset category edit state
@@ -1262,7 +1264,7 @@ const [staffProfile, setStaffProfile] = useState(null);
     }
   };
 
- const handleAddStaff = async (e) => {
+const handleAddStaff = async (e) => {
   e.preventDefault();
   setFormError('');
   setFormSuccess(false);
@@ -1272,10 +1274,13 @@ const [staffProfile, setStaffProfile] = useState(null);
   Object.keys(newStaff).forEach(key => {
     if (key !== 'permissions') touched[key] = true;
   });
-  if (!isEditingStaff) {
+  
+  // Only require password fields when not editing or when password is being changed
+  if (!isEditingStaff || (isEditingStaff && newStaff.password !== '********')) {
     touched.password = true;
     touched.confirmPassword = true;
   }
+  
   setTouchedFields(prev => ({ ...prev, staff: touched }));
   
   // Validate form
@@ -1284,19 +1289,25 @@ const [staffProfile, setStaffProfile] = useState(null);
     return;
   }
   
-  // Rest of your existing code...
   try {
-    let staffData = { ...newStaff };
+    // Create FormData for file upload
+    const formData = new FormData();
+    formData.append('name', newStaff.name);
+    formData.append('email', newStaff.email);
+    formData.append('phone', newStaff.phone);
+    formData.append('designation', newStaff.designation);
     
-    // Upload profile image if exists
+    // Only send password if it's not the placeholder and not empty
+    if (newStaff.password !== '********' && newStaff.password.trim()) {
+      formData.append('password', newStaff.password);
+    }
+    
+    formData.append('permissions', JSON.stringify(newStaff.permissions));
+    formData.append('isActive', newStaff.isActive !== undefined ? newStaff.isActive : true);
+    
+    // Add profile image if exists
     if (profileImage) {
-      try {
-        const imageUrl = await uploadProfileImage(profileImage);
-        staffData.profileImage = imageUrl;
-      } catch (error) {
-        setFormError("Failed to upload profile image: " + error.message);
-        return;
-      }
+      formData.append('profileImage', profileImage);
     }
     
     const url = isEditingStaff 
@@ -1308,10 +1319,9 @@ const [staffProfile, setStaffProfile] = useState(null);
     const response = await fetch(url, {
       method: method,
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${getAuthToken()}`
       },
-      body: JSON.stringify(staffData)
+      body: formData
     });
     
     const data = await response.json();
@@ -1366,29 +1376,45 @@ const [staffProfile, setStaffProfile] = useState(null);
 };
 
   // Function to handle editing staff
-  const handleEditStaff = (staffMember) => {
-    setNewStaff({
-      name: staffMember.name || '',
-      email: staffMember.email || '',
-      phone: staffMember.phone || '',
-      designation: staffMember.designation || '',
-      password: '', // Don't show password for security
-      permissions: staffMember.permissions || {
-        Dashboard: false,
-        Staff: false,
-        User: false,
-        Category: false,
-        Product: false,
-        Bookings: false,
-        Reports: false,
-        Settings: false
-      }
-    });
-    setEditStaffId(staffMember._id);
-    setIsEditingStaff(true);
-    setActiveMenu('add-staff');
-  };
-
+const handleEditStaff = (staffMember) => {
+  setNewStaff({
+    name: staffMember.name || '',
+    email: staffMember.email || '',
+    phone: staffMember.phone || '',
+    designation: staffMember.designation || '',
+    password: '********', // Set a placeholder value for password
+    isActive: staffMember.isActive !== undefined ? staffMember.isActive : true,
+    permissions: staffMember.permissions || {
+      Dashboard: false,
+      Staff: false,
+      User: false,
+      Category: false,
+      Product: false,
+      Bookings: false,
+      Reports: false,
+      Settings: false
+    }
+  });
+  
+  // Set profile image preview if exists
+  if (staffMember.profileImage) {
+    setProfileImagePreview(`http://localhost:5000${staffMember.profileImage}`);
+  } else {
+    setProfileImagePreview("");
+  }
+  
+  setEditStaffId(staffMember._id);
+  setIsEditingStaff(true);
+  setActiveMenu('add-staff');
+  setProfileImage(null);
+  setConfirmPassword(''); 
+  setFormSuccess(false); 
+  setFormError(''); 
+  
+  // Reset touched fields and errors
+  setTouchedFields(prev => ({ ...prev, staff: {} }));
+  setFormErrors(prev => ({ ...prev, staff: {} }));
+};
 
   const handleAddProduct = async (e) => {
     e.preventDefault();
@@ -1422,48 +1448,48 @@ const [staffProfile, setStaffProfile] = useState(null);
   };
 
   const handleAddUser = async (e) => {
-  e.preventDefault();
-  
-  // Mark all fields as touched
-  const touched = {};
-  Object.keys(newUser).forEach(key => touched[key] = true);
-  setTouchedFields(prev => ({ ...prev, user: touched }));
-  
-  // Validate form
-  if (!validateUserForm()) {
-    alert("Please fix the errors in the form");
-    return;
-  }
-  
-  try {
-    const response = await fetch('http://localhost:5000/api/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newUser)
-    });
+    e.preventDefault();
     
-    const data = await response.json();
-    if (data.success) {
-      alert('User added successfully!');
-      setShowAddUserModal(false);
-      setNewUser({
-        name: '',
-        email: '',
-        phone: '',
-        city: '',
-        password: ''
-      });
-      setFormErrors(prev => ({ ...prev, user: {} }));
-      setTouchedFields(prev => ({ ...prev, user: {} }));
-      fetchUsers();
-    } else {
-      alert(data.error || 'Failed to add user');
+    // Mark all fields as touched
+    const touched = {};
+    Object.keys(newUser).forEach(key => touched[key] = true);
+    setTouchedFields(prev => ({ ...prev, user: touched }));
+    
+    // Validate form
+    if (!validateUserForm()) {
+      alert("Please fix the errors in the form");
+      return;
     }
-  } catch (error) {
-    console.error('Error adding user:', error);
-    alert('Failed to add user');
-  }
-};
+    
+    try {
+      const response = await fetch('http://localhost:5000/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser)
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        alert('User added successfully!');
+        setShowAddUserModal(false);
+        setNewUser({
+          name: '',
+          email: '',
+          phone: '',
+          city: '',
+          password: ''
+        });
+        setFormErrors(prev => ({ ...prev, user: {} }));
+        setTouchedFields(prev => ({ ...prev, user: {} }));
+        fetchUsers();
+      } else {
+        alert(data.error || 'Failed to add user');
+      }
+    } catch (error) {
+      console.error('Error adding user:', error);
+      alert('Failed to add user');
+    }
+  };
 
   const handleSaveSettings = async (e) => {
     e.preventDefault();
@@ -1513,8 +1539,6 @@ const [staffProfile, setStaffProfile] = useState(null);
     }
   };
 
-
-
   const deleteProduct = async (productId) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
@@ -1534,17 +1558,6 @@ const [staffProfile, setStaffProfile] = useState(null);
         alert('Failed to delete product');
       }
     }
-  };
-
-  // Function to get initials from name
-  const getInitials = (name) => {
-    if (!name) return 'NA';
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2);
   };
 
   const updateBookingStatus = async (bookingId, status) => {
@@ -1591,27 +1604,27 @@ const [staffProfile, setStaffProfile] = useState(null);
   };
 
   useEffect(() => {
-  // Check if user is already logged in
-  const token = localStorage.getItem('authToken');
-  const role = localStorage.getItem('userRole');
-  const permissions = localStorage.getItem('userPermissions');
-  
-  if (token && role && permissions) {
-    setIsLoggedIn(true);
-    setUserRole(role);
-    setUserPermissions(JSON.parse(permissions));
-    fetchDashboardData();
+    // Check if user is already logged in
+    const token = localStorage.getItem('authToken');
+    const role = localStorage.getItem('userRole');
+    const permissions = localStorage.getItem('userPermissions');
     
-    // Fetch appropriate profile
-    if (role === 'admin') {
-      fetchAdminProfile();
-    } else {
-      fetchStaffProfile();
+    if (token && role && permissions) {
+      setIsLoggedIn(true);
+      setUserRole(role);
+      setUserPermissions(JSON.parse(permissions));
+      fetchDashboardData();
+      
+      // Fetch appropriate profile
+      if (role === 'admin') {
+        fetchAdminProfile();
+      } else {
+        fetchStaffProfile();
+      }
     }
-  }
-  
-  fetchAdminLogo();
-}, []);
+    
+    fetchAdminLogo();
+  }, []);
 
   if (!isLoggedIn) {
     return (
@@ -1993,169 +2006,181 @@ const [staffProfile, setStaffProfile] = useState(null);
     }
 
     switch(activeMenu) {
-
-      // Add in the switch statement:
-case 'profile':
-  return (
-    <div>
-    <Card className="p-3 shadow-lg">
-      <div className="border-0">
-        <h5 className="mb-0">My Profile</h5>
-      </div></Card><br />
-      <Card>
-      <Card.Body>
-        {userRole === 'admin' ? (
-          adminProfile ? (
-            <div className="profile-info">
-              <div className="text-center mb-4">
-                <div className="mb-3">
-                  <i className="bi bi-person-circle" style={{ fontSize: "80px", color: "#6c757d" }}></i>
-                </div>
-                <h4>{adminProfile.username}</h4>
-                <Badge bg="success" className="mb-2">{adminProfile.position}</Badge>
+      case 'profile':
+        return (
+          <div>
+            <Card className="p-3 shadow-lg">
+              <div className="border-0">
+                <h5 className="mb-0">My Profile</h5>
               </div>
-              
-              <div className="list-group list-group-flush">
-                <div className="list-group-item">
-                  <div className="row">
-                    <div className="col-4 text-muted">Email</div>
-                    <div className="col-8">
-                      <strong>{adminProfile.email}</strong>
+            </Card><br />
+            <Card>
+              <Card.Body>
+                {userRole === 'admin' ? (
+                  adminProfile ? (
+                    <div className="profile-info">
+                      <div className="text-center mb-4">
+                        <div className="mb-3">
+                          <i className="bi bi-person-circle" style={{ fontSize: "80px", color: "#6c757d" }}></i>
+                        </div>
+                        <h4>{adminProfile.username}</h4>
+                        <Badge bg="success" className="mb-2">{adminProfile.position}</Badge>
+                      </div>
+                      
+                      <div className="list-group list-group-flush">
+                        <div className="list-group-item">
+                          <div className="row">
+                            <div className="col-4 text-muted">Email</div>
+                            <div className="col-8">
+                              <strong>{adminProfile.email}</strong>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="list-group-item">
+                          <div className="row">
+                            <div className="col-4 text-muted">Position</div>
+                            <div className="col-8">
+                              <strong>{adminProfile.position}</strong>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="list-group-item">
+                          <div className="row">
+                            <div className="col-4 text-muted">Status</div>
+                            <div className="col-8">
+                              <Badge bg={adminProfile.isActive ? 'success' : 'secondary'}>
+                                {adminProfile.isActive ? 'Active' : 'Inactive'}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="list-group-item">
+                          <div className="row">
+                            <div className="col-4 text-muted">Last Login</div>
+                            <div className="col-8">
+                              {adminProfile.lastLogin ? 
+                                new Date(adminProfile.lastLogin).toLocaleString() : 
+                                'Never logged in'}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="list-group-item">
+                          <div className="row">
+                            <div className="col-4 text-muted">Account Created</div>
+                            <div className="col-8">
+                              {new Date(adminProfile.createdAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                
-               
-                
-                <div className="list-group-item">
-                  <div className="row">
-                    <div className="col-4 text-muted">Position</div>
-                    <div className="col-8">
-                      <strong>{adminProfile.position}</strong>
+                  ) : (
+                    <div className="text-center py-4">
+                      <Spinner animation="border" variant="primary" />
+                      <p className="mt-2">Loading profile...</p>
                     </div>
-                  </div>
-                </div>
-                
-                <div className="list-group-item">
-                  <div className="row">
-                    <div className="col-4 text-muted">Status</div>
-                    <div className="col-8">
-                      <Badge bg={adminProfile.isActive ? 'success' : 'secondary'}>
-                        {adminProfile.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
+                  )
+                ) : (
+                  staffProfile ? (
+                    <div className="profile-info">
+                      <div className="text-center mb-4">
+                        <div className="mb-3">
+                          {staffProfile.profileImage ? (
+                            <img 
+                              src={`http://localhost:5000${staffProfile.profileImage}`} 
+                              alt={staffProfile.name}
+                              style={{ 
+                                width: '100px', 
+                                height: '100px', 
+                                objectFit: 'cover',
+                                borderRadius: '50%',
+                                border: '3px solid #dee2e6'
+                              }}
+                            />
+                          ) : (
+                            <i className="bi bi-person-circle" style={{ fontSize: "80px", color: "#6c757d" }}></i>
+                          )}
+                        </div>
+                        <h4>{staffProfile.name}</h4>
+                        <Badge bg="info" className="mb-2">{staffProfile.position}</Badge>
+                      </div>
+                      
+                      <div className="list-group list-group-flush">
+                        <div className="list-group-item">
+                          <div className="row">
+                            <div className="col-4 text-muted">Email</div>
+                            <div className="col-8">
+                              <strong>{staffProfile.email}</strong>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="list-group-item">
+                          <div className="row">
+                            <div className="col-4 text-muted">Phone</div>
+                            <div className="col-8">
+                              <strong>{staffProfile.phone}</strong>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="list-group-item">
+                          <div className="row">
+                            <div className="col-4 text-muted">Designation</div>
+                            <div className="col-8">
+                              <strong>{staffProfile.designation}</strong>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="list-group-item">
+                          <div className="row">
+                            <div className="col-4 text-muted">Status</div>
+                            <div className="col-8">
+                              <Badge bg={staffProfile.isActive ? 'success' : 'secondary'}>
+                                {staffProfile.isActive ? 'Active' : 'Inactive'}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="list-group-item">
+                          <div className="row">
+                            <div className="col-4 text-muted">Permissions</div>
+                            <div className="col-8">
+                              {Object.entries(staffProfile.permissions || {})
+                                .filter(([key, value]) => value)
+                                .map(([key]) => key)
+                                .join(', ')}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="list-group-item">
+                          <div className="row">
+                            <div className="col-4 text-muted">Account Created</div>
+                            <div className="col-8">
+                              {new Date(staffProfile.createdAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                
-                <div className="list-group-item">
-                  <div className="row">
-                    <div className="col-4 text-muted">Last Login</div>
-                    <div className="col-8">
-                      {adminProfile.lastLogin ? 
-                        new Date(adminProfile.lastLogin).toLocaleString() : 
-                        'Never logged in'}
+                  ) : (
+                    <div className="text-center py-4">
+                      <Spinner animation="border" variant="primary" />
+                      <p className="mt-2">Loading profile...</p>
                     </div>
-                  </div>
-                </div>
-                
-                <div className="list-group-item">
-                  <div className="row">
-                    <div className="col-4 text-muted">Account Created</div>
-                    <div className="col-8">
-                      {new Date(adminProfile.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <Spinner animation="border" variant="primary" />
-              <p className="mt-2">Loading profile...</p>
-            </div>
-          )
-        ) : (
-          staffProfile ? (
-            <div className="profile-info">
-              <div className="text-center mb-4">
-                <div className="mb-3">
-                  <i className="bi bi-person-circle" style={{ fontSize: "80px", color: "#6c757d" }}></i>
-                </div>
-                <h4>{staffProfile.name}</h4>
-                <Badge bg="info" className="mb-2">{staffProfile.position}</Badge>
-              </div>
-              
-              <div className="list-group list-group-flush">
-                <div className="list-group-item">
-                  <div className="row">
-                    <div className="col-4 text-muted">Email</div>
-                    <div className="col-8">
-                      <strong>{staffProfile.email}</strong>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="list-group-item">
-                  <div className="row">
-                    <div className="col-4 text-muted">Phone</div>
-                    <div className="col-8">
-                      <strong>{staffProfile.phone}</strong>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="list-group-item">
-                  <div className="row">
-                    <div className="col-4 text-muted">Designation</div>
-                    <div className="col-8">
-                      <strong>{staffProfile.designation}</strong>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="list-group-item">
-                  <div className="row">
-                    <div className="col-4 text-muted">Status</div>
-                    <div className="col-8">
-                      <Badge bg={staffProfile.isActive ? 'success' : 'secondary'}>
-                        {staffProfile.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="list-group-item">
-                  <div className="row">
-                    <div className="col-4 text-muted">Permissions</div>
-                    <div className="col-8">
-                      {Object.entries(staffProfile.permissions || {})
-                        .filter(([key, value]) => value)
-                        .map(([key]) => key)
-                        .join(', ')}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="list-group-item">
-                  <div className="row">
-                    <div className="col-4 text-muted">Account Created</div>
-                    <div className="col-8">
-                      {new Date(staffProfile.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <Spinner animation="border" variant="primary" />
-              <p className="mt-2">Loading profile...</p>
-            </div>
-          )
-        )}
-      </Card.Body>
-    </Card></div>
-  );
+                  )
+                )}
+              </Card.Body>
+            </Card>
+          </div>
+        );
 
       case 'dashboard':
         return (
@@ -2454,6 +2479,47 @@ case 'profile':
                 </div>
                 
                 <Form onSubmit={handleAddStaff} className="pt-2">
+                  {/* Profile Picture Upload */}
+                  <Row className="mb-4">
+                    <Col md={12}>
+                      <Form.Group>
+                        <Form.Label>Profile Picture</Form.Label>
+                        <Form.Control
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                              setProfileImage(file);
+                              setProfileImagePreview(URL.createObjectURL(file));
+                            }
+                          }}
+                          className="py-2"
+                          style={getFieldStyle('staff', 'profileImage', profileImage)}
+                        />
+                        <Form.Text className="text-muted">
+                          Upload a profile picture (Max 5MB, JPG/PNG format)
+                        </Form.Text>
+                        {profileImagePreview && (
+                          <div className="mt-2 text-center">
+                            <img 
+                              src={profileImagePreview} 
+                              alt="Preview" 
+                              style={{ 
+                                width: '100px', 
+                                height: '100px', 
+                                objectFit: 'cover',
+                                borderRadius: '50%',
+                                border: '2px solid #dee2e6'
+                              }}
+                            />
+                            <p className="text-muted mt-1" style={{fontSize:"12px"}}>Preview</p>
+                          </div>
+                        )}
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
                   {/* First Row with Name and Email */}
                   <Row style={{ "--bs-gutter-x": "5.5rem" }} className="mb-3">
                     <Col md={6}>
@@ -2580,11 +2646,12 @@ case 'profile':
                       </Col>
                     </Row>
                   )}
+
                   {/* Permissions Section */}
                   <Form.Group className="my-4">
                     <Form.Label className='fw-semibold mb-3'>Permissions</Form.Label>
                     <div className="px-1">
-                      <Row style={{ "--bs-gutter-x": "5.5rem" } } className=" gy-2">
+                      <Row style={{ "--bs-gutter-x": "5.5rem" }} className=" gy-2">
                         {[
                           'Dashboard',
                           'Staff', 
@@ -2657,6 +2724,8 @@ case 'profile':
                           }
                         });
                         setConfirmPassword('');
+                        setProfileImage(null);
+                        setProfileImagePreview("");
                         if (isEditingStaff) {
                           setEditStaffId(null);
                           setIsEditingStaff(false);
@@ -2667,13 +2736,13 @@ case 'profile':
                       Cancel
                     </Button>
                     <Button 
-                    variant="dark" 
-                    type="submit"
-                    style={{ minWidth: '100px' }}
-                  >
-                    <i className={`bi ${isEditingStaff ? 'bi-pencil' : 'bi-person-plus'} me-2`}></i>
-                   Submit
-                  </Button>
+                      variant="dark" 
+                      type="submit"
+                      style={{ minWidth: '100px' }}
+                    >
+                      <i className={`bi ${isEditingStaff ? 'bi-pencil' : 'bi-person-plus'} me-2`}></i>
+                     Submit
+                    </Button>
                   </div>
                 </Form>
               </Card.Body>
@@ -2712,38 +2781,43 @@ case 'profile':
             </Card><br />
             <Card className="shadow-lg  p-3" style={{border:"5px"}}>
               <Card.Header className="border-0 ">
-                <Row><Col><h5 className="mb-1 fw-semibold">Manage user</h5>
-                <p className='text-muted' style={{fontSize:"12px"}}>Use this form to update your profile</p></Col>
-                <Col>
-                <div className="d-flex gap-2">
-                  <Form.Control
-                    type="search"
-                    placeholder="Search user..."
-                    value={staffSearch}
-                    onChange={(e) => {
-                      setStaffSearch(e.target.value);
-                      fetchStaff(1, e.target.value, staffPerPage);
-                    }}
-                    style={{ border:"2px solid ",width: '250px', height: "40px", marginTop: "10px" }}
-                  />
-                  
-                  <CustomPagination
-                    currentPage={staffPage}
-                    totalPages={staffTotalPages}
-                    totalItems={staffTotalItems}
-                    itemsPerPage={staffPerPage}
-                    onPageChange={(page) => {
-                      setStaffPage(page);
-                      fetchStaff(page, staffSearch, staffPerPage);
-                    }}
-                    onItemsPerPageChange={(perPage) => {
-                      setStaffPerPage(perPage);
-                      fetchStaff(1, staffSearch, perPage);
-                    }}
-                    showDownload={true}
-                    dataType="staff"
-                  />
-                </div></Col></Row>
+                <Row>
+                  <Col>
+                    <h5 className="mb-1 fw-semibold">Manage user</h5>
+                    <p className='text-muted' style={{fontSize:"12px"}}>Use this form to update your profile</p>
+                  </Col>
+                  <Col>
+                    <div className="d-flex gap-2">
+                      <Form.Control
+                        type="search"
+                        placeholder="Search user..."
+                        value={staffSearch}
+                        onChange={(e) => {
+                          setStaffSearch(e.target.value);
+                          fetchStaff(1, e.target.value, staffPerPage);
+                        }}
+                        style={{ border:"2px solid ",width: '250px', height: "40px", marginTop: "10px" }}
+                      />
+                      
+                      <CustomPagination
+                        currentPage={staffPage}
+                        totalPages={staffTotalPages}
+                        totalItems={staffTotalItems}
+                        itemsPerPage={staffPerPage}
+                        onPageChange={(page) => {
+                          setStaffPage(page);
+                          fetchStaff(page, staffSearch, staffPerPage);
+                        }}
+                        onItemsPerPageChange={(perPage) => {
+                          setStaffPerPage(perPage);
+                          fetchStaff(1, staffSearch, perPage);
+                        }}
+                        showDownload={true}
+                        dataType="staff"
+                      />
+                    </div>
+                  </Col>
+                </Row>
               </Card.Header>
               <Card.Body>
                 {formSuccess && (
@@ -2777,12 +2851,13 @@ case 'profile':
                             onChange={handleSelectAllStaff}
                           />
                         </th>
+                        <th style={{ width: '60px' }}>Photo</th>
                         <th>Name</th>
                         <th>Email</th>
                         <th>Contact no</th>
                         <th>Password</th>
                         <th>Permissions</th>
-                        <th style={{ width: '100px' }}>Actions</th>
+                        <th style={{ width: '120px' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2794,6 +2869,42 @@ case 'profile':
                               checked={selectedStaff.includes(staffMember._id)}
                               onChange={() => handleStaffSelect(staffMember._id)}
                             />
+                          </td>
+                          
+                          <td>
+                            <div style={{ 
+                              width: '40px', 
+                              height: '40px', 
+                              borderRadius: '50%', 
+                              overflow: 'hidden',
+                              border: '2px solid #dee2e6'
+                            }}>
+                              {staffMember.profileImage ? (
+                                <img 
+                                  src={`http://localhost:5000${staffMember.profileImage}`} 
+                                  alt={staffMember.name}
+                                  style={{ 
+                                    width: '100%', 
+                                    height: '100%', 
+                                    objectFit: 'cover'
+                                  }}
+                                />
+                              ) : (
+                                <div style={{ 
+                                  width: '100%', 
+                                  height: '100%', 
+                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: 'white',
+                                  fontWeight: 'bold',
+                                  fontSize: '14px'
+                                }}>
+                                  {getInitials(staffMember.name)}
+                                </div>
+                              )}
+                            </div>
                           </td>
                           
                           <td>
@@ -3893,7 +4004,6 @@ case 'profile':
             </Button>
             <Navbar.Brand className="fw-bold">
               Urban Company {userRole === 'admin' ? 'Admin' : 'Staff'} Panel
-              
             </Navbar.Brand>
             
             <Navbar.Toggle aria-controls="navbar-nav" />
@@ -3901,38 +4011,49 @@ case 'profile':
               <Nav className="align-items-center">
                 <Dropdown>
                   <Dropdown.Toggle variant="light" className="d-flex align-items-center">
-                    <i className="bi bi-person-circle me-2"></i>
+                    {userRole === 'staff' && staffProfile?.profileImage ? (
+                      <img 
+                        src={`http://localhost:5000${staffProfile.profileImage}`} 
+                        alt="Profile"
+                        style={{ 
+                          width: '30px', 
+                          height: '30px', 
+                          borderRadius: '50%',
+                          marginRight: '8px',
+                          objectFit: 'cover'
+                        }}
+                      />
+                    ) : (
+                      <i className="bi bi-person-circle me-2"></i>
+                    )}
                     <span className="d-none d-md-inline">
-                      {userRole === 'admin' ? 'Admin User' : 'Staff User'}
+                      {userRole === 'admin' ? 'Admin User' : staffProfile?.name || 'Staff User'}
                     </span>
                   </Dropdown.Toggle>
                   <Dropdown.Menu align="end">
-                  <Dropdown.Item onClick={() => {
-                    // Check user role and show appropriate profile
-                    if (userRole === 'admin') {
-                      // Fetch admin profile details
-                      fetchAdminProfile();
-                    } else {
-                      // Fetch staff profile details
-                      fetchStaffProfile();
-                    }
-                    setActiveMenu('profile');
-                  }}>
-                    <i className="bi bi-person-circle me-2"></i>Profile
-                  </Dropdown.Item>
-                  <Dropdown.Item onClick={() => handleMenuClick('settings')}>
-                    <i className="bi bi-gear me-2"></i>Settings
-                  </Dropdown.Item>
-                  <Dropdown.Divider />
-                  <Dropdown.Item onClick={() => {
-                    localStorage.clear();
-                    setIsLoggedIn(false);
-                    setUserRole(null);
-                    setUserPermissions(null);
-                  }}>
-                    <i className="bi bi-box-arrow-right me-2"></i>Logout
-                  </Dropdown.Item>
-                </Dropdown.Menu>
+                    <Dropdown.Item onClick={() => {
+                      if (userRole === 'admin') {
+                        fetchAdminProfile();
+                      } else {
+                        fetchStaffProfile();
+                      }
+                      setActiveMenu('profile');
+                    }}>
+                      <i className="bi bi-person-circle me-2"></i>Profile
+                    </Dropdown.Item>
+                    <Dropdown.Item onClick={() => handleMenuClick('settings')}>
+                      <i className="bi bi-gear me-2"></i>Settings
+                    </Dropdown.Item>
+                    <Dropdown.Divider />
+                    <Dropdown.Item onClick={() => {
+                      localStorage.clear();
+                      setIsLoggedIn(false);
+                      setUserRole(null);
+                      setUserPermissions(null);
+                    }}>
+                      <i className="bi bi-box-arrow-right me-2"></i>Logout
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
                 </Dropdown>
               </Nav>
             </Navbar.Collapse>
@@ -3948,12 +4069,50 @@ case 'profile':
         <Modal show={showStaffDetails} onHide={() => setShowStaffDetails(false)} centered>
           <Modal.Header >
             <Modal.Title className="fw-semibold fs-6">User Details</Modal.Title>
-            <Button type="button" onClick={() => setShowSlotModal(false)} className="position-absolute border-0 justify-content-center closebtn p-0">X</Button>
+            <Button 
+              type="button" 
+              onClick={() => setShowStaffDetails(false)} 
+              className="position-absolute border-0 justify-content-center closebtn p-0" 
+              style={{ right: '15px', top: '15px', background: 'transparent' }}
+            >
+              ×
+            </Button>
           </Modal.Header>
           <Modal.Body>
             {selectedStaffDetails && (
               <div>
                 <div className="text-center mb-4">
+                  <div className="mb-3">
+                    {selectedStaffDetails.profileImage ? (
+                      <img 
+                        src={`http://localhost:5000${selectedStaffDetails.profileImage}`} 
+                        alt={selectedStaffDetails.name}
+                        style={{ 
+                          width: '100px', 
+                          height: '100px', 
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          border: '3px solid #dee2e6'
+                        }}
+                      />
+                    ) : (
+                      <div style={{ 
+                        width: '100px', 
+                        height: '100px', 
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        fontSize: '24px',
+                        margin: '0 auto'
+                      }}>
+                        {getInitials(selectedStaffDetails.name)}
+                      </div>
+                    )}
+                  </div>
                   <h5 className="mb-1">{selectedStaffDetails.name}</h5>
                   <p className="text-muted mb-3">{selectedStaffDetails.designation}</p>
                 </div>
@@ -3975,6 +4134,12 @@ case 'profile':
                         .map(([permission]) => permission)
                         .join(', ')}
                     </span>
+                  </div>
+                  <div className="list-group-item px-0">
+                    <small className="text-muted d-block">Status</small>
+                    <Badge bg={selectedStaffDetails.isActive ? 'success' : 'secondary'}>
+                      {selectedStaffDetails.isActive ? 'Active' : 'Inactive'}
+                    </Badge>
                   </div>
                   <div className="list-group-item px-0 border-bottom-0">
                     <small className="text-muted d-block">Member Since</small>

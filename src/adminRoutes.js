@@ -10,17 +10,20 @@ import fs from "fs";
 const router = express.Router();
 const JWT_SECRET = "your-jwt-secret-key-change-this";
 
-// Setup multer for file uploads
+
+
+// __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// --- Multer Configuration ---
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, "../assets");
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    const assetsDir = path.join(__dirname, "assets");
+    if (!fs.existsSync(assetsDir)) {
+      fs.mkdirSync(assetsDir, { recursive: true });
     }
-    cb(null, uploadDir);
+    cb(null, assetsDir);
   },
   filename: (req, file, cb) => {
     const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname);
@@ -38,17 +41,18 @@ const upload = multer({
     }
   },
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB
+    fileSize: 5 * 1024 * 1024 // 5MB limit
   }
 });
 
-// Staff Schema
+// Staff Schema with profileImage field
 const staffSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   phone: { type: String, required: true },
   designation: { type: String, required: true },
   password: { type: String, required: true },
+  profileImage: { type: String, default: "/assets/default-avatar.png" }, // NEW FIELD
   isActive: { type: Boolean, default: true },
   permissions: {
     Dashboard: { type: Boolean, default: false },
@@ -110,7 +114,7 @@ const verifyToken = (req, res, next) => {
     return res.status(401).json({ error: "Access denied. No token provided." });
   }
   
-  const token = authHeader.split(' ')[1]; // Remove "Bearer " prefix
+  const token = authHeader.split(' ')[1];
   
   if (!token) {
     return res.status(401).json({ error: "Access denied. No token provided." });
@@ -262,6 +266,7 @@ router.post("/staff-login", async (req, res) => {
         id: staff._id,
         email: staff.email,
         role: 'staff',
+        profileImage: staff.profileImage, // Add profile image to token
         permissions: staff.permissions
       },
       JWT_SECRET,
@@ -280,6 +285,7 @@ router.post("/staff-login", async (req, res) => {
         email: staff.email,
         phone: staff.phone,
         designation: staff.designation,
+        profileImage: staff.profileImage, // Add profile image
         permissions: staff.permissions,
         role: 'staff'
       }
@@ -293,7 +299,6 @@ router.post("/staff-login", async (req, res) => {
 
 // Apply JWT authentication middleware to all routes below
 router.use(verifyToken);
-
 
 // Get Admin Profile
 router.get("/profile", checkPermission('Dashboard'), async (req, res) => {
@@ -310,7 +315,7 @@ router.get("/profile", checkPermission('Dashboard'), async (req, res) => {
         username: admin.username,
         email: admin.email,
         role: admin.role,
-        position: "Administrator", // Admin position
+        position: "Administrator",
         isActive: admin.isActive,
         lastLogin: admin.lastLogin,
         createdAt: admin.createdAt
@@ -339,7 +344,8 @@ router.get("/staff-profile", checkPermission('Dashboard'), async (req, res) => {
         email: staff.email,
         phone: staff.phone,
         designation: staff.designation,
-        position: staff.designation, // Staff position
+        profileImage: staff.profileImage, // Add profile image
+        position: staff.designation,
         isActive: staff.isActive,
         permissions: staff.permissions,
         createdAt: staff.createdAt,
@@ -352,6 +358,7 @@ router.get("/staff-profile", checkPermission('Dashboard'), async (req, res) => {
     res.status(500).json({ error: "Failed to fetch staff profile" });
   }
 });
+
 // Admin Dashboard Statistics
 router.get("/dashboard", checkPermission('Dashboard'), async (req, res) => {
   try {
@@ -528,8 +535,8 @@ router.get("/staff/:id", checkPermission('Staff'), async (req, res) => {
   }
 });
 
-// Create new staff member WITH PASSWORD
-router.post("/staff", checkPermission('Staff'), async (req, res) => {
+// Create new staff member WITH PROFILE IMAGE UPLOAD
+router.post("/staff", checkPermission('Staff'), upload.single('profileImage'), async (req, res) => {
   try {
     const {
       name,
@@ -554,6 +561,13 @@ router.post("/staff", checkPermission('Staff'), async (req, res) => {
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Handle profile image upload
+    let profileImageUrl = "/assets/default-avatar.png";
+    if (req.file) {
+      profileImageUrl = `/assets/${req.file.filename}`;
+      console.log("Profile image uploaded:", profileImageUrl);
+    }
 
     // Parse permissions
     let parsedPermissions = {};
@@ -583,6 +597,7 @@ router.post("/staff", checkPermission('Staff'), async (req, res) => {
       phone,
       designation,
       password: hashedPassword,
+      profileImage: profileImageUrl, // Add profile image
       isActive: isActive !== undefined ? isActive : true,
       permissions: parsedPermissions
     });
@@ -598,6 +613,7 @@ router.post("/staff", checkPermission('Staff'), async (req, res) => {
         email: staff.email,
         phone: staff.phone,
         designation: staff.designation,
+        profileImage: staff.profileImage, // Return profile image
         permissions: staff.permissions,
         isActive: staff.isActive
       }
@@ -615,8 +631,8 @@ router.post("/staff", checkPermission('Staff'), async (req, res) => {
   }
 });
 
-// Update staff member
-router.put("/staff/:id", checkPermission('Staff'), async (req, res) => {
+// Update staff member WITH PROFILE IMAGE UPLOAD
+router.put("/staff/:id", checkPermission('Staff'), upload.single('profileImage'), async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -635,6 +651,21 @@ router.put("/staff/:id", checkPermission('Staff'), async (req, res) => {
       });
       if (emailExists) {
         return res.status(400).json({ error: "Email already exists" });
+      }
+    }
+
+    // Handle profile image upload
+    if (req.file) {
+      updateData.profileImage = `/assets/${req.file.filename}`;
+      console.log("Profile image updated:", updateData.profileImage);
+      
+      // Delete old image if not default
+      if (existingStaff.profileImage && existingStaff.profileImage !== "/assets/default-avatar.png") {
+        const oldImagePath = path.join(__dirname, '..', existingStaff.profileImage);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+          console.log("Deleted old profile image:", oldImagePath);
+        }
       }
     }
 
@@ -676,6 +707,16 @@ router.delete("/staff/:id", checkPermission('Staff'), async (req, res) => {
     if (!staff) {
       return res.status(404).json({ error: "Staff member not found" });
     }
+
+    // Delete profile image if not default
+    if (staff.profileImage && staff.profileImage !== "/assets/default-avatar.png") {
+      const imagePath = path.join(__dirname, '..', staff.profileImage);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+        console.log("Deleted profile image:", imagePath);
+      }
+    }
+
     await Staff.findByIdAndDelete(id);
 
     res.json({
