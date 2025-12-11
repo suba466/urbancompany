@@ -49,7 +49,6 @@ const staffSchema = new mongoose.Schema({
   phone: { type: String, required: true },
   designation: { type: String, required: true },
   password: { type: String, required: true },
-  profileImage: { type: String, default: "" },
   isActive: { type: Boolean, default: true },
   permissions: {
     Dashboard: { type: Boolean, default: false },
@@ -292,11 +291,67 @@ router.post("/staff-login", async (req, res) => {
   }
 });
 
-// ==================== PROTECTED ROUTES (REQUIRE AUTH) ====================
-
 // Apply JWT authentication middleware to all routes below
 router.use(verifyToken);
 
+
+// Get Admin Profile
+router.get("/profile", checkPermission('Dashboard'), async (req, res) => {
+  try {
+    const admin = await Admin.findById(req.user.id);
+    if (!admin) {
+      return res.status(404).json({ error: "Admin not found" });
+    }
+
+    res.json({
+      success: true,
+      profile: {
+        id: admin._id,
+        username: admin.username,
+        email: admin.email,
+        role: admin.role,
+        position: "Administrator", // Admin position
+        isActive: admin.isActive,
+        lastLogin: admin.lastLogin,
+        createdAt: admin.createdAt
+      }
+    });
+
+  } catch (error) {
+    console.error("Error fetching admin profile:", error);
+    res.status(500).json({ error: "Failed to fetch admin profile" });
+  }
+});
+
+// Get Staff Profile
+router.get("/staff-profile", checkPermission('Dashboard'), async (req, res) => {
+  try {
+    const staff = await Staff.findById(req.user.id);
+    if (!staff) {
+      return res.status(404).json({ error: "Staff not found" });
+    }
+
+    res.json({
+      success: true,
+      profile: {
+        id: staff._id,
+        name: staff.name,
+        email: staff.email,
+        phone: staff.phone,
+        designation: staff.designation,
+        position: staff.designation, // Staff position
+        isActive: staff.isActive,
+        permissions: staff.permissions,
+        createdAt: staff.createdAt,
+        updatedAt: staff.updatedAt
+      }
+    });
+
+  } catch (error) {
+    console.error("Error fetching staff profile:", error);
+    res.status(500).json({ error: "Failed to fetch staff profile" });
+  }
+});
 // Admin Dashboard Statistics
 router.get("/dashboard", checkPermission('Dashboard'), async (req, res) => {
   try {

@@ -8,7 +8,7 @@ import { MdModeEdit } from "react-icons/md";
 import { MdOutlineDelete } from "react-icons/md";
 import { FaFileExcel, FaFilePdf, FaFileCsv } from "react-icons/fa";
 import { FcBusinessman, FcPlanner, FcBullish, FcSupport } from "react-icons/fc";
-import jsPDF from 'jspdf';
+
 import html2pdf from 'html2pdf.js';
 import * as XLSX from 'xlsx';
 import Categories from './Categories';
@@ -58,6 +58,9 @@ function AdminPanel() {
       Settings: false
     }
   });
+const [profileImage, setProfileImage] = useState(null);
+const [profileImagePreview, setProfileImagePreview] = useState("");
+const [uploadingImage, setUploadingImage] = useState(false);
   
   // Staff Bulk Selection
   const [selectedStaff, setSelectedStaff] = useState([]);
@@ -157,6 +160,68 @@ function AdminPanel() {
     address: '123 Business Street, City, Country'
   });
 
+ // Function to handle image upload
+const uploadProfileImage = async (file) => {
+  try {
+    setUploadingImage(true);
+    const formData = new FormData();
+    formData.append('profileImage', file);
+
+    const response = await fetch('http://localhost:5000/api/upload/upload-profile', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${getAuthToken()}`
+      },
+      body: formData
+    });
+
+    const data = await response.json();
+    if (data.success) {
+      return data.imageUrl;
+    } else {
+      throw new Error(data.error || 'Failed to upload image');
+    }
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    throw error;
+  } finally {
+    setUploadingImage(false);
+  }
+};
+
+
+  const fetchAdminProfile = async () => {
+  try {
+    const response = await fetch('http://localhost:5000/api/admin/profile', {
+      headers: getAuthHeaders()
+    });
+    const data = await response.json();
+    if (data.success) {
+      setAdminProfile(data.profile);
+    }
+  } catch (error) {
+    console.error('Error fetching admin profile:', error);
+  }
+};
+
+const fetchStaffProfile = async () => {
+  try {
+    const response = await fetch('http://localhost:5000/api/admin/staff-profile', {
+      headers: getAuthHeaders()
+    });
+    const data = await response.json();
+    if (data.success) {
+      setStaffProfile(data.profile);
+    }
+  } catch (error) {
+    console.error('Error fetching staff profile:', error);
+  }
+};
+
+// Add new state for profiles
+const [adminProfile, setAdminProfile] = useState(null);
+const [staffProfile, setStaffProfile] = useState(null);
+
   // Check if user has permission
   const hasPermission = (permission) => {
     if (!userPermissions) return false;
@@ -198,49 +263,82 @@ function AdminPanel() {
   };
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const endpoint = loginType === 'admin' 
-        ? 'http://localhost:5000/api/admin/login'
-        : 'http://localhost:5000/api/admin/staff-login';
+  e.preventDefault();
+  setLoading(true);
+  
+  try {
+    // Auto-detect login type based on email domain or pattern
+    const isAdminEmail = loginData.email.includes('@urbancompany.com') || 
+                        loginData.email.includes('admin');
+    
+    const endpoint = isAdminEmail 
+      ? 'http://localhost:5000/api/admin/login'
+      : 'http://localhost:5000/api/admin/staff-login';
+    
+    console.log('Attempting login as:', isAdminEmail ? 'Admin' : 'Staff');
+    
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(loginData)
+    });
+    
+    const data = await response.json();
+    console.log('Login response:', data);
+    
+    if (data.success) {
+      setIsLoggedIn(true);
       
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(loginData)
-      });
+      // Store token and user info
+      localStorage.setItem('authToken', data.token);
       
-      const data = await response.json();
-      if (data.success) {
-        setIsLoggedIn(true);
+      if (isAdminEmail) {
+        localStorage.setItem('userRole', 'admin');
+        localStorage.setItem('userPermissions', JSON.stringify(data.admin?.permissions || {}));
+        setUserRole('admin');
+        setUserPermissions(data.admin?.permissions || {});
+      } else {
+        localStorage.setItem('userRole', 'staff');
+        localStorage.setItem('userPermissions', JSON.stringify(data.staff?.permissions || {}));
+        setUserRole('staff');
+        setUserPermissions(data.staff?.permissions || {});
+      }
+      
+      fetchDashboardData();
+    } else {
+      // If admin login fails, try staff login (or vice versa)
+      if (isAdminEmail) {
+        console.log('Admin login failed, trying staff login...');
+        // Try staff login
+        const staffResponse = await fetch('http://localhost:5000/api/admin/staff-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(loginData)
+        });
         
-        // Store token and user info
-        localStorage.setItem('authToken', data.token);
-        
-        if (loginType === 'admin') {
-          localStorage.setItem('userRole', 'admin');
-          localStorage.setItem('userPermissions', JSON.stringify(data.admin.permissions));
-          setUserRole('admin');
-          setUserPermissions(data.admin.permissions);
-        } else {
+        const staffData = await staffResponse.json();
+        if (staffData.success) {
+          setIsLoggedIn(true);
+          localStorage.setItem('authToken', staffData.token);
           localStorage.setItem('userRole', 'staff');
-          localStorage.setItem('userPermissions', JSON.stringify(data.staff.permissions));
+          localStorage.setItem('userPermissions', JSON.stringify(staffData.staff?.permissions || {}));
           setUserRole('staff');
-          setUserPermissions(data.staff.permissions);
+          setUserPermissions(staffData.staff?.permissions || {});
+          fetchDashboardData();
+        } else {
+          alert(data.error || staffData.error || 'Login failed');
         }
-        
-        fetchDashboardData();
       } else {
         alert(data.error || 'Login failed');
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      alert('Login failed');
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (error) {
+    console.error('Login error:', error);
+    alert('Login failed. Please check your connection.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const fetchDashboardData = async () => {
     try {
@@ -858,21 +956,21 @@ function AdminPanel() {
                 onClick={() => downloadTableAsPDF(dataType)}
                 title="Download as PDF"
               >
-                <FaFilePdf className="text-secondary" />
+                <FaFilePdf className="text-danger" />
               </Button>
               <Button 
                 style={{backgroundColor:"white",border:"1px solid #000000"}}
                 onClick={() => downloadTableAsExcel(dataType)}
                 title="Download as Excel"
               >
-                <FaFileExcel className="text-secondary" />
+                <FaFileExcel className="text-danger" />
               </Button>
               <Button 
                 style={{backgroundColor:"white",border:"1px solid #000000"}}
                 onClick={() => downloadTableAsCSV(dataType)}
                 title="Download as CSV"
               >
-                <FaFileCsv className="text-secondary" />
+                <FaFileCsv className="text-danger" />
               </Button>
             </div>
           )}
@@ -894,7 +992,8 @@ function AdminPanel() {
       'manage-products': 'Product',
       'bookings': 'Bookings',
       'reports': 'Reports',
-      'settings': 'Settings'
+      'settings': 'Settings',
+      'profile':'Dashboard'
     };
 
     const requiredPermission = permissionMap[menu];
@@ -990,80 +1089,99 @@ function AdminPanel() {
     }
   };
 
-  const handleAddStaff = async (e) => {
-    e.preventDefault();
-    setFormError('');
-    setFormSuccess(false);
+  // Update handleAddStaff function
+const handleAddStaff = async (e) => {
+  e.preventDefault();
+  setFormError('');
+  setFormSuccess(false);
+  
+  if (!newStaff.name || !newStaff.email || !newStaff.phone || !newStaff.designation || !newStaff.password) {
+    setFormError("Please fill all required fields");
+    return;
+  }
+  
+  if (newStaff.password !== confirmPassword) {
+    setFormError("Passwords do not match");
+    return;
+  }
+  
+  try {
+    let staffData = { ...newStaff };
     
-    if (!newStaff.name || !newStaff.email || !newStaff.phone || !newStaff.designation || !newStaff.password) {
-      setFormError("Please fill all required fields");
-      return;
-    }
-    
-    if (newStaff.password !== confirmPassword) {
-      setFormError("Passwords do not match");
-      return;
-    }
-    
-    try {
-      const url = isEditingStaff 
-        ? `http://localhost:5000/api/admin/staff/${editStaffId}`
-        : 'http://localhost:5000/api/admin/staff';
-      
-      const method = isEditingStaff ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method: method,
-        headers: getAuthHeaders(),
-        body: JSON.stringify(newStaff)
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setFormSuccess(true);
-        
-        // Reset form
-        setNewStaff({
-          name: '',
-          email: '',
-          phone: '',
-          designation: '',
-          password: '',
-          permissions: {
-            Dashboard: false,
-            Staff: false,
-            User: false,
-            Category: false,
-            Product: false,
-            Bookings: false,
-            Reports: false,
-            Settings: false
-          }
-        });
-        setConfirmPassword('');
-        
-        // Reset editing state
-        setEditStaffId(null);
-        setIsEditingStaff(false);
-        
-        // Refresh staff list
-        setTimeout(() => {
-          fetchStaff();
-        }, 500);
-        
-        setTimeout(() => {
-          setFormSuccess(false);
-        }, 5000);
-        
-      } else {
-        setFormError(data.error || (isEditingStaff ? 'Failed to update staff member' : 'Failed to add staff member'));
+    // Upload profile image if exists
+    if (profileImage) {
+      try {
+        const imageUrl = await uploadProfileImage(profileImage);
+        staffData.profileImage = imageUrl;
+      } catch (error) {
+        setFormError("Failed to upload profile image: " + error.message);
+        return;
       }
-    } catch (error) {
-      console.error('Error saving staff:', error);
-      setFormError(`Failed to ${isEditingStaff ? 'update' : 'add'} staff member. Please try again.`);
     }
-  };
+    
+    const url = isEditingStaff 
+      ? `http://localhost:5000/api/admin/staff/${editStaffId}`
+      : 'http://localhost:5000/api/admin/staff';
+    
+    const method = isEditingStaff ? 'PUT' : 'POST';
+    
+    const response = await fetch(url, {
+      method: method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getAuthToken()}`
+      },
+      body: JSON.stringify(staffData)
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      setFormSuccess(true);
+      
+      // Reset form
+      setNewStaff({
+        name: '',
+        email: '',
+        phone: '',
+        designation: '',
+        password: '',
+        permissions: {
+          Dashboard: false,
+          Staff: false,
+          User: false,
+          Category: false,
+          Product: false,
+          Bookings: false,
+          Reports: false,
+          Settings: false
+        }
+      });
+      setConfirmPassword('');
+      setProfileImage(null);
+      setProfileImagePreview("");
+      
+      // Reset editing state
+      setEditStaffId(null);
+      setIsEditingStaff(false);
+      
+      // Refresh staff list
+      setTimeout(() => {
+        fetchStaff();
+      }, 500);
+      
+      setTimeout(() => {
+        setFormSuccess(false);
+      }, 5000);
+      
+    } else {
+      setFormError(data.error || (isEditingStaff ? 'Failed to update staff member' : 'Failed to add staff member'));
+    }
+  } catch (error) {
+    console.error('Error saving staff:', error);
+    setFormError(`Failed to ${isEditingStaff ? 'update' : 'add'} staff member. Please try again.`);
+  }
+};
 
   // Function to handle editing staff
   const handleEditStaff = (staffMember) => {
@@ -1089,28 +1207,6 @@ function AdminPanel() {
     setActiveMenu('add-staff');
   };
 
-  const handleAddCategory = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await fetch('http://localhost:5000/api/admin/services', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(newCategory)
-      });
-      
-      if (response.ok) {
-        alert('Category added successfully!');
-        setShowAddCategoryModal(false);
-        setNewCategory({ name: '', description: '', icon: '', order: 0, isActive: true });
-        fetchCategories();
-      } else {
-        alert('Failed to add category');
-      }
-    } catch (error) {
-      console.error('Error adding category:', error);
-      alert('Failed to add category');
-    }
-  };
 
   const handleAddProduct = async (e) => {
     e.preventDefault();
@@ -1221,26 +1317,7 @@ function AdminPanel() {
     }
   };
 
-  const deleteCategory = async (categoryId) => {
-    if (window.confirm('Are you sure you want to delete this category?')) {
-      try {
-        const response = await fetch(`http://localhost:5000/api/admin/services/${categoryId}`, {
-          method: 'DELETE',
-          headers: getAuthHeaders()
-        });
-        
-        if (response.ok) {
-          alert('Category deleted successfully');
-          fetchCategories();
-        } else {
-          alert('Failed to delete category');
-        }
-      } catch (error) {
-        console.error('Error deleting category:', error);
-        alert('Failed to delete category');
-      }
-    }
-  };
+
 
   const deleteProduct = async (productId) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
@@ -1318,20 +1395,27 @@ function AdminPanel() {
   };
 
   useEffect(() => {
-    // Check if user is already logged in
-    const token = localStorage.getItem('authToken');
-    const role = localStorage.getItem('userRole');
-    const permissions = localStorage.getItem('userPermissions');
+  // Check if user is already logged in
+  const token = localStorage.getItem('authToken');
+  const role = localStorage.getItem('userRole');
+  const permissions = localStorage.getItem('userPermissions');
+  
+  if (token && role && permissions) {
+    setIsLoggedIn(true);
+    setUserRole(role);
+    setUserPermissions(JSON.parse(permissions));
+    fetchDashboardData();
     
-    if (token && role && permissions) {
-      setIsLoggedIn(true);
-      setUserRole(role);
-      setUserPermissions(JSON.parse(permissions));
-      fetchDashboardData();
+    // Fetch appropriate profile
+    if (role === 'admin') {
+      fetchAdminProfile();
+    } else {
+      fetchStaffProfile();
     }
-    
-    fetchAdminLogo();
-  }, []);
+  }
+  
+  fetchAdminLogo();
+}, []);
 
   if (!isLoggedIn) {
     return (
@@ -1375,72 +1459,59 @@ function AdminPanel() {
                 <div className="mb-4">
                   <h6 className='fw-semibold'>Log in as {loginType === 'admin' ? 'Admin' : 'Staff'}</h6>
                 </div>
-                
-                <Tabs
-                  activeKey={loginType}
-                  onSelect={(k) => setLoginType(k)}
-                  className="mb-3"
-                >
-                  <Tab eventKey="admin" title="Admin Login">
-                    <div className="mt-3">
-                      <small className="text-muted">Default: admin@urbancompany.com / admin123</small>
-                    </div>
-                  </Tab>
-                  <Tab eventKey="staff" title="Staff Login">
-                    <div className="mt-3">
-                      <small className="text-muted">Use credentials created by admin</small>
-                    </div>
-                  </Tab>
-                </Tabs>
-                
                 <Form onSubmit={handleLogin}>
-                  <Form.Group className="mb-3">   
-                    <Form.Control
-                      type="email"
-                      placeholder="Email address"
-                      value={loginData.email}
-                      onChange={(e) => setLoginData({...loginData, email: e.target.value})}
-                      required
-                      className="py-2"
-                      style={{ borderRadius: "8px", border: "2px solid #000000ff" }}
-                      autoComplete="username"
-                    />
-                  </Form.Group>
-                  
-                  <Form.Group className="mb-4">
-                    <Form.Control
-                      type="password"
-                      placeholder="Password"
-                      value={loginData.password}
-                      onChange={(e) => setLoginData({...loginData, password: e.target.value})}
-                      required
-                      className="py-2"
-                      style={{ borderRadius: "8px", border: "2px solid #000000ff" }}
-                      autoComplete="current-password"
-                    />
-                  </Form.Group>
-                  
-                  <Button 
-                    type="submit" 
-                    className="w-100 py-3" 
-                    disabled={loading}
-                    style={{ 
-                      background: "#000000",
-                      border: "none",
-                      borderRadius: "8px",
-                      fontWeight: "bold",
-                      fontSize: "16px",
-                      transition: "all 0.3s"
-                    }}
-                  >
-                    {loading ? (
-                      <>
-                        <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
-                        <span className="ms-2">Signing in...</span>
-                      </>
-                    ) : `Sign In as ${loginType === 'admin' ? 'Admin' : 'Staff'}`}
-                  </Button>
-                </Form>
+                <Form.Group className="mb-3">  
+                  <Form.Control
+                    type="email"
+                    placeholder="Username"
+                    value={loginData.email}
+                    onChange={(e) => setLoginData({...loginData, email: e.target.value})}
+                    required
+                    className="py-2"
+                    style={{ borderRadius: "8px", border: "2px solid #000000ff" }}
+                    autoComplete="username"
+                  />
+                </Form.Group>
+                
+                <Form.Group className="mb-4">
+                  <Form.Control
+                    type="password"
+                    placeholder="Password"
+                    value={loginData.password}
+                    onChange={(e) => setLoginData({...loginData, password: e.target.value})}
+                    required
+                    className="py-2"
+                    style={{ borderRadius: "8px", border: "2px solid #000000ff" }}
+                    autoComplete="current-password"
+                  />
+                </Form.Group>
+                
+                <Button 
+                  type="submit" 
+                  className="w-100 py-3" 
+                  disabled={loading}
+                  style={{ 
+                    background: "#000000",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontWeight: "bold",
+                    fontSize: "16px",
+                    transition: "all 0.3s"
+                  }}
+                >
+                  {loading ? (
+                    <>
+                      <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
+                      <span className="ms-2">Signing in...</span>
+                    </>
+                  ) : 'Sign In'}
+                </Button>
+              </Form> <br />
+              <div >
+                <h6 >Admin ceredentials:</h6>
+                <p className='text-muted mb-0'>Username: admin@urbancompany.com</p>
+                <p className='text-muted mb-0'>Password: admin123</p>
+              </div>
               </Card.Body>
             </Card>
           </Col>
@@ -1479,11 +1550,6 @@ function AdminPanel() {
           <small className="text-muted">
             {userRole === 'admin' ? 'Admin Panel' : 'Staff Panel'}
           </small>
-          <div className="mt-2">
-            <Badge bg={userRole === 'admin' ? 'success' : 'info'}>
-              {userRole === 'admin' ? 'Administrator' : 'Staff'}
-            </Badge>
-          </div>
         </div>
 
         <Nav className="flex-column px-3">
@@ -1731,6 +1797,170 @@ function AdminPanel() {
     }
 
     switch(activeMenu) {
+
+      // Add in the switch statement:
+case 'profile':
+  return (
+    <div>
+    <Card className="p-3 shadow-lg">
+      <div className="border-0">
+        <h5 className="mb-0">My Profile</h5>
+      </div></Card><br />
+      <Card>
+      <Card.Body>
+        {userRole === 'admin' ? (
+          adminProfile ? (
+            <div className="profile-info">
+              <div className="text-center mb-4">
+                <div className="mb-3">
+                  <i className="bi bi-person-circle" style={{ fontSize: "80px", color: "#6c757d" }}></i>
+                </div>
+                <h4>{adminProfile.username}</h4>
+                <Badge bg="success" className="mb-2">{adminProfile.position}</Badge>
+              </div>
+              
+              <div className="list-group list-group-flush">
+                <div className="list-group-item">
+                  <div className="row">
+                    <div className="col-4 text-muted">Email</div>
+                    <div className="col-8">
+                      <strong>{adminProfile.email}</strong>
+                    </div>
+                  </div>
+                </div>
+                
+               
+                
+                <div className="list-group-item">
+                  <div className="row">
+                    <div className="col-4 text-muted">Position</div>
+                    <div className="col-8">
+                      <strong>{adminProfile.position}</strong>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="list-group-item">
+                  <div className="row">
+                    <div className="col-4 text-muted">Status</div>
+                    <div className="col-8">
+                      <Badge bg={adminProfile.isActive ? 'success' : 'secondary'}>
+                        {adminProfile.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="list-group-item">
+                  <div className="row">
+                    <div className="col-4 text-muted">Last Login</div>
+                    <div className="col-8">
+                      {adminProfile.lastLogin ? 
+                        new Date(adminProfile.lastLogin).toLocaleString() : 
+                        'Never logged in'}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="list-group-item">
+                  <div className="row">
+                    <div className="col-4 text-muted">Account Created</div>
+                    <div className="col-8">
+                      {new Date(adminProfile.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <Spinner animation="border" variant="primary" />
+              <p className="mt-2">Loading profile...</p>
+            </div>
+          )
+        ) : (
+          staffProfile ? (
+            <div className="profile-info">
+              <div className="text-center mb-4">
+                <div className="mb-3">
+                  <i className="bi bi-person-circle" style={{ fontSize: "80px", color: "#6c757d" }}></i>
+                </div>
+                <h4>{staffProfile.name}</h4>
+                <Badge bg="info" className="mb-2">{staffProfile.position}</Badge>
+              </div>
+              
+              <div className="list-group list-group-flush">
+                <div className="list-group-item">
+                  <div className="row">
+                    <div className="col-4 text-muted">Email</div>
+                    <div className="col-8">
+                      <strong>{staffProfile.email}</strong>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="list-group-item">
+                  <div className="row">
+                    <div className="col-4 text-muted">Phone</div>
+                    <div className="col-8">
+                      <strong>{staffProfile.phone}</strong>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="list-group-item">
+                  <div className="row">
+                    <div className="col-4 text-muted">Designation</div>
+                    <div className="col-8">
+                      <strong>{staffProfile.designation}</strong>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="list-group-item">
+                  <div className="row">
+                    <div className="col-4 text-muted">Status</div>
+                    <div className="col-8">
+                      <Badge bg={staffProfile.isActive ? 'success' : 'secondary'}>
+                        {staffProfile.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="list-group-item">
+                  <div className="row">
+                    <div className="col-4 text-muted">Permissions</div>
+                    <div className="col-8">
+                      {Object.entries(staffProfile.permissions || {})
+                        .filter(([key, value]) => value)
+                        .map(([key]) => key)
+                        .join(', ')}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="list-group-item">
+                  <div className="row">
+                    <div className="col-4 text-muted">Account Created</div>
+                    <div className="col-8">
+                      {new Date(staffProfile.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <Spinner animation="border" variant="primary" />
+              <p className="mt-2">Loading profile...</p>
+            </div>
+          )
+        )}
+      </Card.Body>
+    </Card></div>
+  );
+
       case 'dashboard':
         return (
           <>
@@ -2029,7 +2259,7 @@ function AdminPanel() {
                 
                 <Form onSubmit={handleAddStaff} className="pt-2">
                   {/* First Row with Name and Email */}
-                  <Row className="gx-5 mb-3">
+                  <Row  style={{ "--bs-gutter-x": "5.5rem" } } className=" mb-3">
                     <Col md={6}>
                       <Form.Group>
                         <Form.Control
@@ -2046,6 +2276,7 @@ function AdminPanel() {
                           placeholder="Name"
                           autoComplete="name"
                         />
+                        
                       </Form.Group>
                     </Col>
                     <Col md={6}>
@@ -2069,7 +2300,7 @@ function AdminPanel() {
                   </Row>
                   
                   {/* Second Row with Contact Number and Designation */}
-                  <Row className="gx-5 mb-3">
+                  <Row style={{ "--bs-gutter-x": "5.5rem" } } className=" mb-3">
                     <Col md={6}>
                       <Form.Group>
                         <Form.Control
@@ -2115,7 +2346,7 @@ function AdminPanel() {
                   
                   {/* Password Fields - Only when not editing */}
                   {!isEditingStaff && (
-                    <Row className="gx-5 mb-3">
+                    <Row style={{ "--bs-gutter-x": "5.5rem" } } className=" mb-3">
                       <Col md={6}>
                         <Form.Group>
                           <Form.Control
@@ -2166,7 +2397,7 @@ function AdminPanel() {
                   <Form.Group className="my-4">
                     <Form.Label className='fw-semibold mb-3'>Permissions</Form.Label>
                     <div className="px-1">
-                      <Row className="gx-5 gy-2">
+                      <Row style={{ "--bs-gutter-x": "5.5rem" } } className=" gy-2">
                         {[
                           'Dashboard',
                           'Staff', 
@@ -2300,14 +2531,15 @@ function AdminPanel() {
                 <div className="d-flex gap-2">
                   <Form.Control
                     type="search"
-                    placeholder="Search staff..."
+                    placeholder="Search user..."
                     value={staffSearch}
                     onChange={(e) => {
                       setStaffSearch(e.target.value);
                       fetchStaff(1, e.target.value, staffPerPage);
                     }}
-                    style={{ width: '250px', height: "40px", marginTop: "10px" }}
+                    style={{ border:"2px solid ",width: '250px', height: "40px", marginTop: "10px" }}
                   />
+                  
                   <CustomPagination
                     currentPage={staffPage}
                     totalPages={staffTotalPages}
@@ -2335,7 +2567,7 @@ function AdminPanel() {
                 )}
                 
                 {selectedStaff.length > 0 && (
-                  <Alert variant="info" className="d-flex justify-content-between align-items-center">
+                  <Alert variant="dark" className="d-flex justify-content-between align-items-center">
                     <span>{selectedStaff.length} staff member(s) selected</span>
                     <Button 
                       variant="danger" 
@@ -3490,24 +3722,32 @@ function AdminPanel() {
                     </span>
                   </Dropdown.Toggle>
                   <Dropdown.Menu align="end">
-                    <Dropdown.Item disabled>
-                      <i className="bi bi-person me-2"></i>
-                      {userRole === 'admin' ? 'Administrator' : 'Staff Member'}
-                    </Dropdown.Item>
-                    <Dropdown.Item disabled>
-                      <i className="bi bi-shield-check me-2"></i>
-                      Permissions: {Object.keys(userPermissions || {}).filter(k => userPermissions[k]).length} enabled
-                    </Dropdown.Item>
-                    <Dropdown.Divider />
-                    <Dropdown.Item onClick={() => {
-                      localStorage.clear();
-                      setIsLoggedIn(false);
-                      setUserRole(null);
-                      setUserPermissions(null);
-                    }}>
-                      <i className="bi bi-box-arrow-right me-2"></i>Logout
-                    </Dropdown.Item>
-                  </Dropdown.Menu>
+                  <Dropdown.Item onClick={() => {
+                    // Check user role and show appropriate profile
+                    if (userRole === 'admin') {
+                      // Fetch admin profile details
+                      fetchAdminProfile();
+                    } else {
+                      // Fetch staff profile details
+                      fetchStaffProfile();
+                    }
+                    setActiveMenu('profile');
+                  }}>
+                    <i className="bi bi-person-circle me-2"></i>Profile
+                  </Dropdown.Item>
+                  <Dropdown.Item onClick={() => handleMenuClick('settings')}>
+                    <i className="bi bi-gear me-2"></i>Settings
+                  </Dropdown.Item>
+                  <Dropdown.Divider />
+                  <Dropdown.Item onClick={() => {
+                    localStorage.clear();
+                    setIsLoggedIn(false);
+                    setUserRole(null);
+                    setUserPermissions(null);
+                  }}>
+                    <i className="bi bi-box-arrow-right me-2"></i>Logout
+                  </Dropdown.Item>
+                </Dropdown.Menu>
                 </Dropdown>
               </Nav>
             </Navbar.Collapse>

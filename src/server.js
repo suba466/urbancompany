@@ -6,12 +6,12 @@ import mongoose from "mongoose";
 import multer from "multer";
 import fs from "fs";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken"; // ADD THIS
+import jwt from "jsonwebtoken"; 
 import adminRoutes from "./adminRoutes.js";
 
 const app = express();
 const PORT = 5000;
-const JWT_SECRET = "your-jwt-secret-key-change-this"; // CHANGE IN PRODUCTION
+const JWT_SECRET = "your-jwt-secret-key-change-this"; 
 
 // Middleware
 app.use(cors());
@@ -164,30 +164,6 @@ const Booking = mongoose.model("Booking", bookingSchema);
 app.use("/api/admin", adminRoutes);
 
 
-const verifyToken = (req, res, next) => {
-  const token = req.headers['authorization']?.split(' ')[1];
-  
-  if (!token) {
-    return res.status(401).json({ error: "Access denied. No token provided." });
-  }
-  
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: "Invalid token" });
-  }
-};
-
-const verifyAdmin = (req, res, next) => {
-  if (!req.user || req.user.role !== 'admin') {
-    return res.status(403).json({ error: "Admin access required" });
-  }
-  next();
-};
-
-app.use("/api/admin", adminRoutes);
 // User Registration with Image Upload
 app.post("/api/register", upload.single('profileImage'), async (req, res) => {
   try {
