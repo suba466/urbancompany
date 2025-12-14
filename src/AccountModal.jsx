@@ -7,7 +7,8 @@ import { BiLeftArrowAlt } from "react-icons/bi";
 import { PiNotepadLight } from "react-icons/pi";
 import { useAuth } from "./AuthContext";
 import { IoSettingsOutline } from "react-icons/io5";
-function AccountModal({ show,totalPrice=()=>{}, onHide, initialView = "main" }) {
+
+function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main" }) {
   const [logo1, setLogo1] = useState("");
   const [currentView, setCurrentView] = useState(initialView);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,43 +47,43 @@ function AccountModal({ show,totalPrice=()=>{}, onHide, initialView = "main" }) 
     profileFile: null
   });
 
-  const { isLoggedIn, userInfo, login, logout } = useAuth();
+  const { isLoggedIn, customerInfo, login, logout } = useAuth();
 
   // Update the useEffect that loads profile data
   useEffect(() => {
-    if (isLoggedIn && show && userInfo.email) {
-      loadUserData();
+    if (isLoggedIn && show && customerInfo.email) {
+      loadCustomerData();
       
-      // Initialize profile data with user info
+      // Initialize profile data with customer info
       setProfileData({
-        title: userInfo.title || "Ms",
-        name: userInfo.name || "",
-        email: userInfo.email || "",
-        phone: userInfo.phone || "",
-        city: userInfo.city || "",
+        title: customerInfo.title || "Ms",
+        name: customerInfo.name || "",
+        email: customerInfo.email || "",
+        phone: customerInfo.phone || "",
+        city: customerInfo.city || "",
         profileFile: null
       });
 
       console.log("Profile data initialized with:", {
-        name: userInfo.name,
-        email: userInfo.email,
-        phone: userInfo.phone,
-        city: userInfo.city,
-        title: userInfo.title
+        name: customerInfo.name,
+        email: customerInfo.email,
+        phone: customerInfo.phone,
+        city: customerInfo.city,
+        title: customerInfo.title
       });
     }
-  }, [isLoggedIn, show, userInfo]);
+  }, [isLoggedIn, show, customerInfo]);
 
   // Add this useEffect to debug the booking loading
   useEffect(() => {
     console.log("Debug - Current state:", {
       isLoggedIn,
-      userInfo,
+      customerInfo,
       bookingsCount: bookings.length,
       bookings,
       loadingBookings
     });
-  }, [bookings, loadingBookings, isLoggedIn, userInfo]);
+  }, [bookings, loadingBookings, isLoggedIn, customerInfo]);
 
   // Add this function to check all bookings in database
   const checkAllBookings = async () => {
@@ -93,31 +94,31 @@ function AccountModal({ show,totalPrice=()=>{}, onHide, initialView = "main" }) 
         const allBookings = await response.json();
         console.log("All bookings in database:", allBookings);
         
-        // Check if any booking matches current user's email
-        const userBookings = allBookings.filter(booking => 
-          booking.userEmail === userInfo.email
+        // Check if any booking matches current customer's email
+        const customerBookings = allBookings.filter(booking => 
+          booking.customerEmail === customerInfo.email
         );
-        console.log("User's bookings:", userBookings);
+        console.log("Customer's bookings:", customerBookings);
       }
     } catch (error) {
       console.error("Error checking all bookings:", error);
     }
   };
 
-  const loadUserData = async () => {
+  const loadCustomerData = async () => {
     try {
       setLoadingBookings(true);
-      if (!userInfo.email) {
+      if (!customerInfo.email) {
         console.log("No email found");
         setBookings([]);
         return;
       }
       
-      const userEmail = userInfo.email;
-      console.log("Fetching bookings for:", userEmail);
+      const customerEmail = customerInfo.email;
+      console.log("Fetching bookings for:", customerEmail);
       
       // Load bookings from server
-      const bookingsResponse = await fetch(`http://localhost:5000/api/bookings/${userEmail}`);
+      const bookingsResponse = await fetch(`http://localhost:5000/api/bookings/${customerEmail}`);
       
       if (bookingsResponse.ok) {
         const bookingsData = await bookingsResponse.json();
@@ -129,14 +130,14 @@ function AccountModal({ show,totalPrice=()=>{}, onHide, initialView = "main" }) 
       }
 
       // Load plans from same email
-      const plansResponse = await fetch(`http://localhost:5000/api/plans/${userEmail}`);
+      const plansResponse = await fetch(`http://localhost:5000/api/plans/${customerEmail}`);
       if (plansResponse.ok) {
         const plansData = await plansResponse.json();
         setPlans(plansData.plans || []);
       }
       
     } catch (error) {
-      console.error("Error loading user data:", error);
+      console.error("Error loading customer data:", error);
       setBookings([]);
     } finally {
       setLoadingBookings(false);
@@ -294,129 +295,129 @@ function AccountModal({ show,totalPrice=()=>{}, onHide, initialView = "main" }) 
   };
 
   const handleRegister = async (e) => {
-  e.preventDefault();
-  
-  // DEBUG: Log all registration data
-  console.log("=== REGISTRATION DATA ===");
-  console.log("Name:", registerData.name);
-  console.log("Email:", registerData.email);
-  console.log("Phone:", registerData.phone);
-  console.log("City:", registerData.city);
-  console.log("Password:", registerData.password);
-  console.log("Confirm Password:", registerData.confirmPassword);
-  console.log("Profile File:", registerData.profileFile);
-  console.log("========================");
-  
-  // Validation
-  if (!registerData.name || registerData.name.trim() === "") {
-    console.log("Validation failed: Name is empty");
-    alert("Please enter your name");
-    return;
-  }
-
-  if (!registerData.email || registerData.email.trim() === "") {
-    console.log("Validation failed: Email is empty");
-    alert("Please enter your email");
-    return;
-  }
-
-  if (!/^\S+@\S+\.\S+$/.test(registerData.email)) {
-    console.log("Validation failed: Invalid email format");
-    alert("Please enter a valid email address");
-    return;
-  }
-
-  if (!registerData.phone || registerData.phone.trim() === "" || registerData.phone.length !== 10) {
-    console.log("Validation failed: Phone is invalid");
-    alert("Please enter a valid 10-digit phone number");
-    return;
-  }
-
-  if (!registerData.city || registerData.city.trim() === "") {
-    console.log("Validation failed: City is empty");
-    alert("Please enter your city");
-    return;
-  }
-
-  if (!registerData.password || registerData.password === "") {
-    console.log("Validation failed: Password is empty");
-    alert("Please enter a password");
-    return;
-  }
-
-  if (registerData.password.length < 6) {
-    console.log("Validation failed: Password too short");
-    alert("Password must be at least 6 characters long");
-    return;
-  }
-
-  if (!registerData.confirmPassword || registerData.confirmPassword === "") {
-    console.log("Validation failed: Confirm password is empty");
-    alert("Please confirm your password");
-    return;
-  }
-
-  if (registerData.password !== registerData.confirmPassword) {
-    console.log("Validation failed: Passwords don't match");
+    e.preventDefault();
+    
+    // DEBUG: Log all registration data
+    console.log("=== REGISTRATION DATA ===");
+    console.log("Name:", registerData.name);
+    console.log("Email:", registerData.email);
+    console.log("Phone:", registerData.phone);
+    console.log("City:", registerData.city);
     console.log("Password:", registerData.password);
     console.log("Confirm Password:", registerData.confirmPassword);
-    alert("Passwords do not match");
-    return;
-  }
-
-  setIsLoading(true);
-  try {
-    // Create FormData
-    const formData = new FormData();
-    formData.append('name', registerData.name);
-    formData.append('email', registerData.email);
-    formData.append('phone', registerData.phone);
-    formData.append('city', registerData.city);
-    formData.append('password', registerData.password);
+    console.log("Profile File:", registerData.profileFile);
+    console.log("========================");
     
-    // Append profile picture if exists
-    if (registerData.profileFile) {
-      formData.append('profileImage', registerData.profileFile);
-      console.log("Appending profile image:", registerData.profileFile.name);
+    // Validation
+    if (!registerData.name || registerData.name.trim() === "") {
+      console.log("Validation failed: Name is empty");
+      alert("Please enter your name");
+      return;
     }
 
-    console.log("Sending registration request...");
-    const response = await fetch("http://localhost:5000/api/register", {
-      method: "POST",
-      body: formData,
-    });
-
-    const data = await response.json();
-    console.log("Registration response:", data);
-
-    if (!response.ok) {
-      throw new Error(data.error || "Failed to register");
+    if (!registerData.email || registerData.email.trim() === "") {
+      console.log("Validation failed: Email is empty");
+      alert("Please enter your email");
+      return;
     }
 
-    // Auto login after successful registration
-    login({
-      name: data.user.name,
-      email: data.user.email,
-      phone: data.user.phone,
-      city: data.user.city,
-      userId: data.user.id,
-      profileImage: data.user.profileImage,
-      title: data.user.title || "Ms"
-    });
+    if (!/^\S+@\S+\.\S+$/.test(registerData.email)) {
+      console.log("Validation failed: Invalid email format");
+      alert("Please enter a valid email address");
+      return;
+    }
 
-    setCurrentView("main");
-    onHide();
-    alert("Registration successful! Welcome to Urban Company");
-    
-  } catch (error) {
-    console.error("Error registering:", error);
-    alert(error.message);
-  } finally {
-    setIsLoading(false);
-  }
-};
+    if (!registerData.phone || registerData.phone.trim() === "" || registerData.phone.length !== 10) {
+      console.log("Validation failed: Phone is invalid");
+      alert("Please enter a valid 10-digit phone number");
+      return;
+    }
 
-  // Handle user login
+    if (!registerData.city || registerData.city.trim() === "") {
+      console.log("Validation failed: City is empty");
+      alert("Please enter your city");
+      return;
+    }
+
+    if (!registerData.password || registerData.password === "") {
+      console.log("Validation failed: Password is empty");
+      alert("Please enter a password");
+      return;
+    }
+
+    if (registerData.password.length < 6) {
+      console.log("Validation failed: Password too short");
+      alert("Password must be at least 6 characters long");
+      return;
+    }
+
+    if (!registerData.confirmPassword || registerData.confirmPassword === "") {
+      console.log("Validation failed: Confirm password is empty");
+      alert("Please confirm your password");
+      return;
+    }
+
+    if (registerData.password !== registerData.confirmPassword) {
+      console.log("Validation failed: Passwords don't match");
+      console.log("Password:", registerData.password);
+      console.log("Confirm Password:", registerData.confirmPassword);
+      alert("Passwords do not match");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Create FormData
+      const formData = new FormData();
+      formData.append('name', registerData.name);
+      formData.append('email', registerData.email);
+      formData.append('phone', registerData.phone);
+      formData.append('city', registerData.city);
+      formData.append('password', registerData.password);
+      
+      // Append profile picture if exists
+      if (registerData.profileFile) {
+        formData.append('profileImage', registerData.profileFile);
+        console.log("Appending profile image:", registerData.profileFile.name);
+      }
+
+      console.log("Sending registration request...");
+      const response = await fetch("http://localhost:5000/api/register", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+      console.log("Registration response:", data);
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to register");
+      }
+
+      // Auto login after successful registration
+      login({
+        name: data.customer.name,
+        email: data.customer.email,
+        phone: data.customer.phone,
+        city: data.customer.city,
+        customerId: data.customer.id,
+        profileImage: data.customer.profileImage,
+        title: data.customer.title || "Ms"
+      });
+
+      setCurrentView("main");
+      onHide();
+      alert("Registration successful! Welcome to Urban Company");
+      
+    } catch (error) {
+      console.error("Error registering:", error);
+      alert(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle customer login
   const handleLogin = async (e) => {
     e.preventDefault();
     
@@ -452,13 +453,13 @@ function AccountModal({ show,totalPrice=()=>{}, onHide, initialView = "main" }) 
 
       // Login successful
       login({
-        name: data.user.name,
-        email: data.user.email,
-        phone: data.user.phone,
-        city: data.user.city,
-        userId: data.user.id,
-        profileImage: data.user.profileImage,
-        title: data.user.title || "Ms"
+        name: data.customer.name,
+        email: data.customer.email,
+        phone: data.customer.phone,
+        city: data.customer.city,
+        customerId: data.customer.id,
+        profileImage: data.customer.profileImage,
+        title: data.customer.title || "Ms"
       });
 
       setCurrentView("main");
@@ -482,121 +483,121 @@ function AccountModal({ show,totalPrice=()=>{}, onHide, initialView = "main" }) 
     onHide();
   };
 
-// Handle profile save
-const handleProfileSave = async () => {
-  console.log("=== DEBUG START ===");
-  console.log("📋 Profile data to save:", profileData);
-  console.log("👤 Full userInfo object:", userInfo);
-  console.log("🆔 User ID value:", userInfo.userId);
-  console.log("🆔 User ID type:", typeof userInfo.userId);
-  console.log("=== DEBUG END ===");
-  
-  // Validation
-  if (!userInfo.userId || userInfo.userId === "undefined" || userInfo.userId === "") {
-    console.error("❌ Invalid userId:", userInfo.userId);
-    alert("User ID is missing or invalid. Please:\n1. Log out\n2. Clear browser cache\n3. Log in again");
-    return;
-  }
-
-  if (!profileData.name.trim()) {
-    alert("Please enter your name");
-    return;
-  }
-
-  if (!profileData.email.trim()) {
-    alert("Please enter your email");
-    return;
-  }
-
-  if (!/^\S+@\S+\.\S+$/.test(profileData.email)) {
-    alert("Please enter a valid email address");
-    return;
-  }
-
-  if (!profileData.phone.trim() || profileData.phone.length < 10) {
-    alert("Please enter a valid phone number (10 digits)");
-    return;
-  }
-
-  if (!profileData.city.trim()) {
-    alert("Please enter your city");
-    return;
-  }
-
-  setIsLoading(true);
-  try {
-    // Create FormData for file upload
-    const formData = new FormData();
-    formData.append('userId', userInfo.userId);
-    formData.append('name', profileData.name);
-    formData.append('email', profileData.email);
-    formData.append('phone', profileData.phone);
-    formData.append('city', profileData.city);
-    formData.append('title', profileData.title || "Ms");
+  // Handle profile save
+  const handleProfileSave = async () => {
+    console.log("=== DEBUG START ===");
+    console.log("📋 Profile data to save:", profileData);
+    console.log("👤 Full customerInfo object:", customerInfo);
+    console.log("🆔 Customer ID value:", customerInfo.customerId);
+    console.log("🆔 Customer ID type:", typeof customerInfo.customerId);
+    console.log("=== DEBUG END ===");
     
-    // Append profile file if exists
-    if (profileData.profileFile) {
-      formData.append('profileImage', profileData.profileFile);
-      console.log("📤 Uploading profile image:", profileData.profileFile.name);
+    // Validation
+    if (!customerInfo.customerId || customerInfo.customerId === "undefined" || customerInfo.customerId === "") {
+      console.error("❌ Invalid customerId:", customerInfo.customerId);
+      alert("Customer ID is missing or invalid. Please:\n1. Log out\n2. Clear browser cache\n3. Log in again");
+      return;
     }
 
-    console.log("📤 Sending update request to server...");
-    console.log("🔗 Endpoint: http://localhost:5000/api/update-profile");
-    console.log("🆔 User ID being sent:", userInfo.userId);
-
-    const response = await fetch("http://localhost:5000/api/update-profile", {
-      method: "POST",
-      body: formData,
-    });
-
-    console.log("📥 Response status:", response.status);
-    console.log("📥 Response headers:", response.headers);
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log("✅ Profile update response:", data);
-      
-      // Clean up preview URL if exists
-      if (profilePreview) {
-        URL.revokeObjectURL(profilePreview);
-      }
-      
-      // Update user info in context
-      const updatedUserInfo = {
-        ...userInfo,
-        name: data.user.name,
-        email: data.user.email,
-        phone: data.user.phone,
-        city: data.user.city,
-        title: data.user.title || "Ms",
-        profileImage: data.user.profileImage
-      };
-      
-      console.log("🔄 Updating context with:", updatedUserInfo);
-      login(updatedUserInfo);
-
-      setProfilePreview(null);
-      setCurrentView("main");
-      alert("Profile updated successfully!");
-    } else {
-      const errorText = await response.text();
-      console.error("❌ Update failed - Response text:", errorText);
-      
-      try {
-        const errorData = JSON.parse(errorText);
-        throw new Error(errorData.error || "Failed to update profile");
-      } catch {
-        throw new Error(`Server error: ${response.status} - ${errorText}`);
-      }
+    if (!profileData.name.trim()) {
+      alert("Please enter your name");
+      return;
     }
-    
-  } catch (error) {
-    console.error("❌ Error updating profile:", error);
-    alert("Failed to update profile: " + error.message);
-  } finally {
-    setIsLoading(false);
-  }
-};
+
+    if (!profileData.email.trim()) {
+      alert("Please enter your email");
+      return;
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(profileData.email)) {
+      alert("Please enter a valid email address");
+      return;
+    }
+
+    if (!profileData.phone.trim() || profileData.phone.length < 10) {
+      alert("Please enter a valid phone number (10 digits)");
+      return;
+    }
+
+    if (!profileData.city.trim()) {
+      alert("Please enter your city");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('customerId', customerInfo.customerId); // Changed from userId
+      formData.append('name', profileData.name);
+      formData.append('email', profileData.email);
+      formData.append('phone', profileData.phone);
+      formData.append('city', profileData.city);
+      formData.append('title', profileData.title || "Ms");
+      
+      // Append profile file if exists
+      if (profileData.profileFile) {
+        formData.append('profileImage', profileData.profileFile);
+        console.log("📤 Uploading profile image:", profileData.profileFile.name);
+      }
+
+      console.log("📤 Sending update request to server...");
+      console.log("🔗 Endpoint: http://localhost:5000/api/update-profile");
+      console.log("🆔 Customer ID being sent:", customerInfo.customerId);
+
+      const response = await fetch("http://localhost:5000/api/update-profile", {
+        method: "POST",
+        body: formData,
+      });
+
+      console.log("📥 Response status:", response.status);
+      console.log("📥 Response headers:", response.headers);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("✅ Profile update response:", data);
+        
+        // Clean up preview URL if exists
+        if (profilePreview) {
+          URL.revokeObjectURL(profilePreview);
+        }
+        
+        // Update customer info in context
+        const updatedCustomerInfo = {
+          ...customerInfo,
+          name: data.customer.name,
+          email: data.customer.email,
+          phone: data.customer.phone,
+          city: data.customer.city,
+          title: data.customer.title || "Ms",
+          profileImage: data.customer.profileImage
+        };
+        
+        console.log("🔄 Updating context with:", updatedCustomerInfo);
+        login(updatedCustomerInfo);
+
+        setProfilePreview(null);
+        setCurrentView("main");
+        alert("Profile updated successfully!");
+      } else {
+        const errorText = await response.text();
+        console.error("❌ Update failed - Response text:", errorText);
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.error || "Failed to update profile");
+        } catch {
+          throw new Error(`Server error: ${response.status} - ${errorText}`);
+        }
+      }
+      
+    } catch (error) {
+      console.error("❌ Error updating profile:", error);
+      alert("Failed to update profile: " + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Render profile picture component
   const renderProfilePicture = (pictureUrl, size = 80, editable = false, onEditClick = null) => {
@@ -900,10 +901,10 @@ const handleProfileSave = async () => {
   // Render profile editing view
   const renderProfileEditView = () => {
     console.log("Edit View - Current Profile Data:", profileData);
-    console.log("Edit View - Current User Info:", userInfo);
+    console.log("Edit View - Current Customer Info:", customerInfo);
     
     // Use preview if exists, otherwise use existing profile image
-    const displayImage = profilePreview || userInfo.profileImage;
+    const displayImage = profilePreview || customerInfo.profileImage;
     
     return (
       <div>
@@ -956,7 +957,7 @@ const handleProfileSave = async () => {
                         key={title}
                         type="button"
                         className={`btn border-0 rounded-0 flex-fill ${
-                          (profileData.title || userInfo.title || "Ms") === title 
+                          (profileData.title || customerInfo.title || "Ms") === title 
                             ? 'btn-dark' 
                             : 'btn-outline-secondary'
                         }`}
@@ -979,7 +980,7 @@ const handleProfileSave = async () => {
                   <div className="">
                     <Form.Control
                       type="text"
-                      value={profileData.name || userInfo.name || ""}
+                      value={profileData.name || customerInfo.name || ""}
                       onChange={(e) => handleProfileChange('name', e.target.value)}
                       className="border-0 p-0"
                       style={{ 
@@ -1001,7 +1002,7 @@ const handleProfileSave = async () => {
               <div>
                 <Form.Control
                   type="email"
-                  value={profileData.email || userInfo.email || ""}
+                  value={profileData.email || customerInfo.email || ""}
                   onChange={(e) => handleProfileChange('email', e.target.value)}
                   placeholder="Enter email"
                   className="border-0 p-0"
@@ -1021,7 +1022,7 @@ const handleProfileSave = async () => {
               <p className="text-muted small mb-0" style={{fontSize:"12px"}}>Phone Number</p>
               <Form.Control
                 type="tel"
-                value={profileData.phone || userInfo.phone || ""}
+                value={profileData.phone || customerInfo.phone || ""}
                 onChange={(e) => handleProfileChange('phone', e.target.value.replace(/\D/g, ""))}
                 placeholder="Enter phone number"
                 className="border-0 p-0"
@@ -1041,7 +1042,7 @@ const handleProfileSave = async () => {
               <p className="text-muted small mb-0" style={{fontSize:"12px"}}>City</p>
               <Form.Control
                 type="text"
-                value={profileData.city || userInfo.city || ""}
+                value={profileData.city || customerInfo.city || ""}
                 onChange={(e) => handleProfileChange('city', e.target.value)}
                 placeholder="Enter your city"
                 className="border-0 p-0"
@@ -1080,214 +1081,215 @@ const handleProfileSave = async () => {
   };
 
   // In AccountModal.jsx, update the renderBookingsView function
-const renderBookingsView = () => {
-  // Calculate total for each booking
-  const calculateBookingTotal = (booking) => {
-    if (booking.isCurrent && totalPrice) {
-      return totalPrice;
-    }
-    if (booking.paymentBreakdown) {
-      return booking.paymentBreakdown.totalPrice || 0;
-    }
-    if (booking.servicePrice) {
-      return Number(booking.servicePrice) || 0;
-    }
-    // Calculate from items
-    if (booking.items && booking.items.length > 0) {
-      return booking.items.reduce((sum, item) => {
-        const price = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
-        const quantity = item.quantity || 1;
-        return sum + (price * quantity);
-      }, 0);
-    }
-    
-    return 0;
-  };
+  const renderBookingsView = () => {
+    // Calculate total for each booking
+    const calculateBookingTotal = (booking) => {
+      if (booking.isCurrent && totalPrice) {
+        return totalPrice;
+      }
+      if (booking.paymentBreakdown) {
+        return booking.paymentBreakdown.totalPrice || 0;
+      }
+      if (booking.servicePrice) {
+        return Number(booking.servicePrice) || 0;
+      }
+      // Calculate from items
+      if (booking.items && booking.items.length > 0) {
+        return booking.items.reduce((sum, item) => {
+          const price = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
+          const quantity = item.quantity || 1;
+          return sum + (price * quantity);
+        }, 0);
+      }
+      
+      return 0;
+    };
 
-  return (
-    <div className="p-2">
-      {loadingBookings ? (
-        <div className="text-center py-5">
-          <Spinner animation="border" variant="primary" />
-          <p className="mt-2 text-muted">Loading your bookings...</p>
-        </div>
-      ) : bookings.length === 0 ? (
-        <div className="text-center py-5">
-          <LuNotepadText size={48} className="text-muted mb-3" />
-          <p className="text-muted">No bookings yet</p>
-          <p className="small text-muted">
-            Your completed orders will appear here
-          </p>
-        </div>
-      ) : (
-        <div className="d-grid gap-3">
-          {bookings.map((booking) => {
-            const bookingTotal = calculateBookingTotal(booking);
-            
-            return (
-              <Card key={booking._id} className="border-0 shadow-sm">
-                <Card.Body>
-                  <div className="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                      <p className="fw-semibold mb-1">
-                        Order #{booking._id}
-                      </p>
-                      <p className="small text-muted mb-0">
-                        {new Date(booking.bookingDate || Date.now()).toLocaleDateString('en-IN', {
-                          weekday: 'short',
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric'
-                        })} at {booking.scheduledTime || "10:00 AM"}
-                      </p>
-                    </div>
-                    <span className={`badge ${
-                      booking.status === 'Confirmed' ? 'bg-success' : 
-                      booking.status === 'Completed' ? 'bg-primary' : 
-                      booking.status === 'Cancelled' ? 'bg-danger' : 'bg-warning'
-                    }`}>
-                      {booking.status}
-                    </span>
-                  </div>
-                  
-                  {/* Display individual services */}
-                  {booking.items && booking.items.length > 0 ? (
-                    <div className="mb-3">
-                      <p className="small fw-semibold mb-2">Services:</p>
+    return (
+      <div className="p-2">
+        {loadingBookings ? (
+          <div className="text-center py-5">
+            <Spinner animation="border" variant="primary" />
+            <p className="mt-2 text-muted">Loading your bookings...</p>
+          </div>
+        ) : bookings.length === 0 ? (
+          <div className="text-center py-5">
+            <LuNotepadText size={48} className="text-muted mb-3" />
+            <p className="text-muted">No bookings yet</p>
+            <p className="small text-muted">
+              Your completed orders will appear here
+            </p>
+          </div>
+        ) : (
+          <div className="d-grid gap-3">
+            {bookings.map((booking) => {
+              const bookingTotal = calculateBookingTotal(booking);
+              
+              return (
+                <Card key={booking._id} className="border-0 shadow-sm">
+                  <Card.Body>
+                    <div className="d-flex justify-content-between align-items-start mb-2">
                       <div>
-                        {booking.items.map((item, index) => {
-                          const itemPrice = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
-                          const quantity = item.quantity || 1;
-                          const totalItemPrice = itemPrice * quantity;
-                          
-                          return (
-                            <div key={index} className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
-                              <div>
-                                <p className="mb-1 small">{item.name}</p>
-                                <p className="mb-0 text-muted" style={{ fontSize: "11px" }}>
-                                  Qty: {quantity} × ₹{itemPrice.toLocaleString('en-IN')}
-                                </p>
-                              </div>
-                              <p className="mb-0 small ">
-                                ₹{totalItemPrice.toLocaleString('en-IN')}
-                              </p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mb-3">
-                      <p className="small text-muted mb-1">
-                        <strong>Service:</strong> {booking.serviceName || "Beauty Services"}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Total Amount with taxes */}
-                  <div >
-                    <div className="d-flex justify-content-between mt-2 pt-2 ">
-                      <span>Amount to Pay (with tax):</span>
-                      <span >
-                        ₹{bookingTotal.toLocaleString('en-IN')}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Address */}
-                  {booking.address && (
-                    <div className="d-flex align-items-start mb-3">
-                      <MdLocationOn size={14} className="text-muted mt-1 me-2 flex-shrink-0" />
-                      <div className="flex-grow-1">
-                        <p className="small text-muted mb-1">
-                          {booking.address.doorNo && `${booking.address.doorNo}, `}
-                          {booking.address.mainText || "Selected Address"}
-                          {booking.address.subText && `, ${booking.address.subText}`}
+                        <p className="fw-semibold mb-1">
+                          Order #{booking._id}
+                        </p>
+                        <p className="small text-muted mb-0">
+                          {new Date(booking.bookingDate || Date.now()).toLocaleDateString('en-IN', {
+                            weekday: 'short',
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                          })} at {booking.scheduledTime || "10:00 AM"}
                         </p>
                       </div>
+                      <span className={`badge ${
+                        booking.status === 'Confirmed' ? 'bg-success' : 
+                        booking.status === 'Completed' ? 'bg-primary' : 
+                        booking.status === 'Cancelled' ? 'bg-danger' : 'bg-warning'
+                      }`}>
+                        {booking.status}
+                      </span>
                     </div>
-                  )}
-
-                  {/* Action buttons with CANCEL functionality */}
-                  <div className="mt-3 pt-2 border-top d-flex gap-2">
-                    <Button 
-                      variant="outline-primary" 
-                      size="sm"
-                      className="flex-grow-1"
-                      onClick={() => {
-                        // Create detailed message
-                        let details = `Booking Details\n`;
-                        details += `────────────────\n`;
-                        details += `Booking ID: ${booking._id}\n`;
-                        details += `Date: ${new Date(booking.bookingDate).toLocaleDateString('en-IN')}\n`;
-                        details += `Time: ${booking.scheduledTime || "10:00 AM"}\n`;
-                        details += `Status: ${booking.status}\n\n`;
-                        
-                        details += `🛒 Services:\n`;
-                        if (booking.items && booking.items.length > 0) {
-                          booking.items.forEach((item, index) => {
+                    
+                    {/* Display individual services */}
+                    {booking.items && booking.items.length > 0 ? (
+                      <div className="mb-3">
+                        <p className="small fw-semibold mb-2">Services:</p>
+                        <div>
+                          {booking.items.map((item, index) => {
                             const itemPrice = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
                             const quantity = item.quantity || 1;
-                            details += `  ${index + 1}. ${item.name}\n`;
-                            details += `     ₹${itemPrice} × ${quantity} = ₹${itemPrice * quantity}\n`;
-                          });
-                        } else {
-                          details += ` ${booking.serviceName}\n`;
-                        }
-                        
-                        details += `\nPayment Summary:\n`;
-                        details += `  Amount to Pay: ₹${bookingTotal}\n\n`;
-                        
-                        if (booking.address) {
-                          details += `Address:\n`;
-                          details += `  ${booking.address.doorNo ? booking.address.doorNo + ', ' : ''}`;
-                          details += `${booking.address.mainText || ''}`;
-                          details += `${booking.address.subText ? ', ' + booking.address.subText : ''}`;
-                        }
-                        
-                        alert(details);
-                      }}
-                    >
-                      View Details
-                    </Button>
-                    {/* DELETE BUTTON - For all bookings */}
-                    <Button 
-                      variant="outline-dark" 
-                      size="sm"
-                      onClick={async () => {
-                        if (window.confirm("Are you sure you want to delete this booking record?")) {
-                          try {
-                            // Call API to delete booking
-                            const response = await fetch(`http://localhost:5000/api/bookings/${booking._id}`, {
-                              method: "DELETE"
-                            });
+                            const totalItemPrice = itemPrice * quantity;
                             
-                            if (response.ok) {
-                              alert("Booking deleted successfully!");
-                              // Refresh bookings
-                              loadUserData();
-                            } else {
-                              alert("Failed to delete booking");
-                            }
-                          } catch (error) {
-                            console.error("Error deleting booking:", error);
-                            alert("Error deleting booking. Please try again.");
+                            return (
+                              <div key={index} className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                <div>
+                                  <p className="mb-1 small">{item.name}</p>
+                                  <p className="mb-0 text-muted" style={{ fontSize: "11px" }}>
+                                    Qty: {quantity} × ₹{itemPrice.toLocaleString('en-IN')}
+                                  </p>
+                                </div>
+                                <p className="mb-0 small ">
+                                  ₹{totalItemPrice.toLocaleString('en-IN')}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mb-3">
+                        <p className="small text-muted mb-1">
+                          <strong>Service:</strong> {booking.serviceName || "Beauty Services"}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Total Amount with taxes */}
+                    <div >
+                      <div className="d-flex justify-content-between mt-2 pt-2 ">
+                        <span>Amount to Pay (with tax):</span>
+                        <span >
+                          ₹{bookingTotal.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Address */}
+                    {booking.address && (
+                      <div className="d-flex align-items-start mb-3">
+                        <MdLocationOn size={14} className="text-muted mt-1 me-2 flex-shrink-0" />
+                        <div className="flex-grow-1">
+                          <p className="small text-muted mb-1">
+                            {booking.address.doorNo && `${booking.address.doorNo}, `}
+                            {booking.address.mainText || "Selected Address"}
+                            {booking.address.subText && `, ${booking.address.subText}`}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action buttons with CANCEL functionality */}
+                    <div className="mt-3 pt-2 border-top d-flex gap-2">
+                      <Button 
+                        variant="outline-primary" 
+                        size="sm"
+                        className="flex-grow-1"
+                        onClick={() => {
+                          // Create detailed message
+                          let details = `Booking Details\n`;
+                          details += `────────────────\n`;
+                          details += `Booking ID: ${booking._id}\n`;
+                          details += `Date: ${new Date(booking.bookingDate).toLocaleDateString('en-IN')}\n`;
+                          details += `Time: ${booking.scheduledTime || "10:00 AM"}\n`;
+                          details += `Status: ${booking.status}\n\n`;
+                          
+                          details += `🛒 Services:\n`;
+                          if (booking.items && booking.items.length > 0) {
+                            booking.items.forEach((item, index) => {
+                              const itemPrice = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
+                              const quantity = item.quantity || 1;
+                              details += `  ${index + 1}. ${item.name}\n`;
+                              details += `     ₹${itemPrice} × ${quantity} = ₹${itemPrice * quantity}\n`;
+                            });
+                          } else {
+                            details += ` ${booking.serviceName}\n`;
                           }
-                        }
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </Card.Body>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
+                          
+                          details += `\nPayment Summary:\n`;
+                          details += `  Amount to Pay: ₹${bookingTotal}\n\n`;
+                          
+                          if (booking.address) {
+                            details += `Address:\n`;
+                            details += `  ${booking.address.doorNo ? booking.address.doorNo + ', ' : ''}`;
+                            details += `${booking.address.mainText || ''}`;
+                            details += `${booking.address.subText ? ', ' + booking.address.subText : ''}`;
+                          }
+                          
+                          alert(details);
+                        }}
+                      >
+                        View Details
+                      </Button>
+                      {/* DELETE BUTTON - For all bookings */}
+                      <Button 
+                        variant="outline-dark" 
+                        size="sm"
+                        onClick={async () => {
+                          if (window.confirm("Are you sure you want to delete this booking record?")) {
+                            try {
+                              // Call API to delete booking
+                              const response = await fetch(`http://localhost:5000/api/bookings/${booking._id}`, {
+                                method: "DELETE"
+                              });
+                              
+                              if (response.ok) {
+                                alert("Booking deleted successfully!");
+                                // Refresh bookings
+                                loadCustomerData();
+                              } else {
+                                alert("Failed to delete booking");
+                              }
+                            } catch (error) {
+                              console.error("Error deleting booking:", error);
+                              alert("Error deleting booking. Please try again.");
+                            }
+                          }
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </Card.Body>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Render plans view
   const renderPlansView = () => (
     <div>
@@ -1324,7 +1326,6 @@ const renderBookingsView = () => {
       <h5 className="fw-semibold">Order related messages</h5>
       <p className="text-muted">Order related messages can't be turned off as they are important for service experience</p>
       <hr style={{border:"2px solid"}}/>
-
     </div>
   );
 
@@ -1337,13 +1338,13 @@ const renderBookingsView = () => {
         onClick={() => handleNavigation("profile-details")}
       >
         <div className="d-flex align-items-center gap-3">
-          {renderProfilePicture(userInfo.profileImage, 60, false)}
+          {renderProfilePicture(customerInfo.profileImage, 60, false)}
           <div className="flex-grow-1">
-            <h5 className="fw-semibold mb-1">{userInfo.name || "User"}</h5>
+            <h5 className="fw-semibold mb-1">{customerInfo.name || "Customer"}</h5>
             <p className="small text-muted mb-0">
-              +91 {userInfo.phone}
+              +91 {customerInfo.phone}
             </p>
-              <p className="small text-muted mb-1">{userInfo.email}</p>
+              <p className="small text-muted mb-1">{customerInfo.email}</p>
           </div>
           <MdOutlineArrowForwardIos size={14} className="text-muted" />
         </div>

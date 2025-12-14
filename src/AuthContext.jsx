@@ -1,4 +1,3 @@
-// AuthContext.js
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const AuthContext = createContext();
@@ -9,8 +8,8 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userInfo, setUserInfo] = useState({
-    userId: '',
+  const [customerInfo, setCustomerInfo] = useState({
+    customerId: '', // Changed from userId
     name: '',
     email: '',
     phone: '',
@@ -21,54 +20,54 @@ export const AuthProvider = ({ children }) => {
 
   // Load from localStorage on initial render
   useEffect(() => {
-    const storedUser = localStorage.getItem('urbanUser');
-    if (storedUser) {
+    const storedCustomer = localStorage.getItem('urbanCustomer'); // Changed key
+    if (storedCustomer) {
       try {
-        const userData = JSON.parse(storedUser);
-        console.log("📂 Loading user from localStorage:", userData);
-        setUserInfo(userData);
+        const customerData = JSON.parse(storedCustomer);
+        console.log("📂 Loading customer from localStorage:", customerData);
+        setCustomerInfo(customerData);
         setIsLoggedIn(true);
       } catch (error) {
-        console.error("❌ Error parsing stored user:", error);
-        localStorage.removeItem('urbanUser');
+        console.error("❌ Error parsing stored customer:", error);
+        localStorage.removeItem('urbanCustomer');
       }
     }
   }, []);
 
-  const login = (userData) => {
-    console.log("🔑 Login called with data:", userData);
+  const login = (customerData) => {
+    console.log("🔑 Login called with data:", customerData);
     
-    // Ensure userId is present
-    if (!userData.userId) {
-      console.error("❌ No userId provided during login!");
-      alert("Login failed: User ID missing");
+    // Ensure customerId is present
+    if (!customerData.customerId) {
+      console.error("❌ No customerId provided during login!");
+      alert("Login failed: Customer ID missing");
       return;
     }
 
-    const userInfoToStore = {
-      userId: userData.userId,
-      name: userData.name || '',
-      email: userData.email || '',
-      phone: userData.phone || '',
-      city: userData.city || '',
-      profileImage: userData.profileImage || '',
-      title: userData.title || 'Ms'
+    const customerInfoToStore = {
+      customerId: customerData.customerId, // Changed from userId
+      name: customerData.name || '',
+      email: customerData.email || '',
+      phone: customerData.phone || '',
+      city: customerData.city || '',
+      profileImage: customerData.profileImage || '',
+      title: customerData.title || 'Ms'
     };
 
-    console.log("💾 Storing user info:", userInfoToStore);
+    console.log("💾 Storing customer info:", customerInfoToStore);
     
-    setUserInfo(userInfoToStore);
+    setCustomerInfo(customerInfoToStore);
     setIsLoggedIn(true);
     
-    // Save to localStorage
-    localStorage.setItem('urbanUser', JSON.stringify(userInfoToStore));
-    console.log("✅ User saved to localStorage");
+    // Save to localStorage with new key
+    localStorage.setItem('urbanCustomer', JSON.stringify(customerInfoToStore));
+    console.log("✅ Customer saved to localStorage");
   };
 
   const logout = () => {
-    console.log("🚪 Logging out user");
-    setUserInfo({
-      userId: '',
+    console.log("🚪 Logging out customer");
+    setCustomerInfo({
+      customerId: '', // Changed from userId
       name: '',
       email: '',
       phone: '',
@@ -77,12 +76,12 @@ export const AuthProvider = ({ children }) => {
       title: 'Ms'
     });
     setIsLoggedIn(false);
-    localStorage.removeItem('urbanUser');
+    localStorage.removeItem('urbanCustomer'); // Changed key
   };
 
   const value = {
     isLoggedIn,
-    userInfo,
+    customerInfo, // Changed from userInfo
     login,
     logout
   };

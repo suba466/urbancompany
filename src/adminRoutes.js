@@ -10,8 +10,6 @@ import fs from "fs";
 const router = express.Router();
 const JWT_SECRET = "your-jwt-secret-key-change-this";
 
-
-
 // __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,19 +43,19 @@ const upload = multer({
   }
 });
 
-// Staff Schema with profileImage field
-const staffSchema = new mongoose.Schema({
+// User Schema with profileImage field (Changed from Staff to User)
+const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   phone: { type: String, required: true },
   designation: { type: String, required: true },
   password: { type: String, required: true },
-  profileImage: { type: String, default: "/assets/default-avatar.png" }, // NEW FIELD
+  profileImage: { type: String, default: "/assets/default-avatar.png" },
   isActive: { type: Boolean, default: true },
   permissions: {
     Dashboard: { type: Boolean, default: false },
-    Staff: { type: Boolean, default: false },
-    User: { type: Boolean, default: false },
+    Users: { type: Boolean, default: false }, // Changed from Staff to Users
+    Customer: { type: Boolean, default: false },
     Category: { type: Boolean, default: false },
     Product: { type: Boolean, default: false },
     Bookings: { type: Boolean, default: false },
@@ -68,7 +66,7 @@ const staffSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-const Staff = mongoose.model("Staff", staffSchema);
+const User = mongoose.model("User", userSchema); // Changed from Staff to User
 
 // Admin Schema
 const adminSchema = new mongoose.Schema({
@@ -82,6 +80,22 @@ const adminSchema = new mongoose.Schema({
 });
 
 const Admin = mongoose.model("Admin", adminSchema);
+
+// Customer Schema
+const customerSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  phone: { type: String, required: true },
+  city: { type: String, required: true },
+  password: { type: String, required: true },
+  profileImage: { type: String, default: "" },
+  title: { type: String, default: "Ms" },
+  isVerified: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+const Customer = mongoose.model("Customer", customerSchema);
 
 // Initialize default admin
 export const initializeAdmin = async () => {
@@ -142,8 +156,8 @@ const checkPermission = (permission) => {
       return next();
     }
 
-    // Staff needs specific permission
-    if (req.user.role === 'staff' && req.user.permissions && req.user.permissions[permission]) {
+    // User needs specific permission
+    if (req.user.role === 'user' && req.user.permissions && req.user.permissions[permission]) {
       return next();
     }
 
@@ -189,8 +203,8 @@ router.post("/login", async (req, res) => {
         role: 'admin',
         permissions: {
           Dashboard: true,
-          Staff: true,
-          User: true,
+          Users: true, // Changed from Staff to Users
+          Customer: true,
           Category: true,
           Product: true,
           Bookings: true,
@@ -215,8 +229,8 @@ router.post("/login", async (req, res) => {
         role: admin.role,
         permissions: {
           Dashboard: true,
-          Staff: true,
-          User: true,
+          Users: true, // Changed from Staff to Users
+          Customer: true,
           Category: true,
           Product: true,
           Bookings: true,
@@ -232,67 +246,67 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Staff Login with JWT
-router.post("/staff-login", async (req, res) => {
+// User Login with JWT (Changed from staff-login to user-login)
+router.post("/user-login", async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    console.log("Staff login attempt:", { email });
+    console.log("User login attempt:", { email });
     
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required" });
     }
 
-    const staff = await Staff.findOne({ email });
-    if (!staff) {
+    const user = await User.findOne({ email });
+    if (!user) {
       return res.status(400).json({ error: "Invalid email or password" });
     }
 
-    if (!staff.isActive) {
+    if (!user.isActive) {
       return res.status(400).json({ error: "Account is deactivated" });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, staff.password);
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(400).json({ error: "Invalid email or password" });
     }
 
-    staff.lastLogin = new Date();
-    await staff.save();
+    // Update last login
+    await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
 
-    // Generate JWT token for staff
+    // Generate JWT token for user
     const token = jwt.sign(
       {
-        id: staff._id,
-        email: staff.email,
-        role: 'staff',
-        profileImage: staff.profileImage, // Add profile image to token
-        permissions: staff.permissions
+        id: user._id,
+        email: user.email,
+        role: 'user',
+        profileImage: user.profileImage,
+        permissions: user.permissions
       },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
 
-    console.log(`Staff logged in: ${email}`);
+    console.log(`User logged in: ${email}`);
 
     res.json({
       success: true,
-      message: "Staff login successful",
+      message: "User login successful",
       token,
-      staff: {
-        id: staff._id,
-        name: staff.name,
-        email: staff.email,
-        phone: staff.phone,
-        designation: staff.designation,
-        profileImage: staff.profileImage, // Add profile image
-        permissions: staff.permissions,
-        role: 'staff'
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        designation: user.designation,
+        profileImage: user.profileImage,
+        permissions: user.permissions,
+        role: 'user'
       }
     });
 
   } catch (error) {
-    console.error("Error in staff login:", error);
+    console.error("Error in user login:", error);
     res.status(500).json({ error: "Failed to login" });
   }
 });
@@ -328,51 +342,46 @@ router.get("/profile", checkPermission('Dashboard'), async (req, res) => {
   }
 });
 
-// Get Staff Profile
-router.get("/staff-profile", checkPermission('Dashboard'), async (req, res) => {
+// Get User Profile (Changed from staff-profile to user-profile)
+router.get("/user-profile", checkPermission('Dashboard'), async (req, res) => {
   try {
-    const staff = await Staff.findById(req.user.id);
-    if (!staff) {
-      return res.status(404).json({ error: "Staff not found" });
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
     }
 
     res.json({
       success: true,
       profile: {
-        id: staff._id,
-        name: staff.name,
-        email: staff.email,
-        phone: staff.phone,
-        designation: staff.designation,
-        profileImage: staff.profileImage, // Add profile image
-        position: staff.designation,
-        isActive: staff.isActive,
-        permissions: staff.permissions,
-        createdAt: staff.createdAt,
-        updatedAt: staff.updatedAt
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        designation: user.designation,
+        profileImage: user.profileImage,
+        position: user.designation,
+        isActive: user.isActive,
+        permissions: user.permissions,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
       }
     });
 
   } catch (error) {
-    console.error("Error fetching staff profile:", error);
-    res.status(500).json({ error: "Failed to fetch staff profile" });
+    console.error("Error fetching user profile:", error);
+    res.status(500).json({ error: "Failed to fetch user profile" });
   }
 });
 
 // Admin Dashboard Statistics
 router.get("/dashboard", checkPermission('Dashboard'), async (req, res) => {
   try {
-    const User = mongoose.model("User");
-    const Booking = mongoose.model("Booking");
-    const Service = mongoose.model("Service");
-    const Package = mongoose.model("Package");
-
-    const totalUsers = await User.countDocuments();
-    const totalBookings = await Booking.countDocuments();
-    const totalCategories = await Service.countDocuments();
-    const totalPackages = await Package.countDocuments();
+    const totalCustomers = await Customer.countDocuments();
+    const totalBookings = await mongoose.model("Booking").countDocuments();
+    const totalCategories = await mongoose.model("Service").countDocuments();
+    const totalPackages = await mongoose.model("Package").countDocuments();
     
-    const totalRevenue = await Booking.aggregate([
+    const totalRevenue = await mongoose.model("Booking").aggregate([
       {
         $group: {
           _id: null,
@@ -381,45 +390,45 @@ router.get("/dashboard", checkPermission('Dashboard'), async (req, res) => {
       }
     ]);
 
-    // Get recent bookings with user details
-    const recentBookings = await Booking.find()
+    // Get recent bookings with customer details
+    const recentBookings = await mongoose.model("Booking").find()
       .sort({ createdAt: -1 })
       .limit(10)
       .lean();
     
-    // Get user emails from bookings
-    const userEmails = recentBookings.map(b => b.userEmail);
+    // Get customer emails from bookings
+    const customerEmails = recentBookings.map(b => b.customerEmail);
     
-    // Get users with profile images
-    const users = await User.find({ email: { $in: userEmails } })
+    // Get customers with profile images
+    const customers = await Customer.find({ email: { $in: customerEmails } })
       .select('email name profileImage')
       .lean();
     
-    // Create a user map for quick lookup
-    const userMap = {};
-    users.forEach(user => {
-      userMap[user.email] = {
-        name: user.name,
-        profileImage: user.profileImage
+    // Create a customer map for quick lookup
+    const customerMap = {};
+    customers.forEach(customer => {
+      customerMap[customer.email] = {
+        name: customer.name,
+        profileImage: customer.profileImage
       };
     });
     
-    // Add user details to bookings
-    const recentBookingsWithUserDetails = recentBookings.map(booking => {
-      const userDetails = userMap[booking.userEmail] || {};
+    // Add customer details to bookings
+    const recentBookingsWithCustomerDetails = recentBookings.map(booking => {
+      const customerDetails = customerMap[booking.customerEmail] || {};
       return {
         ...booking,
-        userName: userDetails.name || booking.userName,
-        userProfileImage: userDetails.profileImage || ''
+        customerName: customerDetails.name || booking.customerName,
+        customerProfileImage: customerDetails.profileImage || ''
       };
     });
     
-    const recentUsers = await User.find()
+    const recentCustomers = await Customer.find()
       .sort({ createdAt: -1 })
       .limit(10)
       .select('name email phone city profileImage createdAt');
 
-    const monthlyRevenue = await Booking.aggregate([
+    const monthlyRevenue = await mongoose.model("Booking").aggregate([
       {
         $match: {
           createdAt: {
@@ -440,7 +449,7 @@ router.get("/dashboard", checkPermission('Dashboard'), async (req, res) => {
       { $sort: { "_id.year": 1, "_id.month": 1 } }
     ]);
 
-    const topServices = await Booking.aggregate([
+    const topServices = await mongoose.model("Booking").aggregate([
       {
         $group: {
           _id: "$serviceName",
@@ -455,14 +464,14 @@ router.get("/dashboard", checkPermission('Dashboard'), async (req, res) => {
     res.json({
       success: true,
       stats: {
-        totalUsers,
+        totalCustomers,
         totalBookings,
         totalCategories,
         totalPackages,
         totalRevenue: totalRevenue[0]?.total || 0
       },
-      recentBookings: recentBookingsWithUserDetails,
-      recentUsers,
+      recentBookings: recentBookingsWithCustomerDetails,
+      recentCustomers,
       monthlyRevenue,
       topServices
     });
@@ -473,8 +482,8 @@ router.get("/dashboard", checkPermission('Dashboard'), async (req, res) => {
   }
 });
 
-// Get all staff with pagination
-router.get("/staff", checkPermission('Staff'), async (req, res) => {
+// Get all users with pagination (Changed from staff to users)
+router.get("/users", checkPermission('Users'), async (req, res) => {
   try {
     const { page = 1, limit = 20, search = "" } = req.query;
     const skip = (page - 1) * limit;
@@ -489,17 +498,17 @@ router.get("/staff", checkPermission('Staff'), async (req, res) => {
       ];
     }
 
-    const staff = await Staff.find(query)
+    const users = await User.find(query)
       .select('-password -__v')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
 
-    const total = await Staff.countDocuments(query);
+    const total = await User.countDocuments(query);
 
     res.json({
       success: true,
-      staff,
+      users,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -509,34 +518,34 @@ router.get("/staff", checkPermission('Staff'), async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error fetching staff:", error);
-    res.status(500).json({ error: "Failed to fetch staff" });
+    console.error("Error fetching users:", error);
+    res.status(500).json({ error: "Failed to fetch users" });
   }
 });
 
-// Get single staff member
-router.get("/staff/:id", checkPermission('Staff'), async (req, res) => {
+// Get single user (Changed from staff to user)
+router.get("/users/:id", checkPermission('Users'), async (req, res) => {
   try {
     const { id } = req.params;
-    const staff = await Staff.findById(id).select('-password -__v');
+    const user = await User.findById(id).select('-password -__v');
     
-    if (!staff) {
-      return res.status(404).json({ error: "Staff member not found" });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
     }
 
     res.json({
       success: true,
-      staff
+      user
     });
 
   } catch (error) {
-    console.error("Error fetching staff:", error);
-    res.status(500).json({ error: "Failed to fetch staff" });
+    console.error("Error fetching user:", error);
+    res.status(500).json({ error: "Failed to fetch user" });
   }
 });
 
-// Create new staff member WITH PROFILE IMAGE UPLOAD
-router.post("/staff", checkPermission('Staff'), upload.single('profileImage'), async (req, res) => {
+// Create new user WITH PROFILE IMAGE UPLOAD (Changed from staff to user)
+router.post("/users", checkPermission('Users'), upload.single('profileImage'), async (req, res) => {
   try {
     const {
       name,
@@ -554,9 +563,9 @@ router.post("/staff", checkPermission('Staff'), upload.single('profileImage'), a
     }
 
     // Check if email already exists
-    const existingStaff = await Staff.findOne({ email });
-    if (existingStaff) {
-      return res.status(400).json({ error: "Staff member with this email already exists" });
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: "User with this email already exists" });
     }
 
     // Hash password
@@ -580,8 +589,8 @@ router.post("/staff", checkPermission('Staff'), upload.single('profileImage'), a
     } else {
       parsedPermissions = {
         Dashboard: false,
-        Staff: false,
-        User: false,
+        Users: false,
+        Customer: false,
         Category: false,
         Product: false,
         Bookings: false,
@@ -590,62 +599,62 @@ router.post("/staff", checkPermission('Staff'), upload.single('profileImage'), a
       };
     }
 
-    // Create new staff
-    const staff = new Staff({
+    // Create new user
+    const user = new User({
       name,
       email,
       phone,
       designation,
       password: hashedPassword,
-      profileImage: profileImageUrl, // Add profile image
+      profileImage: profileImageUrl,
       isActive: isActive !== undefined ? isActive : true,
       permissions: parsedPermissions
     });
 
-    await staff.save();
+    await user.save();
 
     res.status(201).json({
       success: true,
-      message: "Staff member created successfully",
-      staff: {
-        id: staff._id,
-        name: staff.name,
-        email: staff.email,
-        phone: staff.phone,
-        designation: staff.designation,
-        profileImage: staff.profileImage, // Return profile image
-        permissions: staff.permissions,
-        isActive: staff.isActive
+      message: "User created successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        designation: user.designation,
+        profileImage: user.profileImage,
+        permissions: user.permissions,
+        isActive: user.isActive
       }
     });
 
   } catch (error) {
-    console.error("Error creating staff:", error);
+    console.error("Error creating user:", error);
     if (error.code === 11000) {
       return res.status(400).json({ error: "Email already exists" });
     }
     if (error.name === 'ValidationError') {
       return res.status(400).json({ error: error.message });
     }
-    res.status(500).json({ error: "Failed to create staff member" });
+    res.status(500).json({ error: "Failed to create user" });
   }
 });
 
-// Update staff member WITH PROFILE IMAGE UPLOAD
-router.put("/staff/:id", checkPermission('Staff'), upload.single('profileImage'), async (req, res) => {
+// Update user WITH PROFILE IMAGE UPLOAD (Changed from staff to user)
+router.put("/users/:id", checkPermission('Users'), upload.single('profileImage'), async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
 
-    // Find existing staff
-    const existingStaff = await Staff.findById(id);
-    if (!existingStaff) {
-      return res.status(404).json({ error: "Staff member not found" });
+    // Find existing user
+    const existingUser = await User.findById(id);
+    if (!existingUser) {
+      return res.status(404).json({ error: "User not found" });
     }
 
     // Don't allow email update to existing email
-    if (updateData.email && updateData.email !== existingStaff.email) {
-      const emailExists = await Staff.findOne({ 
+    if (updateData.email && updateData.email !== existingUser.email) {
+      const emailExists = await User.findOne({ 
         email: updateData.email, 
         _id: { $ne: id } 
       });
@@ -660,8 +669,8 @@ router.put("/staff/:id", checkPermission('Staff'), upload.single('profileImage')
       console.log("Profile image updated:", updateData.profileImage);
       
       // Delete old image if not default
-      if (existingStaff.profileImage && existingStaff.profileImage !== "/assets/default-avatar.png") {
-        const oldImagePath = path.join(__dirname, '..', existingStaff.profileImage);
+      if (existingUser.profileImage && existingUser.profileImage !== "/assets/default-avatar.png") {
+        const oldImagePath = path.join(__dirname, '..', existingUser.profileImage);
         if (fs.existsSync(oldImagePath)) {
           fs.unlinkSync(oldImagePath);
           console.log("Deleted old profile image:", oldImagePath);
@@ -679,8 +688,8 @@ router.put("/staff/:id", checkPermission('Staff'), upload.single('profileImage')
       updateData.permissions = JSON.parse(updateData.permissions);
     }
 
-    // Update staff
-    const staff = await Staff.findByIdAndUpdate(
+    // Update user
+    const user = await User.findByIdAndUpdate(
       id,
       { ...updateData, updatedAt: new Date() },
       { new: true, runValidators: true }
@@ -688,50 +697,50 @@ router.put("/staff/:id", checkPermission('Staff'), upload.single('profileImage')
 
     res.json({
       success: true,
-      message: "Staff member updated successfully",
-      staff
+      message: "User updated successfully",
+      user
     });
 
   } catch (error) {
-    console.error("Error updating staff:", error);
-    res.status(500).json({ error: "Failed to update staff member" });
+    console.error("Error updating user:", error);
+    res.status(500).json({ error: "Failed to update user" });
   }
 });
 
-// Delete staff member
-router.delete("/staff/:id", checkPermission('Staff'), async (req, res) => {
+// Delete user (Changed from staff to user)
+router.delete("/users/:id", checkPermission('Users'), async (req, res) => {
   try {
     const { id } = req.params;
 
-    const staff = await Staff.findById(id);
-    if (!staff) {
-      return res.status(404).json({ error: "Staff member not found" });
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
     }
 
     // Delete profile image if not default
-    if (staff.profileImage && staff.profileImage !== "/assets/default-avatar.png") {
-      const imagePath = path.join(__dirname, '..', staff.profileImage);
+    if (user.profileImage && user.profileImage !== "/assets/default-avatar.png") {
+      const imagePath = path.join(__dirname, '..', user.profileImage);
       if (fs.existsSync(imagePath)) {
         fs.unlinkSync(imagePath);
         console.log("Deleted profile image:", imagePath);
       }
     }
 
-    await Staff.findByIdAndDelete(id);
+    await User.findByIdAndDelete(id);
 
     res.json({
       success: true,
-      message: "Staff member deleted successfully"
+      message: "User deleted successfully"
     });
 
   } catch (error) {
-    console.error("Error deleting staff:", error);
-    res.status(500).json({ error: "Failed to delete staff member" });
+    console.error("Error deleting user:", error);
+    res.status(500).json({ error: "Failed to delete user" });
   }
 });
 
-// Get users by emails
-router.post("/users-by-emails", checkPermission('User'), async (req, res) => {
+// Get customers by emails
+router.post("/customers-by-emails", checkPermission('Customer'), async (req, res) => {
   try {
     const { emails } = req.body;
     
@@ -739,25 +748,23 @@ router.post("/users-by-emails", checkPermission('User'), async (req, res) => {
       return res.status(400).json({ error: "Emails array is required" });
     }
     
-    const User = mongoose.model("User");
-    const users = await User.find({ email: { $in: emails } })
+    const customers = await Customer.find({ email: { $in: emails } })
       .select('name email profileImage');
     
     res.json({
       success: true,
-      users
+      customers
     });
     
   } catch (error) {
-    console.error("Error fetching users by emails:", error);
-    res.status(500).json({ error: "Failed to fetch users" });
+    console.error("Error fetching customers by emails:", error);
+    res.status(500).json({ error: "Failed to fetch customers" });
   }
 });
 
-// Get all users with pagination
-router.get("/users", checkPermission('User'), async (req, res) => {
+// Get all customers with pagination
+router.get("/customers", checkPermission('Customer'), async (req, res) => {
   try {
-    const User = mongoose.model("User");
     const { page = 1, limit = 20, search = "", sort = "-createdAt" } = req.query;
     const skip = (page - 1) * limit;
 
@@ -773,17 +780,17 @@ router.get("/users", checkPermission('User'), async (req, res) => {
       };
     }
 
-    const users = await User.find(query)
+    const customers = await Customer.find(query)
       .select('name email phone city profileImage createdAt password')
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
 
-    const total = await User.countDocuments(query);
+    const total = await Customer.countDocuments(query);
 
     res.json({
       success: true,
-      users,
+      customers,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -793,8 +800,121 @@ router.get("/users", checkPermission('User'), async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error fetching users:", error);
-    res.status(500).json({ error: "Failed to fetch users" });
+    console.error("Error fetching customers:", error);
+    res.status(500).json({ error: "Failed to fetch customers" });
+  }
+});
+
+// Get single customer
+router.get("/customers/:id", checkPermission('Customer'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const customer = await Customer.findById(id).select('-password -__v');
+    
+    if (!customer) {
+      return res.status(404).json({ error: "Customer not found" });
+    }
+
+    res.json({
+      success: true,
+      customer
+    });
+
+  } catch (error) {
+    console.error("Error fetching customer:", error);
+    res.status(500).json({ error: "Failed to fetch customer" });
+  }
+});
+
+// Update customer
+router.put("/customers/:id", checkPermission('Customer'), upload.single('profileImage'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const customer = await Customer.findById(id);
+    if (!customer) {
+      return res.status(404).json({ error: "Customer not found" });
+    }
+
+    // Don't allow email update to existing email
+    if (updateData.email && updateData.email !== customer.email) {
+      const emailExists = await Customer.findOne({ 
+        email: updateData.email, 
+        _id: { $ne: id } 
+      });
+      if (emailExists) {
+        return res.status(400).json({ error: "Email already exists" });
+      }
+    }
+
+    // Handle profile image upload
+    if (req.file) {
+      updateData.profileImage = `/assets/${req.file.filename}`;
+      console.log("Profile image updated:", updateData.profileImage);
+      
+      // Delete old image if exists
+      if (customer.profileImage && customer.profileImage.startsWith('/assets/')) {
+        const oldImagePath = path.join(__dirname, '..', customer.profileImage);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+          console.log("Deleted old profile image:", oldImagePath);
+        }
+      }
+    }
+
+    // Handle password update
+    if (updateData.password) {
+      updateData.password = await bcrypt.hash(updateData.password, 10);
+    }
+
+    const updatedCustomer = await Customer.findByIdAndUpdate(
+      id,
+      { ...updateData, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    ).select('-password -__v');
+
+    res.json({
+      success: true,
+      message: "Customer updated successfully",
+      customer: updatedCustomer
+    });
+
+  } catch (error) {
+    console.error("Error updating customer:", error);
+    res.status(500).json({ error: "Failed to update customer" });
+  }
+});
+
+// Delete customer
+router.delete("/customers/:id", checkPermission('Customer'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const customer = await Customer.findById(id);
+    if (!customer) {
+      return res.status(404).json({ error: "Customer not found" });
+    }
+
+    // Delete profile image if exists
+    if (customer.profileImage && customer.profileImage.startsWith('/assets/')) {
+      const imagePath = path.join(__dirname, '..', customer.profileImage);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+        console.log("Deleted profile image:", imagePath);
+      }
+    }
+
+    await Customer.findByIdAndDelete(id);
+
+    res.json({
+      success: true,
+      message: "Customer deleted successfully"
+    });
+
+  } catch (error) {
+    console.error("Error deleting customer:", error);
+    res.status(500).json({ error: "Failed to delete customer" });
   }
 });
 
@@ -1008,9 +1128,9 @@ router.get("/bookings", checkPermission('Bookings'), async (req, res) => {
     
     if (search) {
       query.$or = [
-        { userName: { $regex: search, $options: "i" } },
-        { userEmail: { $regex: search, $options: "i" } },
-        { userPhone: { $regex: search, $options: "i" } },
+        { customerName: { $regex: search, $options: "i" } },
+        { customerEmail: { $regex: search, $options: "i" } },
+        { customerPhone: { $regex: search, $options: "i" } },
         { serviceName: { $regex: search, $options: "i" } }
       ];
     }
@@ -1180,8 +1300,8 @@ router.post("/bulk-delete", async (req, res) => {
 
     // Check permission based on entity
     const permissionMap = {
-      'staff': 'Staff',
-      'users': 'User',
+      'users': 'Users', // Changed from 'staff' to 'users'
+      'customers': 'Customer',
       'services': 'Category',
       'packages': 'Product',
       'bookings': 'Bookings'
@@ -1204,13 +1324,13 @@ router.post("/bulk-delete", async (req, res) => {
     let message = "";
 
     switch(entity) {
-      case 'staff':
-        model = Staff;
-        message = "staff member(s)";
+      case 'users': // Changed from 'staff'
+        model = User; // Changed from Staff to User
+        message = "user(s)"; // Changed from staff member(s)
         break;
-      case 'users':
-        model = mongoose.model("User");
-        message = "user(s)";
+      case 'customers':
+        model = Customer;
+        message = "customer(s)";
         break;
       case 'services':
         model = mongoose.model("Service");
@@ -1236,6 +1356,30 @@ router.post("/bulk-delete", async (req, res) => {
       services.forEach(service => {
         if (service.img && service.img !== "/assets/default-category.png") {
           const imagePath = path.join(__dirname, '..', service.img);
+          if (fs.existsSync(imagePath)) {
+            fs.unlinkSync(imagePath);
+          }
+        }
+      });
+    } else if (entity === 'customers') {
+      const customers = await model.find({ _id: { $in: ids } });
+      
+      // Delete profile images
+      customers.forEach(customer => {
+        if (customer.profileImage && customer.profileImage.startsWith('/assets/')) {
+          const imagePath = path.join(__dirname, '..', customer.profileImage);
+          if (fs.existsSync(imagePath)) {
+            fs.unlinkSync(imagePath);
+          }
+        }
+      });
+    } else if (entity === 'users') {
+      const users = await model.find({ _id: { $in: ids } });
+      
+      // Delete profile images
+      users.forEach(user => {
+        if (user.profileImage && user.profileImage !== "/assets/default-avatar.png") {
+          const imagePath = path.join(__dirname, '..', user.profileImage);
           if (fs.existsSync(imagePath)) {
             fs.unlinkSync(imagePath);
           }

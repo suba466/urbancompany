@@ -57,7 +57,6 @@ mongoose.connect("mongodb://localhost:27017/suba")
   .then(() => console.log(" MongoDB connected"))
   .catch(err => console.error(" MongoDB connection error:", err));
 
-
 // --- SCHEMAS ---
 const bannerSchema = new mongoose.Schema({
   title: String,
@@ -70,7 +69,7 @@ const bannerSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-const Banner = mongoose.model("Banner", bannerSchema);
+const Banner = mongoose.models.Banner || mongoose.model("Banner", bannerSchema);
 
 const packageSchema = new mongoose.Schema({
   title: String,
@@ -85,7 +84,7 @@ const packageSchema = new mongoose.Schema({
   ratingBreak: [{ stars: Number, value: Number, count: String }]
 });
 
-const Package = mongoose.model("Package", packageSchema);
+const Package = mongoose.models.Package || mongoose.model("Package", packageSchema);
 
 const cartSchema = new mongoose.Schema({
   productId: { type: String },
@@ -97,7 +96,7 @@ const cartSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-const Cart = mongoose.model("Cart", cartSchema);
+const Cart = mongoose.models.Cart || mongoose.model("Cart", cartSchema);
 
 const serviceSchema = new mongoose.Schema({
   name: String,
@@ -110,9 +109,10 @@ const serviceSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-const Service = mongoose.model("Service", serviceSchema);
+const Service = mongoose.models.Service || mongoose.model("Service", serviceSchema);
 
-const userSchema = new mongoose.Schema({
+// Customer Schema
+const customerSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   phone: { type: String, required: true },
@@ -122,18 +122,44 @@ const userSchema = new mongoose.Schema({
   title: { type: String, default: "Ms" },
   isVerified: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now } // Add this line
+  updatedAt: { type: Date, default: Date.now }
 });
 
-const User = mongoose.model("User", userSchema);
+// User Schema (Changed from Staff to User)
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  phone: { type: String, required: true },
+  designation: { type: String, required: true },
+  password: { type: String, required: true },
+  profileImage: { type: String, default: "/assets/default-avatar.png" },
+  isActive: { type: Boolean, default: true },
+  permissions: {
+    Dashboard: { type: Boolean, default: false },
+    Users: { type: Boolean, default: false },
+    Customer: { type: Boolean, default: false },
+    Category: { type: Boolean, default: false },
+    Product: { type: Boolean, default: false },
+    Bookings: { type: Boolean, default: false },
+    Reports: { type: Boolean, default: false },
+    Settings: { type: Boolean, default: false }
+  },
+  lastLogin: Date,
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+// FIXED: Check if models already exist before creating
+const Customer = mongoose.models.Customer || mongoose.model("Customer", customerSchema);
+const User = mongoose.models.User || mongoose.model("User", userSchema);
 
 // --- Bookings Schema ---
 const bookingSchema = new mongoose.Schema({
-  userId: String,
-  userEmail: String,
-  userName: String,
-  userPhone: String,
-  userCity: String,
+  customerId: String,
+  customerEmail: String,
+  customerName: String,
+  customerPhone: String,
+  customerCity: String,
   serviceName: String,
   servicePrice: String,
   originalPrice: String,
@@ -158,18 +184,81 @@ const bookingSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-const Booking = mongoose.model("Booking", bookingSchema);
-
+const Booking = mongoose.models.Booking || mongoose.model("Booking", bookingSchema);
 
 app.use("/api/admin", adminRoutes);
 
+// User Login (Changed from staff to user)
+app.post("/api/user-login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    console.log(" User login attempt:", { email });
+    
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
 
-// User Registration with Image Upload
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ error: "Invalid email or password" });
+    }
+
+    if (!user.isActive) {
+      return res.status(400).json({ error: "Account is deactivated" });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ error: "Invalid email or password" });
+    }
+
+    // Update last login
+    await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
+
+    // Generate JWT token for user
+    const token = jwt.sign(
+      {
+        id: user._id,
+        email: user.email,
+        role: 'user',
+        profileImage: user.profileImage,
+        permissions: user.permissions
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    console.log(`User logged in: ${email}`);
+
+    res.json({
+      success: true,
+      message: "User login successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        designation: user.designation,
+        profileImage: user.profileImage,
+        permissions: user.permissions,
+        role: 'user'
+      }
+    });
+
+  } catch (error) {
+    console.error(" Error in user login:", error);
+    res.status(500).json({ error: "Failed to login" });
+  }
+});
+
+// Customer Registration with Image Upload
 app.post("/api/register", upload.single('profileImage'), async (req, res) => {
   try {
     const { name, email, phone, city, password } = req.body;
     
-    console.log(" Registration attempt:", { email, name, phone, city });
+    console.log(" Customer registration attempt:", { email, name, phone, city });
     
     // Validation
     if (!name || !email || !phone || !city || !password) {
@@ -188,10 +277,10 @@ app.post("/api/register", upload.single('profileImage'), async (req, res) => {
       return res.status(400).json({ error: "Password must be at least 6 characters long" });
     }
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ error: "User already exists with this email" });
+    // Check if customer already exists
+    const existingCustomer = await Customer.findOne({ email });
+    if (existingCustomer) {
+      return res.status(400).json({ error: "Customer already exists with this email" });
     }
 
     // Hash password
@@ -201,13 +290,13 @@ app.post("/api/register", upload.single('profileImage'), async (req, res) => {
     let profileImageUrl = "";
     if (req.file) {
       profileImageUrl = `/assets/${req.file.filename}`;
-      console.log(" Profile image uploaded:", profileImageUrl);
+      console.log(" Customer profile image uploaded:", profileImageUrl);
     } else {
       console.log(" No profile image uploaded");
     }
 
-    // Create new user
-    const user = new User({
+    // Create new customer
+    const customer = new Customer({
       name,
       email,
       phone,
@@ -216,53 +305,53 @@ app.post("/api/register", upload.single('profileImage'), async (req, res) => {
       profileImage: profileImageUrl
     });
 
-    await user.save();
+    await customer.save();
 
-    console.log(` New user registered: ${email}`);
+    console.log(` New customer registered: ${email}`);
 
     res.status(201).json({
       success: true,
-      message: "User registered successfully",
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        city: user.city,
-        profileImage: user.profileImage,
-        title: user.title
+      message: "Customer registered successfully",
+      customer: {
+        id: customer._id,
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        city: customer.city,
+        profileImage: customer.profileImage,
+        title: customer.title
       }
     });
 
   } catch (error) {
-    console.error(" Error in registration:", error);
+    console.error(" Error in customer registration:", error);
     if (error.code === 11000) {
-      return res.status(400).json({ error: "User already exists with this email" });
+      return res.status(400).json({ error: "Customer already exists with this email" });
     }
-    res.status(500).json({ error: "Failed to register user" });
+    res.status(500).json({ error: "Failed to register customer" });
   }
 });
 
-// User Login with JWT
+// Customer Login with JWT
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    console.log(" Login attempt:", { email });
+    console.log(" Customer login attempt:", { email });
     
     // Validation
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required" });
     }
 
-    // Find user
-    const user = await User.findOne({ email });
-    if (!user) {
+    // Find customer
+    const customer = await Customer.findOne({ email });
+    if (!customer) {
       return res.status(400).json({ error: "Invalid email or password" });
     }
 
     // Check password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await bcrypt.compare(password, customer.password);
     if (!isPasswordValid) {
       return res.status(400).json({ error: "Invalid email or password" });
     }
@@ -270,43 +359,45 @@ app.post("/api/login", async (req, res) => {
     // Generate JWT token
     const token = jwt.sign(
       {
-        id: user._id,
-        email: user.email,
-        role: 'user'
+        id: customer._id,
+        email: customer.email,
+        role: 'customer'
       },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
 
-    console.log(` User logged in: ${email}`);
+    console.log(` Customer logged in: ${email}`);
 
     res.json({
       success: true,
       message: "Login successful",
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        city: user.city,
-        profileImage: user.profileImage,
-        title: user.title,
-        role: 'user'
+      customer: {
+        id: customer._id,
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        city: customer.city,
+        profileImage: customer.profileImage,
+        title: customer.title,
+        role: 'customer'
       }
     });
 
   } catch (error) {
-    console.error(" Error in login:", error);
+    console.error(" Error in customer login:", error);
     res.status(500).json({ error: "Failed to login" });
   }
 });
+
+// Customer Update Profile
 app.post("/api/update-profile", upload.single("profileImage"), async (req, res) => {
   try {
-    const { userId, name, email, phone, city, title } = req.body;
+    const { customerId, name, email, phone, city, title } = req.body;
 
-    console.log("Profile update request received:", {
-      userId,
+    console.log("Customer profile update request received:", {
+      customerId,
       name,
       email,
       phone,
@@ -316,45 +407,45 @@ app.post("/api/update-profile", upload.single("profileImage"), async (req, res) 
       file: req.file
     });
 
-    // Check if userId is valid
-    if (!userId || userId === "undefined") {
-      console.error("Invalid userId:", userId);
+    // Check if customerId is valid
+    if (!customerId || customerId === "undefined") {
+      console.error("Invalid customerId:", customerId);
       return res.status(400).json({ 
-        error: "Invalid user ID. Please log out and log in again." 
+        error: "Invalid customer ID. Please log out and log in again." 
       });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      console.error(" Invalid MongoDB ObjectId:", userId);
+    if (!mongoose.Types.ObjectId.isValid(customerId)) {
+      console.error(" Invalid MongoDB ObjectId:", customerId);
       return res.status(400).json({ 
-        error: "Invalid user ID format. Please log out and log in again." 
+        error: "Invalid customer ID format. Please log out and log in again." 
       });
     }
 
-    // Find existing user
-    const existingUser = await User.findById(userId);
-    if (!existingUser) {
-      return res.status(404).json({ error: "User not found" });
+    // Find existing customer
+    const existingCustomer = await Customer.findById(customerId);
+    if (!existingCustomer) {
+      return res.status(404).json({ error: "Customer not found" });
     }
 
     // Check if email is being changed to one that already exists
-    if (email && email !== existingUser.email) {
-      const emailExists = await User.findOne({ email, _id: { $ne: userId } });
+    if (email && email !== existingCustomer.email) {
+      const emailExists = await Customer.findOne({ email, _id: { $ne: customerId } });
       if (emailExists) {
         return res.status(400).json({ error: "Email already exists" });
       }
     }
 
     // Handle profile image
-    let newProfileImage = existingUser.profileImage;
+    let newProfileImage = existingCustomer.profileImage;
     if (req.file) {
       newProfileImage = `/assets/${req.file.filename}`;
       console.log(" New profile image:", newProfileImage);
 
       // Delete previous image if it exists and is not the default
-      if (existingUser.profileImage && existingUser.profileImage.startsWith('/assets/')) {
+      if (existingCustomer.profileImage && existingCustomer.profileImage.startsWith('/assets/')) {
         try {
-          const oldImagePath = path.join(__dirname, existingUser.profileImage);
+          const oldImagePath = path.join(__dirname, existingCustomer.profileImage);
           if (fs.existsSync(oldImagePath)) {
             fs.unlinkSync(oldImagePath);
             console.log(" Deleted old image:", oldImagePath);
@@ -368,38 +459,38 @@ app.post("/api/update-profile", upload.single("profileImage"), async (req, res) 
 
     // Prepare update data
     const updateData = {
-      name: name || existingUser.name,
-      email: email || existingUser.email,
-      phone: phone || existingUser.phone,
-      city: city || existingUser.city,
-      title: title || existingUser.title || "Ms",
+      name: name || existingCustomer.name,
+      email: email || existingCustomer.email,
+      phone: phone || existingCustomer.phone,
+      city: city || existingCustomer.city,
+      title: title || existingCustomer.title || "Ms",
       profileImage: newProfileImage,
       updatedAt: new Date()
     };
 
-    console.log(" Updating user with data:", updateData);
+    console.log(" Updating customer with data:", updateData);
 
-    // Update user in database
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
+    // Update customer in database
+    const updatedCustomer = await Customer.findByIdAndUpdate(
+      customerId,
       updateData,
       { 
         new: true, 
         runValidators: true,
-        select: '-password' // Don't return password
+        select: '-password'
       }
     );
 
-    console.log(" User updated successfully:", {
-      id: updatedUser._id,
-      name: updatedUser.name,
-      email: updatedUser.email
+    console.log(" Customer updated successfully:", {
+      id: updatedCustomer._id,
+      name: updatedCustomer.name,
+      email: updatedCustomer.email
     });
 
     return res.json({
       success: true,
       message: "Profile updated successfully",
-      user: updatedUser
+      customer: updatedCustomer
     });
 
   } catch (err) {
@@ -423,11 +514,11 @@ app.post("/api/update-profile", upload.single("profileImage"), async (req, res) 
 app.post("/api/bookings", async (req, res) => {
   try {
     const {
-      userId,
-      userEmail,
-      userName,
-      userPhone,
-      userCity,
+      customerId,
+      customerEmail,
+      customerName,
+      customerPhone,
+      customerCity,
       serviceName,
       servicePrice,
       originalPrice,
@@ -442,22 +533,22 @@ app.post("/api/bookings", async (req, res) => {
     } = req.body;
 
     console.log(" Received booking data:", {
-      userEmail,
+      customerEmail,
       serviceName,
       servicePrice,
       itemsCount: items ? items.length : 0
     });
 
-    if (!userEmail || !serviceName) {
-      return res.status(400).json({ error: "User email and service name are required" });
+    if (!customerEmail || !serviceName) {
+      return res.status(400).json({ error: "Customer email and service name are required" });
     }
 
     const booking = new Booking({
-      userId: userId || `user_${userEmail}`,
-      userEmail,
-      userName: userName || "Customer",
-      userPhone: userPhone || "",
-      userCity: userCity || "",
+      customerId: customerId || `customer_${customerEmail}`,
+      customerEmail,
+      customerName: customerName || "Customer",
+      customerPhone: customerPhone || "",
+      customerCity: customerCity || "",
       serviceName,
       servicePrice: servicePrice ? servicePrice.toString() : "0",
       originalPrice: originalPrice ? originalPrice.toString() : "0",
@@ -478,7 +569,7 @@ app.post("/api/bookings", async (req, res) => {
 
     console.log(` Booking created successfully:`, {
       id: savedBooking._id,
-      email: savedBooking.userEmail,
+      email: savedBooking.customerEmail,
       service: savedBooking.serviceName,
       price: savedBooking.servicePrice
     });
@@ -495,14 +586,14 @@ app.post("/api/bookings", async (req, res) => {
   }
 });
 
-// Get user's bookings by email
+// Get customer's bookings by email
 app.get("/api/bookings/:email", async (req, res) => {
   try {
     const { email } = req.params;
     
     console.log(` Fetching bookings for email: ${email}`);
     
-    const bookings = await Booking.find({ userEmail: email })
+    const bookings = await Booking.find({ customerEmail: email })
       .sort({ createdAt: -1 })
       .limit(50);
 
@@ -520,6 +611,7 @@ app.get("/api/bookings/:email", async (req, res) => {
   }
 });
 
+// Delete booking
 app.delete("/api/bookings/:id",async(req,res)=>{
   try{
     const {id}=req.params;
@@ -557,7 +649,19 @@ app.get('/api/all-bookings', async (req, res) => {
   }
 });
 
-// Get all users (for debugging)
+// Get all customers (for debugging)
+app.get('/api/all-customers', async (req, res) => {
+  try {
+    const customers = await Customer.find({}).select('-password').sort({ createdAt: -1 });
+    console.log(`Total customers in database: ${customers.length}`);
+    res.json(customers);
+  } catch (error) {
+    console.error("Error fetching all customers:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all users (for debugging) - Changed from staff to users
 app.get('/api/all-users', async (req, res) => {
   try {
     const users = await User.find({}).select('-password').sort({ createdAt: -1 });
@@ -569,7 +673,21 @@ app.get('/api/all-users', async (req, res) => {
   }
 });
 
-// Get user by ID
+// Get customer by ID
+app.get('/api/customer/:id', async (req, res) => {
+  try {
+    const customer = await Customer.findById(req.params.id).select('-password');
+    if (!customer) {
+      return res.status(404).json({ error: "Customer not found" });
+    }
+    res.json(customer);
+  } catch (error) {
+    console.error("Error fetching customer:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get user by ID - Changed from staff to user
 app.get('/api/user/:id', async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
@@ -584,9 +702,9 @@ app.get('/api/user/:id', async (req, res) => {
 });
 
 // --- Plans API Routes ---
-app.get("/api/plans/:userEmail", async (req, res) => {
+app.get("/api/plans/:customerEmail", async (req, res) => {
   try {
-    const { userEmail } = req.params;
+    const { customerEmail } = req.params;
     
     // For now, return empty array or mock data
     res.json({
@@ -795,7 +913,6 @@ app.delete("/api/banners/:id", async (req, res) => {
   }
 });
 
-// In your server.js file, update the /api/services endpoint
 app.get("/api/services", async (req, res) => {
   try {
     // Always fetch from MongoDB first
@@ -1077,7 +1194,7 @@ app.post("/api/addpackages", async (req, res) => {
   try {
     const newPackage = new Package({
       ...req.body,
-      category: req.body.category || 'Salon for women' // Ensure category is set
+      category: req.body.category || 'Salon for women'
     });
     await newPackage.save();
     res.status(201).json({ message: "Package added", package: newPackage });
@@ -1114,9 +1231,10 @@ app.get("/api/carts", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch carts" });
   }
 });
+
 app.post("/api/addcarts", async (req, res) => {
   try {
-    const { productId, title, price, originalPrice, content, category } = req.body; // ADD category here
+    const { productId, title, price, originalPrice, content, category } = req.body;
     let existing = null;
     if (productId) {
       existing = await Cart.findOne({ productId });
@@ -1125,7 +1243,7 @@ app.post("/api/addcarts", async (req, res) => {
       existing.content = content;
       existing.price = price;
       existing.originalPrice = originalPrice;
-      existing.category = category || 'Salon for women'; // ADD this line
+      existing.category = category || 'Salon for women';
       existing.count = existing.count || 1;
       await existing.save();
       return res.json({ message: "Cart updated", cart: existing });
@@ -1136,7 +1254,7 @@ app.post("/api/addcarts", async (req, res) => {
       price,
       originalPrice,
       content,
-      category: category || 'Salon for women', // ADD this line
+      category: category || 'Salon for women',
       count: 1,
     });
     await newCart.save();
@@ -1155,6 +1273,7 @@ app.put("/api/carts/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to update cart" });
   }
 });
+
 app.delete("/api/carts/:id", async (req, res) => {
   try {
     await Cart.findByIdAndDelete(req.params.id);
@@ -1183,7 +1302,7 @@ app.get("/api/salonforwomen", async (req, res) => {
   }
 });
 
-// Get services for other categories (similar pattern)
+// Get services for other categories
 app.get("/api/services/:category", async (req, res) => {
   try {
     const { category } = req.params;
@@ -1202,6 +1321,7 @@ app.get("/api/services/:category", async (req, res) => {
     res.status(500).json({ error: `Failed to fetch ${category} services` });
   }
 });
+
 // Health check endpoint
 app.get("/api/health", (req, res) => {
   res.json({ 

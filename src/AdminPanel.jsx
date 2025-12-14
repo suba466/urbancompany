@@ -8,7 +8,6 @@ import { MdModeEdit } from "react-icons/md";
 import { MdOutlineDelete } from "react-icons/md";
 import { FaFileExcel, FaFilePdf, FaFileCsv } from "react-icons/fa";
 import { FcBusinessman, FcPlanner, FcBullish, FcSupport } from "react-icons/fc";
-
 import html2pdf from 'html2pdf.js';
 import * as XLSX from 'xlsx';
 import Categories from './Categories';
@@ -28,16 +27,16 @@ function AdminPanel() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [formErrors, setFormErrors] = useState({
-    staff: {},
-    user: {},
+    users: {},
+    customer: {},
     product: {},
     category: {},
     settings: {}
   });
 
   const [touchedFields, setTouchedFields] = useState({
-    staff: {},
-    user: {},
+    users: {},
+    customer: {},
     product: {},
     category: {},
     settings: {}
@@ -46,17 +45,17 @@ function AdminPanel() {
   // Dashboard States
   const [stats, setStats] = useState(null);
   const [recentBookings, setRecentBookings] = useState([]);
-  const [recentUsers, setRecentUsers] = useState([]);
+  const [recentCustomers, setRecentCustomers] = useState([]);
   
-  // User Management States
-  const [staff, setStaff] = useState([]);
-  const [staffSearch, setStaffSearch] = useState('');
-  const [staffPage, setStaffPage] = useState(1);
-  const [staffTotalPages, setStaffTotalPages] = useState(1);
-  const [staffPerPage, setStaffPerPage] = useState(10);
-  const [staffTotalItems, setStaffTotalItems] = useState(0);
-  const [showAddStaffForm, setShowAddStaffForm] = useState(false);
-  const [newStaff, setNewStaff] = useState({
+  // User Management States (Changed from Staff to Users)
+  const [users, setUsers] = useState([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [userPage, setUserPage] = useState(1);
+  const [userTotalPages, setUserTotalPages] = useState(1);
+  const [userPerPage, setUserPerPage] = useState(10);
+  const [userTotalItems, setUserTotalItems] = useState(0);
+  const [showAddUserForm, setShowAddUserForm] = useState(false);
+  const [newUser, setNewUser] = useState({
     name: '',
     email: '',
     phone: '',
@@ -64,8 +63,8 @@ function AdminPanel() {
     password: '',
     permissions: {
       Dashboard: false,
-      Staff: false,
-      User: false,
+      Users: false,
+      Customer: false,
       Category: false,
       Product: false,
       Bookings: false,
@@ -79,27 +78,27 @@ function AdminPanel() {
   const [profileImagePreview, setProfileImagePreview] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   
-  // Staff Bulk Selection
-  const [selectedStaff, setSelectedStaff] = useState([]);
-  const [selectAllStaff, setSelectAllStaff] = useState(false);
+  // User Bulk Selection
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [selectAllUsers, setSelectAllUsers] = useState(false);
   
   // Form feedback
   const [formSuccess, setFormSuccess] = useState(false);
   const [formError, setFormError] = useState('');
-  const [editStaffId, setEditStaffId] = useState(null);
-  const [isEditingStaff, setIsEditingStaff] = useState(false);
-  const [showStaffDetails, setShowStaffDetails] = useState(false);
-  const [selectedStaffDetails, setSelectedStaffDetails] = useState(null);
+  const [editUserId, setEditUserId] = useState(null);
+  const [isEditingUser, setIsEditingUser] = useState(false);
+  const [showUserDetails, setShowUserDetails] = useState(false);
+  const [selectedUserDetails, setSelectedUserDetails] = useState(null);
   
-  // User Management States
-  const [users, setUsers] = useState([]);
-  const [userSearch, setUserSearch] = useState('');
-  const [userPage, setUserPage] = useState(1);
-  const [userTotalPages, setUserTotalPages] = useState(1);
-  const [userPerPage, setUserPerPage] = useState(10);
-  const [userTotalItems, setUserTotalItems] = useState(0);
-  const [showAddUserModal, setShowAddUserModal] = useState(false);
-  const [newUser, setNewUser] = useState({
+  // Customer Management States
+  const [customers, setCustomers] = useState([]);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [customerPage, setCustomerPage] = useState(1);
+  const [customerTotalPages, setCustomerTotalPages] = useState(1);
+  const [customerPerPage, setCustomerPerPage] = useState(10);
+  const [customerTotalItems, setCustomerTotalItems] = useState(0);
+  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({
     name: '',
     email: '',
     phone: '',
@@ -107,9 +106,9 @@ function AdminPanel() {
     password: ''
   });
   
-  // User Bulk Selection
-  const [selectedUsers, setSelectedUsers] = useState([]);
-  const [selectAllUsers, setSelectAllUsers] = useState(false);
+  // Customer Bulk Selection
+  const [selectedCustomers, setSelectedCustomers] = useState([]);
+  const [selectAllCustomers, setSelectAllCustomers] = useState(false);
   
   // Category Management States
   const [categories, setCategories] = useState([]);
@@ -164,7 +163,7 @@ function AdminPanel() {
   const [reports, setReports] = useState({
     dailyBookings: 0,
     monthlyRevenue: 0,
-    userGrowth: 0,
+    customerGrowth: 0,
     topCategories: []
   });
 
@@ -179,7 +178,7 @@ function AdminPanel() {
 
   // Profile States
   const [adminProfile, setAdminProfile] = useState(null);
-  const [staffProfile, setStaffProfile] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
 
  // Format permissions with badges
 const formatPermissions = (permissions) => {
@@ -193,8 +192,8 @@ const formatPermissions = (permissions) => {
   
   const permissionGradients = {
     'Dashboard': 'linear-gradient(135deg, #141E30 0%, #243B55 100%)',
-    'Staff': 'linear-gradient(135deg, #0F2027 0%, #203A43 100%)',
-    'User': 'linear-gradient(135deg, #1A2980 0%, #26D0CE 100%)',
+    'Users': 'linear-gradient(135deg, #0F2027 0%, #203A43 100%)',
+    'Customer': 'linear-gradient(135deg, #1A2980 0%, #26D0CE 100%)',
     'Category': 'linear-gradient(135deg, #232526 0%, #414345 100%)',
     'Product': 'linear-gradient(135deg, #8E0E00 0%, #1F1C18 100%)',
     'Bookings': 'linear-gradient(135deg, #3A1C71 0%, #d82739ff 50%, #FFAF7B 100%)',
@@ -227,59 +226,6 @@ const formatPermissions = (permissions) => {
   );
 };
 
-const validateStaffForm = () => {
-  const errors = {};
-  
-  if (!newStaff.name.trim()) {
-    errors.name = 'Name is required';
-  }
-  
-  if (!newStaff.email.trim()) {
-    errors.email = 'Email is required';
-  } else if (!/\S+@\S+\.\S+/.test(newStaff.email)) {
-    errors.email = 'Email is invalid';
-  }
-  
-  if (!newStaff.phone.trim()) {
-    errors.phone = 'Phone is required';
-  } else if (!/^\d{10}$/.test(newStaff.phone.replace(/\D/g, ''))) {
-    errors.phone = 'Phone must be 10 digits';
-  }
-  
-  if (!newStaff.designation) {
-    errors.designation = 'Designation is required';
-  }
-  
-  // Skip password validation when editing (unless password is being changed)
-  if (!isEditingStaff) {
-    if (!newStaff.password) {
-      errors.password = 'Password is required';
-    } else if (newStaff.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters';
-    }
-    
-    if (!confirmPassword) {
-      errors.confirmPassword = 'Please confirm password';
-    } else if (newStaff.password !== confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match';
-    }
-  } else if (newStaff.password !== '********' && newStaff.password.length > 0) {
-    // If editing and password is being changed (not placeholder)
-    if (newStaff.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters';
-    }
-    
-    if (!confirmPassword) {
-      errors.confirmPassword = 'Please confirm password';
-    } else if (newStaff.password !== confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match';
-    }
-  }
-  
-  setFormErrors(prev => ({ ...prev, staff: errors }));
-  return Object.keys(errors).length === 0;
-};
-
 const validateUserForm = () => {
   const errors = {};
   
@@ -295,19 +241,72 @@ const validateUserForm = () => {
   
   if (!newUser.phone.trim()) {
     errors.phone = 'Phone is required';
+  } else if (!/^\d{10}$/.test(newUser.phone.replace(/\D/g, ''))) {
+    errors.phone = 'Phone must be 10 digits';
   }
   
-  if (!newUser.city.trim()) {
+  if (!newUser.designation) {
+    errors.designation = 'Designation is required';
+  }
+  
+  // Skip password validation when editing (unless password is being changed)
+  if (!isEditingUser) {
+    if (!newUser.password) {
+      errors.password = 'Password is required';
+    } else if (newUser.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+    
+    if (!confirmPassword) {
+      errors.confirmPassword = 'Please confirm password';
+    } else if (newUser.password !== confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+  } else if (newUser.password !== '********' && newUser.password.length > 0) {
+    // If editing and password is being changed (not placeholder)
+    if (newUser.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+    
+    if (!confirmPassword) {
+      errors.confirmPassword = 'Please confirm password';
+    } else if (newUser.password !== confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+  }
+  
+  setFormErrors(prev => ({ ...prev, users: errors }));
+  return Object.keys(errors).length === 0;
+};
+
+const validateCustomerForm = () => {
+  const errors = {};
+  
+  if (!newCustomer.name.trim()) {
+    errors.name = 'Name is required';
+  }
+  
+  if (!newCustomer.email.trim()) {
+    errors.email = 'Email is required';
+  } else if (!/\S+@\S+\.\S+/.test(newCustomer.email)) {
+    errors.email = 'Email is invalid';
+  }
+  
+  if (!newCustomer.phone.trim()) {
+    errors.phone = 'Phone is required';
+  }
+  
+  if (!newCustomer.city.trim()) {
     errors.city = 'City is required';
   }
   
-  if (!newUser.password) {
+  if (!newCustomer.password) {
     errors.password = 'Password is required';
-  } else if (newUser.password.length < 6) {
+  } else if (newCustomer.password.length < 6) {
     errors.password = 'Password must be at least 6 characters';
   }
   
-  setFormErrors(prev => ({ ...prev, user: errors }));
+  setFormErrors(prev => ({ ...prev, customer: errors }));
   return Object.keys(errors).length === 0;
 };
 
@@ -347,10 +346,10 @@ const handleFieldBlur = (formType, fieldName) => {
   }));
   
   // Trigger validation for the specific field
-  if (formType === 'staff') {
-    validateStaffForm();
-  } else if (formType === 'user') {
+  if (formType === 'users') {
     validateUserForm();
+  } else if (formType === 'customer') {
+    validateCustomerForm();
   } else if (formType === 'product') {
     validateProductForm();
   }
@@ -387,17 +386,17 @@ const getFieldStyle = (formType, fieldName, currentValue) => {
   }
 };
 
-const fetchStaffProfile = async () => {
+const fetchUserProfile = async () => {
   try {
-    const response = await fetch('http://localhost:5000/api/admin/staff-profile', {
+    const response = await fetch('http://localhost:5000/api/admin/user-profile', {
       headers: getAuthHeaders()
     });
     const data = await response.json();
     if (data.success) {
-      setStaffProfile(data.profile);
+      setUserProfile(data.profile);
     }
   } catch (error) {
-    console.error('Error fetching staff profile:', error);
+    console.error('Error fetching user profile:', error);
   }
 };
 
@@ -436,12 +435,12 @@ const fetchStaffProfile = async () => {
     }
   };
 
-  const handleViewStaff = (staffMember) => {
-    setSelectedStaffDetails(staffMember);
-    setShowStaffDetails(true);
+  const handleViewUser = (userMember) => {
+    setSelectedUserDetails(userMember);
+    setShowUserDetails(true);
   };
 
-  const handleLogin = async (e) => {
+ const handleLogin = async (e) => {
   e.preventDefault();
   setLoading(true);
   
@@ -452,9 +451,9 @@ const fetchStaffProfile = async () => {
     
     const endpoint = isAdminEmail 
       ? 'http://localhost:5000/api/admin/login'
-      : 'http://localhost:5000/api/admin/staff-login';
+      : 'http://localhost:5000/api/admin/user-login';
     
-    console.log('Attempting login as:', isAdminEmail ? 'Admin' : 'Staff');
+    console.log('Attempting login as:', isAdminEmail ? 'Admin' : 'User');
     
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -468,6 +467,9 @@ const fetchStaffProfile = async () => {
     if (data.success) {
       setIsLoggedIn(true);
       
+      // ALWAYS reset to dashboard when logging in
+      setActiveMenu('dashboard');
+      
       // Store token and user info
       localStorage.setItem('authToken', data.token);
       
@@ -477,35 +479,39 @@ const fetchStaffProfile = async () => {
         setUserRole('admin');
         setUserPermissions(data.admin?.permissions || {});
       } else {
-        localStorage.setItem('userRole', 'staff');
-        localStorage.setItem('userPermissions', JSON.stringify(data.staff?.permissions || {}));
-        setUserRole('staff');
-        setUserPermissions(data.staff?.permissions || {});
+        localStorage.setItem('userRole', 'user');
+        localStorage.setItem('userPermissions', JSON.stringify(data.user?.permissions || {}));
+        setUserRole('user');
+        setUserPermissions(data.user?.permissions || {});
       }
       
       fetchDashboardData();
     } else {
-      // If admin login fails, try staff login (or vice versa)
+      // If admin login fails, try user login
       if (isAdminEmail) {
-        console.log('Admin login failed, trying staff login...');
-        // Try staff login
-        const staffResponse = await fetch('http://localhost:5000/api/admin/staff-login', {
+        console.log('Admin login failed, trying user login...');
+        // Try user login
+        const userResponse = await fetch('http://localhost:5000/api/admin/user-login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(loginData)
         });
         
-        const staffData = await staffResponse.json();
-        if (staffData.success) {
+        const userData = await userResponse.json();
+        if (userData.success) {
           setIsLoggedIn(true);
-          localStorage.setItem('authToken', staffData.token);
-          localStorage.setItem('userRole', 'staff');
-          localStorage.setItem('userPermissions', JSON.stringify(staffData.staff?.permissions || {}));
-          setUserRole('staff');
-          setUserPermissions(staffData.staff?.permissions || {});
+          
+          // ALWAYS reset to dashboard when logging in
+          setActiveMenu('dashboard');
+          
+          localStorage.setItem('authToken', userData.token);
+          localStorage.setItem('userRole', 'user');
+          localStorage.setItem('userPermissions', JSON.stringify(userData.user?.permissions || {}));
+          setUserRole('user');
+          setUserPermissions(userData.user?.permissions || {});
           fetchDashboardData();
         } else {
-          alert(data.error || staffData.error || 'Login failed');
+          alert(data.error || userData.error || 'Login failed');
         }
       } else {
         alert(data.error || 'Login failed');
@@ -529,40 +535,19 @@ const fetchStaffProfile = async () => {
         setStats(data.stats);
         
         const transformedBookings = data.recentBookings?.map(booking => {
-          const user = data.recentUsers?.find(u => u.email === booking.userEmail);
+          const customer = data.recentCustomers?.find(u => u.email === booking.customerEmail);
           return {
             ...booking,
-            userProfileImage: user?.profileImage || '',
-            userName: user?.name || booking.userName
+            customerProfileImage: customer?.profileImage || '',
+            customerName: customer?.name || booking.customerName
           };
         }) || [];
         
         setRecentBookings(transformedBookings);
-        setRecentUsers(data.recentUsers || []);
+        setRecentCustomers(data.recentCustomers || []);
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-    }
-  };
-
-  const fetchStaff = async (page = 1, search = '', perPage = staffPerPage) => {
-    try {
-      let url = `http://localhost:5000/api/admin/staff?page=${page}&limit=${perPage}&search=${search}`;
-      
-      const response = await fetch(url, {
-        headers: getAuthHeaders()
-      });
-      const data = await response.json();
-      if (data.success) {
-        setStaff(data.staff || []);
-        setStaffTotalPages(data.pagination?.pages || 1);
-        setStaffTotalItems(data.pagination?.total || 0);
-        setSelectedStaff([]);
-        setSelectAllStaff(false);
-        setStaffPerPage(perPage);
-      }
-    } catch (error) {
-      console.error('Error fetching staff:', error);
     }
   };
 
@@ -584,6 +569,27 @@ const fetchStaffProfile = async () => {
       }
     } catch (error) {
       console.error('Error fetching users:', error);
+    }
+  };
+
+  const fetchCustomers = async (page = 1, search = '', perPage = customerPerPage) => {
+    try {
+      let url = `http://localhost:5000/api/admin/customers?page=${page}&limit=${perPage}&search=${search}`;
+      
+      const response = await fetch(url, {
+        headers: getAuthHeaders()
+      });
+      const data = await response.json();
+      if (data.success) {
+        setCustomers(data.customers || []);
+        setCustomerTotalPages(data.pagination?.pages || 1);
+        setCustomerTotalItems(data.pagination?.total || 0);
+        setSelectedCustomers([]);
+        setSelectAllCustomers(false);
+        setCustomerPerPage(perPage);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
     }
   };
 
@@ -657,24 +663,24 @@ const fetchStaffProfile = async () => {
       });
       const data = await response.json();
       if (data.success) {
-        // Get user emails from bookings
-        const userEmails = data.bookings.map(b => b.userEmail);
+        // Get customer emails from bookings
+        const customerEmails = data.bookings.map(b => b.customerEmail);
         
-        // Fetch user profile images
-        const usersResponse = await fetch(`http://localhost:5000/api/admin/users-by-emails`, {
+        // Fetch customer profile images
+        const customersResponse = await fetch(`http://localhost:5000/api/admin/customers-by-emails`, {
           method: 'POST',
           headers: getAuthHeaders(),
-          body: JSON.stringify({ emails: userEmails })
+          body: JSON.stringify({ emails: customerEmails })
         });
         
-        const usersData = await usersResponse.json();
-        const userMap = {};
+        const customersData = await customersResponse.json();
+        const customerMap = {};
         
-        if (usersData.success) {
-          usersData.users.forEach(user => {
-            userMap[user.email] = {
-              name: user.name,
-              profileImage: user.profileImage
+        if (customersData.success) {
+          customersData.customers.forEach(customer => {
+            customerMap[customer.email] = {
+              name: customer.name,
+              profileImage: customer.profileImage
             };
           });
         }
@@ -682,8 +688,8 @@ const fetchStaffProfile = async () => {
         // Add profile images to bookings
         const bookingsWithProfiles = data.bookings.map(booking => ({
           ...booking,
-          userName: userMap[booking.userEmail]?.name || booking.userName,
-          userProfileImage: userMap[booking.userEmail]?.profileImage || ''
+          customerName: customerMap[booking.customerEmail]?.name || booking.customerName,
+          customerProfileImage: customerMap[booking.customerEmail]?.profileImage || ''
         }));
         
         setBookings(bookingsWithProfiles || []);
@@ -703,7 +709,7 @@ const fetchStaffProfile = async () => {
       const mockReports = {
         dailyBookings: 45,
         monthlyRevenue: 125000,
-        userGrowth: '12%',
+        customerGrowth: '12%',
         topCategories: [
           { name: 'Salon', bookings: 120, revenue: 45000 },
           { name: 'Cleaning', bookings: 85, revenue: 38000 },
@@ -718,25 +724,6 @@ const fetchStaffProfile = async () => {
   };
 
   // Checkbox selection handlers
-  const handleStaffSelect = (staffId) => {
-    setSelectedStaff(prev => {
-      if (prev.includes(staffId)) {
-        return prev.filter(id => id !== staffId);
-      } else {
-        return [...prev, staffId];
-      }
-    });
-  };
-
-  const handleSelectAllStaff = () => {
-    if (selectAllStaff) {
-      setSelectedStaff([]);
-    } else {
-      setSelectedStaff(staff.map(s => s._id));
-    }
-    setSelectAllStaff(!selectAllStaff);
-  };
-
   const handleUserSelect = (userId) => {
     setSelectedUsers(prev => {
       if (prev.includes(userId)) {
@@ -754,6 +741,25 @@ const fetchStaffProfile = async () => {
       setSelectedUsers(users.map(u => u._id));
     }
     setSelectAllUsers(!selectAllUsers);
+  };
+
+  const handleCustomerSelect = (customerId) => {
+    setSelectedCustomers(prev => {
+      if (prev.includes(customerId)) {
+        return prev.filter(id => id !== customerId);
+      } else {
+        return [...prev, customerId];
+      }
+    });
+  };
+
+  const handleSelectAllCustomers = () => {
+    if (selectAllCustomers) {
+      setSelectedCustomers([]);
+    } else {
+      setSelectedCustomers(customers.map(c => c._id));
+    }
+    setSelectAllCustomers(!selectAllCustomers);
   };
 
   const updateCategory = async (categoryId, updateData) => {
@@ -818,8 +824,8 @@ const fetchStaffProfile = async () => {
     if (selectedIds.length === 0) return;
     
     const entityNames = {
-      'staff': 'staff member(s)',
       'users': 'user(s)',
+      'customers': 'customer(s)',
       'categories': 'category(ies)',
       'products': 'product(s)',
       'bookings': 'booking(s)'
@@ -827,8 +833,8 @@ const fetchStaffProfile = async () => {
 
     // Map frontend entity names to backend entity names
     const backendEntityMap = {
-      'staff': 'staff',
       'users': 'users',
+      'customers': 'customers',
       'categories': 'services',
       'products': 'packages', 
       'bookings': 'bookings'
@@ -854,15 +860,15 @@ const fetchStaffProfile = async () => {
           
           // Reset selection and refresh data
           switch(entity) {
-            case 'staff':
-              setSelectedStaff([]);
-              setSelectAllStaff(false);
-              fetchStaff(staffPage, staffSearch, staffPerPage);
-              break;
             case 'users':
               setSelectedUsers([]);
               setSelectAllUsers(false);
               fetchUsers(userPage, userSearch, userPerPage);
+              break;
+            case 'customers':
+              setSelectedCustomers([]);
+              setSelectAllCustomers(false);
+              fetchCustomers(customerPage, customerSearch, customerPerPage);
               break;
             case 'categories':
               setSelectedCategories([]);
@@ -932,36 +938,36 @@ const fetchStaffProfile = async () => {
     
     // Get data based on current active menu
     switch(activeMenu) {
-      case 'manage-staff':
-        data = staff.map(s => ({
-          'Name': s.name,
-          'Email': s.email,
-          'Phone': s.phone,
-          'Designation': s.designation,
-          'Profile Image': s.profileImage ? `http://localhost:5000${s.profileImage}` : 'No Image',
-          'Permissions': Object.entries(s.permissions || {})
+      case 'manage-users':
+        data = users.map(u => ({
+          'Name': u.name,
+          'Email': u.email,
+          'Phone': u.phone,
+          'Designation': u.designation,
+          'Profile Image': u.profileImage ? `http://localhost:5000${u.profileImage}` : 'No Image',
+          'Permissions': Object.entries(u.permissions || {})
             .filter(([key, value]) => value)
             .map(([key]) => key.charAt(0).toUpperCase() + key.slice(1))
             .join(', ')
         }));
         break;
         
-      case 'manage-users':
-        data = users.map(u => ({
-          'Name': u.name,
-          'Email': u.email,
-          'Phone': u.phone,
-          'City': u.city,
-          'Profile Image': u.profileImage ? `http://localhost:5000${u.profileImage}` : 'No Image',
-          'Joined Date': new Date(u.createdAt).toLocaleDateString()
+      case 'manage-customers':
+        data = customers.map(c => ({
+          'Name': c.name,
+          'Email': c.email,
+          'Phone': c.phone,
+          'City': c.city,
+          'Profile Image': c.profileImage ? `http://localhost:5000${c.profileImage}` : 'No Image',
+          'Joined Date': new Date(c.createdAt).toLocaleDateString()
         }));
         break;
         
       case 'bookings':
         data = bookings.map(b => ({
-          'Customer': b.userName,
-          'Email': b.userEmail,
-          'Profile Image': b.userProfileImage ? `http://localhost:5000${b.userProfileImage}` : 'No Image',
+          'Customer': b.customerName,
+          'Email': b.customerEmail,
+          'Profile Image': b.customerProfileImage ? `http://localhost:5000${b.customerProfileImage}` : 'No Image',
           'Service': b.serviceName,
           'Price': `₹${b.servicePrice}`,
           'Status': b.status,
@@ -1009,39 +1015,39 @@ const fetchStaffProfile = async () => {
     
     // Get data based on current active menu
     switch(activeMenu) {
-      case 'manage-staff':
+      case 'manage-users':
         headers = ['Name', 'Email', 'Phone', 'Designation', 'Profile Image URL', 'Permissions'];
-        data = staff.map(s => [
-          s.name,
-          s.email,
-          s.phone,
-          s.designation,
-          s.profileImage ? `http://localhost:5000${s.profileImage}` : 'No Image',
-          Object.entries(s.permissions || {})
+        data = users.map(u => [
+          u.name,
+          u.email,
+          u.phone,
+          u.designation,
+          u.profileImage ? `http://localhost:5000${u.profileImage}` : 'No Image',
+          Object.entries(u.permissions || {})
             .filter(([key, value]) => value)
             .map(([key]) => key.charAt(0).toUpperCase() + key.slice(1))
             .join(', ')
         ]);
         break;
         
-      case 'manage-users':
+      case 'manage-customers':
         headers = ['Name', 'Email', 'Phone', 'City', 'Profile Image URL', 'Joined Date'];
-        data = users.map(u => [
-          u.name,
-          u.email,
-          u.phone,
-          u.city,
-          u.profileImage ? `http://localhost:5000${u.profileImage}` : 'No Image',
-          new Date(u.createdAt).toLocaleDateString()
+        data = customers.map(c => [
+          c.name,
+          c.email,
+          c.phone,
+          c.city,
+          c.profileImage ? `http://localhost:5000${c.profileImage}` : 'No Image',
+          new Date(c.createdAt).toLocaleDateString()
         ]);
         break;
         
       case 'bookings':
         headers = ['Customer', 'Email', 'Profile Image URL', 'Service', 'Price', 'Status', 'Date'];
         data = bookings.map(b => [
-          b.userName,
-          b.userEmail,
-          b.userProfileImage ? `http://localhost:5000${b.userProfileImage}` : 'No Image',
+          b.customerName,
+          b.customerEmail,
+          b.customerProfileImage ? `http://localhost:5000${b.customerProfileImage}` : 'No Image',
           b.serviceName,
           `₹${b.servicePrice}`,
           b.status,
@@ -1156,9 +1162,9 @@ const fetchStaffProfile = async () => {
     // Check permission before switching menu
     const permissionMap = {
       'dashboard': 'Dashboard',
-      'add-staff': 'Staff',
-      'manage-staff': 'Staff',
-      'manage-users': 'User',
+      'add-user': 'Users',
+      'manage-users': 'Users',
+      'manage-customers': 'Customer',
       'add-category': 'Category',
       'manage-categories': 'Category',
       'add-product': 'Product',
@@ -1176,14 +1182,14 @@ const fetchStaffProfile = async () => {
     }
 
     setActiveMenu(menu);
-    setIsEditingStaff(false);
-    setEditStaffId(null);
+    setIsEditingUser(false);
+    setEditUserId(null);
     setIsEditingCategory(false);
     setEditCategoryId(null);
     
     // Reset forms when switching away
-    if (menu !== 'add-staff') {
-      setNewStaff({
+    if (menu !== 'add-user') {
+      setNewUser({
         name: '',
         email: '',
         phone: '',
@@ -1191,8 +1197,8 @@ const fetchStaffProfile = async () => {
         password: '',
         permissions: {
           Dashboard: false,
-          Staff: false,
-          User: false,
+          Users: false,
+          Customer: false,
           Category: false,
           Product: false,
           Bookings: false,
@@ -1203,6 +1209,17 @@ const fetchStaffProfile = async () => {
       setConfirmPassword('');
       setProfileImage(null);
       setProfileImagePreview("");
+    }
+    
+    // Reset customer form when switching away
+    if (menu !== 'manage-customers') {
+      setNewCustomer({
+        name: '',
+        email: '',
+        phone: '',
+        city: '',
+        password: ''
+      });
     }
     
     // Reset category edit state
@@ -1223,17 +1240,17 @@ const fetchStaffProfile = async () => {
       case 'dashboard':
         fetchDashboardData();
         break;
-      case 'add-staff':
-        setShowAddStaffForm(true);
-        fetchStaff();
-        break;
-      case 'manage-staff':
-        setShowAddStaffForm(false);
-        fetchStaff();
+      case 'add-user':
+        setShowAddUserForm(true);
+        fetchUsers();
         break;
       case 'manage-users':
-        setShowAddUserModal(false);
+        setShowAddUserForm(false);
         fetchUsers();
+        break;
+      case 'manage-customers':
+        setShowAddCustomerModal(false);
+        fetchCustomers();
         break;
       case 'add-category':
         setShowAddCategoryModal(true);
@@ -1264,27 +1281,27 @@ const fetchStaffProfile = async () => {
     }
   };
 
-const handleAddStaff = async (e) => {
+const handleAddUser = async (e) => {
   e.preventDefault();
   setFormError('');
   setFormSuccess(false);
   
   // Mark all fields as touched
   const touched = {};
-  Object.keys(newStaff).forEach(key => {
+  Object.keys(newUser).forEach(key => {
     if (key !== 'permissions') touched[key] = true;
   });
   
   // Only require password fields when not editing or when password is being changed
-  if (!isEditingStaff || (isEditingStaff && newStaff.password !== '********')) {
+  if (!isEditingUser || (isEditingUser && newUser.password !== '********')) {
     touched.password = true;
     touched.confirmPassword = true;
   }
   
-  setTouchedFields(prev => ({ ...prev, staff: touched }));
+  setTouchedFields(prev => ({ ...prev, users: touched }));
   
   // Validate form
-  if (!validateStaffForm()) {
+  if (!validateUserForm()) {
     setFormError("Please fix the errors in the form");
     return;
   }
@@ -1292,29 +1309,29 @@ const handleAddStaff = async (e) => {
   try {
     // Create FormData for file upload
     const formData = new FormData();
-    formData.append('name', newStaff.name);
-    formData.append('email', newStaff.email);
-    formData.append('phone', newStaff.phone);
-    formData.append('designation', newStaff.designation);
+    formData.append('name', newUser.name);
+    formData.append('email', newUser.email);
+    formData.append('phone', newUser.phone);
+    formData.append('designation', newUser.designation);
     
     // Only send password if it's not the placeholder and not empty
-    if (newStaff.password !== '********' && newStaff.password.trim()) {
-      formData.append('password', newStaff.password);
+    if (newUser.password !== '********' && newUser.password.trim()) {
+      formData.append('password', newUser.password);
     }
     
-    formData.append('permissions', JSON.stringify(newStaff.permissions));
-    formData.append('isActive', newStaff.isActive !== undefined ? newStaff.isActive : true);
+    formData.append('permissions', JSON.stringify(newUser.permissions));
+    formData.append('isActive', newUser.isActive !== undefined ? newUser.isActive : true);
     
     // Add profile image if exists
     if (profileImage) {
       formData.append('profileImage', profileImage);
     }
     
-    const url = isEditingStaff 
-      ? `http://localhost:5000/api/admin/staff/${editStaffId}`
-      : 'http://localhost:5000/api/admin/staff';
+    const url = isEditingUser 
+      ? `http://localhost:5000/api/admin/users/${editUserId}`
+      : 'http://localhost:5000/api/admin/users';
     
-    const method = isEditingStaff ? 'PUT' : 'POST';
+    const method = isEditingUser ? 'PUT' : 'POST';
     
     const response = await fetch(url, {
       method: method,
@@ -1330,7 +1347,7 @@ const handleAddStaff = async (e) => {
       setFormSuccess(true);
       
       // Reset form and errors
-      setNewStaff({
+      setNewUser({
         name: '',
         email: '',
         phone: '',
@@ -1338,8 +1355,8 @@ const handleAddStaff = async (e) => {
         password: '',
         permissions: {
           Dashboard: false,
-          Staff: false,
-          User: false,
+          Users: false,
+          Customer: false,
           Category: false,
           Product: false,
           Bookings: false,
@@ -1350,16 +1367,16 @@ const handleAddStaff = async (e) => {
       setConfirmPassword('');
       setProfileImage(null);
       setProfileImagePreview("");
-      setFormErrors(prev => ({ ...prev, staff: {} }));
-      setTouchedFields(prev => ({ ...prev, staff: {} }));
+      setFormErrors(prev => ({ ...prev, users: {} }));
+      setTouchedFields(prev => ({ ...prev, users: {} }));
       
       // Reset editing state
-      setEditStaffId(null);
-      setIsEditingStaff(false);
+      setEditUserId(null);
+      setIsEditingUser(false);
       
-      // Refresh staff list
+      // Refresh user list
       setTimeout(() => {
-        fetchStaff();
+        fetchUsers();
       }, 500);
       
       setTimeout(() => {
@@ -1367,27 +1384,27 @@ const handleAddStaff = async (e) => {
       }, 5000);
       
     } else {
-      setFormError(data.error || (isEditingStaff ? 'Failed to update staff member' : 'Failed to add staff member'));
+      setFormError(data.error || (isEditingUser ? 'Failed to update user' : 'Failed to add user'));
     }
   } catch (error) {
-    console.error('Error saving staff:', error);
-    setFormError(`Failed to ${isEditingStaff ? 'update' : 'add'} staff member. Please try again.`);
+    console.error('Error saving user:', error);
+    setFormError(`Failed to ${isEditingUser ? 'update' : 'add'} user. Please try again.`);
   }
 };
 
-  // Function to handle editing staff
-const handleEditStaff = (staffMember) => {
-  setNewStaff({
-    name: staffMember.name || '',
-    email: staffMember.email || '',
-    phone: staffMember.phone || '',
-    designation: staffMember.designation || '',
-    password: '********', // Set a placeholder value for password
-    isActive: staffMember.isActive !== undefined ? staffMember.isActive : true,
-    permissions: staffMember.permissions || {
+  // Function to handle editing user
+const handleEditUser = (userMember) => {
+  setNewUser({
+    name: userMember.name || '',
+    email: userMember.email || '',
+    phone: userMember.phone || '',
+    designation: userMember.designation || '',
+    password: '********',
+    isActive: userMember.isActive !== undefined ? userMember.isActive : true,
+    permissions: userMember.permissions || {
       Dashboard: false,
-      Staff: false,
-      User: false,
+      Users: false,
+      Customer: false,
       Category: false,
       Product: false,
       Bookings: false,
@@ -1397,23 +1414,23 @@ const handleEditStaff = (staffMember) => {
   });
   
   // Set profile image preview if exists
-  if (staffMember.profileImage) {
-    setProfileImagePreview(`http://localhost:5000${staffMember.profileImage}`);
+  if (userMember.profileImage) {
+    setProfileImagePreview(`http://localhost:5000${userMember.profileImage}`);
   } else {
     setProfileImagePreview("");
   }
   
-  setEditStaffId(staffMember._id);
-  setIsEditingStaff(true);
-  setActiveMenu('add-staff');
+  setEditUserId(userMember._id);
+  setIsEditingUser(true);
+  setActiveMenu('add-user');
   setProfileImage(null);
   setConfirmPassword(''); 
   setFormSuccess(false); 
   setFormError(''); 
   
   // Reset touched fields and errors
-  setTouchedFields(prev => ({ ...prev, staff: {} }));
-  setFormErrors(prev => ({ ...prev, staff: {} }));
+  setTouchedFields(prev => ({ ...prev, users: {} }));
+  setFormErrors(prev => ({ ...prev, users: {} }));
 };
 
   const handleAddProduct = async (e) => {
@@ -1447,16 +1464,16 @@ const handleEditStaff = (staffMember) => {
     }
   };
 
-  const handleAddUser = async (e) => {
+  const handleAddCustomer = async (e) => {
     e.preventDefault();
     
     // Mark all fields as touched
     const touched = {};
-    Object.keys(newUser).forEach(key => touched[key] = true);
-    setTouchedFields(prev => ({ ...prev, user: touched }));
+    Object.keys(newCustomer).forEach(key => touched[key] = true);
+    setTouchedFields(prev => ({ ...prev, customer: touched }));
     
     // Validate form
-    if (!validateUserForm()) {
+    if (!validateCustomerForm()) {
       alert("Please fix the errors in the form");
       return;
     }
@@ -1465,29 +1482,29 @@ const handleEditStaff = (staffMember) => {
       const response = await fetch('http://localhost:5000/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newUser)
+        body: JSON.stringify(newCustomer)
       });
       
       const data = await response.json();
       if (data.success) {
-        alert('User added successfully!');
-        setShowAddUserModal(false);
-        setNewUser({
+        alert('Customer added successfully!');
+        setShowAddCustomerModal(false);
+        setNewCustomer({
           name: '',
           email: '',
           phone: '',
           city: '',
           password: ''
         });
-        setFormErrors(prev => ({ ...prev, user: {} }));
-        setTouchedFields(prev => ({ ...prev, user: {} }));
-        fetchUsers();
+        setFormErrors(prev => ({ ...prev, customer: {} }));
+        setTouchedFields(prev => ({ ...prev, customer: {} }));
+        fetchCustomers();
       } else {
-        alert(data.error || 'Failed to add user');
+        alert(data.error || 'Failed to add customer');
       }
     } catch (error) {
-      console.error('Error adding user:', error);
-      alert('Failed to add user');
+      console.error('Error adding customer:', error);
+      alert('Failed to add customer');
     }
   };
 
@@ -1497,27 +1514,6 @@ const handleEditStaff = (staffMember) => {
   };
 
   // Delete Functions
-  const deleteStaff = async (staffId) => {
-    if (window.confirm('Are you sure you want to delete this staff member?')) {
-      try {
-        const response = await fetch(`http://localhost:5000/api/admin/staff/${staffId}`, {
-          method: 'DELETE',
-          headers: getAuthHeaders()
-        });
-        const data = await response.json();
-        if (data.success) {
-          alert('Staff member deleted successfully');
-          fetchStaff(staffPage, staffSearch, staffPerPage);
-        } else {
-          alert(data.error || 'Failed to delete staff member');
-        }
-      } catch (error) {
-        console.error('Error deleting staff:', error);
-        alert('Failed to delete staff member');
-      }
-    }
-  };
-
   const deleteUser = async (userId) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
@@ -1535,6 +1531,27 @@ const handleEditStaff = (staffMember) => {
       } catch (error) {
         console.error('Error deleting user:', error);
         alert('Failed to delete user');
+      }
+    }
+  };
+
+  const deleteCustomer = async (customerId) => {
+    if (window.confirm('Are you sure you want to delete this customer?')) {
+      try {
+        const response = await fetch(`http://localhost:5000/api/admin/customers/${customerId}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        if (data.success) {
+          alert('Customer deleted successfully');
+          fetchCustomers(customerPage, customerSearch, customerPerPage);
+        } else {
+          alert(data.error || 'Failed to delete customer');
+        }
+      } catch (error) {
+        console.error('Error deleting customer:', error);
+        alert('Failed to delete customer');
       }
     }
   };
@@ -1603,28 +1620,33 @@ const handleEditStaff = (staffMember) => {
     }
   };
 
-  useEffect(() => {
-    // Check if user is already logged in
-    const token = localStorage.getItem('authToken');
-    const role = localStorage.getItem('userRole');
-    const permissions = localStorage.getItem('userPermissions');
+useEffect(() => {
+  // Check if user is already logged in
+  const token = localStorage.getItem('authToken');
+  const role = localStorage.getItem('userRole');
+  const permissions = localStorage.getItem('userPermissions');
+  
+  if (token && role && permissions) {
+    setIsLoggedIn(true);
+    setUserRole(role);
+    setUserPermissions(JSON.parse(permissions));
     
-    if (token && role && permissions) {
-      setIsLoggedIn(true);
-      setUserRole(role);
-      setUserPermissions(JSON.parse(permissions));
-      fetchDashboardData();
-      
-      // Fetch appropriate profile
-      if (role === 'admin') {
-        fetchAdminProfile();
-      } else {
-        fetchStaffProfile();
-      }
+    // ALWAYS start with dashboard on page load
+    setActiveMenu('dashboard');
+    
+    fetchDashboardData();
+    fetchCustomers(); // Fetch customers on load
+    
+    // Fetch appropriate profile
+    if (role === 'admin') {
+      fetchAdminProfile();
+    } else {
+      fetchUserProfile();
     }
-    
-    fetchAdminLogo();
-  }, []);
+  }
+  
+  fetchAdminLogo();
+}, []);
 
   if (!isLoggedIn) {
     return (
@@ -1666,7 +1688,7 @@ const handleEditStaff = (staffMember) => {
             <Card style={{ border: "0px", boxShadow: "none", backgroundColor: "transparent" }}>
               <Card.Body className="p-0">
                 <div className="mb-4">
-                  <h6 className='fw-semibold'>Log in as {loginType === 'admin' ? 'Admin' : 'Staff'}</h6>
+                  <h6 className='fw-semibold'>Log in as {loginType === 'admin' ? 'Admin' : 'User'}</h6>
                 </div>
                 <Form onSubmit={handleLogin}>
                 <Form.Group className="mb-3">  
@@ -1717,7 +1739,7 @@ const handleEditStaff = (staffMember) => {
                 </Button>
               </Form> <br />
               <div >
-                <h6 >Admin ceredentials:</h6>
+                <h6 >Admin credentials:</h6>
                 <p className='text-muted mb-0'>Username: admin@urbancompany.com</p>
                 <p className='text-muted mb-0'>Password: admin123</p>
               </div>
@@ -1757,7 +1779,7 @@ const handleEditStaff = (staffMember) => {
           />
           <h5 className="mt-3 mb-0">Urban Company</h5>
           <small className="text-muted">
-            {userRole === 'admin' ? 'Admin Panel' : 'Staff Panel'}
+            {userRole === 'admin' ? 'Admin Panel' : 'User Panel'}
           </small>
         </div>
 
@@ -1778,14 +1800,14 @@ const handleEditStaff = (staffMember) => {
             </Nav.Link>
           )}
           
-          {/* User Management - Only for admin and staff with Staff permission */}
-          {(userRole === 'admin' || hasPermission('Staff')) && (
+          {/* User Management - Only for admin and users with Users permission */}
+          {(userRole === 'admin' || hasPermission('Users')) && (
             <Dropdown className="mb-2">
               <Dropdown.Toggle 
                 as={Nav.Link} 
                 style={{ 
-                  color: ['add-staff', 'manage-staff'].includes(activeMenu) ? '#000' : 'white',
-                  background: ['add-staff', 'manage-staff'].includes(activeMenu) ? 'white' : 'transparent',
+                  color: ['add-user', 'manage-users'].includes(activeMenu) ? '#000' : 'white',
+                  background: ['add-user', 'manage-users'].includes(activeMenu) ? 'white' : 'transparent',
                   borderRadius: '8px',
                   padding: '10px 15px',
                   display: 'flex',
@@ -1800,18 +1822,32 @@ const handleEditStaff = (staffMember) => {
               </Dropdown.Toggle>
               <Dropdown.Menu style={{ width: '100%' }}>
                 {userRole === 'admin' && (
-                  <Dropdown.Item onClick={() => handleMenuClick('add-staff')}>
+                  <Dropdown.Item onClick={() => handleMenuClick('add-user')}>
                     <i className="bi bi-person-plus me-2"></i>Add user
                   </Dropdown.Item>
                 )}
-                <Dropdown.Item onClick={() => handleMenuClick('manage-staff')}>
-                  <i className="bi bi-people-fill me-2"></i>Manage user
+                <Dropdown.Item onClick={() => handleMenuClick('manage-users')}>
+                  <i className="bi bi-people-fill me-2"></i>Manage users
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
           )}
           
-          
+          {/* Customer Management */}
+          {(userRole === 'admin' || hasPermission('Customer')) && (
+            <Nav.Link 
+              className={`mb-2 ${activeMenu === 'manage-customers' ? 'active' : ''}`}
+              onClick={() => handleMenuClick('manage-customers')}
+              style={{ 
+                color: activeMenu === 'manage-customers' ? '#000' : 'white',
+                background: activeMenu === 'manage-customers' ? 'white' : 'transparent',
+                borderRadius: '8px',
+                padding: '10px 15px'
+              }}
+            >
+              <i className="bi bi-person-badge me-2"></i>Customers
+            </Nav.Link>
+          )}
           
           {/* Category Management */}
           {(userRole === 'admin' || hasPermission('Category')) && (
@@ -1948,38 +1984,52 @@ const handleEditStaff = (staffMember) => {
     );
   };
 
-  const renderContent = () => {
-    // Check permission for current menu
-    const permissionMap = {
-      'dashboard': 'Dashboard',
-      'add-staff': 'Staff',
-      'manage-staff': 'Staff',
-      'manage-users': 'User',
-      'add-category': 'Category',
-      'manage-categories': 'Category',
-      'add-product': 'Product',
-      'manage-products': 'Product',
-      'bookings': 'Bookings',
-      'reports': 'Reports',
-      'settings': 'Settings'
-    };
+ const renderContent = () => {
+  // ALWAYS default to dashboard if no menu is active
+  if (!activeMenu) {
+    setActiveMenu('dashboard');
+    return null;
+  }
+  
+  // Check permission for current menu
+  const permissionMap = {
+    'dashboard': 'Dashboard',
+    'add-user': 'Users',
+    'manage-users': 'Users',
+    'manage-customers': 'Customer',
+    'add-category': 'Category',
+    'manage-categories': 'Category',
+    'add-product': 'Product',
+    'manage-products': 'Product',
+    'bookings': 'Bookings',
+    'reports': 'Reports',
+    'settings': 'Settings',
+    'profile': 'Dashboard'
+  };
 
-    const requiredPermission = permissionMap[activeMenu];
-    if (requiredPermission && !hasPermission(requiredPermission)) {
-      return (
-        <Container className="text-center py-5">
-          <Card className="border-0 shadow-sm">
-            <Card.Body>
-              <h3 className="text-danger">Access Denied</h3>
-              <p>You don't have permission to access this section.</p>
-              <Button variant="primary" onClick={() => handleMenuClick('dashboard')}>
-                Go to Dashboard
-              </Button>
-            </Card.Body>
-          </Card>
-        </Container>
-      );
-    }
+  const requiredPermission = permissionMap[activeMenu];
+  
+  // If the user doesn't have permission for the current menu, 
+  // automatically redirect to dashboard
+  if (requiredPermission && !hasPermission(requiredPermission)) {
+    // Show access denied message briefly
+    setTimeout(() => {
+      handleMenuClick('dashboard');
+    }, 100);
+    
+    return (
+      <Container className="text-center py-5">
+        <Card className="border-0 shadow-sm">
+          <Card.Body>
+            <h3 className="text-danger">Access Denied</h3>
+            <p>You don't have permission to access this section.</p>
+            <p>Redirecting to Dashboard...</p>
+            <Spinner animation="border" variant="primary" />
+          </Card.Body>
+        </Card>
+      </Container>
+    );
+  }
 
     switch(activeMenu) {
       case 'profile':
@@ -2061,14 +2111,14 @@ const handleEditStaff = (staffMember) => {
                     </div>
                   )
                 ) : (
-                  staffProfile ? (
+                  userProfile ? (
                     <div className="profile-info">
                       <div className="text-center mb-4">
                         <div className="mb-3">
-                          {staffProfile.profileImage ? (
+                          {userProfile.profileImage ? (
                             <img 
-                              src={`http://localhost:5000${staffProfile.profileImage}`} 
-                              alt={staffProfile.name}
+                              src={`http://localhost:5000${userProfile.profileImage}`} 
+                              alt={userProfile.name}
                               style={{ 
                                 width: '100px', 
                                 height: '100px', 
@@ -2081,8 +2131,8 @@ const handleEditStaff = (staffMember) => {
                             <i className="bi bi-person-circle" style={{ fontSize: "80px", color: "#6c757d" }}></i>
                           )}
                         </div>
-                        <h4>{staffProfile.name}</h4>
-                        <Badge bg="info" className="mb-2">{staffProfile.position}</Badge>
+                        <h4>{userProfile.name}</h4>
+                        <Badge bg="info" className="mb-2">{userProfile.position}</Badge>
                       </div>
                       
                       <div className="list-group list-group-flush">
@@ -2090,7 +2140,7 @@ const handleEditStaff = (staffMember) => {
                           <div className="row">
                             <div className="col-4 text-muted">Email</div>
                             <div className="col-8">
-                              <strong>{staffProfile.email}</strong>
+                              <strong>{userProfile.email}</strong>
                             </div>
                           </div>
                         </div>
@@ -2099,7 +2149,7 @@ const handleEditStaff = (staffMember) => {
                           <div className="row">
                             <div className="col-4 text-muted">Phone</div>
                             <div className="col-8">
-                              <strong>{staffProfile.phone}</strong>
+                              <strong>{userProfile.phone}</strong>
                             </div>
                           </div>
                         </div>
@@ -2108,7 +2158,7 @@ const handleEditStaff = (staffMember) => {
                           <div className="row">
                             <div className="col-4 text-muted">Designation</div>
                             <div className="col-8">
-                              <strong>{staffProfile.designation}</strong>
+                              <strong>{userProfile.designation}</strong>
                             </div>
                           </div>
                         </div>
@@ -2117,8 +2167,8 @@ const handleEditStaff = (staffMember) => {
                           <div className="row">
                             <div className="col-4 text-muted">Status</div>
                             <div className="col-8">
-                              <Badge bg={staffProfile.isActive ? 'success' : 'secondary'}>
-                                {staffProfile.isActive ? 'Active' : 'Inactive'}
+                              <Badge bg={userProfile.isActive ? 'success' : 'secondary'}>
+                                {userProfile.isActive ? 'Active' : 'Inactive'}
                               </Badge>
                             </div>
                           </div>
@@ -2128,7 +2178,7 @@ const handleEditStaff = (staffMember) => {
                           <div className="row">
                             <div className="col-4 text-muted">Permissions</div>
                             <div className="col-8">
-                              {Object.entries(staffProfile.permissions || {})
+                              {Object.entries(userProfile.permissions || {})
                                 .filter(([key, value]) => value)
                                 .map(([key]) => key)
                                 .join(', ')}
@@ -2140,7 +2190,7 @@ const handleEditStaff = (staffMember) => {
                           <div className="row">
                             <div className="col-4 text-muted">Account Created</div>
                             <div className="col-8">
-                              {new Date(staffProfile.createdAt).toLocaleDateString()}
+                              {new Date(userProfile.createdAt).toLocaleDateString()}
                             </div>
                           </div>
                         </div>
@@ -2170,8 +2220,8 @@ const handleEditStaff = (staffMember) => {
                         <span style={{ fontSize: "30px" }}><FcBusinessman /></span>
                       </div>
                     </div>
-                    <h6 className="text-muted mb-2">Total Users</h6>
-                    <h2 className="mb-0" >{stats?.totalUsers || 0}</h2>
+                    <h6 className="text-muted mb-2">Total Customers</h6>
+                    <h2 className="mb-0" >{stats?.totalCustomers || 0}</h2>
                   </Card.Body>
                 </Card>
               </Col>
@@ -2246,10 +2296,10 @@ const handleEditStaff = (staffMember) => {
                                   overflow: 'hidden',
                                   border: '2px solid #dee2e6'
                                 }}>
-                                  {booking.userProfileImage ? (
+                                  {booking.customerProfileImage ? (
                                     <img 
-                                      src={`http://localhost:5000${booking.userProfileImage}`} 
-                                      alt={booking.userName}
+                                      src={`http://localhost:5000${booking.customerProfileImage}`} 
+                                      alt={booking.customerName}
                                       style={{ 
                                         width: '100%', 
                                         height: '100%', 
@@ -2269,7 +2319,7 @@ const handleEditStaff = (staffMember) => {
                                             font-weight: bold;
                                             font-size: 16px;
                                           ">
-                                            ${getInitials(booking.userName)}
+                                            ${getInitials(booking.customerName)}
                                           </div>
                                         `;
                                       }}
@@ -2286,15 +2336,15 @@ const handleEditStaff = (staffMember) => {
                                       fontWeight: 'bold',
                                       fontSize: '16px'
                                     }}>
-                                      {getInitials(booking.userName)}
+                                      {getInitials(booking.customerName)}
                                     </div>
                                   )}
                                 </div>
                               </td>
                               <td>
                                 <div>
-                                  <strong>{booking.userName}</strong><br/>
-                                  <small className="text-muted">{booking.userEmail}</small>
+                                  <strong>{booking.customerName}</strong><br/>
+                                  <small className="text-muted">{booking.customerEmail}</small>
                                 </div>
                               </td>
                               <td>{booking.serviceName}</td>
@@ -2320,11 +2370,11 @@ const handleEditStaff = (staffMember) => {
               <Col md={4}>
                 <Card className="border-0 shadow-sm">
                   <Card.Header className="border-0">
-                    <h5>Recent Users</h5>
+                    <h5>Recent Customers</h5>
                   </Card.Header>
                   <Card.Body>
-                    {recentUsers.slice(0, 5).map((user) => (
-                      <div key={user._id} className="d-flex align-items-center mb-3">
+                    {recentCustomers.slice(0, 5).map((customer) => (
+                      <div key={customer._id} className="d-flex align-items-center mb-3">
                         <div style={{ 
                           width: '50px', 
                           height: '50px', 
@@ -2334,10 +2384,10 @@ const handleEditStaff = (staffMember) => {
                           flexShrink: 0,
                           marginRight: '12px'
                         }}>
-                          {user.profileImage ? (
+                          {customer.profileImage ? (
                             <img 
-                              src={`http://localhost:5000${user.profileImage}`} 
-                              alt={user.name}
+                              src={`http://localhost:5000${customer.profileImage}`} 
+                              alt={customer.name}
                               style={{ 
                                 width: '100%', 
                                 height: '100%', 
@@ -2357,7 +2407,7 @@ const handleEditStaff = (staffMember) => {
                                     font-weight: bold;
                                     font-size: 16px;
                                   ">
-                                    ${getInitials(user.name)}
+                                    ${getInitials(customer.name)}
                                   </div>
                                 `;
                               }}
@@ -2374,15 +2424,15 @@ const handleEditStaff = (staffMember) => {
                               fontWeight: 'bold',
                               fontSize: '16px'
                             }}>
-                              {getInitials(user.name)}
+                              {getInitials(customer.name)}
                             </div>
                           )}
                         </div>
                         <div style={{ flexGrow: 1 }}>
-                          <strong>{user.name || 'Unknown User'}</strong><br/>
-                          <small className="text-muted">{user.email || 'No email'}</small>
+                          <strong>{customer.name || 'Unknown Customer'}</strong><br/>
+                          <small className="text-muted">{customer.email || 'No email'}</small>
                           <small className="d-block text-muted">
-                            Joined: {new Date(user.createdAt).toLocaleDateString()}
+                            Joined: {new Date(customer.createdAt).toLocaleDateString()}
                           </small>
                         </div>
                       </div>
@@ -2394,24 +2444,24 @@ const handleEditStaff = (staffMember) => {
           </>
         );
 
-      case 'add-staff':
-        if (!hasPermission('Staff')) {
+      case 'add-user':
+        if (!hasPermission('Users')) {
           return (
             <Card className="border-0 shadow-sm">
               <Card.Body className="text-center py-5">
                 <h3 className="text-danger">Access Denied</h3>
-                <p>You don't have permission to add staff members.</p>
+                <p>You don't have permission to add users.</p>
               </Card.Body>
             </Card>
           );
         }
         
         return (
-          <div className="p-3">
-            <Card className="shadow-lg p-2">
-              <Card.Body>
+          <div className="p-3" >
+            <Card className="shadow-lg " >
+              <Card.Body  style={{marginLeft:"25px",marginRight:"25px"}}>
                 <h5 className="mb-0 fw-semibold">
-                  {isEditingStaff ? 'Edit Staff' : (
+                  {isEditingUser ? 'Edit User' : (
                     <>
                       User Management
                       <span className="text-muted mx-2" style={{fontSize:"14px",fontWeight:"normal"}}>•</span>
@@ -2425,11 +2475,11 @@ const handleEditStaff = (staffMember) => {
             <br />
             
             <Card className="shadow-lg">
-              <Card.Body className="p-6">
+              <Card.Body className="p-6"  style={{marginLeft:"25px",marginRight:"25px"}}>
                 {formSuccess && (
                   <Alert variant="success" onClose={() => setFormSuccess(false)} dismissible>
                     <Alert.Heading>Success!</Alert.Heading>
-                    <p>{isEditingStaff ? 'Staff member updated successfully' : 'Staff member has been added successfully'}</p>
+                    <p>{isEditingUser ? 'User updated successfully' : 'User has been added successfully'}</p>
                   </Alert>
                 )}
                 
@@ -2441,10 +2491,10 @@ const handleEditStaff = (staffMember) => {
                 )}
 
                 <div className="mb-4">
-                  {isEditingStaff ? (
+                  {isEditingUser ? (
                     <>
                       <h5 className="fw-semibold mb-1">Edit user</h5>
-                      <p className='text-muted' style={{fontSize:"12px"}}>Update the staff member profile</p>
+                      <p className='text-muted' style={{fontSize:"12px"}}>Update the user profile</p>
                     </>
                   ) : (
                     <>
@@ -2454,25 +2504,25 @@ const handleEditStaff = (staffMember) => {
                   )}
                 </div>
                 
-                <Form onSubmit={handleAddStaff} className="pt-2">
+                <Form onSubmit={handleAddUser} className="pt-2">
                  
                   {/* First Row with Name and Email */}
-                  <Row style={{ "--bs-gutter-x": "5.5rem" }} className="mb-3">
+                  <Row  className="mb-3 gx-5">
                     <Col md={6}>
                       <Form.Group>
                         <Form.Control
                           type="text" 
                           style={{borderRadius:"5px",border:"2px solid #000000",height:"45px"}}
-                          value={newStaff.name}
-                          onChange={(e) => setNewStaff({...newStaff, name: e.target.value})}
-                          onBlur={() => handleFieldBlur('staff', 'name')}
+                          value={newUser.name}
+                          onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+                          onBlur={() => handleFieldBlur('users', 'name')}
                           required
                           placeholder="Name"
                           autoComplete="name"
                           className="py-3 "
                         />
-                        {touchedFields.staff?.name && formErrors.staff?.name && (
-                          <small className="text-danger d-block mt-1">{formErrors.staff.name}</small>
+                        {touchedFields.users?.name && formErrors.users?.name && (
+                          <small className="text-danger d-block mt-1">{formErrors.users.name}</small>
                         )}
                       </Form.Group>
                     </Col>
@@ -2481,50 +2531,49 @@ const handleEditStaff = (staffMember) => {
                         <Form.Control
                           type="email" 
                           style={{borderRadius:"5px",border:"2px solid #000000",height:"45px"}}
-                          value={newStaff.email}
-                          onChange={(e) => setNewStaff({...newStaff, email: e.target.value})}
-                          onBlur={() => handleFieldBlur('staff', 'email')}
+                          value={newUser.email}
+                          onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                          onBlur={() => handleFieldBlur('users', 'email')}
                           required
                           placeholder="E-mail"
                           autoComplete="email"
                           className="py-3"
                         />
-                        {touchedFields.staff?.email && formErrors.staff?.email && (
-                          <small className="text-danger d-block mt-1">{formErrors.staff.email}</small>
+                        {touchedFields.users?.email && formErrors.users?.email && (
+                          <small className="text-danger d-block mt-1">{formErrors.users.email}</small>
                         )}
                       </Form.Group>
                     </Col>
                   </Row>
 
                   {/* Second Row with Contact Number and Designation */}
-                  <Row style={{ "--bs-gutter-x": "5.5rem" }} className="mb-3">
+                  <Row  className="mb-3 gx-5">
                     <Col md={6}>
                       <Form.Group>
                         <Form.Control
                           type="tel" 
                           style={{borderRadius:"5px",border:"2px solid #000000",height:"45px"}}
-                          value={newStaff.phone}
-                          onChange={(e) => setNewStaff({...newStaff, phone: e.target.value})}
-                          onBlur={() => handleFieldBlur('staff', 'phone')}
+                          value={newUser.phone}
+                          onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
+                          onBlur={() => handleFieldBlur('users', 'phone')}
                           required
                           placeholder="Contact number"
                           autoComplete="tel"
                           className="py-3"
                         />
-                        {touchedFields.staff?.phone && formErrors.staff?.phone && (
-                          <small className="text-danger d-block mt-1">{formErrors.staff.phone}</small>
+                        {touchedFields.users?.phone && formErrors.users?.phone && (
+                          <small className="text-danger d-block mt-1">{formErrors.users.phone}</small>
                         )}
                       </Form.Group>
                     </Col>
                     <Col md={6}>
                       <Form.Group>
                         <Form.Select
-                          value={newStaff.designation} 
+                          value={newUser.designation}
                           style={{borderRadius:"5px",border:"2px solid #000000",height:"45px"}}
-                          onChange={(e) => setNewStaff({...newStaff, designation: e.target.value})}
-                          onBlur={() => handleFieldBlur('staff', 'designation')}
+                          onChange={(e) => setNewUser({...newUser, designation: e.target.value})}
+                          onBlur={() => handleFieldBlur('users', 'designation')}
                           required
-                          className="py-3"
                         >
                           <option value="">Select Designation</option>
                           <option value="Manager">Manager</option>
@@ -2534,31 +2583,31 @@ const handleEditStaff = (staffMember) => {
                           <option value="Admin">Admin</option>
                           <option value="Other">Other</option>
                         </Form.Select>
-                        {touchedFields.staff?.designation && formErrors.staff?.designation && (
-                          <small className="text-danger d-block mt-1">{formErrors.staff.designation}</small>
+                        {touchedFields.users?.designation && formErrors.users?.designation && (
+                          <small className="text-danger d-block mt-1">{formErrors.users.designation}</small>
                         )}
                       </Form.Group>
                     </Col>
                   </Row>
 
                   {/* Password Fields - Only when not editing */}
-                  {!isEditingStaff && (
-                    <Row style={{ "--bs-gutter-x": "5.5rem" }} className="mb-3">
+                  {!isEditingUser && (
+                    <Row  className="mb-3 gx-5">
                       <Col md={6}>
                         <Form.Group>
                           <Form.Control
                             type="password"
-                            value={newStaff.password} 
-                            onChange={(e) => setNewStaff({...newStaff, password: e.target.value})}
-                            onBlur={() => handleFieldBlur('staff', 'password')}
+                            value={newUser.password}
+                            onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                            onBlur={() => handleFieldBlur('users', 'password')}
                             placeholder="Password"
                             style={{borderRadius:"5px",border:"2px solid #000000",height:"45px"}}
                             autoComplete="new-password"
                             required
                             className="py-3"
                           />
-                          {touchedFields.staff?.password && formErrors.staff?.password && (
-                            <small className="text-danger d-block mt-1">{formErrors.staff.password}</small>
+                          {touchedFields.users?.password && formErrors.users?.password && (
+                            <small className="text-danger d-block mt-1">{formErrors.users.password}</small>
                           )}
                         </Form.Group>
                       </Col>
@@ -2568,19 +2617,20 @@ const handleEditStaff = (staffMember) => {
                             type="password"
                             value={confirmPassword} 
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            onBlur={() => handleFieldBlur('staff', 'confirmPassword')}
+                            onBlur={() => handleFieldBlur('users', 'confirmPassword')}
                             placeholder="Confirm password"
                             style={{borderRadius:"5px",border:"2px solid #000000",height:"45px"}}
                             autoComplete="new-password"
                             required
                             className="py-3"
                           />
-                          {touchedFields.staff?.confirmPassword && formErrors.staff?.confirmPassword && (
-                            <small className="text-danger d-block mt-1">{formErrors.staff.confirmPassword}</small>
+                          {touchedFields.users?.confirmPassword && formErrors.users?.confirmPassword && (
+                            <small className="text-danger d-block mt-1">{formErrors.users.confirmPassword}</small>
                           )}
                         </Form.Group>
                       </Col>
                       <Col md={6} >
+                      <p>Profile photo</p>
                       <Form.Group>
                        <Form.Control
                           type="file"
@@ -2621,11 +2671,11 @@ const handleEditStaff = (staffMember) => {
                   <Form.Group className="my-4">
                     <Form.Label className='fw-semibold mb-3'>Permissions</Form.Label>
                     <div className="px-1">
-                      <Row style={{ "--bs-gutter-x": "5.5rem" }} className=" gy-2">
+                      <Row className=" gy-2  gx-5">
                         {[
                           'Dashboard',
-                          'Staff', 
-                          'User',
+                          'Users',
+                          'Customer',
                           'Category',
                           'Product',
                           'Bookings',
@@ -2636,33 +2686,37 @@ const handleEditStaff = (staffMember) => {
                             <div 
                               className="d-flex align-items-center p-2 rounded"
                               style={{
-                                cursor: 'pointer',
+                                cursor: 'pointer', 
                                 transition: 'all 0.2s',
-                                backgroundColor: newStaff.permissions[permission] ? '#e9ecef' : 'transparent'
+                                backgroundColor: newUser.permissions[permission] ? '#e9ecef' : 'transparent'
                               }}
-                              onClick={() => setNewStaff({
-                                ...newStaff,
+                              onClick={() => setNewUser({
+                                ...newUser,
                                 permissions: {
-                                  ...newStaff.permissions,
-                                  [permission]: !newStaff.permissions[permission]
+                                  ...newUser.permissions,
+                                  [permission]: !newUser.permissions[permission]
                                 }
                               })}
                             >
-                              <Form.Check
-                                type="checkbox"
-                                id={`permission-${permission}`}
-                                label={permission}
-                                checked={newStaff.permissions[permission] || false}
-                                onChange={(e) => setNewStaff({
-                                  ...newStaff,
-                                  permissions: {
-                                    ...newStaff.permissions,
-                                    [permission]: e.target.checked
-                                  }
-                                })}
-                                className="mb-0"
-                                style={{ fontSize: "13px" }}
-                              />
+                             <Form.Check
+                              type="checkbox"
+                              id={`permission-${permission}`}
+                              label={permission}
+                              checked={newUser.permissions[permission] || false}
+                              onChange={(e) => setNewUser({
+                                ...newUser,
+                                permissions: {
+                                  ...newUser.permissions,
+                                  [permission]: e.target.checked
+                                }
+                              })}
+                              className="mb-0"
+                              style={{ 
+                                fontSize: "13px",
+                                '--bs-border-width': '2px',
+                                '--bs-border-color': '#000000',
+                              }}
+                            />
                             </div>
                           </Col>
                         ))}
@@ -2675,8 +2729,8 @@ const handleEditStaff = (staffMember) => {
                     <Button 
                       variant="outline-secondary" 
                       onClick={() => {
-                        handleMenuClick('manage-staff');
-                        setNewStaff({
+                        handleMenuClick('manage-users');
+                        setNewUser({
                           name: '',
                           email: '',
                           phone: '',
@@ -2684,8 +2738,8 @@ const handleEditStaff = (staffMember) => {
                           password: '',
                           permissions: {
                             Dashboard: false,
-                            Staff: false,
-                            User: false,
+                            Users: false,
+                            Customer: false,
                             Category: false,
                             Product: false,
                             Bookings: false,
@@ -2696,9 +2750,9 @@ const handleEditStaff = (staffMember) => {
                         setConfirmPassword('');
                         setProfileImage(null);
                         setProfileImagePreview("");
-                        if (isEditingStaff) {
-                          setEditStaffId(null);
-                          setIsEditingStaff(false);
+                        if (isEditingUser) {
+                          setEditUserId(null);
+                          setIsEditingUser(false);
                         }
                       }}
                       style={{ minWidth: '100px' }}
@@ -2710,7 +2764,7 @@ const handleEditStaff = (staffMember) => {
                       type="submit"
                       style={{ minWidth: '100px' }}
                     >
-                      <i className={`bi ${isEditingStaff ? 'bi-pencil' : 'bi-person-plus'} me-2`}></i>
+                      <i className={`bi ${isEditingUser ? 'bi-pencil' : 'bi-person-plus'} me-2`}></i>
                      Submit
                     </Button>
                   </div>
@@ -2720,90 +2774,79 @@ const handleEditStaff = (staffMember) => {
           </div>
         );
 
-      case 'manage-staff':
-        if (!hasPermission('Staff')) {
-          return (
-            <Card className="border-0 shadow-sm">
-              <Card.Body className="text-center py-5">
-                <h3 className="text-danger">Access Denied</h3>
-                <p>You don't have permission to manage staff.</p>
-              </Card.Body>
-            </Card>
-          );
-        }
-        
+      case 'manage-users':
         return (
           <div>
             <Card>
-              <Card className="shadow-lg p-3">
-                <Card.Body>
+              <Card className="shadow-lg ">
+                <Card.Body  style={{marginLeft:"25px",marginRight:"25px"}}>
                   <h5 className="mb-0 fw-semibold">
-                    {isEditingStaff ? 'Edit Staff' : (
+                    {isEditingUser ? 'Edit User' : (
                       <>
                         User Management
                         <span className="text-muted mx-2" style={{fontSize:"14px",fontWeight:"normal"}}>•</span>
-                        <span className="text-muted " style={{fontSize:"14px",fontWeight:"normal"}}>Manage User</span>
+                        <span className="text-muted " style={{fontSize:"14px",fontWeight:"normal"}}>Manage Users</span>
                       </>
                     )}
                   </h5>
                 </Card.Body>
             </Card>
             </Card><br />
-            <Card className="shadow-lg  p-3" style={{border:"5px"}}>
-              <Card.Header className="border-0 ">
-                <Row>
+            <Card className="shadow-lg  " style={{border:"5px"}}>
+              <Card.Header className="border-0 "  >
+                <Row style={{marginLeft:"25px",marginRight:"25px"}}>
                   <Col>
-                    <h5 className="mb-1 fw-semibold">Manage user</h5>
-                    <p className='text-muted' style={{fontSize:"12px"}}>Use this form to update your profile</p>
+                    <h5 className="mb-1 fw-semibold">Manage users</h5>
+                    <p className='text-muted' style={{fontSize:"10.5px"}}>Use this form to update user profiles</p>
                   </Col>
                   <Col>
                     <div className="d-flex gap-2">
                       <Form.Control
                         type="search"
-                        placeholder="Search user..."
-                        value={staffSearch}
+                        placeholder="Search users..."
+                        value={userSearch}
                         onChange={(e) => {
-                          setStaffSearch(e.target.value);
-                          fetchStaff(1, e.target.value, staffPerPage);
+                          setUserSearch(e.target.value);
+                          fetchUsers(1, e.target.value, userPerPage);
                         }}
                         style={{ border:"2px solid ",width: '250px', height: "40px", marginTop: "10px" }}
                       />
                       
                       <CustomPagination
-                        currentPage={staffPage}
-                        totalPages={staffTotalPages}
-                        totalItems={staffTotalItems}
-                        itemsPerPage={staffPerPage}
+                        currentPage={userPage}
+                        totalPages={userTotalPages}
+                        totalItems={userTotalItems}
+                        itemsPerPage={userPerPage}
                         onPageChange={(page) => {
-                          setStaffPage(page);
-                          fetchStaff(page, staffSearch, staffPerPage);
+                          setUserPage(page);
+                          fetchUsers(page, userSearch, userPerPage);
                         }}
                         onItemsPerPageChange={(perPage) => {
-                          setStaffPerPage(perPage);
-                          fetchStaff(1, staffSearch, perPage);
+                          setUserPerPage(perPage);
+                          fetchUsers(1, userSearch, perPage);
                         }}
                         showDownload={true}
-                        dataType="staff"
+                        dataType="users"
                       />
                     </div>
                   </Col>
                 </Row>
               </Card.Header>
-              <Card.Body>
+              <Card.Body  style={{marginLeft:"25px",marginRight:"25px"}}>
                 {formSuccess && (
                   <Alert variant="success" onClose={() => setFormSuccess(false)} dismissible>
                     <Alert.Heading>Success!</Alert.Heading>
-                    <p>Staff member updated successfully!</p>
+                    <p>User updated successfully!</p>
                   </Alert>
                 )}
                 
-                {selectedStaff.length > 0 && (
+                {selectedUsers.length > 0 && (
                   <Alert variant="dark" className="d-flex justify-content-between align-items-center">
-                    <span>{selectedStaff.length} staff member(s) selected</span>
+                    <span>{selectedUsers.length} user(s) selected</span>
                     <Button 
                       variant="danger" 
                       size="sm"
-                      onClick={()=>handleBulkDelete('staff',selectedStaff)}
+                      onClick={()=>handleBulkDelete('users', selectedUsers)}
                     >
                       <i className="bi bi-trash me-2"></i>Delete Selected
                     </Button>
@@ -2814,30 +2857,30 @@ const handleEditStaff = (staffMember) => {
                   <Table striped bordered hover style={{border:"2px solid"}}>
                     <thead>
                       <tr>
-                        <th style={{ width: '40px' }}>
+                        <th >
                           <Form.Check
                             type="checkbox"
-                            checked={selectAllStaff}
-                            onChange={handleSelectAllStaff}
+                            checked={selectAllUsers}
+                            onChange={handleSelectAllUsers}
                           />
                         </th>
-                        <th style={{ width: '60px' }}>Photo</th>
+                        <th >Photo</th>
                         <th>Name</th>
                         <th>Email</th>
                         <th>Contact no</th>
                         <th>Password</th>
                         <th>Permissions</th>
-                        <th style={{ width: '120px' }}>Actions</th>
+                        <th >Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {staff.map((staffMember) => (
-                        <tr key={staffMember._id}>
+                      {users.map((user) => (
+                        <tr key={user._id}>
                           <td>
                             <Form.Check
                               type="checkbox"
-                              checked={selectedStaff.includes(staffMember._id)}
-                              onChange={() => handleStaffSelect(staffMember._id)}
+                              checked={selectedUsers.includes(user._id)}
+                              onChange={() => handleUserSelect(user._id)}
                             />
                           </td>
                           
@@ -2845,14 +2888,202 @@ const handleEditStaff = (staffMember) => {
                             <div style={{ 
                               width: '40px', 
                               height: '40px', 
+                              borderRadius: '50px', 
+                              overflow: 'hidden',
+                              border: '2px solid #dee2e6'
+                            }}>
+                              {user.profileImage ? (
+                                <img 
+                                  src={`http://localhost:5000${user.profileImage}`} 
+                                  alt={user.name}
+                                  style={{ 
+                                    width: '100%', 
+                                    height: '100%', 
+                                    objectFit: 'cover'
+                                  }}
+                                />
+                              ) : (
+                                <div className='w-100 h-100 d-flex align-items-center justify-contents-center' style={{ 
+                                   
+                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                 
+                                  color: 'white',
+                                  fontWeight: 'bold',
+                                  fontSize: '14px'
+                                }}>
+                                  {getInitials(user.name)}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          
+                          <td>
+                            {user.name}
+                          </td>
+                          <td>
+                            <div className="text-truncate" style={{ maxWidth: '200px' }}>
+                              {user.email}
+                            </div>
+                          </td>
+                          <td>{user.phone}</td>
+                          <td>
+                            {displayPassword(user.password)}
+                          </td>
+                          <td>
+                            <div style={{ maxWidth: '200px' }}>
+                              {formatPermissions(user.permissions)}
+                            </div>
+                          </td>
+                          <td>
+                            <div className="d-flex gap-1">
+                              <Button 
+                                variant="warning" 
+                                size="sm"
+                                onClick={() => handleEditUser(user)}
+                                title="Edit User"
+                              >
+                                <MdModeEdit />
+                              </Button>
+                              <Button 
+                                variant="danger" 
+                                size="sm"
+                                onClick={() => deleteUser(user._id)}
+                                title="Delete User"
+                              >
+                                <MdOutlineDelete />
+                              </Button>
+                              <Button 
+                                variant="dark" 
+                                size="sm"
+                                onClick={() => handleViewUser(user)}
+                                title="View User Details"
+                              >
+                                <IoEyeSharp /> 
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
+              </Card.Body>
+            </Card>
+          </div>
+        );
+        
+      case 'manage-customers':
+        if (!hasPermission('Customer')) {
+          return (
+            <Card className="border-0 shadow-sm">
+              <Card.Body className="text-center py-5">
+                <h3 className="text-danger">Access Denied</h3>
+                <p>You don't have permission to manage customers.</p>
+              </Card.Body>
+            </Card>
+          );
+        }
+        
+        return (
+          <div>
+            <Card className="shadow-lg">
+              <Card.Body  style={{marginLeft:"25px",marginRight:"25px"}}>
+                <h5 className="fw-semibold mb-0">Customer Management</h5>
+                <p className='text-muted' style={{fontSize:"12px"}}>View and manage all registered customers</p>
+              </Card.Body>
+            </Card><br />
+            <Card className="border-0 shadow-sm">
+              <Card.Header className="border-0 d-flex justify-content-between align-items-center">
+                <div>
+                  <h5 className="mb-1 fw-semibold">Manage Customers</h5>
+                  <p className="text-muted mb-0" style={{fontSize:"12px"}}>View and manage all registered customers</p>
+                </div>
+                <div className="d-flex gap-2">
+                  <Form.Control
+                    type="search"
+                    placeholder="Search customers..."
+                    value={customerSearch}
+                    onChange={(e) => {
+                      setCustomerSearch(e.target.value);
+                      fetchCustomers(1, e.target.value, customerPerPage);
+                    }}
+                    style={{height:"40px",marginTop:"8px" }}
+                  />
+                  <CustomPagination
+                    currentPage={customerPage}
+                    totalPages={customerTotalPages}
+                    totalItems={customerTotalItems}
+                    itemsPerPage={customerPerPage}
+                    onPageChange={(page) => {
+                      setCustomerPage(page);
+                      fetchCustomers(page, customerSearch, customerPerPage);
+                    }}
+                    onItemsPerPageChange={(perPage) => {
+                      setCustomerPerPage(perPage);
+                      fetchCustomers(1, customerSearch, perPage);
+                    }}
+                    showDownload={true}
+                    dataType="customers"
+                  />
+                </div>
+              </Card.Header>
+              <Card.Body>
+                {selectedCustomers.length > 0 && (
+                  <Alert variant="light" className="d-flex justify-content-between align-items-center">
+                    <span>{selectedCustomers.length} customer(s) selected</span>
+                    <Button 
+                      variant="danger" 
+                      size="sm"
+                      onClick={() => handleBulkDelete('customers', selectedCustomers)}
+                    >
+                      <i className="bi bi-trash me-2"></i>Delete Selected
+                    </Button>
+                  </Alert>
+                )}
+                
+                <div className="table-responsive">
+                  <Table hover responsive>
+                    <thead>
+                      <tr>
+                        <th style={{ width: '40px' }}>
+                          <Form.Check
+                            type="checkbox"
+                            checked={selectAllCustomers}
+                            onChange={handleSelectAllCustomers}
+                          />
+                        </th>
+                        <th style={{ width: '80px' }}>Profile</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>City</th>
+                        <th style={{ width: '150px' }}>Password</th>
+                        <th>Joined Date</th>
+                        <th style={{ width: '100px' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {customers.map((customer) => (
+                        <tr key={customer._id}>
+                          <td>
+                            <Form.Check
+                              type="checkbox"
+                              checked={selectedCustomers.includes(customer._id)}
+                              onChange={() => handleCustomerSelect(customer._id)}
+                            />
+                          </td>
+                          <td>
+                            <div style={{ 
+                              width: '50px', 
+                              height: '50px', 
                               borderRadius: '50%', 
                               overflow: 'hidden',
                               border: '2px solid #dee2e6'
                             }}>
-                              {staffMember.profileImage ? (
+                              {customer.profileImage ? (
                                 <img 
-                                  src={`http://localhost:5000${staffMember.profileImage}`} 
-                                  alt={staffMember.name}
+                                  src={`http://localhost:5000${customer.profileImage}`} 
+                                  alt={customer.name}
                                   style={{ 
                                     width: '100%', 
                                     height: '100%', 
@@ -2869,56 +3100,32 @@ const handleEditStaff = (staffMember) => {
                                   justifyContent: 'center',
                                   color: 'white',
                                   fontWeight: 'bold',
-                                  fontSize: '14px'
+                                  fontSize: '16px'
                                 }}>
-                                  {getInitials(staffMember.name)}
+                                  {getInitials(customer.name)}
                                 </div>
                               )}
                             </div>
                           </td>
-                          
+                          <td><strong>{customer.name}</strong></td>
+                          <td>{customer.email}</td>
+                          <td>{customer.phone}</td>
+                          <td>{customer.city}</td>
                           <td>
-                            <strong>{staffMember.name}</strong>
+                            <small className="text-muted" style={{ letterSpacing: '2px', fontFamily: 'monospace' }}>
+                              {displayPassword(customer.password)}
+                            </small>
                           </td>
+                          <td>{new Date(customer.createdAt).toLocaleDateString()}</td>
                           <td>
-                            <div className="text-truncate" style={{ maxWidth: '200px' }}>
-                              {staffMember.email}
-                            </div>
-                          </td>
-                          <td>{staffMember.phone}</td>
-                          <td>
-                            {displayPassword(staffMember.password)}
-                          </td>
-                          <td>
-                            <div style={{ maxWidth: '200px' }}>
-                              {formatPermissions(staffMember.permissions)}
-                            </div>
-                          </td>
-                          <td>
-                            <div className="d-flex gap-1">
-                              <Button 
-                                variant="warning" 
-                                size="sm"
-                                onClick={() => handleEditStaff(staffMember)}
-                                title="Edit Staff"
-                              >
-                                <MdModeEdit />
-                              </Button>
+                            <div className="text-center">
                               <Button 
                                 variant="danger" 
                                 size="sm"
-                                onClick={() => deleteStaff(staffMember._id)}
-                                title="Delete Staff"
+                                onClick={() => deleteCustomer(customer._id)}
+                                title="Delete Customer"
                               >
                                 <MdOutlineDelete />
-                              </Button>
-                              <Button 
-                                variant="dark" 
-                                size="sm"
-                                onClick={() => handleViewStaff(staffMember)}
-                                title="View Staff Details"
-                              >
-                                <IoEyeSharp /> 
                               </Button>
                             </div>
                           </td>
@@ -2930,165 +3137,6 @@ const handleEditStaff = (staffMember) => {
               </Card.Body>
             </Card>
           </div>
-        );
-        
-      case 'manage-users':
-        if (!hasPermission('User')) {
-          return (
-            <Card className="border-0 shadow-sm">
-              <Card.Body className="text-center py-5">
-                <h3 className="text-danger">Access Denied</h3>
-                <p>You don't have permission to manage users.</p>
-              </Card.Body>
-            </Card>
-          );
-        }
-        
-        return (
-          <Card className="border-0 shadow-sm">
-            <Card.Header className="border-0 d-flex justify-content-between align-items-center">
-              <div>
-                <h5 className="mb-0">Manage Users</h5>
-                <p className="text-muted mb-0">View and manage all registered users</p>
-              </div>
-              <div className="d-flex gap-2">
-                <Form.Control
-                  type="search"
-                  placeholder="Search users..."
-                  value={userSearch}
-                  onChange={(e) => {
-                    setUserSearch(e.target.value);
-                    fetchUsers(1, e.target.value, userPerPage);
-                  }}
-                  style={{height:"40px",marginTop:"8px" }}
-                />
-                <CustomPagination
-                  currentPage={userPage}
-                  totalPages={userTotalPages}
-                  totalItems={userTotalItems}
-                  itemsPerPage={userPerPage}
-                  onPageChange={(page) => {
-                    setUserPage(page);
-                    fetchUsers(page, userSearch, userPerPage);
-                  }}
-                  onItemsPerPageChange={(perPage) => {
-                    setUserPerPage(perPage);
-                    fetchUsers(1, userSearch, perPage);
-                  }}
-                  showDownload={true}
-                  dataType="users"
-                />
-              </div>
-            </Card.Header>
-            <Card.Body>
-              {selectedUsers.length > 0 && (
-                <Alert variant="light" className="d-flex justify-content-between align-items-center">
-                  <span>{selectedUsers.length} user(s) selected</span>
-                  <Button 
-                    variant="danger" 
-                    size="sm"
-                    onClick={() => handleBulkDelete('users', selectedUsers)}
-                  >
-                    <i className="bi bi-trash me-2"></i>Delete Selected
-                  </Button>
-                </Alert>
-              )}
-              
-              <div className="table-responsive">
-                <Table hover responsive>
-                  <thead>
-                    <tr>
-                      <th style={{ width: '40px' }}>
-                        <Form.Check
-                          type="checkbox"
-                          checked={selectAllUsers}
-                          onChange={handleSelectAllUsers}
-                        />
-                      </th>
-                      <th style={{ width: '80px' }}>Profile</th>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Phone</th>
-                      <th>City</th>
-                      <th style={{ width: '150px' }}>Password</th>
-                      <th>Joined Date</th>
-                      <th style={{ width: '100px' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((user) => (
-                      <tr key={user._id}>
-                        <td>
-                          <Form.Check
-                            type="checkbox"
-                            checked={selectedUsers.includes(user._id)}
-                            onChange={() => handleUserSelect(user._id)}
-                          />
-                        </td>
-                        <td>
-                          <div style={{ 
-                            width: '50px', 
-                            height: '50px', 
-                            borderRadius: '50%', 
-                            overflow: 'hidden',
-                            border: '2px solid #dee2e6'
-                          }}>
-                            {user.profileImage ? (
-                              <img 
-                                src={`http://localhost:5000${user.profileImage}`} 
-                                alt={user.name}
-                                style={{ 
-                                  width: '100%', 
-                                  height: '100%', 
-                                  objectFit: 'cover'
-                                }}
-                              />
-                            ) : (
-                              <div style={{ 
-                                width: '100%', 
-                                height: '100%', 
-                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'white',
-                                fontWeight: 'bold',
-                                fontSize: '16px'
-                              }}>
-                                {getInitials(user.name)}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td><strong>{user.name}</strong></td>
-                        <td>{user.email}</td>
-                        <td>{user.phone}</td>
-                        <td>{user.city}</td>
-                        <td>
-                          <small className="text-muted" style={{ letterSpacing: '2px', fontFamily: 'monospace' }}>
-                            {displayPassword(user.password)}
-                          </small>
-                        </td>
-                        <td>{new Date(user.createdAt).toLocaleDateString()}</td>
-                        <td>
-                          <div className="text-center">
-                            <Button 
-                              variant="danger" 
-                              size="sm"
-                              onClick={() => deleteUser(user._id)}
-                              title="Delete User"
-                            >
-                              <MdOutlineDelete />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </div>
-            </Card.Body>
-          </Card>
         );
         
       case 'manage-categories':
@@ -3617,10 +3665,10 @@ const handleEditStaff = (staffMember) => {
                             overflow: 'hidden',
                             border: '2px solid #dee2e6'
                           }}>
-                            {booking.userProfileImage ? (
+                            {booking.customerProfileImage ? (
                               <img 
-                                src={`http://localhost:5000${booking.userProfileImage}`} 
-                                alt={booking.userName}
+                                src={`http://localhost:5000${booking.customerProfileImage}`} 
+                                alt={booking.customerName}
                                 style={{ 
                                   width: '100%', 
                                   height: '100%', 
@@ -3640,7 +3688,7 @@ const handleEditStaff = (staffMember) => {
                                       font-weight: bold;
                                       font-size: 12px;
                                     ">
-                                      ${getInitials(booking.userName)}
+                                      ${getInitials(booking.customerName)}
                                     </div>
                                   `;
                                 }}
@@ -3657,7 +3705,7 @@ const handleEditStaff = (staffMember) => {
                                 fontWeight: 'bold',
                                 fontSize: '12px'
                               }}>
-                                {getInitials(booking.userName)}
+                                {getInitials(booking.customerName)}
                               </div>
                             )}
                           </div>
@@ -3665,8 +3713,8 @@ const handleEditStaff = (staffMember) => {
                         <td><small className="text-muted">{booking._id?.substring(0, 8)}...</small></td>
                         <td>
                           <div>
-                            <strong>{booking.userName}</strong><br/>
-                            <small className="text-muted">{booking.userEmail}</small>
+                            <strong>{booking.customerName}</strong><br/>
+                            <small className="text-muted">{booking.customerEmail}</small>
                           </div>
                         </td>
                         <td>{booking.serviceName}</td>
@@ -3736,8 +3784,8 @@ const handleEditStaff = (staffMember) => {
               <Col md={3}>
                 <Card className="text-center border-0 shadow-sm">
                   <Card.Body className="py-4">
-                    <h5 className="text-muted mb-2">User Growth</h5>
-                    <h2 className="mb-0" style={{ color: "#ed64a6" }}>{reports.userGrowth}</h2>
+                    <h5 className="text-muted mb-2">Customer Growth</h5>
+                    <h2 className="mb-0" style={{ color: "#ed64a6" }}>{reports.customerGrowth}</h2>
                   </Card.Body>
                 </Card>
               </Col>
@@ -3814,7 +3862,7 @@ const handleEditStaff = (staffMember) => {
                         <Form.Label>Report Type</Form.Label>
                         <Form.Select>
                           <option>Sales Report</option>
-                          <option>User Report</option>
+                          <option>Customer Report</option>
                           <option>Booking Report</option>
                           <option>Revenue Report</option>
                         </Form.Select>
@@ -3845,7 +3893,7 @@ const handleEditStaff = (staffMember) => {
                         <strong>12</strong>
                       </div>
                       <div className="list-group-item d-flex justify-content-between">
-                        <span>New Users Today</span>
+                        <span>New Customers Today</span>
                         <strong>8</strong>
                       </div>
                       <div className="list-group-item d-flex justify-content-between">
@@ -3973,7 +4021,7 @@ const handleEditStaff = (staffMember) => {
               <i className={`bi bi-${sidebarOpen ? 'chevron-left' : 'chevron-right'}`}></i>
             </Button>
             <Navbar.Brand className="fw-bold">
-              Urban Company {userRole === 'admin' ? 'Admin' : 'Staff'} Panel
+              Urban Company {userRole === 'admin' ? 'Admin' : 'User'} Panel
             </Navbar.Brand>
             
             <Navbar.Toggle aria-controls="navbar-nav" />
@@ -3981,9 +4029,9 @@ const handleEditStaff = (staffMember) => {
               <Nav className="align-items-center">
                 <Dropdown>
                   <Dropdown.Toggle variant="light" className="d-flex align-items-center">
-                    {userRole === 'staff' && staffProfile?.profileImage ? (
+                    {userRole === 'user' && userProfile?.profileImage ? (
                       <img 
-                        src={`http://localhost:5000${staffProfile.profileImage}`} 
+                        src={`http://localhost:5000${userProfile.profileImage}`} 
                         alt="Profile"
                         style={{ 
                           width: '30px', 
@@ -3997,7 +4045,7 @@ const handleEditStaff = (staffMember) => {
                       <i className="bi bi-person-circle me-2"></i>
                     )}
                     <span className="d-none d-md-inline">
-                      {userRole === 'admin' ? 'Admin User' : staffProfile?.name || 'Staff User'}
+                      {userRole === 'admin' ? 'Admin User' : userProfile?.name || 'User'}
                     </span>
                   </Dropdown.Toggle>
                   <Dropdown.Menu align="end">
@@ -4005,7 +4053,7 @@ const handleEditStaff = (staffMember) => {
                       if (userRole === 'admin') {
                         fetchAdminProfile();
                       } else {
-                        fetchStaffProfile();
+                        fetchUserProfile();
                       }
                       setActiveMenu('profile');
                     }}>
@@ -4035,13 +4083,13 @@ const handleEditStaff = (staffMember) => {
           {renderContent()}
         </Container>
         
-        {/* Staff Details Modal */}
-        <Modal show={showStaffDetails} onHide={() => setShowStaffDetails(false)} centered>
+        {/* User Details Modal */}
+        <Modal show={showUserDetails} onHide={() => setShowUserDetails(false)} centered>
           <Modal.Header >
             <Modal.Title className="fw-semibold fs-6">User Details</Modal.Title>
             <Button 
               type="button" 
-              onClick={() => setShowStaffDetails(false)} 
+              onClick={() => setShowUserDetails(false)} 
               className="position-absolute border-0 justify-content-center closebtn p-0" 
               style={{ right: '15px', top: '15px', background: 'transparent' }}
             >
@@ -4049,14 +4097,14 @@ const handleEditStaff = (staffMember) => {
             </Button>
           </Modal.Header>
           <Modal.Body>
-            {selectedStaffDetails && (
+            {selectedUserDetails && (
               <div>
                 <div className="text-center mb-4">
                   <div className="mb-3">
-                    {selectedStaffDetails.profileImage ? (
+                    {selectedUserDetails.profileImage ? (
                       <img 
-                        src={`http://localhost:5000${selectedStaffDetails.profileImage}`} 
-                        alt={selectedStaffDetails.name}
+                        src={`http://localhost:5000${selectedUserDetails.profileImage}`} 
+                        alt={selectedUserDetails.name}
                         style={{ 
                           width: '100px', 
                           height: '100px', 
@@ -4079,27 +4127,27 @@ const handleEditStaff = (staffMember) => {
                         fontSize: '24px',
                         margin: '0 auto'
                       }}>
-                        {getInitials(selectedStaffDetails.name)}
+                        {getInitials(selectedUserDetails.name)}
                       </div>
                     )}
                   </div>
-                  <h5 className="mb-1">{selectedStaffDetails.name}</h5>
-                  <p className="text-muted mb-3">{selectedStaffDetails.designation}</p>
+                  <h5 className="mb-1">{selectedUserDetails.name}</h5>
+                  <p className="text-muted mb-3">{selectedUserDetails.designation}</p>
                 </div>
 
                 <div className="list-group list-group-flush">
                   <div className="list-group-item px-0 border-top-0">
                     <small className="text-muted d-block">Email</small>
-                    <span>{selectedStaffDetails.email}</span>
+                    <span>{selectedUserDetails.email}</span>
                   </div>
                   <div className="list-group-item px-0">
                     <small className="text-muted d-block">Phone</small>
-                    <span>{selectedStaffDetails.phone}</span>
+                    <span>{selectedUserDetails.phone}</span>
                   </div>
                   <div className="list-group-item px-0">
                     <small className="text-muted d-block">Active Permissions</small>
                     <span>
-                      {Object.entries(selectedStaffDetails.permissions || {})
+                      {Object.entries(selectedUserDetails.permissions || {})
                         .filter(([key, value]) => value)
                         .map(([permission]) => permission)
                         .join(', ')}
@@ -4107,14 +4155,14 @@ const handleEditStaff = (staffMember) => {
                   </div>
                   <div className="list-group-item px-0">
                     <small className="text-muted d-block">Status</small>
-                    <Badge bg={selectedStaffDetails.isActive ? 'success' : 'secondary'}>
-                      {selectedStaffDetails.isActive ? 'Active' : 'Inactive'}
+                    <Badge bg={selectedUserDetails.isActive ? 'success' : 'secondary'}>
+                      {selectedUserDetails.isActive ? 'Active' : 'Inactive'}
                     </Badge>
                   </div>
                   <div className="list-group-item px-0 border-bottom-0">
                     <small className="text-muted d-block">Member Since</small>
                     <span>
-                      {selectedStaffDetails.createdAt ? new Date(selectedStaffDetails.createdAt).toLocaleDateString() : 'N/A'}
+                      {selectedUserDetails.createdAt ? new Date(selectedUserDetails.createdAt).toLocaleDateString() : 'N/A'}
                     </span>
                   </div>
                 </div>
@@ -4122,14 +4170,14 @@ const handleEditStaff = (staffMember) => {
             )}
           </Modal.Body>
           <Modal.Footer className="border-0">
-            <Button variant="secondary" onClick={() => setShowStaffDetails(false)}>
+            <Button variant="secondary" onClick={() => setShowUserDetails(false)}>
               Close
             </Button>
             <Button 
               variant="dark" 
               onClick={() => {
-                setShowStaffDetails(false);
-                handleEditStaff(selectedStaffDetails);
+                setShowUserDetails(false);
+                handleEditUser(selectedUserDetails);
               }}
             >
               Edit
