@@ -1,3 +1,4 @@
+// AuthContext.js
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const AuthContext = createContext();
@@ -8,8 +9,8 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [customerInfo, setCustomerInfo] = useState({
-    customerId: '', // Changed from userId
+  const [userInfo, setUserInfo] = useState({
+    id: '',  // Change userId to id
     name: '',
     email: '',
     phone: '',
@@ -20,54 +21,56 @@ export const AuthProvider = ({ children }) => {
 
   // Load from localStorage on initial render
   useEffect(() => {
-    const storedCustomer = localStorage.getItem('urbanCustomer'); // Changed key
-    if (storedCustomer) {
+    const storedUser = localStorage.getItem('urbanUser');
+    if (storedUser) {
       try {
-        const customerData = JSON.parse(storedCustomer);
-        console.log("📂 Loading customer from localStorage:", customerData);
-        setCustomerInfo(customerData);
+        const userData = JSON.parse(storedUser);
+        console.log("📂 Loading user from localStorage:", userData);
+        setUserInfo(userData);
         setIsLoggedIn(true);
       } catch (error) {
-        console.error("❌ Error parsing stored customer:", error);
-        localStorage.removeItem('urbanCustomer');
+        console.error("❌ Error parsing stored user:", error);
+        localStorage.removeItem('urbanUser');
       }
     }
   }, []);
 
-  const login = (customerData) => {
-    console.log("🔑 Login called with data:", customerData);
+  const login = (userData) => {
+    console.log("🔑 Login called with data:", userData);
     
-    // Ensure customerId is present
-    if (!customerData.customerId) {
-      console.error("❌ No customerId provided during login!");
-      alert("Login failed: Customer ID missing");
+    // Accept either userId, customerId, or id
+    const userId = userData.userId || userData.customerId || userData.id;
+    
+    if (!userId) {
+      console.error("❌ No user ID provided during login!");
+      alert("Login failed: User ID missing");
       return;
     }
 
-    const customerInfoToStore = {
-      customerId: customerData.customerId, // Changed from userId
-      name: customerData.name || '',
-      email: customerData.email || '',
-      phone: customerData.phone || '',
-      city: customerData.city || '',
-      profileImage: customerData.profileImage || '',
-      title: customerData.title || 'Ms'
+    const userInfoToStore = {
+      id: userId,  // Use consistent field name
+      name: userData.name || '',
+      email: userData.email || '',
+      phone: userData.phone || '',
+      city: userData.city || '',
+      profileImage: userData.profileImage || '',
+      title: userData.title || 'Ms'
     };
 
-    console.log("💾 Storing customer info:", customerInfoToStore);
+    console.log("💾 Storing user info:", userInfoToStore);
     
-    setCustomerInfo(customerInfoToStore);
+    setUserInfo(userInfoToStore);
     setIsLoggedIn(true);
     
-    // Save to localStorage with new key
-    localStorage.setItem('urbanCustomer', JSON.stringify(customerInfoToStore));
-    console.log("✅ Customer saved to localStorage");
+    // Save to localStorage
+    localStorage.setItem('urbanUser', JSON.stringify(userInfoToStore));
+    console.log("✅ User saved to localStorage");
   };
 
   const logout = () => {
-    console.log("🚪 Logging out customer");
-    setCustomerInfo({
-      customerId: '', // Changed from userId
+    console.log("🚪 Logging out user");
+    setUserInfo({
+      id: '',
       name: '',
       email: '',
       phone: '',
@@ -76,12 +79,16 @@ export const AuthProvider = ({ children }) => {
       title: 'Ms'
     });
     setIsLoggedIn(false);
-    localStorage.removeItem('urbanCustomer'); // Changed key
+    localStorage.removeItem('urbanUser');
   };
 
   const value = {
     isLoggedIn,
-    customerInfo, // Changed from userInfo
+    userInfo: {
+      ...userInfo,
+      customerId: userInfo.id,  // Add backward compatibility
+      userId: userInfo.id       // Add backward compatibility
+    },
     login,
     logout
   };

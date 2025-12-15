@@ -47,29 +47,32 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
     profileFile: null
   });
 
-  const { isLoggedIn, customerInfo, login, logout } = useAuth();
+  const { isLoggedIn, userInfo, login, logout } = useAuth();
+  
+  // Create alias for backward compatibility
+  const customerInfo = userInfo || {};
 
   // Update the useEffect that loads profile data
   useEffect(() => {
-    if (isLoggedIn && show && customerInfo.email) {
+    if (isLoggedIn && show && customerInfo?.email) {
       loadCustomerData();
       
       // Initialize profile data with customer info
       setProfileData({
-        title: customerInfo.title || "Ms",
-        name: customerInfo.name || "",
-        email: customerInfo.email || "",
-        phone: customerInfo.phone || "",
-        city: customerInfo.city || "",
+        title: customerInfo?.title || "Ms",
+        name: customerInfo?.name || "",
+        email: customerInfo?.email || "",
+        phone: customerInfo?.phone || "",
+        city: customerInfo?.city || "",
         profileFile: null
       });
 
       console.log("Profile data initialized with:", {
-        name: customerInfo.name,
-        email: customerInfo.email,
-        phone: customerInfo.phone,
-        city: customerInfo.city,
-        title: customerInfo.title
+        name: customerInfo?.name,
+        email: customerInfo?.email,
+        phone: customerInfo?.phone,
+        city: customerInfo?.city,
+        title: customerInfo?.title
       });
     }
   }, [isLoggedIn, show, customerInfo]);
@@ -96,7 +99,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
         
         // Check if any booking matches current customer's email
         const customerBookings = allBookings.filter(booking => 
-          booking.customerEmail === customerInfo.email
+          booking.customerEmail === customerInfo?.email
         );
         console.log("Customer's bookings:", customerBookings);
       }
@@ -108,13 +111,13 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
   const loadCustomerData = async () => {
     try {
       setLoadingBookings(true);
-      if (!customerInfo.email) {
+      if (!customerInfo?.email) {
         console.log("No email found");
         setBookings([]);
         return;
       }
       
-      const customerEmail = customerInfo.email;
+      const customerEmail = customerInfo?.email;
       console.log("Fetching bookings for:", customerEmail);
       
       // Load bookings from server
@@ -488,13 +491,16 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
     console.log("=== DEBUG START ===");
     console.log("📋 Profile data to save:", profileData);
     console.log("👤 Full customerInfo object:", customerInfo);
-    console.log("🆔 Customer ID value:", customerInfo.customerId);
-    console.log("🆔 Customer ID type:", typeof customerInfo.customerId);
+    console.log("🆔 Customer ID value:", customerInfo?.customerId || customerInfo?.id);
+    console.log("🆔 Customer ID type:", typeof (customerInfo?.customerId || customerInfo?.id));
     console.log("=== DEBUG END ===");
     
+    // Get the customer ID from either field
+    const customerId = customerInfo?.customerId || customerInfo?.id;
+    
     // Validation
-    if (!customerInfo.customerId || customerInfo.customerId === "undefined" || customerInfo.customerId === "") {
-      console.error("❌ Invalid customerId:", customerInfo.customerId);
+    if (!customerId || customerId === "undefined" || customerId === "") {
+      console.error("❌ Invalid customerId:", customerId);
       alert("Customer ID is missing or invalid. Please:\n1. Log out\n2. Clear browser cache\n3. Log in again");
       return;
     }
@@ -528,7 +534,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
     try {
       // Create FormData for file upload
       const formData = new FormData();
-      formData.append('customerId', customerInfo.customerId); // Changed from userId
+      formData.append('customerId', customerId); // Use the correct customerId
       formData.append('name', profileData.name);
       formData.append('email', profileData.email);
       formData.append('phone', profileData.phone);
@@ -543,7 +549,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
 
       console.log("📤 Sending update request to server...");
       console.log("🔗 Endpoint: http://localhost:5000/api/update-profile");
-      console.log("🆔 Customer ID being sent:", customerInfo.customerId);
+      console.log("🆔 Customer ID being sent:", customerId);
 
       const response = await fetch("http://localhost:5000/api/update-profile", {
         method: "POST",
@@ -601,6 +607,11 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
 
   // Render profile picture component
   const renderProfilePicture = (pictureUrl, size = 80, editable = false, onEditClick = null) => {
+    // Handle undefined pictureUrl
+    if (!pictureUrl) {
+      pictureUrl = "";
+    }
+    
     // Construct full URL if it's a relative path
     const getFullImageUrl = (url) => {
       if (!url) return null;
@@ -904,7 +915,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
     console.log("Edit View - Current Customer Info:", customerInfo);
     
     // Use preview if exists, otherwise use existing profile image
-    const displayImage = profilePreview || customerInfo.profileImage;
+    const displayImage = profilePreview || customerInfo?.profileImage;
     
     return (
       <div>
@@ -957,7 +968,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
                         key={title}
                         type="button"
                         className={`btn border-0 rounded-0 flex-fill ${
-                          (profileData.title || customerInfo.title || "Ms") === title 
+                          (profileData.title || customerInfo?.title || "Ms") === title 
                             ? 'btn-dark' 
                             : 'btn-outline-secondary'
                         }`}
@@ -980,7 +991,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
                   <div className="">
                     <Form.Control
                       type="text"
-                      value={profileData.name || customerInfo.name || ""}
+                      value={profileData.name || customerInfo?.name || ""}
                       onChange={(e) => handleProfileChange('name', e.target.value)}
                       className="border-0 p-0"
                       style={{ 
@@ -1002,7 +1013,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
               <div>
                 <Form.Control
                   type="email"
-                  value={profileData.email || customerInfo.email || ""}
+                  value={profileData.email || customerInfo?.email || ""}
                   onChange={(e) => handleProfileChange('email', e.target.value)}
                   placeholder="Enter email"
                   className="border-0 p-0"
@@ -1022,7 +1033,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
               <p className="text-muted small mb-0" style={{fontSize:"12px"}}>Phone Number</p>
               <Form.Control
                 type="tel"
-                value={profileData.phone || customerInfo.phone || ""}
+                value={profileData.phone || customerInfo?.phone || ""}
                 onChange={(e) => handleProfileChange('phone', e.target.value.replace(/\D/g, ""))}
                 placeholder="Enter phone number"
                 className="border-0 p-0"
@@ -1042,7 +1053,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
               <p className="text-muted small mb-0" style={{fontSize:"12px"}}>City</p>
               <Form.Control
                 type="text"
-                value={profileData.city || customerInfo.city || ""}
+                value={profileData.city || customerInfo?.city || ""}
                 onChange={(e) => handleProfileChange('city', e.target.value)}
                 placeholder="Enter your city"
                 className="border-0 p-0"
@@ -1330,83 +1341,88 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
   );
 
   // Render main view after login with profile picture
-  const renderMainViewAfterLogin = () => (
-    <div>
-      <div 
-        className="mb-4 p-3"
-        style={{ cursor: "pointer" }}
-        onClick={() => handleNavigation("profile-details")}
-      >
-        <div className="d-flex align-items-center gap-3">
-          {renderProfilePicture(customerInfo.profileImage, 60, false)}
-          <div className="flex-grow-1">
-            <h5 className="fw-semibold mb-1">{customerInfo.name || "Customer"}</h5>
-            <p className="small text-muted mb-0">
-              +91 {customerInfo.phone}
-            </p>
-              <p className="small text-muted mb-1">{customerInfo.email}</p>
-          </div>
-          <MdOutlineArrowForwardIos size={14} className="text-muted" />
-        </div>
-      </div>
-
+  const renderMainViewAfterLogin = () => {
+    console.log("🔍 Debug - customerInfo in renderMainViewAfterLogin:", customerInfo);
+    console.log("🔍 Debug - profileImage value:", customerInfo?.profileImage);
+    
+    return (
       <div>
-        {[
-          { icon: <PiNotepadLight size={20} />, label: "My plans", view: "plans" },
-          { icon: <LuNotepadText size={20} />, label: "Bookings", view: "bookings" },
-          { icon: <IoMdHelpCircleOutline size={20} />, label: "Help Center", view: "help" },
-          {icon: <IoSettingsOutline size={20}/>, label: "Settings", view: "settings"}
-        ].map((item, index) => (
-          <div 
-            key={index}
-            className="d-flex justify-content-between align-items-center py-3 border-bottom"
-            onClick={() => handleNavigation(item.view)}
-            style={{ cursor: "pointer" }}
-          >
-            <div className="d-flex align-items-center gap-3">
-              <span className="text-muted">{item.icon}</span>
-              <span className="fw-medium">{item.label}</span>
+        <div 
+          className="mb-4 p-3"
+          style={{ cursor: "pointer" }}
+          onClick={() => handleNavigation("profile-details")}
+        >
+          <div className="d-flex align-items-center gap-3">
+            {renderProfilePicture(customerInfo?.profileImage, 60, false)}
+            <div className="flex-grow-1">
+              <h5 className="fw-semibold mb-1">{customerInfo?.name || "Customer"}</h5>
+              <p className="small text-muted mb-0">
+                +91 {customerInfo?.phone || ""}
+              </p>
+                <p className="small text-muted mb-1">{customerInfo?.email || ""}</p>
             </div>
             <MdOutlineArrowForwardIos size={14} className="text-muted" />
           </div>
-        ))}
-        
-        <div 
-          className="d-flex justify-content-between align-items-center py-3 border-bottom"
-          onClick={() => handleNavigation("about")}
-          style={{ cursor: "pointer" }}
-        >
-          <div className="d-flex align-items-center gap-3">
-            <span className="text-muted">
-              <img 
-                src={logo1 || "http://localhost:5000/assets/urban.png"} 
-                alt="UC" 
-                style={{ width: "20px", height: "20px", objectFit: "contain" }}
-                onError={(e) => {
-                  e.target.src = "http://localhost:5000/assets/urban.png";
-                }}
-              />
-            </span>
-            <span className="fw-medium">About Urban Company</span>
-            </div>
-          <MdOutlineArrowForwardIos size={14} className="text-muted" />
         </div>
 
-        <div 
-          className="d-flex justify-content-between align-items-center py-3 text-danger"
-          onClick={handleLogout}
-          style={{ cursor: "pointer" }}
-        >
-          <div className="d-flex align-items-center gap-3">
-            <span className="text-danger">
-              <IoMdLogOut size={20} />
-            </span>
-            <span className="fw-medium">Logout</span>
+        <div>
+          {[
+            { icon: <PiNotepadLight size={20} />, label: "My plans", view: "plans" },
+            { icon: <LuNotepadText size={20} />, label: "Bookings", view: "bookings" },
+            { icon: <IoMdHelpCircleOutline size={20} />, label: "Help Center", view: "help" },
+            {icon: <IoSettingsOutline size={20}/>, label: "Settings", view: "settings"}
+          ].map((item, index) => (
+            <div 
+              key={index}
+              className="d-flex justify-content-between align-items-center py-3 border-bottom"
+              onClick={() => handleNavigation(item.view)}
+              style={{ cursor: "pointer" }}
+            >
+              <div className="d-flex align-items-center gap-3">
+                <span className="text-muted">{item.icon}</span>
+                <span className="fw-medium">{item.label}</span>
+              </div>
+              <MdOutlineArrowForwardIos size={14} className="text-muted" />
+            </div>
+          ))}
+          
+          <div 
+            className="d-flex justify-content-between align-items-center py-3 border-bottom"
+            onClick={() => handleNavigation("about")}
+            style={{ cursor: "pointer" }}
+          >
+            <div className="d-flex align-items-center gap-3">
+              <span className="text-muted">
+                <img 
+                  src={logo1 || "http://localhost:5000/assets/urban.png"} 
+                  alt="UC" 
+                  style={{ width: "20px", height: "20px", objectFit: "contain" }}
+                  onError={(e) => {
+                    e.target.src = "http://localhost:5000/assets/urban.png";
+                  }}
+                />
+              </span>
+              <span className="fw-medium">About Urban Company</span>
+              </div>
+            <MdOutlineArrowForwardIos size={14} className="text-muted" />
+          </div>
+
+          <div 
+            className="d-flex justify-content-between align-items-center py-3 text-danger"
+            onClick={handleLogout}
+            style={{ cursor: "pointer" }}
+          >
+            <div className="d-flex align-items-center gap-3">
+              <span className="text-danger">
+                <IoMdLogOut size={20} />
+              </span>
+              <span className="fw-medium">Logout</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Render help view
   const renderHelpView = () => (

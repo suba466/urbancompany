@@ -2,17 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { 
   Container, Row, Col, Card, Table, Form, Button, 
   Spinner, Modal, Nav, Navbar, Badge,
-  Dropdown, Alert, Tabs, Tab
+  Dropdown, Alert
 } from 'react-bootstrap';
 import { MdModeEdit } from "react-icons/md";
 import { MdOutlineDelete } from "react-icons/md";
-import { FaFileExcel, FaFilePdf, FaFileCsv } from "react-icons/fa";
 import { FcBusinessman, FcPlanner, FcBullish, FcSupport } from "react-icons/fc";
-import html2pdf from 'html2pdf.js';
-import * as XLSX from 'xlsx';
 import Categories from './Categories';
 import CategoryForm from './CategoryForm';
 import { IoEyeSharp } from "react-icons/io5";
+import TableControls from './TableControls';
+import { 
+  prepareUserDataForExport, 
+  prepareCustomerDataForExport, 
+  prepareBookingDataForExport,
+  getCSVHeadersFromData,
+  exportAsPDF,
+  exportAsExcel,
+  exportAsCSV
+} from './downloadUtils';
 import "./Urbancom.css";
 
 function AdminPanel() {
@@ -47,7 +54,7 @@ function AdminPanel() {
   const [recentBookings, setRecentBookings] = useState([]);
   const [recentCustomers, setRecentCustomers] = useState([]);
   
-  // User Management States (Changed from Staff to Users)
+  // User Management States
   const [users, setUsers] = useState([]);
   const [userSearch, setUserSearch] = useState('');
   const [userPage, setUserPage] = useState(1);
@@ -115,13 +122,7 @@ function AdminPanel() {
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectAllCategories, setSelectAllCategories] = useState(false);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
-  const [newCategory, setNewCategory] = useState({
-    name: '',
-    description: '',
-    icon: '',
-    order: 0,
-    isActive: true
-  });
+
   const [editCategoryId, setEditCategoryId] = useState(null);
   const [isEditingCategory, setIsEditingCategory] = useState(false);
   const [editCategory, setEditCategory] = useState({
@@ -170,7 +171,6 @@ function AdminPanel() {
   // Settings States
   const [settings, setSettings] = useState({
     siteTitle: 'Urban Company',
-    siteLogo: '',
     contactEmail: 'support@urbancompany.com',
     contactPhone: '1800-123-4567',
     address: '123 Business Street, City, Country'
@@ -180,15 +180,15 @@ function AdminPanel() {
   const [adminProfile, setAdminProfile] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
 
- // Format permissions with badges
+  // Format permissions with badges - Updated for consistent padding
 const formatPermissions = (permissions) => {
-  if (!permissions) return <Badge bg="dark" className="me-1">None</Badge>;
+  if (!permissions) return <Badge bg="dark" className="me-1 px-3 py-2">None</Badge>;
   
   const activePermissions = Object.entries(permissions)
     .filter(([key, value]) => value)
     .map(([key]) => key);
   
-  if (activePermissions.length === 0) return <Badge bg="dark" className="me-1">None</Badge>;
+  if (activePermissions.length === 0) return <Badge bg="dark" className="me-1 px-3 py-2">None</Badge>;
   
   const permissionGradients = {
     'Dashboard': 'linear-gradient(135deg, #141E30 0%, #243B55 100%)',
@@ -202,7 +202,7 @@ const formatPermissions = (permissions) => {
   };
 
   return (
-    <div className="d-flex flex-wrap gap-2">
+    <div className="d-flex flex-wrap" style={{ gap: '6px' }}>
       {activePermissions.map((permission) => {
         const gradient = permissionGradients[permission] || 'linear-gradient(135deg, #2C3E50 0%, #4CA1AF 100%)';
         const textColor = '#ffffff';
@@ -215,8 +215,11 @@ const formatPermissions = (permissions) => {
               background: gradient,
               color: textColor,
               borderRadius: '15px',
-              fontSize: "13px",
+              fontSize: "13.5px",
               boxShadow: '0 3px 8px rgba(0,0,0,0.3)',
+              lineHeight: '1.4',
+              display: 'inline-flex',
+              minHeight: '28px'
             }}>
             {permission}
           </span>
@@ -226,179 +229,114 @@ const formatPermissions = (permissions) => {
   );
 };
 
-const validateUserForm = () => {
-  const errors = {};
-  
-  if (!newUser.name.trim()) {
-    errors.name = 'Name is required';
-  }
-  
-  if (!newUser.email.trim()) {
-    errors.email = 'Email is required';
-  } else if (!/\S+@\S+\.\S+/.test(newUser.email)) {
-    errors.email = 'Email is invalid';
-  }
-  
-  if (!newUser.phone.trim()) {
-    errors.phone = 'Phone is required';
-  } else if (!/^\d{10}$/.test(newUser.phone.replace(/\D/g, ''))) {
-    errors.phone = 'Phone must be 10 digits';
-  }
-  
-  if (!newUser.designation) {
-    errors.designation = 'Designation is required';
-  }
-  
-  // Skip password validation when editing (unless password is being changed)
-  if (!isEditingUser) {
-    if (!newUser.password) {
-      errors.password = 'Password is required';
-    } else if (newUser.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters';
+  const validateUserForm = () => {
+    const errors = {};
+    
+    if (!newUser.name.trim()) {
+      errors.name = 'Name is required';
     }
     
-    if (!confirmPassword) {
-      errors.confirmPassword = 'Please confirm password';
-    } else if (newUser.password !== confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match';
-    }
-  } else if (newUser.password !== '********' && newUser.password.length > 0) {
-    // If editing and password is being changed (not placeholder)
-    if (newUser.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters';
+    if (!newUser.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(newUser.email)) {
+      errors.email = 'Email is invalid';
     }
     
-    if (!confirmPassword) {
-      errors.confirmPassword = 'Please confirm password';
-    } else if (newUser.password !== confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match';
+    if (!newUser.phone.trim()) {
+      errors.phone = 'Phone is required';
+    } else if (!/^\d{10}$/.test(newUser.phone.replace(/\D/g, ''))) {
+      errors.phone = 'Phone must be 10 digits';
     }
-  }
-  
-  setFormErrors(prev => ({ ...prev, users: errors }));
-  return Object.keys(errors).length === 0;
-};
-
-const validateCustomerForm = () => {
-  const errors = {};
-  
-  if (!newCustomer.name.trim()) {
-    errors.name = 'Name is required';
-  }
-  
-  if (!newCustomer.email.trim()) {
-    errors.email = 'Email is required';
-  } else if (!/\S+@\S+\.\S+/.test(newCustomer.email)) {
-    errors.email = 'Email is invalid';
-  }
-  
-  if (!newCustomer.phone.trim()) {
-    errors.phone = 'Phone is required';
-  }
-  
-  if (!newCustomer.city.trim()) {
-    errors.city = 'City is required';
-  }
-  
-  if (!newCustomer.password) {
-    errors.password = 'Password is required';
-  } else if (newCustomer.password.length < 6) {
-    errors.password = 'Password must be at least 6 characters';
-  }
-  
-  setFormErrors(prev => ({ ...prev, customer: errors }));
-  return Object.keys(errors).length === 0;
-};
-
-const validateProductForm = () => {
-  const errors = {};
-  
-  if (!newProduct.name.trim()) {
-    errors.name = 'Product name is required';
-  }
-  
-  if (!newProduct.category) {
-    errors.category = 'Category is required';
-  }
-  
-  if (!newProduct.price) {
-    errors.price = 'Price is required';
-  } else if (parseFloat(newProduct.price) <= 0) {
-    errors.price = 'Price must be greater than 0';
-  }
-  
-  if (newProduct.stock === '' || newProduct.stock < 0) {
-    errors.stock = 'Stock quantity is required';
-  }
-  
-  setFormErrors(prev => ({ ...prev, product: errors }));
-  return Object.keys(errors).length === 0;
-};
-
-// Handle field blur for immediate feedback
-const handleFieldBlur = (formType, fieldName) => {
-  setTouchedFields(prev => ({
-    ...prev,
-    [formType]: {
-      ...prev[formType],
-      [fieldName]: true
+    
+    if (!newUser.designation) {
+      errors.designation = 'Designation is required';
     }
-  }));
-  
-  // Trigger validation for the specific field
-  if (formType === 'users') {
-    validateUserForm();
-  } else if (formType === 'customer') {
-    validateCustomerForm();
-  } else if (formType === 'product') {
-    validateProductForm();
-  }
-};
+    
+    // Skip password validation when editing (unless password is being changed)
+    if (!isEditingUser) {
+      if (!newUser.password) {
+        errors.password = 'Password is required';
+      } else if (newUser.password.length < 6) {
+        errors.password = 'Password must be at least 6 characters';
+      }
+      
+      if (!confirmPassword) {
+        errors.confirmPassword = 'Please confirm password';
+      } else if (newUser.password !== confirmPassword) {
+        errors.confirmPassword = 'Passwords do not match';
+      }
+    } else if (newUser.password !== '********' && newUser.password.length > 0) {
+      // If editing and password is being changed (not placeholder)
+      if (newUser.password.length < 6) {
+        errors.password = 'Password must be at least 6 characters';
+      }
+      
+      if (!confirmPassword) {
+        errors.confirmPassword = 'Please confirm password';
+      } else if (newUser.password !== confirmPassword) {
+        errors.confirmPassword = 'Passwords do not match';
+      }
+    }
+    
+    setFormErrors(prev => ({ ...prev, users: errors }));
+    return Object.keys(errors).length === 0;
+  };
 
-// Helper function to get field styling
-const getFieldStyle = (formType, fieldName, currentValue) => {
-  const isTouched = touchedFields[formType]?.[fieldName];
-  const hasError = formErrors[formType]?.[fieldName];
-  
-  if (isTouched && hasError && !currentValue) {
+  // Handle field blur for immediate feedback
+  const handleFieldBlur = (formType, fieldName) => {
+    setTouchedFields(prev => ({
+      ...prev,
+      [formType]: {
+        ...prev[formType],
+        [fieldName]: true
+      }
+    }));
+  };
+
+  // Helper function to get field styling
+  const getFieldStyle = (formType, fieldName, currentValue) => {
+    const isTouched = touchedFields[formType]?.[fieldName];
+    const hasError = formErrors[formType]?.[fieldName];
+    
+    if (isTouched && hasError && !currentValue) {
+      return {
+        border: '2px solid #000000',
+        backgroundColor: '#fff8f8'
+      };
+    }
     return {
       border: '2px solid #000000',
-      backgroundColor: '#fff8f8'
+      backgroundColor: 'white'
     };
-  }
-  return {
-    border: '2px solid #000000',
-    backgroundColor: 'white'
   };
-};
 
   const fetchAdminProfile = async () => {
-  try {
-    const response = await fetch('http://localhost:5000/api/admin/profile', {
-      headers: getAuthHeaders()
-    });
-    const data = await response.json();
-    if (data.success) {
-      setAdminProfile(data.profile);
+    try {
+      const response = await fetch('http://localhost:5000/api/admin/profile', {
+        headers: getAuthHeaders()
+      });
+      const data = await response.json();
+      if (data.success) {
+        setAdminProfile(data.profile);
+      }
+    } catch (error) {
+      console.error('Error fetching admin profile:', error);
     }
-  } catch (error) {
-    console.error('Error fetching admin profile:', error);
-  }
-};
+  };
 
-const fetchUserProfile = async () => {
-  try {
-    const response = await fetch('http://localhost:5000/api/admin/user-profile', {
-      headers: getAuthHeaders()
-    });
-    const data = await response.json();
-    if (data.success) {
-      setUserProfile(data.profile);
+  const fetchUserProfile = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/admin/user-profile', {
+        headers: getAuthHeaders()
+      });
+      const data = await response.json();
+      if (data.success) {
+        setUserProfile(data.profile);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
     }
-  } catch (error) {
-    console.error('Error fetching user profile:', error);
-  }
-};
+  };
 
   // Check if user has permission
   const hasPermission = (permission) => {
@@ -440,90 +378,90 @@ const fetchUserProfile = async () => {
     setShowUserDetails(true);
   };
 
- const handleLogin = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  
-  try {
-    // Auto-detect login type based on email domain or pattern
-    const isAdminEmail = loginData.email.includes('@urbancompany.com') || 
-                        loginData.email.includes('admin');
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
     
-    const endpoint = isAdminEmail 
-      ? 'http://localhost:5000/api/admin/login'
-      : 'http://localhost:5000/api/admin/user-login';
-    
-    console.log('Attempting login as:', isAdminEmail ? 'Admin' : 'User');
-    
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(loginData)
-    });
-    
-    const data = await response.json();
-    console.log('Login response:', data);
-    
-    if (data.success) {
-      setIsLoggedIn(true);
+    try {
+      // Auto-detect login type based on email domain or pattern
+      const isAdminEmail = loginData.email.includes('@urbancompany.com') || 
+                          loginData.email.includes('admin');
       
-      // ALWAYS reset to dashboard when logging in
-      setActiveMenu('dashboard');
+      const endpoint = isAdminEmail 
+        ? 'http://localhost:5000/api/admin/login'
+        : 'http://localhost:5000/api/admin/user-login';
       
-      // Store token and user info
-      localStorage.setItem('authToken', data.token);
+      console.log('Attempting login as:', isAdminEmail ? 'Admin' : 'User');
       
-      if (isAdminEmail) {
-        localStorage.setItem('userRole', 'admin');
-        localStorage.setItem('userPermissions', JSON.stringify(data.admin?.permissions || {}));
-        setUserRole('admin');
-        setUserPermissions(data.admin?.permissions || {});
-      } else {
-        localStorage.setItem('userRole', 'user');
-        localStorage.setItem('userPermissions', JSON.stringify(data.user?.permissions || {}));
-        setUserRole('user');
-        setUserPermissions(data.user?.permissions || {});
-      }
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(loginData)
+      });
       
-      fetchDashboardData();
-    } else {
-      // If admin login fails, try user login
-      if (isAdminEmail) {
-        console.log('Admin login failed, trying user login...');
-        // Try user login
-        const userResponse = await fetch('http://localhost:5000/api/admin/user-login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(loginData)
-        });
+      const data = await response.json();
+      console.log('Login response:', data);
+      
+      if (data.success) {
+        setIsLoggedIn(true);
         
-        const userData = await userResponse.json();
-        if (userData.success) {
-          setIsLoggedIn(true);
-          
-          // ALWAYS reset to dashboard when logging in
-          setActiveMenu('dashboard');
-          
-          localStorage.setItem('authToken', userData.token);
-          localStorage.setItem('userRole', 'user');
-          localStorage.setItem('userPermissions', JSON.stringify(userData.user?.permissions || {}));
-          setUserRole('user');
-          setUserPermissions(userData.user?.permissions || {});
-          fetchDashboardData();
+        // ALWAYS reset to dashboard when logging in
+        setActiveMenu('dashboard');
+        
+        // Store token and user info
+        localStorage.setItem('authToken', data.token);
+        
+        if (isAdminEmail) {
+          localStorage.setItem('userRole', 'admin');
+          localStorage.setItem('userPermissions', JSON.stringify(data.admin?.permissions || {}));
+          setUserRole('admin');
+          setUserPermissions(data.admin?.permissions || {});
         } else {
-          alert(data.error || userData.error || 'Login failed');
+          localStorage.setItem('userRole', 'user');
+          localStorage.setItem('userPermissions', JSON.stringify(data.user?.permissions || {}));
+          setUserRole('user');
+          setUserPermissions(data.user?.permissions || {});
         }
+        
+        fetchDashboardData();
       } else {
-        alert(data.error || 'Login failed');
+        // If admin login fails, try user login
+        if (isAdminEmail) {
+          console.log('Admin login failed, trying user login...');
+          // Try user login
+          const userResponse = await fetch('http://localhost:5000/api/admin/user-login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(loginData)
+          });
+          
+          const userData = await userResponse.json();
+          if (userData.success) {
+            setIsLoggedIn(true);
+            
+            // ALWAYS reset to dashboard when logging in
+            setActiveMenu('dashboard');
+            
+            localStorage.setItem('authToken', userData.token);
+            localStorage.setItem('userRole', 'user');
+            localStorage.setItem('userPermissions', JSON.stringify(userData.user?.permissions || {}));
+            setUserRole('user');
+            setUserPermissions(userData.user?.permissions || {});
+            fetchDashboardData();
+          } else {
+            alert(data.error || userData.error || 'Login failed');
+          }
+        } else {
+          alert(data.error || 'Login failed');
+        }
       }
+    } catch (error) {
+      console.error('Login error:', error);
+      alert('Login failed. Please check your connection.');
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Login error:', error);
-    alert('Login failed. Please check your connection.');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -913,251 +851,6 @@ const fetchUserProfile = async () => {
       .substring(0, 2);
   };
 
-  // Download functions for tables
-  const downloadTableAsPDF = (dataType = '') => {
-    const element = document.querySelector('.table-responsive');
-    if (!element) {
-      alert('No table found to download');
-      return;
-    }
-    
-    const options = {
-      margin: 1,
-      filename: `${dataType || 'table'}_${new Date().toISOString().split('T')[0]}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
-    
-    html2pdf().from(element).set(options).save();
-  };
-
-  const downloadTableAsExcel = (dataType = '') => {
-    let data = [];
-    let headers = [];
-    
-    // Get data based on current active menu
-    switch(activeMenu) {
-      case 'manage-users':
-        data = users.map(u => ({
-          'Name': u.name,
-          'Email': u.email,
-          'Phone': u.phone,
-          'Designation': u.designation,
-          'Profile Image': u.profileImage ? `http://localhost:5000${u.profileImage}` : 'No Image',
-          'Permissions': Object.entries(u.permissions || {})
-            .filter(([key, value]) => value)
-            .map(([key]) => key.charAt(0).toUpperCase() + key.slice(1))
-            .join(', ')
-        }));
-        break;
-        
-      case 'manage-customers':
-        data = customers.map(c => ({
-          'Name': c.name,
-          'Email': c.email,
-          'Phone': c.phone,
-          'City': c.city,
-          'Profile Image': c.profileImage ? `http://localhost:5000${c.profileImage}` : 'No Image',
-          'Joined Date': new Date(c.createdAt).toLocaleDateString()
-        }));
-        break;
-        
-      case 'bookings':
-        data = bookings.map(b => ({
-          'Customer': b.customerName,
-          'Email': b.customerEmail,
-          'Profile Image': b.customerProfileImage ? `http://localhost:5000${b.customerProfileImage}` : 'No Image',
-          'Service': b.serviceName,
-          'Price': `₹${b.servicePrice}`,
-          'Status': b.status,
-          'Date': new Date(b.createdAt).toLocaleDateString()
-        }));
-        break;
-        
-      default:
-        // Fallback: Try to get data from table
-        const table = document.querySelector('table');
-        if (table) {
-          headers = Array.from(table.querySelectorAll('thead th'))
-            .map(th => th.textContent.trim())
-            .filter(h => h);
-          
-          const rows = table.querySelectorAll('tbody tr');
-          data = Array.from(rows).map(row => {
-            const cells = row.querySelectorAll('td');
-            return Array.from(cells).reduce((obj, cell, index) => {
-              if (headers[index]) {
-                const text = cell.textContent.trim();
-                obj[headers[index]] = text.includes('checkbox') ? '' : text;
-              }
-              return obj;
-            }, {});
-          });
-        }
-    }
-    
-    if (data.length === 0) {
-      alert('No data available to export');
-      return;
-    }
-    
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
-    
-    XLSX.writeFile(workbook, `${dataType || 'data'}_${new Date().toISOString().split('T')[0]}.xlsx`);
-  };
-
-  const downloadTableAsCSV = (dataType = '') => {
-    let data = [];
-    let headers = [];
-    
-    // Get data based on current active menu
-    switch(activeMenu) {
-      case 'manage-users':
-        headers = ['Name', 'Email', 'Phone', 'Designation', 'Profile Image URL', 'Permissions'];
-        data = users.map(u => [
-          u.name,
-          u.email,
-          u.phone,
-          u.designation,
-          u.profileImage ? `http://localhost:5000${u.profileImage}` : 'No Image',
-          Object.entries(u.permissions || {})
-            .filter(([key, value]) => value)
-            .map(([key]) => key.charAt(0).toUpperCase() + key.slice(1))
-            .join(', ')
-        ]);
-        break;
-        
-      case 'manage-customers':
-        headers = ['Name', 'Email', 'Phone', 'City', 'Profile Image URL', 'Joined Date'];
-        data = customers.map(c => [
-          c.name,
-          c.email,
-          c.phone,
-          c.city,
-          c.profileImage ? `http://localhost:5000${c.profileImage}` : 'No Image',
-          new Date(c.createdAt).toLocaleDateString()
-        ]);
-        break;
-        
-      case 'bookings':
-        headers = ['Customer', 'Email', 'Profile Image URL', 'Service', 'Price', 'Status', 'Date'];
-        data = bookings.map(b => [
-          b.customerName,
-          b.customerEmail,
-          b.customerProfileImage ? `http://localhost:5000${b.customerProfileImage}` : 'No Image',
-          b.serviceName,
-          `₹${b.servicePrice}`,
-          b.status,
-          new Date(b.createdAt).toLocaleDateString()
-        ]);
-        break;
-        
-      default:
-        // Fallback: Try to get data from table
-        const table = document.querySelector('table');
-        if (table) {
-          headers = Array.from(table.querySelectorAll('thead th'))
-            .map(th => th.textContent.trim())
-            .filter(h => h && !h.includes('checkbox'));
-          
-          const rows = table.querySelectorAll('tbody tr');
-          data = Array.from(rows).map(row => {
-            const cells = row.querySelectorAll('td');
-            return Array.from(cells).map((cell, index) => {
-              // Skip checkbox cells
-              if (cell.querySelector('input[type="checkbox"]')) {
-                return '';
-              }
-              return cell.textContent.trim();
-            }).filter((_, index) => headers[index]);
-          });
-        }
-    }
-    
-    if (data.length === 0) {
-      alert('No data available to export');
-      return;
-    }
-    
-    // Combine headers and data
-    const csvContent = [
-      headers.join(','),
-      ...data.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-    ].join('\n');
-    
-    // Create and download CSV file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${dataType || 'data'}_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // Pagination component with dropdown
-  const CustomPagination = ({ 
-    currentPage, 
-    totalPages, 
-    totalItems,
-    itemsPerPage,
-    onPageChange, 
-    onItemsPerPageChange,
-    showDownload = true,
-    dataType = ''
-  }) => {
-    return (
-      <div className="d-flex justify-content-between align-items-center mt-3">
-        <div className="d-flex align-items-center">
-          <Dropdown className="me-3">
-            <Dropdown.Toggle style={{backgroundColor:"white",border:"1px solid #000000",color:"black"}} size="sm">
-              {itemsPerPage} per page
-            </Dropdown.Toggle>
-            <Dropdown.Menu>
-              <Dropdown.Item onClick={() => onItemsPerPageChange(10)}>10 per page</Dropdown.Item>
-              <Dropdown.Item onClick={() => onItemsPerPageChange(15)}>15 per page</Dropdown.Item>
-              <Dropdown.Item onClick={() => onItemsPerPageChange(20)}>20 per page</Dropdown.Item>
-              <Dropdown.Item onClick={() => onItemsPerPageChange(50)}>50 per page</Dropdown.Item>
-            </Dropdown.Menu>
-          </Dropdown>
-          
-          {showDownload && (
-            <div className="d-flex gap-2">
-              <Button 
-                style={{backgroundColor:"white",border:"1px solid #000000"}}
-                onClick={() => downloadTableAsPDF(dataType)}
-                title="Download as PDF"
-              >
-                <FaFilePdf className="text-danger" />
-              </Button>
-              <Button 
-                style={{backgroundColor:"white",border:"1px solid #000000"}}
-                onClick={() => downloadTableAsExcel(dataType)}
-                title="Download as Excel"
-              >
-                <FaFileExcel className="text-danger" />
-              </Button>
-              <Button 
-                style={{backgroundColor:"white",border:"1px solid #000000"}}
-                onClick={() => downloadTableAsCSV(dataType)}
-                title="Download as CSV"
-              >
-                <FaFileCsv className="text-danger" />
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   const handleMenuClick = (menu) => {
     // Check permission before switching menu
     const permissionMap = {
@@ -1281,157 +974,157 @@ const fetchUserProfile = async () => {
     }
   };
 
-const handleAddUser = async (e) => {
-  e.preventDefault();
-  setFormError('');
-  setFormSuccess(false);
-  
-  // Mark all fields as touched
-  const touched = {};
-  Object.keys(newUser).forEach(key => {
-    if (key !== 'permissions') touched[key] = true;
-  });
-  
-  // Only require password fields when not editing or when password is being changed
-  if (!isEditingUser || (isEditingUser && newUser.password !== '********')) {
-    touched.password = true;
-    touched.confirmPassword = true;
-  }
-  
-  setTouchedFields(prev => ({ ...prev, users: touched }));
-  
-  // Validate form
-  if (!validateUserForm()) {
-    setFormError("Please fix the errors in the form");
-    return;
-  }
-  
-  try {
-    // Create FormData for file upload
-    const formData = new FormData();
-    formData.append('name', newUser.name);
-    formData.append('email', newUser.email);
-    formData.append('phone', newUser.phone);
-    formData.append('designation', newUser.designation);
+  const handleAddUser = async (e) => {
+    e.preventDefault();
+    setFormError('');
+    setFormSuccess(false);
     
-    // Only send password if it's not the placeholder and not empty
-    if (newUser.password !== '********' && newUser.password.trim()) {
-      formData.append('password', newUser.password);
-    }
-    
-    formData.append('permissions', JSON.stringify(newUser.permissions));
-    formData.append('isActive', newUser.isActive !== undefined ? newUser.isActive : true);
-    
-    // Add profile image if exists
-    if (profileImage) {
-      formData.append('profileImage', profileImage);
-    }
-    
-    const url = isEditingUser 
-      ? `http://localhost:5000/api/admin/users/${editUserId}`
-      : 'http://localhost:5000/api/admin/users';
-    
-    const method = isEditingUser ? 'PUT' : 'POST';
-    
-    const response = await fetch(url, {
-      method: method,
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`
-      },
-      body: formData
+    // Mark all fields as touched
+    const touched = {};
+    Object.keys(newUser).forEach(key => {
+      if (key !== 'permissions') touched[key] = true;
     });
     
-    const data = await response.json();
-    
-    if (data.success) {
-      setFormSuccess(true);
-      
-      // Reset form and errors
-      setNewUser({
-        name: '',
-        email: '',
-        phone: '',
-        designation: '',
-        password: '',
-        permissions: {
-          Dashboard: false,
-          Users: false,
-          Customer: false,
-          Category: false,
-          Product: false,
-          Bookings: false,
-          Reports: false,
-          Settings: false
-        }
-      });
-      setConfirmPassword('');
-      setProfileImage(null);
-      setProfileImagePreview("");
-      setFormErrors(prev => ({ ...prev, users: {} }));
-      setTouchedFields(prev => ({ ...prev, users: {} }));
-      
-      // Reset editing state
-      setEditUserId(null);
-      setIsEditingUser(false);
-      
-      // Refresh user list
-      setTimeout(() => {
-        fetchUsers();
-      }, 500);
-      
-      setTimeout(() => {
-        setFormSuccess(false);
-      }, 5000);
-      
-    } else {
-      setFormError(data.error || (isEditingUser ? 'Failed to update user' : 'Failed to add user'));
+    // Only require password fields when not editing or when password is being changed
+    if (!isEditingUser || (isEditingUser && newUser.password !== '********')) {
+      touched.password = true;
+      touched.confirmPassword = true;
     }
-  } catch (error) {
-    console.error('Error saving user:', error);
-    setFormError(`Failed to ${isEditingUser ? 'update' : 'add'} user. Please try again.`);
-  }
-};
+    
+    setTouchedFields(prev => ({ ...prev, users: touched }));
+    
+    // Validate form
+    if (!validateUserForm()) {
+      setFormError("Please fix the errors in the form");
+      return;
+    }
+    
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('name', newUser.name);
+      formData.append('email', newUser.email);
+      formData.append('phone', newUser.phone);
+      formData.append('designation', newUser.designation);
+      
+      // Only send password if it's not the placeholder and not empty
+      if (newUser.password !== '********' && newUser.password.trim()) {
+        formData.append('password', newUser.password);
+      }
+      
+      formData.append('permissions', JSON.stringify(newUser.permissions));
+      formData.append('isActive', newUser.isActive !== undefined ? newUser.isActive : true);
+      
+      // Add profile image if exists
+      if (profileImage) {
+        formData.append('profileImage', profileImage);
+      }
+      
+      const url = isEditingUser 
+        ? `http://localhost:5000/api/admin/users/${editUserId}`
+        : 'http://localhost:5000/api/admin/users';
+      
+      const method = isEditingUser ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`
+        },
+        body: formData
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setFormSuccess(true);
+        
+        // Reset form and errors
+        setNewUser({
+          name: '',
+          email: '',
+          phone: '',
+          designation: '',
+          password: '',
+          permissions: {
+            Dashboard: false,
+            Users: false,
+            Customer: false,
+            Category: false,
+            Product: false,
+            Bookings: false,
+            Reports: false,
+            Settings: false
+          }
+        });
+        setConfirmPassword('');
+        setProfileImage(null);
+        setProfileImagePreview("");
+        setFormErrors(prev => ({ ...prev, users: {} }));
+        setTouchedFields(prev => ({ ...prev, users: {} }));
+        
+        // Reset editing state
+        setEditUserId(null);
+        setIsEditingUser(false);
+        
+        // Refresh user list
+        setTimeout(() => {
+          fetchUsers();
+        }, 500);
+        
+        setTimeout(() => {
+          setFormSuccess(false);
+        }, 5000);
+        
+      } else {
+        setFormError(data.error || (isEditingUser ? 'Failed to update user' : 'Failed to add user'));
+      }
+    } catch (error) {
+      console.error('Error saving user:', error);
+      setFormError(`Failed to ${isEditingUser ? 'update' : 'add'} user. Please try again.`);
+    }
+  };
 
   // Function to handle editing user
-const handleEditUser = (userMember) => {
-  setNewUser({
-    name: userMember.name || '',
-    email: userMember.email || '',
-    phone: userMember.phone || '',
-    designation: userMember.designation || '',
-    password: '********',
-    isActive: userMember.isActive !== undefined ? userMember.isActive : true,
-    permissions: userMember.permissions || {
-      Dashboard: false,
-      Users: false,
-      Customer: false,
-      Category: false,
-      Product: false,
-      Bookings: false,
-      Reports: false,
-      Settings: false
+  const handleEditUser = (userMember) => {
+    setNewUser({
+      name: userMember.name || '',
+      email: userMember.email || '',
+      phone: userMember.phone || '',
+      designation: userMember.designation || '',
+      password: '********',
+      isActive: userMember.isActive !== undefined ? userMember.isActive : true,
+      permissions: userMember.permissions || {
+        Dashboard: false,
+        Users: false,
+        Customer: false,
+        Category: false,
+        Product: false,
+        Bookings: false,
+        Reports: false,
+        Settings: false
+      }
+    });
+    
+    // Set profile image preview if exists
+    if (userMember.profileImage) {
+      setProfileImagePreview(`http://localhost:5000${userMember.profileImage}`);
+    } else {
+      setProfileImagePreview("");
     }
-  });
-  
-  // Set profile image preview if exists
-  if (userMember.profileImage) {
-    setProfileImagePreview(`http://localhost:5000${userMember.profileImage}`);
-  } else {
-    setProfileImagePreview("");
-  }
-  
-  setEditUserId(userMember._id);
-  setIsEditingUser(true);
-  setActiveMenu('add-user');
-  setProfileImage(null);
-  setConfirmPassword(''); 
-  setFormSuccess(false); 
-  setFormError(''); 
-  
-  // Reset touched fields and errors
-  setTouchedFields(prev => ({ ...prev, users: {} }));
-  setFormErrors(prev => ({ ...prev, users: {} }));
-};
+    
+    setEditUserId(userMember._id);
+    setIsEditingUser(true);
+    setActiveMenu('add-user');
+    setProfileImage(null);
+    setConfirmPassword(''); 
+    setFormSuccess(false); 
+    setFormError(''); 
+    
+    // Reset touched fields and errors
+    setTouchedFields(prev => ({ ...prev, users: {} }));
+    setFormErrors(prev => ({ ...prev, users: {} }));
+  };
 
   const handleAddProduct = async (e) => {
     e.preventDefault();
@@ -1461,50 +1154,6 @@ const handleEditUser = (userMember) => {
     } catch (error) {
       console.error('Error adding product:', error);
       alert('Failed to add product');
-    }
-  };
-
-  const handleAddCustomer = async (e) => {
-    e.preventDefault();
-    
-    // Mark all fields as touched
-    const touched = {};
-    Object.keys(newCustomer).forEach(key => touched[key] = true);
-    setTouchedFields(prev => ({ ...prev, customer: touched }));
-    
-    // Validate form
-    if (!validateCustomerForm()) {
-      alert("Please fix the errors in the form");
-      return;
-    }
-    
-    try {
-      const response = await fetch('http://localhost:5000/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newCustomer)
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        alert('Customer added successfully!');
-        setShowAddCustomerModal(false);
-        setNewCustomer({
-          name: '',
-          email: '',
-          phone: '',
-          city: '',
-          password: ''
-        });
-        setFormErrors(prev => ({ ...prev, customer: {} }));
-        setTouchedFields(prev => ({ ...prev, customer: {} }));
-        fetchCustomers();
-      } else {
-        alert(data.error || 'Failed to add customer');
-      }
-    } catch (error) {
-      console.error('Error adding customer:', error);
-      alert('Failed to add customer');
     }
   };
 
@@ -1620,33 +1269,33 @@ const handleEditUser = (userMember) => {
     }
   };
 
-useEffect(() => {
-  // Check if user is already logged in
-  const token = localStorage.getItem('authToken');
-  const role = localStorage.getItem('userRole');
-  const permissions = localStorage.getItem('userPermissions');
-  
-  if (token && role && permissions) {
-    setIsLoggedIn(true);
-    setUserRole(role);
-    setUserPermissions(JSON.parse(permissions));
+  useEffect(() => {
+    // Check if user is already logged in
+    const token = localStorage.getItem('authToken');
+    const role = localStorage.getItem('userRole');
+    const permissions = localStorage.getItem('userPermissions');
     
-    // ALWAYS start with dashboard on page load
-    setActiveMenu('dashboard');
-    
-    fetchDashboardData();
-    fetchCustomers(); // Fetch customers on load
-    
-    // Fetch appropriate profile
-    if (role === 'admin') {
-      fetchAdminProfile();
-    } else {
-      fetchUserProfile();
+    if (token && role && permissions) {
+      setIsLoggedIn(true);
+      setUserRole(role);
+      setUserPermissions(JSON.parse(permissions));
+      
+      // ALWAYS start with dashboard on page load
+      setActiveMenu('dashboard');
+      
+      fetchDashboardData();
+      fetchCustomers(); // Fetch customers on load
+      
+      // Fetch appropriate profile
+      if (role === 'admin') {
+        fetchAdminProfile();
+      } else {
+        fetchUserProfile();
+      }
     }
-  }
-  
-  fetchAdminLogo();
-}, []);
+    
+    fetchAdminLogo();
+  }, []);
 
   if (!isLoggedIn) {
     return (
@@ -1833,22 +1482,6 @@ useEffect(() => {
             </Dropdown>
           )}
           
-          {/* Customer Management */}
-          {(userRole === 'admin' || hasPermission('Customer')) && (
-            <Nav.Link 
-              className={`mb-2 ${activeMenu === 'manage-customers' ? 'active' : ''}`}
-              onClick={() => handleMenuClick('manage-customers')}
-              style={{ 
-                color: activeMenu === 'manage-customers' ? '#000' : 'white',
-                background: activeMenu === 'manage-customers' ? 'white' : 'transparent',
-                borderRadius: '8px',
-                padding: '10px 15px'
-              }}
-            >
-              <i className="bi bi-person-badge me-2"></i>Customers
-            </Nav.Link>
-          )}
-          
           {/* Category Management */}
           {(userRole === 'admin' || hasPermission('Category')) && (
             <Dropdown className="mb-2">
@@ -1931,7 +1564,21 @@ useEffect(() => {
             </Nav.Link>
           )}
 
-          
+           {/* Customer Management */}
+          {(userRole === 'admin' || hasPermission('Customer')) && (
+            <Nav.Link 
+              className={`mb-2 ${activeMenu === 'manage-customers' ? 'active' : ''}`}
+              onClick={() => handleMenuClick('manage-customers')}
+              style={{ 
+                color: activeMenu === 'manage-customers' ? '#000' : 'white',
+                background: activeMenu === 'manage-customers' ? 'white' : 'transparent',
+                borderRadius: '8px',
+                padding: '10px 15px'
+              }}
+            >
+              <i className="bi bi-person-badge me-2"></i>Customers
+            </Nav.Link>
+          )}
           
           {/* Reports */}
           {(userRole === 'admin' || hasPermission('Reports')) && (
@@ -1984,52 +1631,52 @@ useEffect(() => {
     );
   };
 
- const renderContent = () => {
-  // ALWAYS default to dashboard if no menu is active
-  if (!activeMenu) {
-    setActiveMenu('dashboard');
-    return null;
-  }
-  
-  // Check permission for current menu
-  const permissionMap = {
-    'dashboard': 'Dashboard',
-    'add-user': 'Users',
-    'manage-users': 'Users',
-    'manage-customers': 'Customer',
-    'add-category': 'Category',
-    'manage-categories': 'Category',
-    'add-product': 'Product',
-    'manage-products': 'Product',
-    'bookings': 'Bookings',
-    'reports': 'Reports',
-    'settings': 'Settings',
-    'profile': 'Dashboard'
-  };
-
-  const requiredPermission = permissionMap[activeMenu];
-  
-  // If the user doesn't have permission for the current menu, 
-  // automatically redirect to dashboard
-  if (requiredPermission && !hasPermission(requiredPermission)) {
-    // Show access denied message briefly
-    setTimeout(() => {
-      handleMenuClick('dashboard');
-    }, 100);
+  const renderContent = () => {
+    // ALWAYS default to dashboard if no menu is active
+    if (!activeMenu) {
+      setActiveMenu('dashboard');
+      return null;
+    }
     
-    return (
-      <Container className="text-center py-5">
-        <Card className="border-0 shadow-sm">
-          <Card.Body>
-            <h3 className="text-danger">Access Denied</h3>
-            <p>You don't have permission to access this section.</p>
-            <p>Redirecting to Dashboard...</p>
-            <Spinner animation="border" variant="primary" />
-          </Card.Body>
-        </Card>
-      </Container>
-    );
-  }
+    // Check permission for current menu
+    const permissionMap = {
+      'dashboard': 'Dashboard',
+      'add-user': 'Users',
+      'manage-users': 'Users',
+      'manage-customers': 'Customer',
+      'add-category': 'Category',
+      'manage-categories': 'Category',
+      'add-product': 'Product',
+      'manage-products': 'Product',
+      'bookings': 'Bookings',
+      'reports': 'Reports',
+      'settings': 'Settings',
+      'profile': 'Dashboard'
+    };
+
+    const requiredPermission = permissionMap[activeMenu];
+    
+    // If the user doesn't have permission for the current menu, 
+    // automatically redirect to dashboard
+    if (requiredPermission && !hasPermission(requiredPermission)) {
+      // Show access denied message briefly
+      setTimeout(() => {
+        handleMenuClick('dashboard');
+      }, 100);
+      
+      return (
+        <Container className="text-center py-5">
+          <Card className="border-0 shadow-sm">
+            <Card.Body>
+              <h3 className="text-danger">Access Denied</h3>
+              <p>You don't have permission to access this section.</p>
+              <p>Redirecting to Dashboard...</p>
+              <Spinner animation="border" variant="primary" />
+            </Card.Body>
+          </Card>
+        </Container>
+      );
+    }
 
     switch(activeMenu) {
       case 'profile':
@@ -2274,7 +1921,7 @@ useEffect(() => {
                   </Card.Header>
                   <Card.Body>
                     <div className="table-responsive">
-                      <Table striped bordered hover variant="light">
+                      <Table striped bordered hover style={{border:"2px solid"}}>
                         <thead>
                           <tr>
                             <th style={{ width: '80px' }}>Profile</th>
@@ -2507,7 +2154,7 @@ useEffect(() => {
                 <Form onSubmit={handleAddUser} className="pt-2">
                  
                   {/* First Row with Name and Email */}
-                  <Row  className="mb-3 gx-5">
+                  <Row  className="mb-4 gx-5">
                     <Col md={6}>
                       <Form.Group>
                         <Form.Control
@@ -2547,7 +2194,7 @@ useEffect(() => {
                   </Row>
 
                   {/* Second Row with Contact Number and Designation */}
-                  <Row  className="mb-3 gx-5">
+                  <Row  className="mb-4 gx-5">
                     <Col md={6}>
                       <Form.Group>
                         <Form.Control
@@ -2592,8 +2239,8 @@ useEffect(() => {
 
                   {/* Password Fields - Only when not editing */}
                   {!isEditingUser && (
-                    <Row  className="mb-3 gx-5">
-                      <Col md={6}>
+                    <Row  className="mb-4 gx-5">
+                      <Col md={3}>
                         <Form.Group>
                           <Form.Control
                             type="password"
@@ -2611,7 +2258,7 @@ useEffect(() => {
                           )}
                         </Form.Group>
                       </Col>
-                      <Col md={6} className="mb-3">
+                      <Col md={3} className="mb-3">
                         <Form.Group>
                           <Form.Control
                             type="password"
@@ -2630,7 +2277,6 @@ useEffect(() => {
                         </Form.Group>
                       </Col>
                       <Col md={6} >
-                      <p>Profile photo</p>
                       <Form.Group>
                        <Form.Control
                           type="file"
@@ -2653,10 +2299,8 @@ useEffect(() => {
                               alt="Preview" 
                               style={{ 
                                 width: '100px', 
-                                height: '100px', 
-                                objectFit: 'cover',
-                                borderRadius: '10px',
-                                border: '2px solid #dee2e6'
+                                height: '60px', 
+                                objectFit: 'cover'
                               }}
                             />
                             
@@ -2669,7 +2313,7 @@ useEffect(() => {
 
                   {/* Permissions Section */}
                   <Form.Group className="my-4">
-                    <Form.Label className='fw-semibold mb-3'>Permissions</Form.Label>
+                    <Form.Label className='fw-semibold mb-43' style={{fontSize:"14px"}}>Permissions</Form.Label>
                     <div className="px-1">
                       <Row className=" gy-2  gx-5">
                         {[
@@ -2727,7 +2371,7 @@ useEffect(() => {
                   {/* Action Buttons */}
                   <div className="d-flex justify-content-center gap-3 mt-4">
                     <Button 
-                      variant="outline-secondary" 
+                      variant="outline-dark" 
                       onClick={() => {
                         handleMenuClick('manage-users');
                         setNewUser({
@@ -2755,14 +2399,14 @@ useEffect(() => {
                           setIsEditingUser(false);
                         }
                       }}
-                      style={{ minWidth: '100px' }}
+                      style={{ minWidth: '100px',borderRadius:"50px" }}
                     >
                       Cancel
                     </Button>
                     <Button 
                       variant="dark" 
                       type="submit"
-                      style={{ minWidth: '100px' }}
+                      style={{ minWidth: '100px',borderRadius:"50px" }}
                     >
                       <i className={`bi ${isEditingUser ? 'bi-pencil' : 'bi-person-plus'} me-2`}></i>
                      Submit
@@ -2774,203 +2418,222 @@ useEffect(() => {
           </div>
         );
 
-      case 'manage-users':
-        return (
-          <div>
-            <Card>
-              <Card className="shadow-lg ">
-                <Card.Body  style={{marginLeft:"25px",marginRight:"25px"}}>
-                  <h5 className="mb-0 fw-semibold">
-                    {isEditingUser ? 'Edit User' : (
-                      <>
-                        User Management
-                        <span className="text-muted mx-2" style={{fontSize:"14px",fontWeight:"normal"}}>•</span>
-                        <span className="text-muted " style={{fontSize:"14px",fontWeight:"normal"}}>Manage Users</span>
-                      </>
-                    )}
-                  </h5>
-                </Card.Body>
-            </Card>
-            </Card><br />
-            <Card className="shadow-lg  " style={{border:"5px"}}>
-              <Card.Header className="border-0 "  >
-                <Row style={{marginLeft:"25px",marginRight:"25px"}}>
-                  <Col>
-                    <h5 className="mb-1 fw-semibold">Manage users</h5>
-                    <p className='text-muted' style={{fontSize:"10.5px"}}>Use this form to update user profiles</p>
-                  </Col>
-                  <Col>
-                    <div className="d-flex gap-2">
-                      <Form.Control
-                        type="search"
-                        placeholder="Search users..."
-                        value={userSearch}
-                        onChange={(e) => {
-                          setUserSearch(e.target.value);
-                          fetchUsers(1, e.target.value, userPerPage);
+     case 'manage-users':
+    return (
+      <div>
+        <Card className="shadow-lg">
+          <Card.Body style={{ marginLeft: "23px", marginRight: "10px" }}>
+            <h5 className="mb-0 fw-semibold">
+              User Management
+              <span className="text-muted mx-2" style={{ fontSize: "14px", fontWeight: "normal" }}>•</span>
+              <span className="text-muted" style={{ fontSize: "14px", fontWeight: "normal" }}>Manage Users</span>
+            </h5>
+          </Card.Body>
+        </Card>
+        <br />
+        <Card className="shadow-lg" style={{ border: "5px" }}>
+          <Card.Header className="border-0" style={{ backgroundColor: "white" }}>
+            <Row style={{ marginLeft: "12px", marginRight: "10px" }}>
+              <Col style={{ marginTop: "10px" }}>
+                <h5 className="mb-1 fw-semibold">Manage users</h5>
+                <p className='text-muted' style={{ fontSize: "10.5px" }}>Use this form to update user profiles</p>
+              </Col>
+              <Col>
+                {/* Single TableControls component with all features */}
+                <TableControls
+                  itemsPerPage={userPerPage}
+                  onItemsPerPageChange={(perPage) => {
+                    setUserPerPage(perPage);
+                    fetchUsers(1, userSearch, perPage);
+                  }}
+                  currentPage={userPage}
+                  totalPages={userTotalPages}
+                  totalItems={userTotalItems}
+                  onPageChange={(page) => {
+                    setUserPage(page);
+                    fetchUsers(page, userSearch, userPerPage);
+                  }}
+                  searchValue={userSearch}
+                  onSearchChange={(e) => {
+                    setUserSearch(e.target.value);
+                    fetchUsers(1, e.target.value, userPerPage);
+                  }}
+                  searchPlaceholder="Search users..."
+                  onDownloadPDF={() => {
+                    const tableElement = document.querySelector('.table-responsive');
+                    exportAsPDF(tableElement, 'users');
+                  }}
+                  onDownloadExcel={() => {
+                    const userData = prepareUserDataForExport(users);
+                    exportAsExcel(userData, 'users');
+                  }}
+                  onDownloadCSV={() => {
+                    const userData = prepareUserDataForExport(users);
+                    const headers = getCSVHeadersFromData(userData);
+                    exportAsCSV(userData, headers, 'users');
+                  }}selectedCount={selectedUsers.length}
+                  onBulkDelete={() => handleBulkDelete('users', selectedUsers)}
+                  showBulkActions={false} 
+                  bulkEntityName="users"
+                />
+              </Col>
+            </Row>
+          </Card.Header>
+          <Card.Body style={{ marginLeft: "20px", marginRight: "20px" }}>
+            {formSuccess && (
+              <Alert variant="success" onClose={() => setFormSuccess(false)} dismissible>
+                <Alert.Heading>Success!</Alert.Heading>
+                <p>User updated successfully!</p>
+              </Alert>
+            )}
+            
+            {/* Bulk Selection Alert - Similar to Categories component */}
+            {selectedUsers.length > 0 && (
+              <Alert variant="dark" className="d-flex justify-content-between align-items-center mb-3">
+                <span>
+                  <i className="bi bi-check-circle-fill me-2"></i>
+                  {selectedUsers.length} user(s) selected
+                </span>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => handleBulkDelete('users', selectedUsers)}
+                >
+                  <i className="bi bi-trash me-2"></i>Delete Selected
+                </Button>
+              </Alert>
+            )}
+            
+            <div className="table-responsive">
+              <Table striped bordered hover style={{ border: "2px solid" }}>
+                <thead>
+                  <tr>
+                    <th>
+                      <Form.Check
+                        type="checkbox"
+                        checked={selectAllUsers}
+                        onChange={handleSelectAllUsers}
+                        style={{
+                          fontSize: "14px",
+                          '--bs-border-width': '2px',
+                          '--bs-border-color': '#000000',
                         }}
-                        style={{ border:"2px solid ",width: '250px', height: "40px", marginTop: "10px" }}
                       />
+                    </th>
+                    <th>Photo</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Contact no</th>
+                    <th>Password</th>
+                    <th>Permissions</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((user) => (
+                    <tr key={user._id}>
+                      <td>
+                        <Form.Check
+                          type="checkbox"
+                          checked={selectedUsers.includes(user._id)}
+                          onChange={() => handleUserSelect(user._id)}
+                          style={{
+                            fontSize: "14px",
+                            '--bs-border-width': '2px',
+                            '--bs-border-color': '#000000',
+                          }}
+                        />
+                      </td>
                       
-                      <CustomPagination
-                        currentPage={userPage}
-                        totalPages={userTotalPages}
-                        totalItems={userTotalItems}
-                        itemsPerPage={userPerPage}
-                        onPageChange={(page) => {
-                          setUserPage(page);
-                          fetchUsers(page, userSearch, userPerPage);
-                        }}
-                        onItemsPerPageChange={(perPage) => {
-                          setUserPerPage(perPage);
-                          fetchUsers(1, userSearch, perPage);
-                        }}
-                        showDownload={true}
-                        dataType="users"
-                      />
-                    </div>
-                  </Col>
-                </Row>
-              </Card.Header>
-              <Card.Body  style={{marginLeft:"25px",marginRight:"25px"}}>
-                {formSuccess && (
-                  <Alert variant="success" onClose={() => setFormSuccess(false)} dismissible>
-                    <Alert.Heading>Success!</Alert.Heading>
-                    <p>User updated successfully!</p>
-                  </Alert>
-                )}
-                
-                {selectedUsers.length > 0 && (
-                  <Alert variant="dark" className="d-flex justify-content-between align-items-center">
-                    <span>{selectedUsers.length} user(s) selected</span>
-                    <Button 
-                      variant="danger" 
-                      size="sm"
-                      onClick={()=>handleBulkDelete('users', selectedUsers)}
-                    >
-                      <i className="bi bi-trash me-2"></i>Delete Selected
-                    </Button>
-                  </Alert>
-                )}
-                
-                <div className="table-responsive">
-                  <Table striped bordered hover style={{border:"2px solid"}}>
-                    <thead>
-                      <tr>
-                        <th >
-                          <Form.Check
-                            type="checkbox"
-                            checked={selectAllUsers}
-                            onChange={handleSelectAllUsers}
-                          />
-                        </th>
-                        <th >Photo</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Contact no</th>
-                        <th>Password</th>
-                        <th>Permissions</th>
-                        <th >Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {users.map((user) => (
-                        <tr key={user._id}>
-                          <td>
-                            <Form.Check
-                              type="checkbox"
-                              checked={selectedUsers.includes(user._id)}
-                              onChange={() => handleUserSelect(user._id)}
+                      <td>
+                        <div style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50px',
+                          overflow: 'hidden',
+                        }}>
+                          {user.profileImage ? (
+                            <img
+                              src={`http://localhost:5000${user.profileImage}`}
+                              alt={user.name}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
                             />
-                          </td>
-                          
-                          <td>
-                            <div style={{ 
-                              width: '40px', 
-                              height: '40px', 
-                              borderRadius: '50px', 
-                              overflow: 'hidden',
-                              border: '2px solid #dee2e6'
+                          ) : (
+                            <div style={{
+                              width: '100%',
+                              height: '100%',
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                              fontWeight: 'bold',
+                              fontSize: '16px'
                             }}>
-                              {user.profileImage ? (
-                                <img 
-                                  src={`http://localhost:5000${user.profileImage}`} 
-                                  alt={user.name}
-                                  style={{ 
-                                    width: '100%', 
-                                    height: '100%', 
-                                    objectFit: 'cover'
-                                  }}
-                                />
-                              ) : (
-                                <div className='w-100 h-100 d-flex align-items-center justify-contents-center' style={{ 
-                                   
-                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                 
-                                  color: 'white',
-                                  fontWeight: 'bold',
-                                  fontSize: '14px'
-                                }}>
-                                  {getInitials(user.name)}
-                                </div>
-                              )}
+                              {getInitials(user.name)}
                             </div>
-                          </td>
-                          
-                          <td>
-                            {user.name}
-                          </td>
-                          <td>
-                            <div className="text-truncate" style={{ maxWidth: '200px' }}>
-                              {user.email}
-                            </div>
-                          </td>
-                          <td>{user.phone}</td>
-                          <td>
-                            {displayPassword(user.password)}
-                          </td>
-                          <td>
-                            <div style={{ maxWidth: '200px' }}>
-                              {formatPermissions(user.permissions)}
-                            </div>
-                          </td>
-                          <td>
-                            <div className="d-flex gap-1">
-                              <Button 
-                                variant="warning" 
-                                size="sm"
-                                onClick={() => handleEditUser(user)}
-                                title="Edit User"
-                              >
-                                <MdModeEdit />
-                              </Button>
-                              <Button 
-                                variant="danger" 
-                                size="sm"
-                                onClick={() => deleteUser(user._id)}
-                                title="Delete User"
-                              >
-                                <MdOutlineDelete />
-                              </Button>
-                              <Button 
-                                variant="dark" 
-                                size="sm"
-                                onClick={() => handleViewUser(user)}
-                                title="View User Details"
-                              >
-                                <IoEyeSharp /> 
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                </div>
-              </Card.Body>
-            </Card>
-          </div>
-        );
+                          )}
+                        </div>
+                      </td>
+                      
+                      <td>
+                        {user.name}
+                      </td>
+                      <td>
+                        <div className="text-truncate" style={{ maxWidth: '200px' }}>
+                          {user.email}
+                        </div>
+                      </td>
+                      <td>{user.phone}</td>
+                      <td>
+                        {displayPassword(user.password)}
+                      </td>
+                      <td>
+                        <div style={{ maxWidth: '200px' }}>
+                          {formatPermissions(user.permissions)}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="d-flex gap-1">
+                          <Button
+                            variant="warning"
+                            size="sm"
+                            onClick={() => handleEditUser(user)}
+                            title="Edit User"
+                          >
+                            <MdModeEdit />
+                          </Button>
+                          <Button
+                            variant="dark"
+                            size="sm"
+                            onClick={() => handleViewUser(user)}
+                            title="View User Details"
+                          >
+                            <IoEyeSharp />
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => deleteUser(user._id)}
+                            title="Delete User"
+                          >
+                            <MdOutlineDelete />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
+          </Card.Body>
+        </Card>
+      </div>
+  );
         
       case 'manage-customers':
         if (!hasPermission('Customer')) {
@@ -2991,55 +2654,55 @@ useEffect(() => {
                 <h5 className="fw-semibold mb-0">Customer Management</h5>
                 <p className='text-muted' style={{fontSize:"12px"}}>View and manage all registered customers</p>
               </Card.Body>
-            </Card><br />
+            </Card>
+            <br />
             <Card className="border-0 shadow-sm">
-              <Card.Header className="border-0 d-flex justify-content-between align-items-center">
+              <Card.Header className="border-0">
                 <div>
                   <h5 className="mb-1 fw-semibold">Manage Customers</h5>
                   <p className="text-muted mb-0" style={{fontSize:"12px"}}>View and manage all registered customers</p>
                 </div>
-                <div className="d-flex gap-2">
-                  <Form.Control
-                    type="search"
-                    placeholder="Search customers..."
-                    value={customerSearch}
-                    onChange={(e) => {
-                      setCustomerSearch(e.target.value);
-                      fetchCustomers(1, e.target.value, customerPerPage);
-                    }}
-                    style={{height:"40px",marginTop:"8px" }}
-                  />
-                  <CustomPagination
-                    currentPage={customerPage}
-                    totalPages={customerTotalPages}
-                    totalItems={customerTotalItems}
-                    itemsPerPage={customerPerPage}
-                    onPageChange={(page) => {
-                      setCustomerPage(page);
-                      fetchCustomers(page, customerSearch, customerPerPage);
-                    }}
-                    onItemsPerPageChange={(perPage) => {
-                      setCustomerPerPage(perPage);
-                      fetchCustomers(1, customerSearch, perPage);
-                    }}
-                    showDownload={true}
-                    dataType="customers"
-                  />
-                </div>
               </Card.Header>
               <Card.Body>
-                {selectedCustomers.length > 0 && (
-                  <Alert variant="light" className="d-flex justify-content-between align-items-center">
-                    <span>{selectedCustomers.length} customer(s) selected</span>
-                    <Button 
-                      variant="danger" 
-                      size="sm"
-                      onClick={() => handleBulkDelete('customers', selectedCustomers)}
-                    >
-                      <i className="bi bi-trash me-2"></i>Delete Selected
-                    </Button>
-                  </Alert>
-                )}
+                {/* Table Controls */}
+                <TableControls
+                  itemsPerPage={customerPerPage}
+                  onItemsPerPageChange={(perPage) => {
+                    setCustomerPerPage(perPage);
+                    fetchCustomers(1, customerSearch, perPage);
+                  }}
+                  currentPage={customerPage}
+                  totalPages={customerTotalPages}
+                  totalItems={customerTotalItems}
+                  onPageChange={(page) => {
+                    setCustomerPage(page);
+                    fetchCustomers(page, customerSearch, customerPerPage);
+                  }}
+                  searchValue={customerSearch}
+                  onSearchChange={(e) => {
+                    setCustomerSearch(e.target.value);
+                    fetchCustomers(1, e.target.value, customerPerPage);
+                  }}
+                  searchPlaceholder="Search customers..."
+                  onDownloadPDF={() => {
+                    const tableElement = document.querySelector('.table-responsive');
+                    exportAsPDF(tableElement, 'customers');
+                  }}
+                  onDownloadExcel={() => {
+                    const customerData = prepareCustomerDataForExport(customers);
+                    exportAsExcel(customerData, 'customers');
+                  }}
+                  onDownloadCSV={() => {
+                    const customerData = prepareCustomerDataForExport(customers);
+                    const headers = getCSVHeadersFromData(customerData);
+                    exportAsCSV(customerData, headers, 'customers');
+                  }}
+                  selectedCount={selectedCustomers.length}
+                  onBulkDelete={() => handleBulkDelete('customers', selectedCustomers)}
+                  showBulkActions={selectedCustomers.length > 0}
+                  bulkEntityName="customers"
+                  className="mb-3"
+                />
                 
                 <div className="table-responsive">
                   <Table hover responsive>
@@ -3140,17 +2803,6 @@ useEffect(() => {
         );
         
       case 'manage-categories':
-        if (!hasPermission('Category')) {
-          return (
-            <Card className="border-0 shadow-sm">
-              <Card.Body className="text-center py-5">
-                <h3 className="text-danger">Access Denied</h3>
-                <p>You don't have permission to manage categories.</p>
-              </Card.Body>
-            </Card>
-          );
-        }
-        
         return (
           <Categories 
             categories={categories}
@@ -3557,74 +3209,60 @@ useEffect(() => {
                 <h5 className="mb-0">Booking Management</h5>
                 <p className="text-muted mb-0">Manage all customer bookings</p>
               </div>
-              <div className="d-flex gap-2">
-                <Form.Select 
-                  value={bookingStatus} 
-                  onChange={(e) => {
-                    setBookingStatus(e.target.value);
-                    fetchBookings(1, bookingSearch, e.target.value, bookingPerPage);
-                  }}
-                  style={{ height:"40px", marginTop:"10px"}}
-                >
-                  <option value="">All Status</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Confirmed">Confirmed</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Cancelled">Cancelled</option>
-                </Form.Select>
-                <Form.Control
-                  type="search"
-                  placeholder="Search bookings..."
-                  value={bookingSearch}
-                  onChange={(e) => setBookingSearch(e.target.value)}
-                  style={{width:"250px", height:"40px", marginTop:"10px"}}
-                />
-                <CustomPagination
-                  currentPage={bookingPage}
-                  totalPages={bookingTotalPages}
-                  totalItems={bookingTotalItems}
-                  itemsPerPage={bookingPerPage}
-                  onPageChange={(page) => {
-                    setBookingPage(page);
-                    fetchBookings(page, bookingSearch, bookingStatus, bookingPerPage);
-                  }}
-                  onItemsPerPageChange={(perPage) => {
-                    setBookingPerPage(perPage);
-                    fetchBookings(1, bookingSearch, bookingStatus, perPage);
-                  }}
-                  showDownload={true}
-                  dataType="bookings"
-                />
-              </div>
             </Card.Header>
             <Card.Body>
-              {selectedBookings.length > 0 && (
-                <Alert variant="info" className="d-flex justify-content-between align-items-center">
-                  <span>{selectedBookings.length} booking(s) selected</span>
-                  <div className="d-flex gap-2">
-                    <Button 
-                      variant="success" 
-                      size="sm"
-                      onClick={() => {
-                        if (window.confirm(`Confirm ${selectedBookings.length} booking(s)?`)) {
-                          selectedBookings.forEach(id => updateBookingStatus(id, 'Confirmed'));
-                          setSelectedBookings([]);
-                          setSelectAllBookings(false);
-                        }
-                      }}
-                    >
-                      <i className="bi bi-check-circle me-2"></i>Confirm Selected
-                    </Button>
-                    <Button 
-                      variant="danger" 
-                      size="sm"
-                      onClick={() => handleBulkDelete('bookings', selectedBookings)}
-                    >
-                      <i className="bi bi-trash me-2"></i>Delete Selected
-                    </Button>
-                  </div>
-                </Alert>
-              )}
+              {/* Table Controls */}
+              <TableControls
+                itemsPerPage={bookingPerPage}
+                onItemsPerPageChange={(perPage) => {
+                  setBookingPerPage(perPage);
+                  fetchBookings(1, bookingSearch, bookingStatus, perPage);
+                }}
+                currentPage={bookingPage}
+                totalPages={bookingTotalPages}
+                totalItems={bookingTotalItems}
+                onPageChange={(page) => {
+                  setBookingPage(page);
+                  fetchBookings(page, bookingSearch, bookingStatus, bookingPerPage);
+                }}
+                searchValue={bookingSearch}
+                onSearchChange={(e) => setBookingSearch(e.target.value)}
+                searchPlaceholder="Search bookings..."
+                onDownloadPDF={() => {
+                  const tableElement = document.querySelector('.table-responsive');
+                  exportAsPDF(tableElement, 'bookings');
+                }}
+                onDownloadExcel={() => {
+                  const bookingData = prepareBookingDataForExport(bookings);
+                  exportAsExcel(bookingData, 'bookings');
+                }}
+                onDownloadCSV={() => {
+                  const bookingData = prepareBookingDataForExport(bookings);
+                  const headers = getCSVHeadersFromData(bookingData);
+                  exportAsCSV(bookingData, headers, 'bookings');
+                }}
+                selectedCount={selectedBookings.length}
+                onBulkDelete={() => handleBulkDelete('bookings', selectedBookings)}
+                showBulkActions={selectedBookings.length > 0}
+                bulkEntityName="bookings"
+                additionalActions={
+                  <Form.Select 
+                    value={bookingStatus} 
+                    onChange={(e) => {
+                      setBookingStatus(e.target.value);
+                      fetchBookings(1, bookingSearch, e.target.value, bookingPerPage);
+                    }}
+                    style={{ height: "40px", width: "150px" }}
+                  >
+                    <option value="">All Status</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Confirmed">Confirmed</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </Form.Select>
+                }
+                className="mb-3"
+              />
               
               <div className="table-responsive">
                 <Table hover responsive>
@@ -3841,13 +3479,35 @@ useEffect(() => {
                     <i className="bi bi-download me-2"></i>Export
                   </Dropdown.Toggle>
                   <Dropdown.Menu>
-                    <Dropdown.Item onClick={() => downloadTableAsPDF('reports')}>
+                    <Dropdown.Item onClick={() => {
+                      const tableElement = document.querySelector('.table-responsive');
+                      exportAsPDF(tableElement, 'reports');
+                    }}>
                       <i className="bi bi-file-earmark-pdf me-2"></i>Export as PDF
                     </Dropdown.Item>
-                    <Dropdown.Item onClick={() => downloadTableAsExcel('reports')}>
+                    <Dropdown.Item onClick={() => {
+                      const reportData = reports.topCategories.map(cat => ({
+                        'Category': cat.name,
+                        'Bookings': cat.bookings,
+                        'Revenue': `₹${cat.revenue}`,
+                        'Avg. Price': `₹${(cat.revenue / cat.bookings).toFixed(0)}`,
+                        'Growth': '+12%'
+                      }));
+                      exportAsExcel(reportData, 'reports');
+                    }}>
                       <i className="bi bi-file-earmark-excel me-2"></i>Export as Excel
                     </Dropdown.Item>
-                    <Dropdown.Item onClick={() => downloadTableAsCSV('reports')}>
+                    <Dropdown.Item onClick={() => {
+                      const reportData = reports.topCategories.map(cat => ({
+                        'Category': cat.name,
+                        'Bookings': cat.bookings,
+                        'Revenue': `₹${cat.revenue}`,
+                        'Avg. Price': `₹${(cat.revenue / cat.bookings).toFixed(0)}`,
+                        'Growth': '+12%'
+                      }));
+                      const headers = ['Category', 'Bookings', 'Revenue', 'Avg. Price', 'Growth'];
+                      exportAsCSV(reportData, headers, 'reports');
+                    }}>
                       <i className="bi bi-file-earmark-text me-2"></i>Export as CSV
                     </Dropdown.Item>
                   </Dropdown.Menu>
@@ -3976,17 +3636,6 @@ useEffect(() => {
                     </Form.Group>
                   </Col>
                 </Row>
-                <Form.Group className="mb-4">
-                  <Form.Label>Site Logo</Form.Label>
-                  <Form.Control
-                    type="file"
-                    accept="image/*"
-                    className="mb-2"
-                  />
-                  <Form.Text className="text-muted">
-                    Upload your company logo. Recommended size: 200x50 px.
-                  </Form.Text>
-                </Form.Group>
                 <div className="d-flex justify-content-end">
                   <Button variant="primary" type="submit">
                     Save Settings
@@ -4085,17 +3734,7 @@ useEffect(() => {
         
         {/* User Details Modal */}
         <Modal show={showUserDetails} onHide={() => setShowUserDetails(false)} centered>
-          <Modal.Header >
-            <Modal.Title className="fw-semibold fs-6">User Details</Modal.Title>
-            <Button 
-              type="button" 
-              onClick={() => setShowUserDetails(false)} 
-              className="position-absolute border-0 justify-content-center closebtn p-0" 
-              style={{ right: '15px', top: '15px', background: 'transparent' }}
-            >
-              ×
-            </Button>
-          </Modal.Header>
+           <Button type="button" onClick={() => setShowUserDetails(false)} className="position-absolute border-0 justify-content-center closebtn p-0">X</Button>
           <Modal.Body>
             {selectedUserDetails && (
               <div>
@@ -4170,11 +3809,11 @@ useEffect(() => {
             )}
           </Modal.Body>
           <Modal.Footer className="border-0">
-            <Button variant="secondary" onClick={() => setShowUserDetails(false)}>
+            <Button variant="secondary" onClick={() => setShowUserDetails(false)} style={{borderRadius:"50px"}}>
               Close
             </Button>
             <Button 
-              variant="dark" 
+              variant="dark"  style={{borderRadius:"50px"}}
               onClick={() => {
                 setShowUserDetails(false);
                 handleEditUser(selectedUserDetails);

@@ -499,8 +499,26 @@
     font-size: 1.2rem;
   }
 }
+.badge1{
+  background: gradient;
+  color: textColor;
+  border-radius: 15px;
+  font-size: 13px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+}
 
-
+.adminlogo{
+  width: 180px;
+  height: 180px; 
+  object-fit: contain;
+  background-color: white;
+  border-radius: 88px;
+  padding: 20px;
+  margin-top: 0px;              
+}
+.adminname{
+  border-radius: 8px; border: 2px solid #000000ff;
+}
 
 
 /*.btn:active{

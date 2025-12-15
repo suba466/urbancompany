@@ -103,9 +103,7 @@ const serviceSchema = new mongoose.Schema({
   key: String,
   img: {type:String,default:"/assets/default-category.png"},
   description: String,
-  category: String,
   isActive: { type: Boolean, default: true },
-  order: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -915,36 +913,30 @@ app.delete("/api/banners/:id", async (req, res) => {
 
 app.get("/api/services", async (req, res) => {
   try {
-    // Always fetch from MongoDB first
-    const services = await Service.find({ isActive: true }).sort({ order: 1 });
+    console.log(" Fetching services from MongoDB with isActive: true");
+   
+    const services = await Service.find({ isActive: true })
+      // .sort({ order: 1 }) // REMOVE order sorting
+      .sort({ name: 1 }) // Sort by name instead
     
-    if (services && services.length > 0) {
-      return res.json({ services });
-    }
+    console.log(`Found ${services.length} active services`);
     
-    // Fallback to static data only if no services in MongoDB
-    console.log("No services found in MongoDB, using static data as fallback");
-    const staticData = readStaticData();
-    if (staticData && staticData.services) {
-      return res.json({ services: staticData.services });
-    }
+    // Always return MongoDB results, even if empty
+    return res.json({ services });
     
-    res.status(404).json({ error: "No services found" });
   } catch (error) {
     console.error("Error fetching services:", error);
-    // On error, use static data as fallback
-    const staticData = readStaticData();
-    if (staticData && staticData.services) {
-      return res.json({ services: staticData.services });
-    }
-    res.status(500).json({ error: "Failed to fetch services" });
+    // On error, return empty array instead of static data
+    res.json({ services: [] });
   }
 });
 
 app.get("/api/all-services", async (req, res) => {
   try {
-    const services = await Service.find().sort({ order: 1 });
-    res.json({ services });
+    const services = await Service.find()
+      // .sort({ order: 1 }) // REMOVE order sorting
+      .sort({ name: 1 }) // Sort by name instead
+      res.json({ services });
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch services" });
   }
@@ -952,7 +944,7 @@ app.get("/api/all-services", async (req, res) => {
 
 app.post("/api/services", upload.single('image'), async (req, res) => {
   try {
-    const { name, key, description, category, order } = req.body;
+    const { name, key, description,isActive=true } = req.body;
     if (!req.file) {
       return res.status(400).json({ error: "Image is required" });
     }
@@ -960,10 +952,8 @@ app.post("/api/services", upload.single('image'), async (req, res) => {
       name,
       key: key || name.toLowerCase().replace(/ /g, '-'),
       description,
-      category,
       img: `/assets/${req.file.filename}`,
-      order: order || 0,
-      isActive: true
+      isActive: isActive !=undefined?isActive:true
     });
     await service.save();
     res.status(201).json({ message: "Service created successfully", service });
@@ -975,8 +965,8 @@ app.post("/api/services", upload.single('image'), async (req, res) => {
 
 app.put("/api/services/:id", upload.single('image'), async (req, res) => {
   try {
-    const { name, key, description, category, order, isActive } = req.body;
-    const updateData = { name, key, description, category, order, isActive };
+    const { name, key, description, isActive } = req.body;
+    const updateData = { name, key, description,isActive };
     if (req.file) {
       updateData.img = `/assets/${req.file.filename}`;
     }

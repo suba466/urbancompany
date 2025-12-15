@@ -27,53 +27,62 @@ function Banner() {
     }
   };
 
-  const fetchServices = async () => {
-    try {
-      setError(null);
-      const res = await fetch("http://localhost:5000/api/services");
-      if (!res.ok) throw new Error("Failed to fetch services");
-      const data = await res.json();
-      
-      console.log("Banner API response:", data);
-      
-      if (data.services && Array.isArray(data.services)) {
-        // Sort by order if available, otherwise by name
-        const sortedServices = data.services.sort((a, b) => {
-          if (a.order !== undefined && b.order !== undefined) {
-            return a.order - b.order;
-          }
-          return a.name?.localeCompare(b.name) || 0;
-        });
-        
-        setServices(sortedServices);
-      } else {
-        setServices([]);
-        setError("No services available");
-      }
-    } catch (err) {
-      console.error("Error fetching services:", err);
-      setError("Failed to load services");
-      setServices([]);
-    } finally {
-      setLoading(false);
+ const fetchServices = async () => {
+  try {
+    setError(null);
+    console.log("Fetching services from API...");
+    const res = await fetch("http://localhost:5000/api/services");
+    
+    if (!res.ok) {
+      console.error("Failed to fetch services:", res.status, res.statusText);
+      throw new Error(`HTTP ${res.status}: Failed to fetch services`);
     }
-  };
+    
+    const data = await res.json();
+    console.log("API Response:", data);
+    
+    if (data.services && Array.isArray(data.services)) {
+      // Debug: Log each service's isActive status
+      data.services.forEach(service => {
+        console.log(`Service: ${service.name}, isActive: ${service.isActive}`);
+      });
+      
+      console.log(`Found ${data.services.length} active services`);
+      
+      // Sort by order if available, otherwise by name
+      const sortedServices = data.services.sort((a, b) => {
+        if (a.order !== undefined && b.order !== undefined) {
+          return a.order - b.order;
+        }
+        return a.name?.localeCompare(b.name) || 0;
+      });
+      
+      setServices(sortedServices);
+      
+      // Show message if no active services
+      if (sortedServices.length === 0) {
+        setError("No services currently available");
+      }
+    } else {
+      console.warn("No services array in response:", data);
+      setServices([]);
+      setError("No services available");
+    }
+  } catch (err) {
+    console.error("Error fetching services:", err);
+    setError("Failed to load services");
+    setServices([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchBanner();
     fetchServices();
   }, []);
 
-  // Function to get initials from service name
-  const getInitials = (name) => {
-    if (!name) return 'NA';
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2);
-  };
+
 
   // Handle service click
   const handleServiceClick = (service) => {

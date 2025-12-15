@@ -77,32 +77,46 @@ function CartBlock({
                       <Button 
                         onClick={() => handleDecrease(c)} 
                         className="button border-0 d-flex align-items-center justify-content-center"
+                        style={{
+                          backgroundColor: "transparent",
+                          color: "#000",
+                          minWidth: "36px",
+                          fontSize: "18px",
+                          fontWeight: "bold"
+                        }}
                       >
                         −
                       </Button>
-                      <span className="count-box fw-bold" style={{ padding: "2px 10px" }}>
+                      <span className="count-box fw-bold" style={{ padding: "2px 10px", fontSize: "14px" }}>
                         {c.count || 1}
                       </span>
                       <Button 
                         onClick={() => handleIncrease(c)} 
                         className="button border-0 d-flex align-items-center justify-content-center"
+                        style={{
+                          backgroundColor: "transparent",
+                          color: "#000",
+                          minWidth: "36px",
+                          fontSize: "18px",
+                          fontWeight: "bold"
+                        }}
                       >
                         +
                       </Button>
                     </div>
 
                     <div className="text-end">
-                      <p style={{ fontSize: "13px", margin: 0 }}>{formatPrice(price)}</p>
+                      <p style={{ fontSize: "13px", margin: 0, fontWeight: "500" }}>{formatPrice(price)}</p>
                     </div>
                   </Col>
                 </Row>
 
                 {/* Content list - Show ALL services for main packages */}
                 {isMainPackage && c.content && c.content.length > 0 && (
-                  <div style={{ marginTop: "10px", fontSize: "12px" }}>
+                  <div style={{ marginTop: "10px", fontSize: "12px", color: "#555" }}>
                     {c.content.map((item, i) => (
-                      <p key={i} style={{ margin: "2px 0" }}>
-                        <GoDotFill style={{ fontSize: "10px", color: "#5a5959ff" }} />{" "}
+                      <p key={i} style={{ margin: "2px 0", lineHeight: "1.3" }}>
+                        <GoDotFill style={{ fontSize: "10px", color: "#5a5959ff", marginRight: "4px" }} />
                         {item.value ? `${item.value} : ${item.details}` : item.details}
                       </p>
                     ))}
@@ -114,6 +128,14 @@ function CartBlock({
                   <Button
                     className="text-start fw-semibold mt-2 editbtn"
                     onClick={() => onEdit(c)}
+                    style={{
+                      backgroundColor: "transparent",
+                      border: "1px solid #8b5cf6",
+                      color: "#8b5cf6",
+                      padding: "4px 12px",
+                      fontSize: "12px",
+                      borderRadius: "6px"
+                    }}
                   >
                     Edit
                   </Button>
@@ -125,7 +147,14 @@ function CartBlock({
           {!hideViewButton && (
             <Button
               className="butn w-100 fw-bold"
-              style={{ height: "36px", fontSize: "12px", marginTop: "10px" }}
+              style={{ 
+                height: "36px", 
+                fontSize: "12px", 
+                marginTop: "10px",
+                backgroundColor: "#8b5cf6",
+                border: "none",
+                borderRadius: "8px"
+              }}
               onClick={() => navigate("/cart")}
             >
               <Row>

@@ -933,12 +933,8 @@ router.get("/services", checkPermission('Category'), async (req, res) => {
       ];
     }
     
-    if (category) {
-      query.category = category;
-    }
-
     const services = await Service.find(query)
-      .sort({ order: 1 })
+      .sort({ name: 1 })
       .skip(skip)
       .limit(parseInt(limit));
 
@@ -964,7 +960,7 @@ router.get("/services", checkPermission('Category'), async (req, res) => {
 // Create new service WITH image upload
 router.post("/services", checkPermission('Category'), upload.single('image'), async (req, res) => {
   try {
-    const { name, description, category, order, isActive = true, key } = req.body;
+    const { name, description, isActive = true, key } = req.body;
 
     // Handle image upload
     let imageUrl = "/assets/default-category.png";
@@ -982,9 +978,7 @@ router.post("/services", checkPermission('Category'), upload.single('image'), as
       name,
       key: key || name.toLowerCase().replace(/ /g, '-'),
       description: description || "",
-      category: category || "General",
       img: imageUrl,
-      order: order || 0,
       isActive: isActive !== undefined ? isActive : true
     });
 
@@ -1004,7 +998,6 @@ router.post("/services", checkPermission('Category'), upload.single('image'), as
   }
 });
 
-// Update service WITH image upload
 router.put("/services/:id", checkPermission('Category'), upload.single('image'), async (req, res) => {
   try {
     const { id } = req.params;

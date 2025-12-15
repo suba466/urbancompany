@@ -6,8 +6,6 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    category: 'General',
-    order: 0,
     isActive: true
   });
   const [imageFile, setImageFile] = useState(null);
@@ -20,7 +18,6 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
         name: categoryData.name || '',
         description: categoryData.description || '',
         category: categoryData.category || 'General',
-        order: categoryData.order || 0,
         isActive: categoryData.isActive !== undefined ? categoryData.isActive : true
       });
       
@@ -78,23 +75,10 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
     }
   };
 
-  const handleClearForm = () => {
-    setFormData({
-      name: '',
-      description: '',
-      category: 'General',
-      order: 0,
-      isActive: true
-    });
-    setImageFile(null);
-    setPreviewUrl('');
-    setError('');
-  };
-
   return (
     <div className="p-3">
-      <Card className="shadow-lg p-2">
-        <Card.Body>
+      <Card className="shadow-lg">
+        <Card.Body style={{marginLeft:"25px",marginRight:"25px"}}>
           <h5 className="mb-0 fw-semibold">
             {isEditing ? 'Edit Category' : (
               <>
@@ -109,8 +93,8 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
       
       <br />
       
-      <Card className="border-0 shadow-lg p-4">
-        <Card.Body>
+      <Card className="border-0 shadow-lg ">
+        <Card.Body style={{marginLeft:"25px",marginRight:"25px"}}>
           {error && (
             <Alert variant="danger" onClose={() => setError('')} dismissible>
               {error}
@@ -143,10 +127,9 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
                       required
                       placeholder="Category name"
-                      className="py-3"
                       style={{ 
                         border: "2px solid #000000",
-                        borderRadius: "8px"
+                        borderRadius: "5px",height:"45px"
                       }}
                     />
                   </Form.Group>
@@ -158,39 +141,22 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
                       value={formData.description}
                       onChange={(e) => setFormData({...formData, description: e.target.value})}
                       placeholder="Description"
-                      className="py-3"
                       style={{ 
                         border: "2px solid #000000",
-                        borderRadius: "8px"
+                        borderRadius: "5px",height:"55px"
                       }}
                     />
                   </Form.Group>
-                  
-                  <Form.Group className="mb-4">
-                    <Form.Label className="fw-medium mb-2">Display Order</Form.Label>
-                    <Form.Control
-                      type="number"
-                      value={formData.order}
-                      onChange={(e) => setFormData({...formData, order: parseInt(e.target.value) || 0})}
-                      placeholder="Display order"
-                      className="py-3"
-                      style={{ 
-                        border: "2px solid #000000",
-                        borderRadius: "8px"
-                      }}
-                    />
-                    <Form.Text className="text-muted">
-                      Lower numbers appear first
-                    </Form.Text>
-                  </Form.Group>
-                  
                   <Form.Group className="mb-4">
                     <Form.Check
                       type="checkbox"
-                      label="Active Category"
+                      label="Enable"
                       checked={formData.isActive}
                       onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
-                      className="fw-medium"
+                      className="fw-medium" 
+                      style={{ fontSize: "14px",
+                                '--bs-border-width': '2px',
+                                '--bs-border-color': '#000000',}}
                     />
                   </Form.Group>
                 </div>
@@ -227,22 +193,6 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
                                 border: "1px solid #dee2e6"
                               }}
                             />
-                            <div className="d-flex justify-content-center gap-2 mb-3">
-                              <Button 
-                                variant="outline-danger" 
-                                size="sm"
-                                onClick={handleClearForm}
-                              >
-                                <i className="bi bi-trash me-1"></i> Clear Image
-                              </Button>
-                              <Button 
-                                variant="outline-primary" 
-                                size="sm"
-                                onClick={() => document.getElementById('imageUpload').click()}
-                              >
-                                <i className="bi bi-arrow-repeat me-1"></i> Change
-                              </Button>
-                            </div>
                           </>
                         ) : (
                           <div 
@@ -292,11 +242,11 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
               </Col>
             </Row>
             
-            <div className="d-flex justify-content-center gap-3 mt-5 pt-3 border-top">
+            <div className="d-flex justify-content-center gap-3 mt-5  ">
               <Button 
-                variant="outline-secondary" 
+                variant="outline-dark" 
                 onClick={handleCancel}
-                style={{ minWidth: '120px' }}
+                style={{ minWidth: '100px',borderRadius:"50px" }}
               >
                 Cancel
               </Button>
@@ -304,7 +254,7 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
               <Button 
                 variant="dark" 
                 type="submit"
-                style={{ minWidth: '120px' }}
+                style={{ minWidth: '100px',borderRadius:"50px" }}
               >
                 <i className={`bi ${isEditing ? 'bi-pencil' : 'bi-plus-circle'} me-2`}></i>
                 {isEditing ? 'Update' : 'Submit'}

@@ -31,130 +31,206 @@ function CartPage() {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
-  const [showBookingsModal, setShowBookingsModal]=useState(false);
+  const [showBookingsModal, setShowBookingsModal] = useState(false);
   const { isLoggedIn, userInfo } = useAuth();
-  const handleViewBookings=()=>{
+
+  const handleViewBookings = () => {
     setShowBookingsModal(true);
-  }
- // In CartPage.jsx, update the processPayment function
-const processPayment = async () => {
-  // First check if all required fields are filled
-  if (!selectedAddress) {
-    alert("Please select an address first");
-    return;
-  }
-  
-  if (!selectedSlot) {
-    alert("Please select a time slot");
-    return;
-  }
-  
-  // Check if user is logged in
-  if (!isLoggedIn) {
-    alert("Please login to place an order");
-    setShowAccountModal(true);
-    setShowLoginView(true);
-    return;
-  }
+  };
 
-  try {
-    // Calculate totals
-    const itemTotal = calculateItemTotal();
-    const tax = calculateTax();
-    const tip = calculateTip();
-    const slotExtraCharge = calculateSlotExtraCharge();
-    const totalPrice = itemTotal + tax + tip + slotExtraCharge;
+  // Add clearCartFromDatabase function
+  const clearCartFromDatabase = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/api/carts");
+      if (response.ok) {
+        const data = await response.json();
+        const cartItems = data.carts || [];
+        
+        // Delete all cart items
+        for (const item of cartItems) {
+          await fetch(`http://localhost:5000/api/carts/${item._id}`, {
+            method: "DELETE"
+          });
+        }
+        
+        // Refresh cart context
+        refreshCart();
+      }
+    } catch (error) {
+      console.error("Error clearing cart:", error);
+    }
+  };
 
-    // Prepare booking data
-    const bookingData = {
-      userId: userInfo.userId || `user_${userInfo.phone || "9787081119"}`,
-      userEmail: userInfo.email,
-      userName: userInfo.name || "Customer",
-      userPhone: userInfo.phone || "9787081119",
-      userCity: userInfo.city || "",
-      serviceName: cartItems.map(item => item.title).join(', '),
-      servicePrice: totalPrice.toString(),
-      originalPrice: itemTotal.toString(),
-      address: selectedAddress,
-      scheduledDate: selectedDate ? selectedDate.toISOString() : new Date().toISOString(),
-      scheduledTime: selectedSlot.time,
-      items: cartItems.map(item => ({
-        name: item.title,
-        quantity: item.count || 1,
-        price: item.price
-      })),
-      slotExtraCharge: slotExtraCharge,
-      tipAmount: tip,
-      taxAmount: tax,
-      paymentMethod: "Direct Booking", // Or "Cash on Delivery" if you prefer
+  // Fixed processPayment function
+  const processPayment = async () => {
+    // First check if all required fields are filled
+    if (!selectedAddress) {
+      alert("Please select an address first");
+      return;
+    }
+    
+    if (!selectedSlot) {
+      alert("Please select a time slot");
+      return;
+    }
+    
+    // Check if user is logged in
+    if (!isLoggedIn) {
+      alert("Please login to place an order");
+      setShowAccountModal(true);
+      setShowLoginView(true);
+      return;
+    }
+
+    // Validate user info
+    if (!userInfo || !userInfo.email) {
+      alert("User information is incomplete. Please login again.");
+      setShowAccountModal(true);
+      setShowLoginView(true);
+      return;
+    }
+
+    try {
+      // Debug: Check user info
+      console.log("📋 User Info for booking:", userInfo);
+      console.log("📦 Cart items:", cartItems);
+      console.log("🏠 Selected address:", selectedAddress);
+      console.log("⏰ Selected slot:", selectedSlot);
+
+      // Calculate totals
+      const itemTotal = calculateItemTotal();
+      const tax = calculateTax();
+      const tip = calculateTip();
+      const slotExtraCharge = calculateSlotExtraCharge();
+      const totalPrice = itemTotal + tax + tip + slotExtraCharge;
+
+      // Prepare booking data with CORRECT field names
+      const bookingData = {
+        // Use correct field names that backend expects
+        customerId: userInfo.id || userInfo.customerId || `customer_${userInfo.email}`,
+        customerEmail: userInfo.email,
+        customerName: userInfo.name || "Customer",
+        customerPhone: userInfo.phone || "9787081119",
+        customerCity: userInfo.city || "",
+        serviceName: cartItems.length > 0 ? cartItems.map(item => item.title).join(', ') : "Beauty Services",
+        servicePrice: totalPrice.toString(),
+        originalPrice: itemTotal.toString(),
+        address: selectedAddress,
+        scheduledDate: selectedDate ? selectedDate.toISOString() : new Date().toISOString(),
+        scheduledTime: selectedSlot.time,
+        items: cartItems.map(item => ({
+          name: item.title,
+          quantity: item.count || 1,
+          price: item.price.toString()
+        })),
+        slotExtraCharge: slotExtraCharge,
+        tipAmount: tip,
+        taxAmount: tax,
+        paymentMethod: "UPI",
+        status: "Confirmed",
+        paymentStatus: "Paid"
+      };
+
+      console.log("📤 Sending booking data to server:", bookingData);
+
+      // Send booking to server
+      const response = await fetch("http://localhost:5000/api/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(bookingData),
+      });
+
+      const result = await response.json();
+      console.log("📥 Server response:", result);
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to create booking");
+      }
+
+      // Clear cart after successful booking
+      await clearCartFromDatabase();
+      
+      // Clear local storage
+      localStorage.removeItem('selectedAddress');
+      
+      // Show success message
+      alert(`✅ Order placed successfully!\n\nBooking ID: ${result.booking._id}\nAmount: ₹${totalPrice.toLocaleString('en-IN')}`);
+      
+      // Refresh any booking lists
+      window.dispatchEvent(new Event('bookingCreated'));
+      
+      // Redirect to home page
+      window.location.href = "/";
+      
+    } catch (error) {
+      console.error("❌ Error processing order:", error);
+      alert(`❌ Order failed: ${error.message}\n\nPlease try again or contact support.`);
+    }
+  };
+
+  // Test function for debugging
+  const testBookingCreation = async () => {
+    console.log("🔍 Testing booking creation...");
+    
+    // Create test booking data
+    const testData = {
+      customerId: "test_customer_123",
+      customerEmail: "test@example.com",
+      customerName: "Test Customer",
+      customerPhone: "9876543210",
+      customerCity: "Test City",
+      serviceName: "Test Service",
+      servicePrice: "1000",
+      originalPrice: "1000",
+      address: {
+        doorNo: "123",
+        mainText: "Test Street",
+        subText: "Test Area",
+        addressType: "home"
+      },
+      scheduledDate: new Date().toISOString(),
+      scheduledTime: "10:00 AM",
+      items: [{
+        name: "Test Item",
+        quantity: 1,
+        price: "1000"
+      }],
+      slotExtraCharge: 0,
+      tipAmount: 0,
+      taxAmount: 0,
+      paymentMethod: "UPI",
       status: "Confirmed"
     };
-
-    console.log("Creating booking with data:", bookingData);
-
-    // Send booking to server
-    const response = await fetch("http://localhost:5000/api/bookings", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(bookingData),
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to create booking");
-    }
-
-    const result = await response.json();
     
-    // Clear cart after successful booking
-    await clearCartFromDatabase();
-    
-    // Clear local storage
-    localStorage.removeItem('selectedAddress');
-    
-    // Show success message
-    alert(` Order placed successfully!\n\nBooking ID: ${result.booking._id}\nAmount: ₹${totalPrice}`);
-    
-    // Redirect to home or bookings page
-    window.location.href = "/";
-    
-  } catch (error) {
-    console.error("Error processing order:", error);
-    alert(`Order failed: ${error.message}`);
-  }
-};
-
-// Add clearCartFromDatabase function
-const clearCartFromDatabase = async () => {
-  try {
-    const response = await fetch("http://localhost:5000/api/carts");
-    if (response.ok) {
-      const data = await response.json();
-      const cartItems = data.carts || [];
+    try {
+      console.log("📤 Sending test data:", testData);
       
-      // Delete all cart items
-      for (const item of cartItems) {
-        await fetch(`http://localhost:5000/api/carts/${item._id}`, {
-          method: "DELETE"
-        });
+      const response = await fetch("http://localhost:5000/api/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(testData),
+      });
+      
+      const result = await response.json();
+      console.log("📥 Test response:", result);
+      
+      if (response.ok) {
+        console.log("✅ Test booking created successfully!");
+        return true;
+      } else {
+        console.error("❌ Test failed:", result.error);
+        return false;
       }
-      
-      // Refresh cart context
-      refreshCart();
+    } catch (error) {
+      console.error("❌ Test error:", error);
+      return false;
     }
-  } catch (error) {
-    console.error("Error clearing cart:", error);
-  }
-};
-// Add this function to check if order can be placed
-const canPlaceOrder = () => {
-  if (!isLoggedIn) return false;
-  if (!selectedAddress) return false;
-  if (!selectedSlot) return false;
-  if (cartItems.length === 0) return false;
-  return true;
-};
+  };
+
   const timeSlotsData = {
     [new Date().toISOString().split('T')[0]]: [
       { id: 1, time: "10:00 AM", available: true, extraCharge: 0 },
@@ -199,7 +275,11 @@ const canPlaceOrder = () => {
     
     const savedAddress = localStorage.getItem('selectedAddress');
     if (savedAddress) {
-      setSelectedAddress(JSON.parse(savedAddress));
+      try {
+        setSelectedAddress(JSON.parse(savedAddress));
+      } catch (error) {
+        console.error("Error parsing saved address:", error);
+      }
     }
 
     setSelectedDate(new Date());
@@ -209,7 +289,11 @@ const canPlaceOrder = () => {
     const handleStorageChange = () => {
       const savedAddress = localStorage.getItem('selectedAddress');
       if (savedAddress) {
-        setSelectedAddress(JSON.parse(savedAddress));
+        try {
+          setSelectedAddress(JSON.parse(savedAddress));
+        } catch (error) {
+          console.error("Error parsing saved address:", error);
+        }
       }
     };
 
@@ -218,7 +302,11 @@ const canPlaceOrder = () => {
     const interval = setInterval(() => {
       const savedAddress = localStorage.getItem('selectedAddress');
       if (savedAddress && !selectedAddress) {
-        setSelectedAddress(JSON.parse(savedAddress));
+        try {
+          setSelectedAddress(JSON.parse(savedAddress));
+        } catch (error) {
+          console.error("Error parsing saved address:", error);
+        }
       }
     }, 1000);
 
@@ -228,8 +316,13 @@ const canPlaceOrder = () => {
     };
   }, [selectedAddress]);
 
-  const safePrice = (price) =>
-    Number((price || "0").toString().replace(/[₹,]/g, ""));
+  const safePrice = (price) => {
+    if (!price) return 0;
+    const priceStr = price.toString();
+    const cleaned = priceStr.replace(/[₹,]/g, "");
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? 0 : num;
+  };
 
   const formatPrice = (amount) => `₹${amount.toLocaleString("en-IN")}`;
 
@@ -525,6 +618,34 @@ const canPlaceOrder = () => {
     }
   };
 
+  // Add this function to check if order can be placed
+  const canPlaceOrder = () => {
+    if (!isLoggedIn) {
+      console.log("Cannot place order: Not logged in");
+      return false;
+    }
+    if (!selectedAddress) {
+      console.log("Cannot place order: No address selected");
+      return false;
+    }
+    if (!selectedSlot) {
+      console.log("Cannot place order: No time slot selected");
+      return false;
+    }
+    if (cartItems.length === 0) {
+      console.log("Cannot place order: Cart is empty");
+      return false;
+    }
+    
+    // Check if user has required info
+    if (!userInfo?.email) {
+      console.log("Cannot place order: Missing user email");
+      return false;
+    }
+    
+    return true;
+  };
+
   const itemTotal = calculateItemTotal();
   const tax = calculateTax();
   const tip = calculateTip();
@@ -552,6 +673,14 @@ const canPlaceOrder = () => {
             style={{ padding: "12px 32px", fontSize: "16px", borderRadius: "8px" }}
           >
             Explore Services
+          </Button>
+          {/* Test button for debugging */}
+          <Button 
+            variant="outline-warning" 
+            className="mt-3"
+            onClick={testBookingCreation}
+          >
+            Test Booking API
           </Button>
         </div>
       </Container>
@@ -1168,8 +1297,6 @@ const canPlaceOrder = () => {
           </div>
         </Modal.Footer>
       </Modal>
-      
- 
     </div>
   );
 }
