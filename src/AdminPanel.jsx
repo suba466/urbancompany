@@ -83,7 +83,6 @@ function AdminPanel() {
   // Profile Image States
   const [profileImage, setProfileImage] = useState(null);
   const [profileImagePreview, setProfileImagePreview] = useState("");
-  const [uploadingImage, setUploadingImage] = useState(false);
   
   // User Bulk Selection
   const [selectedUsers, setSelectedUsers] = useState([]);
@@ -118,6 +117,11 @@ function AdminPanel() {
   const [selectAllCustomers, setSelectAllCustomers] = useState(false);
   
   // Category Management States
+  const [categoryPage, setCategoryPage] = useState(1);
+  const [categoryTotalPages, setCategoryTotalPages] = useState(1);
+  const [categoryPerPage, setCategoryPerPage] = useState(10);
+  const [categoryTotalItems, setCategoryTotalItems] = useState(0);
+  const [categorySearch, setCategorySearch] = useState('');
   const [categories, setCategories] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectAllCategories, setSelectAllCategories] = useState(false);
@@ -489,27 +493,37 @@ const formatPermissions = (permissions) => {
     }
   };
 
-  const fetchUsers = async (page = 1, search = '', perPage = userPerPage) => {
-    try {
-      let url = `http://localhost:5000/api/admin/users?page=${page}&limit=${perPage}&search=${search}`;
-      
-      const response = await fetch(url, {
-        headers: getAuthHeaders()
+ const fetchUsers = async (page = 1, search = '', perPage = userPerPage) => {
+  try {
+    let url = `http://localhost:5000/api/admin/users?page=${page}&limit=${perPage}&search=${search}`;
+    
+    console.log('Fetching users:', { page, perPage, search });
+    
+    const response = await fetch(url, {
+      headers: getAuthHeaders()
+    });
+    const data = await response.json();
+    
+    if (data.success) {
+      console.log('Users fetched successfully:', {
+        page: data.pagination?.page || page,
+        totalPages: data.pagination?.pages || totalPages,
+        totalItems: data.pagination?.total || userTotalItems,
+        usersCount: data.users?.length || 0
       });
-      const data = await response.json();
-      if (data.success) {
-        setUsers(data.users || []);
-        setUserTotalPages(data.pagination?.pages || 1);
-        setUserTotalItems(data.pagination?.total || 0);
-        setSelectedUsers([]);
-        setSelectAllUsers(false);
-        setUserPerPage(perPage);
-      }
-    } catch (error) {
-      console.error('Error fetching users:', error);
+      
+      setUsers(data.users || []);
+      setUserTotalPages(data.pagination?.pages || 1);
+      setUserTotalItems(data.pagination?.total || 0);
+      setSelectedUsers([]);
+      setSelectAllUsers(false);
+      setUserPerPage(perPage);
+      setUserPage(page);
     }
-  };
-
+  } catch (error) {
+    console.error('Error fetching users:', error);
+  }
+};
   const fetchCustomers = async (page = 1, search = '', perPage = customerPerPage) => {
     try {
       let url = `http://localhost:5000/api/admin/customers?page=${page}&limit=${perPage}&search=${search}`;
@@ -531,41 +545,55 @@ const formatPermissions = (permissions) => {
     }
   };
 
-  const fetchCategories = async () => {
-    try {
-      console.log("🔍 Fetching categories from admin API...");
-      const response = await fetch('http://localhost:5000/api/admin/services', {
-        headers: getAuthHeaders()
-      });
+ const fetchCategories = async (page = 1, search = '', perPage = categoryPerPage) => {
+  try {
+    console.log(`Fetching categories from admin API... Page: ${page}, Search: ${search}, PerPage: ${perPage}`);
+    
+    let url = `http://localhost:5000/api/admin/services?page=${page}&limit=${perPage}&sort=-createdAt`;
+    
+    if (search) {
+      url += `&search=${encodeURIComponent(search)}`;
+    }
+    
+    const response = await fetch(url, {
+      headers: getAuthHeaders()
+    });
+    
+    if (!response.ok) {
+      console.error("Failed to fetch categories:", response.status);
+      setCategories([]);
+      return;
+    }
+    
+    const data = await response.json();
+    console.log("Categories API response:", data);
+    
+    if (data.success && data.services && Array.isArray(data.services)) {
+      console.log(`Found ${data.services.length} categories`);
       
-      if (!response.ok) {
-        console.error("Failed to fetch categories:", response.status);
-        setCategories([]);
-        return;
+      const formattedCategories = data.services.map(service => ({
+        ...service,
+        img: service.img || '/assets/default-category.png'
+      }));
+      
+      setCategories(formattedCategories);
+      
+      // Set pagination data if available
+      if (data.pagination) {
+        setCategoryTotalPages(data.pagination.pages || 1);
+        setCategoryTotalItems(data.pagination.total || 0);
+        setCategoryPerPage(data.pagination.limit || perPage);
+        setCategoryPage(data.pagination.page || page);
       }
-      
-      const data = await response.json();
-      console.log("Categories API response:", data);
-      
-      if (data.success && data.services && Array.isArray(data.services)) {
-        console.log(`Found ${data.services.length} categories`);
-        
-        const formattedCategories = data.services.map(service => ({
-          ...service,
-          img: service.img || '/assets/default-category.png'
-        }));
-        
-        console.log("Setting categories state");
-        setCategories(formattedCategories);
-      } else {
-        console.error("Invalid response format:", data);
-        setCategories([]);
-      }
-    } catch (error) {
-      console.error('Error fetching categories:', error);
+    } else {
+      console.error("Invalid response format:", data);
       setCategories([]);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    setCategories([]);
+  }
+};
 
   const fetchProducts = async () => {
     try {
@@ -841,15 +869,23 @@ const formatPermissions = (permissions) => {
   };
 
   // Function to get initials from name
-  const getInitials = (name) => {
-    if (!name) return 'NA';
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2);
-  };
+const getInitials = (name) => {
+  if (!name || name.trim() === '') return 'NA';
+  
+  // Clean up the name and get initials
+  const parts = name.trim().split(' ');
+  if (parts.length === 0) return 'NA';
+  
+  // Get first letter of first part
+  let initials = parts[0][0].toUpperCase();
+  
+  // Get first letter of last part if exists and different from first
+  if (parts.length > 1 && parts[parts.length - 1][0].toUpperCase() !== initials) {
+    initials += parts[parts.length - 1][0].toUpperCase();
+  }
+  
+  return initials;
+};
 
   const handleMenuClick = (menu) => {
     // Check permission before switching menu
@@ -1952,24 +1988,6 @@ const formatPermissions = (permissions) => {
                                         height: '100%', 
                                         objectFit: 'cover'
                                       }}
-                                      onError={(e) => {
-                                        e.target.style.display = 'none';
-                                        e.target.parentElement.innerHTML = `
-                                          <div style="
-                                            width: 100%;
-                                            height: 100%;
-                                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                            display: flex;
-                                            align-items: center;
-                                            justify-content: center;
-                                            color: white;
-                                            font-weight: bold;
-                                            font-size: 16px;
-                                          ">
-                                            ${getInitials(booking.customerName)}
-                                          </div>
-                                        `;
-                                      }}
                                     />
                                   ) : (
                                     <div style={{ 
@@ -2124,8 +2142,7 @@ const formatPermissions = (permissions) => {
             <Card className="shadow-lg">
               <Card.Body className="p-6"  style={{marginLeft:"25px",marginRight:"25px"}}>
                 {formSuccess && (
-                  <Alert variant="success" onClose={() => setFormSuccess(false)} dismissible>
-                    <Alert.Heading>Success!</Alert.Heading>
+                  <Alert variant="success" style={{height:"50px"}} onClose={() => setFormSuccess(false)} dismissible>
                     <p>{isEditingUser ? 'User updated successfully' : 'User has been added successfully'}</p>
                   </Alert>
                 )}
@@ -2480,12 +2497,7 @@ const formatPermissions = (permissions) => {
             </Row>
           </Card.Header>
           <Card.Body style={{ marginLeft: "20px", marginRight: "20px" }}>
-            {formSuccess && (
-              <Alert variant="success" onClose={() => setFormSuccess(false)} dismissible>
-                <Alert.Heading>Success!</Alert.Heading>
-                <p>User updated successfully!</p>
-              </Alert>
-            )}
+            
             
             {/* Bulk Selection Alert - Similar to Categories component */}
             {selectedUsers.length > 0 && (
@@ -2505,7 +2517,7 @@ const formatPermissions = (permissions) => {
             )}
             
             <div className="table-responsive">
-              <Table striped bordered hover style={{ border: "2px solid" }}>
+              <Table striped bordered hover style={{ border: "2px solid" }} >
                 <thead>
                   <tr>
                     <th>
@@ -2546,39 +2558,58 @@ const formatPermissions = (permissions) => {
                       </td>
                       
                       <td>
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      overflow: 'hidden',
+                      border: '2px solid #dee2e6'
+                    }}>
+                      {user.profileImage ? (
+                        <img
+                          src={`http://localhost:5000${user.profileImage}`}
+                          alt={user.name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.parentElement.innerHTML = `
+                              <div style="
+                                width: 100%;
+                                height: 100%;
+                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                color: white;
+                                font-weight: bold;
+                                font-size: 16px;
+                              ">
+                                ${getInitials(user.name)}
+                              </div>
+                            `;
+                          }}
+                        />
+                      ) : (
                         <div style={{
-                          width: '40px',
-                          height: '40px',
-                          borderRadius: '50px',
-                          overflow: 'hidden',
+                          width: '100%',
+                          height: '100%',
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: 'bold',
+                          fontSize: '16px'
                         }}>
-                          {user.profileImage ? (
-                            <img
-                              src={`http://localhost:5000${user.profileImage}`}
-                              alt={user.name}
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover'
-                              }}
-                            />
-                          ) : (
-                            <div style={{
-                              width: '100%',
-                              height: '100%',
-                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: 'white',
-                              fontWeight: 'bold',
-                              fontSize: '16px'
-                            }}>
-                              {getInitials(user.name)}
-                            </div>
-                          )}
+                          {getInitials(user.name)}
                         </div>
-                      </td>
+                      )}
+                    </div>
+                  </td>
                       
                       <td>
                         {user.name}
@@ -2736,40 +2767,58 @@ const formatPermissions = (permissions) => {
                             />
                           </td>
                           <td>
-                            <div style={{ 
-                              width: '50px', 
-                              height: '50px', 
-                              borderRadius: '50%', 
-                              overflow: 'hidden',
-                              border: '2px solid #dee2e6'
-                            }}>
-                              {customer.profileImage ? (
-                                <img 
-                                  src={`http://localhost:5000${customer.profileImage}`} 
-                                  alt={customer.name}
-                                  style={{ 
-                                    width: '100%', 
-                                    height: '100%', 
-                                    objectFit: 'cover'
-                                  }}
-                                />
-                              ) : (
-                                <div style={{ 
+                          <div style={{ 
+                            width: '50px', 
+                            height: '50px', 
+                            borderRadius: '50%', 
+                            overflow: 'hidden',
+                            border: '2px solid #dee2e6'
+                          }}>
+                            {customer.profileImage ? (
+                              <img 
+                                src={`http://localhost:5000${customer.profileImage}`} 
+                                alt={customer.name}
+                                style={{ 
                                   width: '100%', 
                                   height: '100%', 
-                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  color: 'white',
-                                  fontWeight: 'bold',
-                                  fontSize: '16px'
-                                }}>
-                                  {getInitials(customer.name)}
-                                </div>
-                              )}
-                            </div>
-                          </td>
+                                  objectFit: 'cover'
+                                }}
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  e.target.parentElement.innerHTML = `
+                                    <div style="
+                                      width: 100%;
+                                      height: 100%;
+                                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                      display: flex;
+                                      align-items: center;
+                                      justify-content: center;
+                                      color: white;
+                                      font-weight: bold;
+                                      font-size: 18px;
+                                    ">
+                                      ${getInitials(customer.name)}
+                                    </div>
+                                  `;
+                                }}
+                              />
+                            ) : (
+                              <div style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                fontWeight: 'bold',
+                                fontSize: '18px'
+                              }}>
+                                {getInitials(customer.name)}
+                              </div>
+                            )}
+                          </div>
+                        </td>
                           <td><strong>{customer.name}</strong></td>
                           <td>{customer.email}</td>
                           <td>{customer.phone}</td>
@@ -2802,32 +2851,50 @@ const formatPermissions = (permissions) => {
           </div>
         );
         
-      case 'manage-categories':
-        return (
-          <Categories 
-            categories={categories}
-            onEdit={(category) => {
-              // Set edit mode
-              setIsEditingCategory(true);
-              setEditCategoryId(category._id);
-              setEditCategory(category);
-              // Navigate to add-category form in edit mode
-              setActiveMenu('add-category');
-            }}
-            onDelete={(categoryId) => {
-              if (window.confirm('Are you sure you want to delete this category?')) {
-                handleBulkDelete('categories', [categoryId]);
-              }
-            }}
-            onBulkDelete={(selectedIds) => {
-              handleBulkDelete('categories', selectedIds);
-            }}
-            onToggleStatus={(categoryId, isActive) => {
-              // Update category status
-              updateCategory(categoryId, { isActive });
-            }}
-          />
-        );
+     case 'manage-categories':
+    return (
+      <Categories 
+        categories={categories}
+        onEdit={(category) => {
+          setIsEditingCategory(true);
+          setEditCategoryId(category._id);
+          setEditCategory(category);
+          setActiveMenu('add-category');
+        }}
+        onDelete={(categoryId) => {
+          if (window.confirm('Are you sure you want to delete this category?')) {
+            handleBulkDelete('categories', [categoryId]);
+          }
+        }}
+        onBulkDelete={(selectedIds) => {
+          handleBulkDelete('categories', selectedIds);
+        }}
+        onToggleStatus={(categoryId, isActive) => {
+          updateCategory(categoryId, { isActive });
+        }}
+        
+        // Add these pagination props:
+        currentPage={categoryPage}
+        totalPages={categoryTotalPages}
+        totalItems={categoryTotalItems}
+        onPageChange={(page) => {
+          setCategoryPage(page);
+          fetchCategories(page, categorySearch, categoryPerPage);
+        }}
+        
+        // Add these search props:
+        searchQuery={categorySearch}
+        onSearchChange={(value) => {
+          setCategorySearch(value);
+          fetchCategories(1, value, categoryPerPage); // Reset to page 1 when searching
+        }}
+        itemsPerPage={categoryPerPage}
+        onItemsPerPageChange={(perPage) => {
+          setCategoryPerPage(perPage);
+          fetchCategories(1, categorySearch, perPage); // Reset to page 1 when changing items per page
+        }}
+      />
+    );
         
       case 'add-category':
         if (!hasPermission('Category')) {
@@ -3739,40 +3806,62 @@ const formatPermissions = (permissions) => {
             {selectedUserDetails && (
               <div>
                 <div className="text-center mb-4">
-                  <div className="mb-3">
-                    {selectedUserDetails.profileImage ? (
-                      <img 
-                        src={`http://localhost:5000${selectedUserDetails.profileImage}`} 
-                        alt={selectedUserDetails.name}
-                        style={{ 
-                          width: '100px', 
-                          height: '100px', 
-                          borderRadius: '50%',
-                          objectFit: 'cover',
-                          border: '3px solid #dee2e6'
-                        }}
-                      />
-                    ) : (
-                      <div style={{ 
+                <div className="mb-3">
+                  {selectedUserDetails.profileImage ? (
+                    <img 
+                      src={`http://localhost:5000${selectedUserDetails.profileImage}`} 
+                      alt={selectedUserDetails.name}
+                      style={{ 
                         width: '100px', 
                         height: '100px', 
                         borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontWeight: 'bold',
-                        fontSize: '24px',
-                        margin: '0 auto'
-                      }}>
-                        {getInitials(selectedUserDetails.name)}
-                      </div>
-                    )}
-                  </div>
-                  <h5 className="mb-1">{selectedUserDetails.name}</h5>
-                  <p className="text-muted mb-3">{selectedUserDetails.designation}</p>
+                        objectFit: 'cover',
+                        border: '3px solid #dee2e6'
+                      }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.parentElement.innerHTML = `
+                          <div style="
+                            width: 100px;
+                            height: 100px;
+                            border-radius: 50%;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: white;
+                            font-weight: bold;
+                            font-size: 32px;
+                            margin: 0 auto;
+                            border: 3px solid #dee2e6
+                          ">
+                            ${getInitials(selectedUserDetails.name)}
+                          </div>
+                        `;
+                      }}
+                    />
+                  ) : (
+                    <div style={{ 
+                      width: '100px', 
+                      height: '100px', 
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      fontSize: '32px',
+                      margin: '0 auto',
+                      border: '3px solid #dee2e6'
+                    }}>
+                      {getInitials(selectedUserDetails.name)}
+                    </div>
+                  )}
                 </div>
+                <h5 className="mb-1">{selectedUserDetails.name}</h5>
+                <p className="text-muted mb-3">{selectedUserDetails.designation}</p>
+              </div>
 
                 <div className="list-group list-group-flush">
                   <div className="list-group-item px-0 border-top-0">

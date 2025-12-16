@@ -922,7 +922,7 @@ router.delete("/customers/:id", checkPermission('Customer'), async (req, res) =>
 router.get("/services", checkPermission('Category'), async (req, res) => {
   try {
     const Service = mongoose.model("Service");
-    const { page = 1, limit = 20, search = "", category = "" } = req.query;
+    const { page = 1, limit = 20, search = "", sort="-createdAt"} = req.query;
     const skip = (page - 1) * limit;
 
     let query = {};
@@ -934,7 +934,7 @@ router.get("/services", checkPermission('Category'), async (req, res) => {
     }
     
     const services = await Service.find(query)
-      .sort({ name: 1 })
+      .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
 

@@ -188,7 +188,7 @@ function Salon() {
                       }}
                     />
                   </div>
-                  <p className="text-center" style={{ fontSize: "13px", fontWeight: "450" }}>
+                  <p  style={{marginLeft:"10px", fontSize: "13px", fontWeight: "450" }}>
                     {s.name}
                   </p>
                 </div>

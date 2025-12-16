@@ -376,11 +376,11 @@ function Banner() {
           {/* Additional rows for extra services */}
           {extraRows.length > 0 && (
             <div className="mt-3">
-              <div className="d-flex flex-wrap">
+              <div className="first-row d-flex">
                 {extraRows.map((s, index) => (
                   <div
                     key={s._id || index}
-                    className="first-row-img "
+                    className="services first-row-item d-flex align-items-center justify-content-between"
                     onClick={() => handleServiceClick(s)}
                    
                   >

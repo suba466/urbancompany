@@ -1,8 +1,9 @@
+// TableControls.js - Updated version
 import React from 'react';
 import { Dropdown, Button, Form, Row, Col } from 'react-bootstrap';
 import { FaFileExcel, FaFilePdf, FaFileCsv } from "react-icons/fa";
-import html2pdf from 'html2pdf.js';
-import * as XLSX from 'xlsx';
+import { IoIosArrowBack } from "react-icons/io";
+import { IoIosArrowForward } from "react-icons/io";
 
 const TableControls = ({ 
   // Pagination props
@@ -24,78 +25,29 @@ const TableControls = ({
   onDownloadCSV,
   dataType = 'data',
   
-  // Bulk actions
-  selectedCount = 0,
-  onBulkDelete,
-  showBulkActions = false,
-  bulkEntityName = 'items',
-  
   // Additional actions
   additionalActions,
   showPerPage = true,
   showDownload = true,
   showSearch = true,
+  showPagination = true, // NEW: control whether to show pagination
   
   // Styling
   className = ''
 }) => {
   
-  // Pagination buttons
-  const renderPaginationButtons = () => {
-    const buttons = [];
-    
-    // Previous button
-    buttons.push(
-      <Button
-        key="prev"
-        variant="outline-dark"
-        size="sm"
-        disabled={currentPage <= 1}
-        onClick={() => onPageChange(currentPage - 1)}
-        style={{ minWidth: '80px' }}
-      >
-        ← Previous
-      </Button>
-    );
-    
-    // Page numbers (show limited range)
-    const maxVisiblePages = 5;
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-    
-    if (endPage - startPage + 1 < maxVisiblePages) {
-      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+  // Handle next page
+  const handleNext = () => {
+    if (currentPage < totalPages) {
+      onPageChange(currentPage + 1);
     }
-    
-    for (let i = startPage; i <= endPage; i++) {
-      buttons.push(
-        <Button
-          key={i}
-          variant={currentPage === i ? "dark" : "outline-dark"}
-          size="sm"
-          onClick={() => onPageChange(i)}
-          style={{ minWidth: '40px' }}
-        >
-          {i}
-        </Button>
-      );
+  };
+
+  // Handle previous page
+  const handlePrev = () => {
+    if (currentPage > 1) {
+      onPageChange(currentPage - 1);
     }
-    
-    // Next button
-    buttons.push(
-      <Button
-        key="next"
-        variant="outline-dark"
-        size="sm"
-        disabled={currentPage >= totalPages}
-        onClick={() => onPageChange(currentPage + 1)}
-        style={{ minWidth: '80px' }}
-      >
-        Next →
-      </Button>
-    );
-    
-    return buttons;
   };
 
   return (
@@ -104,7 +56,7 @@ const TableControls = ({
       <Row className="align-items-center mb-3">
         {/* Left Side: Search */}
         {showSearch && (
-          <Col  >
+          <Col md={9}>
             <div className="d-flex align-items-center">
               <Form.Control
                 type="search"
@@ -112,41 +64,24 @@ const TableControls = ({
                 value={searchValue}
                 onChange={onSearchChange}
                 style={{ 
-                  height: '40px',
-                  borderRadius: '0px',border:"2px solid #000000"
+                  height: '40px', 
+                  width: "500px",
+                  borderRadius: '0px',
+                  border: "2px solid #000000"
                 }}
               />
             </div>
           </Col>
         )}
         {/* Right Side: Controls */}
-        <Col >
-          <div className="d-flex align-items-center justify-content-end gap-2">
-            {/* Items per page dropdown */}
-            {showPerPage && (
-              <Dropdown className="me-2">
-                <Dropdown.Toggle 
-                  variant="outline-dark" 
-                  size="sm"
-                  style={{ minWidth: '120px' }}
-                >
-                  {itemsPerPage} per page
-                </Dropdown.Toggle>
-                <Dropdown.Menu>
-                  <Dropdown.Item onClick={() => onItemsPerPageChange(5)}>5 per page</Dropdown.Item>
-                  <Dropdown.Item onClick={() => onItemsPerPageChange(10)}>10 per page</Dropdown.Item>
-                  <Dropdown.Item onClick={() => onItemsPerPageChange(15)}>15 per page</Dropdown.Item>
-                  <Dropdown.Item onClick={() => onItemsPerPageChange(20)}>20 per page</Dropdown.Item>
-                  <Dropdown.Item onClick={() => onItemsPerPageChange(50)}>50 per page</Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown>
-            )}
-            
+        <Col>
+          <div>
             {/* Download buttons */}
             {showDownload && (
-              <div className="d-flex gap-1">
+              <div className="d-flex gap-2">
                 <Button 
-                  variant="outline-light" style={{border:"1px solid #000000"}}
+                  variant="outline-light" 
+                  style={{border:"1px solid #000000"}}
                   size="sm"
                   onClick={onDownloadPDF}
                   title="Download as PDF"
@@ -154,7 +89,8 @@ const TableControls = ({
                   <FaFilePdf className="text-danger" />
                 </Button>
                 <Button 
-                  variant="outline-light" style={{border:"1px solid #000000"}}
+                  variant="outline-light" 
+                  style={{border:"1px solid #000000"}}
                   size="sm"
                   onClick={onDownloadExcel}
                   title="Download as Excel"
@@ -162,7 +98,8 @@ const TableControls = ({
                   <FaFileExcel className="text-success" />
                 </Button>
                 <Button 
-                  variant="outline-light"style={{border:"1px solid #000000"}}
+                  variant="outline-light"
+                  style={{border:"1px solid #000000"}}
                   size="sm"
                   onClick={onDownloadCSV}
                   title="Download as CSV"
@@ -182,83 +119,67 @@ const TableControls = ({
         </Col>
       </Row>
 
-      {/* Bulk Actions Section */}
-      {showBulkActions && selectedCount > 0 && (
-        <Row className="mb-3">
-          <Col>
-            <div className="d-flex justify-content-between align-items-center p-3 bg-light rounded">
-              <span className="fw-medium">
-                {selectedCount} {bulkEntityName} selected
-              </span>
-              <Button 
-                variant="danger" 
+      {/* Second Row: Items per page and Pagination */}
+      <Row className='d-flex justify-content-end align-items-center'>
+        <Col xs="auto">
+          {/* Items per page dropdown */}
+          {showPerPage && (
+            <Dropdown className="me-2">
+              <Dropdown.Toggle 
+                variant="outline-dark" 
                 size="sm"
-                onClick={onBulkDelete}
+                style={{ minWidth: '120px' }}
               >
-                <i className="bi bi-trash me-2"></i>Delete Selected
+                {itemsPerPage} per page
+              </Dropdown.Toggle>
+              <Dropdown.Menu>
+                <Dropdown.Item onClick={() => onItemsPerPageChange(5)}>5 per page</Dropdown.Item>
+                <Dropdown.Item onClick={() => onItemsPerPageChange(10)}>10 per page</Dropdown.Item>
+                <Dropdown.Item onClick={() => onItemsPerPageChange(15)}>15 per page</Dropdown.Item>
+                <Dropdown.Item onClick={() => onItemsPerPageChange(20)}>20 per page</Dropdown.Item>
+                <Dropdown.Item onClick={() => onItemsPerPageChange(50)}>50 per page</Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+          )}
+        </Col>
+        <Col xs="auto">
+          {/* Pagination Controls with Arrows - Always show if showPagination is true */}
+          {showPagination && (
+            <div className="d-flex align-items-center gap-1">
+              <Button
+                variant="outline-dark"
+                size="sm" 
+                disabled={currentPage <= 1}
+                onClick={handlePrev}
+                style={{ 
+                  border: "0px", // Changed from 0px to 1px solid
+                  fontSize: "15px",
+                  minWidth: '36px'
+                }}
+                title="Previous Page"
+              >
+                <IoIosArrowBack />
+              </Button>
+              <Button
+                variant="outline-dark"
+                size="sm"
+                disabled={currentPage >= totalPages}
+                onClick={handleNext}
+                style={{ 
+                  border: "0px", // Changed from 0px to 1px solid
+                  fontSize: "15px",
+                  minWidth: '36px'
+                }}
+                title="Next Page"
+              >
+                <IoIosArrowForward />
               </Button>
             </div>
-          </Col>
-        </Row>
-      )}
-
+          )}
+        </Col>
+      </Row>
     </div>
   );
-};
-
-// Helper functions for downloads (can be imported from utilities)
-export const downloadTableAsPDF = (element, dataType = '') => {
-  if (!element) {
-    alert('No table found to download');
-    return;
-  }
-  
-  const options = {
-    margin: 1,
-    filename: `${dataType || 'table'}_${new Date().toISOString().split('T')[0]}.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2 },
-    jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-  };
-  
-  html2pdf().from(element).set(options).save();
-};
-
-export const downloadTableAsExcel = (data, headers, dataType = '') => {
-  if (data.length === 0) {
-    alert('No data available to export');
-    return;
-  }
-  
-  const worksheet = XLSX.utils.json_to_sheet(data);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
-  
-  XLSX.writeFile(workbook, `${dataType || 'data'}_${new Date().toISOString().split('T')[0]}.xlsx`);
-};
-
-export const downloadTableAsCSV = (data, headers, dataType = '') => {
-  if (data.length === 0) {
-    alert('No data available to export');
-    return;
-  }
-  
-  const csvContent = [
-    headers.join(','),
-    ...data.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-  ].join('\n');
-  
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  const url = URL.createObjectURL(blob);
-  
-  link.setAttribute('href', url);
-  link.setAttribute('download', `${dataType || 'data'}_${new Date().toISOString().split('T')[0]}.csv`);
-  link.style.visibility = 'hidden';
-  
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
 };
 
 export default TableControls;

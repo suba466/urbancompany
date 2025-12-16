@@ -4,20 +4,19 @@ import {
   Row, Col
 } from 'react-bootstrap';
 import { MdModeEdit, MdOutlineDelete } from "react-icons/md";
-import TableControls from './TableControls'; // Adjust path as needed
+import TableControls from './TableControls';
+import { IoEyeSharp } from "react-icons/io5";
 import { 
   getTableElement, 
   exportAsPDF, 
   exportAsExcel, 
   exportAsCSV,
   getCSVHeadersFromData
-} from './downloadUtils'; // Adjust path as needed
+} from './downloadUtils'; 
 
 function Categories({
   categories,
   onEdit,
-  onDelete,
-  onBulkDelete,
   onToggleStatus,
   itemsPerPage = 10,
   onItemsPerPageChange,
@@ -233,15 +232,12 @@ function Categories({
             onDownloadCSV={handleDownloadCSV}
             dataType="categories"
             
-            // Bulk actions
-            selectedCount={selectedCategories.length}
-            onBulkDelete={handleBulkDeleteClick}
-            showBulkActions={false} 
-            
             // Additional options
             showPerPage={true}
             showDownload={true}
             showSearch={true}
+            // Add this to force show arrows
+            showPagination={true}
           /></Col>
           </Row>
         </Card.Header>
@@ -277,7 +273,7 @@ function Categories({
                 <Table striped bordered hover style={{border:"2px solid"}}>
                   <thead>
                     <tr>
-                      <th style={{ width: '40px' }}>
+                      <th >
                         <Form.Check
                           type="checkbox"
                           checked={selectAll}
@@ -289,11 +285,11 @@ function Categories({
                           }}
                         />
                       </th>
-                      <th style={{ width: '80px' }}>Image</th>
+                      <th >Image</th>
                       <th>Name</th>
                       <th>Description</th>
-                      <th style={{ width: '120px' }}>Status</th>
-                      <th style={{ width: '120px' }}>Actions</th>
+                      <th >Status</th>
+                      <th >Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -340,27 +336,16 @@ function Categories({
                               }}>
                                 {loadingImages[category._id] === undefined ? (
                                   // Loading state
-                                  <div style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
+                                  <div className='d-flex align-items-center justify-content-center w-100 h-100' style={{
                                     background: '#f8f9fa'
                                   }}>
                                     <Spinner animation="border" size="sm" />
                                   </div>
                                 ) : loadingImages[category._id] === false || !category.img ? (
                                   // Fallback when image doesn't exist
-                                  <div style={{
-                                    width: '100%',
-                                    height: '100%',
+                                  <div className='d-flex fw-bold align-items-center justify-content-center w-100 h-100' style={{
                                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
                                     color: 'white',
-                                    fontWeight: 'bold',
                                     fontSize: '16px'
                                   }}>
                                     {getInitials(category.name)}
@@ -415,7 +400,7 @@ function Categories({
                               />
                             </td>
                             <td>
-                              <div className="d-flex gap-2">
+                              <div className="d-flex gap-1">
                                 <Button
                                   variant="warning"
                                   size="sm"
@@ -429,6 +414,12 @@ function Categories({
                                   }}
                                 >
                                   <MdModeEdit />
+                                </Button>
+                                <Button
+                                variant="dark"size="sm"
+                                onClick={() => handleViewCategory(category)}
+                                title="View User Details">
+                                  <IoEyeSharp />
                                 </Button>
                                 <Button
                                   variant="danger"
