@@ -22,6 +22,10 @@ import {
 } from './downloadUtils';
 import "./Urbancom.css";
 
+import SubCategories from './SubCategories';
+import SubCategoryForm from './SubCategoryForm';
+
+
 function AdminPanel() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState(null);
@@ -137,21 +141,26 @@ function AdminPanel() {
     isActive: true
   });
   
-  // Product Management States
-  const [products, setProducts] = useState([]);
-  const [productSearch, setProductSearch] = useState('');
-  const [selectedProducts, setSelectedProducts] = useState([]);
-  const [selectAllProducts, setSelectAllProducts] = useState(false);
-  const [showAddProductModal, setShowAddProductModal] = useState(false);
-  const [newProduct, setNewProduct] = useState({
-    name: '',
-    description: '',
-    category: '',
-    price: '',
-    discountPrice: '',
-    stock: 0,
-    isActive: true
-  });
+  //  sub-category 
+const [subCategoryPage, setSubCategoryPage] = useState(1);
+const [subCategoryTotalPages, setSubCategoryTotalPages] = useState(1);
+const [subCategoryPerPage, setSubCategoryPerPage] = useState(10);
+const [subCategoryTotalItems, setSubCategoryTotalItems] = useState(0);
+const [subCategorySearch, setSubCategorySearch] = useState('');
+const [subCategories, setSubCategories] = useState([]);
+const [selectedSubCategories, setSelectedSubCategories] = useState([]);
+const [selectAllSubCategories, setSelectAllSubCategories] = useState(false);
+const [showAddSubCategoryModal, setShowAddSubCategoryModal] = useState(false);
+const [editSubCategoryId, setEditSubCategoryId] = useState(null);
+const [isEditingSubCategory, setIsEditingSubCategory] = useState(false);
+const [editSubCategory, setEditSubCategory] = useState({
+  name: '',
+  description: '',
+  parentCategory: '',
+  order: 0,
+  isActive: true,
+  img: ''
+});
   
   // Bookings Management States
   const [bookings, setBookings] = useState([]);
@@ -297,22 +306,6 @@ const formatPermissions = (permissions) => {
     }));
   };
 
-  // Helper function to get field styling
-  const getFieldStyle = (formType, fieldName, currentValue) => {
-    const isTouched = touchedFields[formType]?.[fieldName];
-    const hasError = formErrors[formType]?.[fieldName];
-    
-    if (isTouched && hasError && !currentValue) {
-      return {
-        border: '2px solid #000000',
-        backgroundColor: '#fff8f8'
-      };
-    }
-    return {
-      border: '2px solid #000000',
-      backgroundColor: 'white'
-    };
-  };
 
   const fetchAdminProfile = async () => {
     try {
@@ -595,6 +588,38 @@ const formatPermissions = (permissions) => {
   }
 };
 
+//fetch sub-category
+const fetchSubCategories = async (page = 1, search = '', perPage = subCategoryPerPage) => {
+  try {
+    let url = `http://localhost:5000/api/admin/subcategories?page=${page}&limit=${perPage}&sort=-createdAt`
+    if (search) url += `&search=${encodeURIComponent(search)}`
+    const response = await fetch(url, { headers: getAuthHeaders() })
+    const data = await response.json()
+    if (data.success) {
+      setSubCategories(data.subcategories || [])
+      setSubCategoryTotalPages(data.pagination?.pages || 1)
+      setSubCategoryTotalItems(data.pagination?.total || 0)
+    }
+  } catch (error) {
+    console.error('Error fetching subcategories:', error)
+  }
+}
+
+const updateSubCategory = async (subCategoryId, updateData) => {
+  try {
+    const response = await fetch(`http://localhost:5000/api/admin/subcategories/${subCategoryId}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(updateData)
+    })
+    const data = await response.json()
+    if (data.success) fetchSubCategories()
+  } catch (error) {
+    console.error('Error updating subcategory:', error)
+  }
+}
+
+
   const fetchProducts = async () => {
     try {
       const response = await fetch('http://localhost:5000/api/admin/packages', {
@@ -786,82 +811,85 @@ const formatPermissions = (permissions) => {
   };
 
   // Common bulk delete function
-  const handleBulkDelete = async (entity, selectedIds) => {
-    if (selectedIds.length === 0) return;
-    
-    const entityNames = {
-      'users': 'user(s)',
-      'customers': 'customer(s)',
-      'categories': 'category(ies)',
-      'products': 'product(s)',
-      'bookings': 'booking(s)'
-    };
-
-    // Map frontend entity names to backend entity names
-    const backendEntityMap = {
-      'users': 'users',
-      'customers': 'customers',
-      'categories': 'services',
-      'products': 'packages', 
-      'bookings': 'bookings'
-    };
-
-    const backendEntity = backendEntityMap[entity];
-    
-    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} ${entityNames[entity]}?`)) {
-      try {
-        const response = await fetch('http://localhost:5000/api/admin/bulk-delete', {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: JSON.stringify({ 
-            entity: backendEntity,
-            ids: selectedIds 
-          })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          alert(data.message);
-          
-          // Reset selection and refresh data
-          switch(entity) {
-            case 'users':
-              setSelectedUsers([]);
-              setSelectAllUsers(false);
-              fetchUsers(userPage, userSearch, userPerPage);
-              break;
-            case 'customers':
-              setSelectedCustomers([]);
-              setSelectAllCustomers(false);
-              fetchCustomers(customerPage, customerSearch, customerPerPage);
-              break;
-            case 'categories':
-              setSelectedCategories([]);
-              setSelectAllCategories(false);
-              fetchCategories();
-              break;
-            case 'products':
-              setSelectedProducts([]);
-              setSelectAllProducts(false);
-              fetchProducts();
-              break;
-            case 'bookings':
-              setSelectedBookings([]);
-              setSelectAllBookings(false);
-              fetchBookings(bookingPage, bookingSearch, bookingStatus, bookingPerPage);
-              fetchDashboardData();
-              break;
-          }
-        } else {
-          alert(data.error || `Failed to delete ${entity}`);
-        }
-      } catch (error) {
-        console.error(`Error deleting ${entity}:`, error);
-        alert(`Failed to delete ${entity}`);
-      }
-    }
+const handleBulkDelete = async (entity, selectedIds) => {
+  if (selectedIds.length === 0) return;
+  
+  const entityNames = {
+    'users': 'user(s)',
+    'customers': 'customer(s)',
+    'categories': 'category(ies)',
+    'subcategories': 'sub-category(ies)', 
+    'products': 'product(s)',
+    'bookings': 'booking(s)'
   };
+
+  const backendEntityMap = {
+    'users': 'users',
+    'customers': 'customers',
+    'categories': 'services',
+    'subcategories': 'subcategories',
+    'products': 'packages', 
+    'bookings': 'bookings'
+  };
+
+  const backendEntity = backendEntityMap[entity];
+  
+  // Single confirmation alert
+  if (window.confirm(`Are you sure you want to delete ${selectedIds.length} ${entityNames[entity]}?`)) {
+    try {
+      const response = await fetch('http://localhost:5000/api/admin/bulk-delete', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ 
+          entity: backendEntity,
+          ids: selectedIds 
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Single success notification
+        alert(`Successfully deleted ${selectedIds.length} ${entityNames[entity]}`);
+        
+        // Reset selection and refresh data
+        switch(entity) {
+          case 'users':
+            setSelectedUsers([]);
+            setSelectAllUsers(false);
+            fetchUsers(userPage, userSearch, userPerPage);
+            break;
+          case 'customers':
+            setSelectedCustomers([]);
+            setSelectAllCustomers(false);
+            fetchCustomers(customerPage, customerSearch, customerPerPage);
+            break;
+          case 'categories':
+            setSelectedCategories([]);
+            setSelectAllCategories(false);
+            fetchCategories(categoryPage, categorySearch, categoryPerPage);
+            break;
+          case 'products':
+            setSelectedProducts([]);
+            setSelectAllProducts(false);
+            fetchProducts();
+            break;
+          case 'bookings':
+            setSelectedBookings([]);
+            setSelectAllBookings(false);
+            fetchBookings(bookingPage, bookingSearch, bookingStatus, bookingPerPage);
+            fetchDashboardData();
+            break;
+        }
+      } else {
+        alert(data.error || `Failed to delete ${entity}`);
+      }
+    } catch (error) {
+      console.error(`Error deleting ${entity}:`, error);
+      alert(`Failed to delete ${entity}`);
+    }
+  }
+};
 
   // Helper function to display password (always shows 6 dots)
   const displayPassword = () => {
@@ -905,16 +933,14 @@ const getInitials = (name) => {
     };
 
     const requiredPermission = permissionMap[menu];
-    if (requiredPermission && !hasPermission(requiredPermission)) {
-      alert("You don't have permission to access this section");
-      return;
-    }
 
-    setActiveMenu(menu);
+     setActiveMenu(menu);
     setIsEditingUser(false);
     setEditUserId(null);
     setIsEditingCategory(false);
     setEditCategoryId(null);
+    setIsEditingSubCategory(false);
+    setEditSubCategoryId(null);
     
     // Reset forms when switching away
     if (menu !== 'add-user') {
@@ -989,6 +1015,15 @@ const getInitials = (name) => {
         setShowAddCategoryModal(false);
         fetchCategories();
         break;
+      case 'add-subcategory':
+        setShowAddSubCategoryModal(true);
+        fetchCategories(); // Fetch parent categories
+        fetchSubCategories();
+      break;
+     case 'manage-subcategories':
+        setShowAddSubCategoryModal(false);
+        fetchSubCategories();
+      break;
       case 'add-product':
         setShowAddProductModal(true);
         fetchProducts();
@@ -1550,6 +1585,29 @@ const getInitials = (name) => {
               </Dropdown.Menu>
             </Dropdown>
           )}
+
+           {/*Sub-Category Management */}
+          {userRole === 'admin' && hasPermission('Category') && (
+            <Dropdown className="mb-2">
+              <Dropdown.Toggle as={Nav.Link} style={{ 
+                color: ['add-subcategory', 'manage-subcategories'].includes(activeMenu) ? '#000' : 'white',
+                background: ['add-subcategory', 'manage-subcategories'].includes(activeMenu) ? 'white' : 'transparent',
+                borderRadius: '8px', padding: '10px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+              }}>
+                <span><i className="bi bi-tags me-2"></i>Sub-Category</span>
+                <i className="bi bi-chevron-down ms-auto"></i>
+              </Dropdown.Toggle>
+              <Dropdown.Menu style={{ width: '100%' }}>
+                <Dropdown.Item onClick={() => handleMenuClick('add-subcategory')}>
+                  <i className="bi bi-folder-plus me-2"></i>Add Sub-Category
+                </Dropdown.Item>
+                <Dropdown.Item onClick={() => handleMenuClick('manage-subcategories')}>
+                  <i className="bi bi-folder-fill me-2"></i>Manage Sub-Categories
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+          )}
+
           
           {/* Product Management */}
           {(userRole === 'admin' || hasPermission('Product')) && (
@@ -1692,8 +1750,6 @@ const getInitials = (name) => {
 
     const requiredPermission = permissionMap[activeMenu];
     
-    // If the user doesn't have permission for the current menu, 
-    // automatically redirect to dashboard
     if (requiredPermission && !hasPermission(requiredPermission)) {
       // Show access denied message briefly
       setTimeout(() => {
@@ -2851,50 +2907,50 @@ const getInitials = (name) => {
           </div>
         );
         
-     case 'manage-categories':
-    return (
-      <Categories 
-        categories={categories}
-        onEdit={(category) => {
-          setIsEditingCategory(true);
-          setEditCategoryId(category._id);
-          setEditCategory(category);
-          setActiveMenu('add-category');
-        }}
-        onDelete={(categoryId) => {
-          if (window.confirm('Are you sure you want to delete this category?')) {
-            handleBulkDelete('categories', [categoryId]);
-          }
-        }}
-        onBulkDelete={(selectedIds) => {
-          handleBulkDelete('categories', selectedIds);
-        }}
-        onToggleStatus={(categoryId, isActive) => {
-          updateCategory(categoryId, { isActive });
-        }}
-        
-        // Add these pagination props:
-        currentPage={categoryPage}
-        totalPages={categoryTotalPages}
-        totalItems={categoryTotalItems}
-        onPageChange={(page) => {
-          setCategoryPage(page);
-          fetchCategories(page, categorySearch, categoryPerPage);
-        }}
-        
-        // Add these search props:
-        searchQuery={categorySearch}
-        onSearchChange={(value) => {
-          setCategorySearch(value);
-          fetchCategories(1, value, categoryPerPage); // Reset to page 1 when searching
-        }}
-        itemsPerPage={categoryPerPage}
-        onItemsPerPageChange={(perPage) => {
-          setCategoryPerPage(perPage);
-          fetchCategories(1, categorySearch, perPage); // Reset to page 1 when changing items per page
-        }}
-      />
-    );
+    case 'manage-categories':
+  return (
+    <Categories 
+      categories={categories}
+      onEdit={(category) => {
+        setIsEditingCategory(true);
+        setEditCategoryId(category._id);
+        setEditCategory(category);
+        setActiveMenu('add-category');
+      }}
+      // Remove the confirmation alert here
+      onDelete={(categoryId) => {
+        // Directly call bulk delete with single ID
+        handleBulkDelete('categories', [categoryId]);
+      }}
+      onBulkDelete={(selectedIds) => {
+        handleBulkDelete('categories', selectedIds);
+      }}
+      onToggleStatus={(categoryId, isActive) => {
+        updateCategory(categoryId, { isActive });
+      }}
+      
+      // Add these pagination props:
+      currentPage={categoryPage}
+      totalPages={categoryTotalPages}
+      totalItems={categoryTotalItems}
+      onPageChange={(page) => {
+        setCategoryPage(page);
+        fetchCategories(page, categorySearch, categoryPerPage);
+      }}
+      
+      // Add these search props:
+      searchQuery={categorySearch}
+      onSearchChange={(value) => {
+        setCategorySearch(value);
+        fetchCategories(1, value, categoryPerPage);
+      }}
+      itemsPerPage={categoryPerPage}
+      onItemsPerPageChange={(perPage) => {
+        setCategoryPerPage(perPage);
+        fetchCategories(1, categorySearch, perPage);
+      }}
+    />
+  );
         
       case 'add-category':
         if (!hasPermission('Category')) {
@@ -2965,6 +3021,141 @@ const getInitials = (name) => {
             }}
           />
         );
+case 'manage-subcategories':
+  if (!hasPermission('Category')) {
+    return (
+      <Card className="border-0 shadow-sm">
+        <Card.Body className="text-center py-5">
+          <h3 className="text-danger">Access Denied</h3>
+          <p>You don't have permission to manage sub-categories.</p>
+        </Card.Body>
+      </Card>
+    );
+  }
+  
+  return (
+    <SubCategories 
+      subCategories={subCategories}
+      onEdit={(subcat) => {
+        setIsEditingSubCategory(true);
+        setEditSubCategoryId(subcat._id);
+        setEditSubCategory(subcat);
+        setActiveMenu('add-subcategory');
+      }}
+      onDelete={(subcatId) => {
+        handleBulkDelete('subcategories', [subcatId]);
+      }}
+      onBulkDelete={(selectedIds) => {
+        handleBulkDelete('subcategories', selectedIds);
+      }}
+      onToggleStatus={(subcatId, isActive) => {
+        updateSubCategory(subcatId, { isActive });
+      }}
+      currentPage={subCategoryPage}
+      totalPages={subCategoryTotalPages}
+      totalItems={subCategoryTotalItems}
+      onPageChange={(page) => {
+        setSubCategoryPage(page);
+        fetchSubCategories(page, subCategorySearch, subCategoryPerPage);
+      }}
+      searchQuery={subCategorySearch}
+      onSearchChange={(value) => {
+        setSubCategorySearch(value);
+        fetchSubCategories(1, value, subCategoryPerPage);
+      }}
+      itemsPerPage={subCategoryPerPage}
+      onItemsPerPageChange={(perPage) => {
+        setSubCategoryPerPage(perPage);
+        fetchSubCategories(1, subCategorySearch, perPage);
+      }}
+    />
+  );
+
+case 'add-subcategory':
+  if (!hasPermission('Category')) {
+    return (
+      <Card className="border-0 shadow-sm">
+        <Card.Body className="text-center py-5">
+          <h3 className="text-danger">Access Denied</h3>
+          <p>You don't have permission to add sub-categories.</p>
+        </Card.Body>
+      </Card>
+    );
+  }
+  
+  return (
+    <SubCategoryForm 
+      isEditing={isEditingSubCategory}
+      categoryData={editSubCategory}
+      categories={categories} // Pass parent categories
+      onSubmit={async (formData, imageFile) => {
+        try {
+          const formDataToSend = new FormData();
+          formDataToSend.append('name', formData.name);
+          formDataToSend.append('description', formData.description);
+          formDataToSend.append('parentCategory', formData.parentCategory);
+          formDataToSend.append('order', formData.order);
+          formDataToSend.append('isActive', formData.isActive);
+          
+          if (imageFile) {
+            formDataToSend.append('image', imageFile);
+          } else if (isEditingSubCategory && editSubCategory.img) {
+            formDataToSend.append('img', editSubCategory.img);
+          }
+
+          const url = isEditingSubCategory 
+            ? `http://localhost:5000/api/admin/subcategories/${editSubCategoryId}`
+            : 'http://localhost:5000/api/admin/subcategories';
+          
+          const response = await fetch(url, {
+            method: isEditingSubCategory ? 'PUT' : 'POST',
+            headers: { 
+              'Authorization': `Bearer ${getAuthToken()}`
+            },
+            body: formDataToSend
+          });
+          
+          const data = await response.json();
+          if (data.success) {
+            alert(`Sub-category ${isEditingSubCategory ? 'updated' : 'added'} successfully!`);
+            
+            // Reset form and navigate back
+            setIsEditingSubCategory(false);
+            setEditSubCategoryId(null);
+            setEditSubCategory({
+              name: '',
+              description: '',
+              parentCategory: '',
+              order: 0,
+              isActive: true,
+              img: ''
+            });
+            fetchSubCategories();
+            handleMenuClick('manage-subcategories');
+          } else {
+            alert(data.error || `Failed to ${isEditingSubCategory ? 'update' : 'add'} sub-category`);
+          }
+        } catch (error) {
+          console.error(`Error ${isEditingSubCategory ? 'updating' : 'adding'} sub-category:`, error);
+          alert(`Failed to ${isEditingSubCategory ? 'update' : 'add'} sub-category`);
+        }
+      }}
+      onCancel={() => {
+        setIsEditingSubCategory(false);
+        setEditSubCategoryId(null);
+        setEditSubCategory({
+          name: '',
+          description: '',
+          parentCategory: '',
+          order: 0,
+          isActive: true,
+          img: ''
+        });
+        handleMenuClick('manage-subcategories');
+      }}
+    />
+  );
+
         
       case 'add-product':
         if (!hasPermission('Product')) {

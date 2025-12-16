@@ -97,6 +97,19 @@ const customerSchema = new mongoose.Schema({
 
 const Customer = mongoose.model("Customer", customerSchema);
 
+
+// In adminRoutes.js, fix the SubCategory schema
+const subCategorySchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  description: String,
+  parentCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'Service', required: true },
+  img: { type: String, default: "/assets/default-category.png" },
+  order: { type: Number, default: 0 },
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+const SubCategory = mongoose.model("SubCategory", subCategorySchema);
 // Initialize default admin
 export const initializeAdmin = async () => {
   try {
@@ -1400,6 +1413,157 @@ router.post("/bulk-delete", async (req, res) => {
     res.status(500).json({ 
       error: `Failed to delete ${entity}` 
     });
+  }
+});
+
+router.get("/subcategories", checkPermission('Category'), async (req, res) => {
+  try {
+    const { page = 1, limit = 20, search = "", sort = "-createdAt" } = req.query;
+    const skip = (page - 1) * limit;
+
+    let query = {};
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } }
+      ];
+    }
+
+    const subcategories = await SubCategory.find(query)
+      .populate('parentCategory', 'name')
+      .sort(sort)
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await SubCategory.countDocuments(query);
+
+    res.json({
+      success: true,
+      subcategories,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching subcategories:", error);
+    res.status(500).json({ error: "Failed to fetch subcategories" });
+  }
+});
+
+// Create subcategory
+router.post("/subcategories", checkPermission('Category'), upload.single('image'), async (req, res) => {
+  try {
+    const { name, description, parentCategory, order, isActive } = req.body;
+
+    if (!name || !parentCategory) {
+      return res.status(400).json({ error: "Name and parent category are required" });
+    }
+
+    // Handle image upload
+    let imageUrl = "/assets/default-category.png";
+    if (req.file) {
+      imageUrl = `/assets/${req.file.filename}`;
+    }
+
+    const subcategory = new SubCategory({
+      name,
+      description: description || "",
+      parentCategory,
+      img: imageUrl,
+      order: order || 0,
+      isActive: isActive !== undefined ? isActive : true
+    });
+
+    await subcategory.save();
+
+    // Populate parent category name for response
+    await subcategory.populate('parentCategory', 'name');
+
+    res.status(201).json({
+      success: true,
+      message: "Sub-category created successfully",
+      subcategory
+    });
+
+  } catch (error) {
+    console.error("Error creating subcategory:", error);
+    res.status(500).json({ error: "Failed to create subcategory" });
+  }
+});
+
+// Update subcategory
+router.put("/subcategories/:id", checkPermission('Category'), upload.single('image'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const subcategory = await SubCategory.findById(id);
+    if (!subcategory) {
+      return res.status(404).json({ error: "Sub-category not found" });
+    }
+
+    // Handle image upload
+    if (req.file) {
+      updateData.img = `/assets/${req.file.filename}`;
+      
+      // Delete old image if not default
+      if (subcategory.img && subcategory.img !== "/assets/default-category.png") {
+        const oldImagePath = path.join(__dirname, '..', subcategory.img);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      }
+    }
+
+    const updatedSubCategory = await SubCategory.findByIdAndUpdate(
+      id,
+      { ...updateData, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    ).populate('parentCategory', 'name');
+
+    res.json({
+      success: true,
+      message: "Sub-category updated successfully",
+      subcategory: updatedSubCategory
+    });
+
+  } catch (error) {
+    console.error("Error updating subcategory:", error);
+    res.status(500).json({ error: "Failed to update subcategory" });
+  }
+});
+
+// Delete subcategory
+router.delete("/subcategories/:id", checkPermission('Category'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const subcategory = await SubCategory.findById(id);
+    if (!subcategory) {
+      return res.status(404).json({ error: "Sub-category not found" });
+    }
+
+    // Delete image if not default
+    if (subcategory.img && subcategory.img !== "/assets/default-category.png") {
+      const imagePath = path.join(__dirname, '..', subcategory.img);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+    }
+
+    await SubCategory.findByIdAndDelete(id);
+
+    res.json({
+      success: true,
+      message: "Sub-category deleted successfully"
+    });
+
+  } catch (error) {
+    console.error("Error deleting subcategory:", error);
+    res.status(500).json({ error: "Failed to delete subcategory" });
   }
 });
 

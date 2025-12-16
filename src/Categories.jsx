@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Card, Table, Form, Button, Alert, Badge, Spinner,
-  Row, Col
+  Row, Col, Modal
 } from 'react-bootstrap';
 import { MdModeEdit, MdOutlineDelete } from "react-icons/md";
 import TableControls from './TableControls';
@@ -17,8 +17,9 @@ import {
 function Categories({
   categories,
   onEdit,
+  onDelete,
   onToggleStatus,
-  itemsPerPage = 10,
+  itemsPerPage = 10,onBulkDelete,
   onItemsPerPageChange,
   searchQuery = "",
   onSearchChange,
@@ -34,6 +35,8 @@ function Categories({
   const [loadingImages, setLoadingImages] = useState({});
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const [perPage, setPerPage] = useState(itemsPerPage);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
   // Filter categories based on search term (client-side)
   const filteredCategories = useMemo(() => {
@@ -77,6 +80,12 @@ function Categories({
       setSelectedCategories([]);
       setSelectAll(false);
     }
+  };
+
+  // View category details
+  const handleViewCategory = (category) => {
+    setSelectedCategory(category);
+    setShowCategoryModal(true);
   };
 
   // Immediate search filtering (client-side)
@@ -186,6 +195,18 @@ function Categories({
       testImages();
     }
   }, [categories]);
+
+  // Format date
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   return (
     <div>
@@ -406,19 +427,17 @@ function Categories({
                                   size="sm"
                                   onClick={() => onEdit && onEdit(category)}
                                   title="Edit Category"
-                                  style={{
-                                    minWidth: '32px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                  }}
+                                  
                                 >
                                   <MdModeEdit />
                                 </Button>
                                 <Button
-                                variant="dark"size="sm"
-                                onClick={() => handleViewCategory(category)}
-                                title="View User Details">
+                                  variant="dark"
+                                  size="sm"
+                                  onClick={() => handleViewCategory(category)}
+                                  title="View Category Details"
+                                  
+                                >
                                   <IoEyeSharp />
                                 </Button>
                                 <Button
@@ -426,12 +445,7 @@ function Categories({
                                   size="sm"
                                   onClick={() => onDelete && onDelete(category._id)}
                                   title="Delete Category"
-                                  style={{
-                                    minWidth: '32px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                  }}
+                                  
                                 >
                                   <MdOutlineDelete />
                                 </Button>
@@ -472,6 +486,127 @@ function Categories({
           )}
         </Card.Body>
       </Card>
+
+      {/* Category Details Modal */}
+      <Modal show={showCategoryModal} onHide={() => setShowCategoryModal(false)} centered>
+        <Button type="button" onClick={() => setShowUserDetails(false)} className="position-absolute border-0 justify-content-center closebtn p-0">X</Button>
+        <Modal.Body>
+          {selectedCategory && (
+            <div>
+              <div className="text-center mb-4">
+                <div className="mb-3">
+                  {selectedCategory.img ? (
+                    <img 
+                      src={`http://localhost:5000${selectedCategory.img}`} 
+                      alt={selectedCategory.name}
+                      style={{ 
+                        width: '150px', 
+                        height: '150px', 
+                        objectFit: 'cover',
+                        borderRadius: '12px',
+                        border: '3px solid #dee2e6'
+                      }}
+                    />
+                  ) : (
+                    <div style={{ 
+                      width: '150px', 
+                      height: '150px', 
+                      borderRadius: '12px',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      fontSize: '48px',
+                      margin: '0 auto',
+                      border: '3px solid #dee2e6'
+                    }}>
+                      {getInitials(selectedCategory.name)}
+                    </div>
+                  )}
+                </div>
+                <h4 className="mb-1">{selectedCategory.name}</h4>
+              </div>
+
+              <div className="list-group list-group-flush">
+                <div className="list-group-item px-0 border-top-0">
+                  <small className="text-muted d-block">Category Name</small>
+                  <span className="fw-semibold">{selectedCategory.name}</span>
+                </div>
+                
+                <div className="list-group-item px-0">
+                  <small className="text-muted d-block">Description</small>
+                  <span>{selectedCategory.description || 'No description available'}</span>
+                </div>
+                
+                {selectedCategory.key && (
+                  <div className="list-group-item px-0">
+                    <small className="text-muted d-block">Key</small>
+                    <span className="font-monospace">{selectedCategory.key}</span>
+                  </div>
+                )}
+                
+                <div className="list-group-item px-0">
+                  <small className="text-muted d-block">Status</small>
+                  <div>
+                    <Form.Check
+                      type="switch"
+                      id="modal-status-switch"
+                      checked={selectedCategory.isActive !== false}
+                      onChange={(e) => {
+                        if (onToggleStatus) {
+                          onToggleStatus(selectedCategory._id, e.target.checked);
+                        }
+                        setSelectedCategory({
+                          ...selectedCategory,
+                          isActive: e.target.checked
+                        });
+                      }}
+                      label={selectedCategory.isActive !== false ? 'Enabled' : 'Disabled'}
+                      inline
+                    />
+                  </div>
+                </div>
+                
+                {selectedCategory.createdAt && (
+                  <div className="list-group-item px-0">
+                    <small className="text-muted d-block">Created Date</small>
+                    <span>{formatDate(selectedCategory.createdAt)}</span>
+                  </div>
+                )}
+                
+                {selectedCategory.img && (
+                  <div className="list-group-item px-0 border-bottom-0">
+                    <small className="text-muted d-block">Image URL</small>
+                    <small className="text-truncate d-block" style={{ maxWidth: '100%' }}>
+                      {`http://localhost:5000${selectedCategory.img}`}
+                    </small>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer className="border-0">
+          <Button variant="secondary" onClick={() => setShowCategoryModal(false)} style={{borderRadius:"50px"}}>
+            Close
+          </Button>
+          <Button 
+            variant="dark"  
+            style={{borderRadius:"50px"}}
+            onClick={() => {
+              setShowCategoryModal(false);
+              if (onEdit) {
+                onEdit(selectedCategory);
+              }
+            }}
+          >
+            
+            Edit
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }
