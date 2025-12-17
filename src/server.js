@@ -78,7 +78,8 @@ const packageSchema = new mongoose.Schema({
   price: String,
   originalPrice: String,
   duration: String,
-  description: String,category:String,
+  description: String,
+  category: String,
   items: [{ text: String, description: String }],
   content: [{ value: String, details: String }],
   ratingBreak: [{ stars: Number, value: Number, count: String }]
@@ -90,7 +91,8 @@ const cartSchema = new mongoose.Schema({
   productId: { type: String },
   title: String,
   price: String,
-  originalPrice: String,category:String,
+  originalPrice: String,
+  category: String,
   count: { type: Number, default: 1 },
   content: [{ value: String, details: String }],
   createdAt: { type: Date, default: Date.now }
@@ -98,16 +100,18 @@ const cartSchema = new mongoose.Schema({
 
 const Cart = mongoose.models.Cart || mongoose.model("Cart", cartSchema);
 
-const serviceSchema = new mongoose.Schema({
+// Category Schema (Changed from Service to Category)
+const categorySchema = new mongoose.Schema({
   name: String,
   key: String,
-  img: {type:String,default:"/assets/default-category.png"},
+  img: { type: String, default: "/assets/default-category.png" },
   description: String,
   isActive: { type: Boolean, default: true },
+  order: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 });
 
-const Service = mongoose.models.Service || mongoose.model("Service", serviceSchema);
+const Category = mongoose.models.Category || mongoose.model("Category", categorySchema);
 
 // Customer Schema
 const customerSchema = new mongoose.Schema({
@@ -610,18 +614,19 @@ app.get("/api/bookings/:email", async (req, res) => {
 });
 
 // Delete booking
-app.delete("/api/bookings/:id",async(req,res)=>{
-  try{
-    const {id}=req.params;
+app.delete("/api/bookings/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
     console.log(`Cancelling booking with ID: ${id}`);
-    const booking=await Booking.findByIdAndDelete(id);
-    if(!booking){
+    const booking = await Booking.findByIdAndDelete(id);
+    if (!booking) {
       return res.status(404).json({
-        success:false,error:"Booking not found"
+        success: false,
+        error: "Booking not found"
       });
     }
     console.log(`Booking ${id} deleted successfully`);
-   res.json({
+    res.json({
       success: true,
       message: "Booking deleted successfully"
     });
@@ -659,7 +664,7 @@ app.get('/api/all-customers', async (req, res) => {
   }
 });
 
-// Get all users (for debugging) - Changed from staff to users
+// Get all users (for debugging)
 app.get('/api/all-users', async (req, res) => {
   try {
     const users = await User.find({}).select('-password').sort({ createdAt: -1 });
@@ -685,7 +690,7 @@ app.get('/api/customer/:id', async (req, res) => {
   }
 });
 
-// Get user by ID - Changed from staff to user
+// Get user by ID
 app.get('/api/user/:id', async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
@@ -724,7 +729,7 @@ const initializeStaticData = () => {
     const initialData = {
       logo: "/assets/Uc.png",
       logo1: "/assets/urban.png",
-      services: [
+      categories: [
         { name: "Salon for women", key: "salon", img: "/assets/salon.webp" },
         { name: "AC & Appliance Repair", key: "ac", img: "/assets/ac.webp" },
         { name: "Cleaning", key: "clean", img: "/assets/clean.webp" },
@@ -817,7 +822,6 @@ const writeStaticData = (data) => {
 
 initializeStaticData();
 
-// ---------- Existing API Routes ----------
 app.get("/api/banner", async (req, res) => {
   try {
     const banner = await Banner.findOne({ isActive: true }).sort({ order: 1 });
@@ -911,86 +915,89 @@ app.delete("/api/banners/:id", async (req, res) => {
   }
 });
 
-app.get("/api/services", async (req, res) => {
+// Get active categories
+app.get("/api/categories", async (req, res) => {
   try {
-    console.log(" Fetching services from MongoDB with isActive: true");
+    console.log(" Fetching categories from MongoDB with isActive: true");
    
-    const services = await Service.find({ isActive: true })
-      // .sort({ order: 1 }) // REMOVE order sorting
-      .sort({ name: 1 }) // Sort by name instead
+    const categories = await Category.find({ isActive: true })
+      .sort({ order: 1, name: 1 })
     
-    console.log(`Found ${services.length} active services`);
+    console.log(`Found ${categories.length} active categories`);
     
     // Always return MongoDB results, even if empty
-    return res.json({ services });
+    return res.json({ categories });
     
   } catch (error) {
-    console.error("Error fetching services:", error);
-    // On error, return empty array instead of static data
-    res.json({ services: [] });
+    console.error("Error fetching categories:", error);
+    res.json({ categories: [] });
   }
 });
 
-app.get("/api/all-services", async (req, res) => {
+// Get all categories (including inactive)
+app.get("/api/all-categories", async (req, res) => {
   try {
-    const services = await Service.find()
-      // .sort({ order: 1 }) // REMOVE order sorting
-      .sort({ name: 1 }) // Sort by name instead
-      res.json({ services });
+    const categories = await Category.find()
+      .sort({ order: 1, name: 1 })
+    res.json({ categories });
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch services" });
+    res.status(500).json({ error: "Failed to fetch categories" });
   }
 });
 
-app.post("/api/services", upload.single('image'), async (req, res) => {
+// Create new category
+app.post("/api/categories", upload.single('image'), async (req, res) => {
   try {
-    const { name, key, description,isActive=true } = req.body;
+    const { name, key, description, order, isActive = true } = req.body;
     if (!req.file) {
       return res.status(400).json({ error: "Image is required" });
     }
-    const service = new Service({
+    const category = new Category({
       name,
       key: key || name.toLowerCase().replace(/ /g, '-'),
       description,
       img: `/assets/${req.file.filename}`,
-      isActive: isActive !=undefined?isActive:true
+      order: order || 0,
+      isActive: isActive !== undefined ? isActive : true
     });
-    await service.save();
-    res.status(201).json({ message: "Service created successfully", service });
+    await category.save();
+    res.status(201).json({ message: "Category created successfully", category });
   } catch (error) {
-    console.error("Error creating service:", error);
-    res.status(500).json({ error: "Failed to create service" });
+    console.error("Error creating category:", error);
+    res.status(500).json({ error: "Failed to create category" });
   }
 });
 
-app.put("/api/services/:id", upload.single('image'), async (req, res) => {
+// Update category
+app.put("/api/categories/:id", upload.single('image'), async (req, res) => {
   try {
-    const { name, key, description, isActive } = req.body;
-    const updateData = { name, key, description,isActive };
+    const { name, key, description, order, isActive } = req.body;
+    const updateData = { name, key, description, order, isActive };
     if (req.file) {
       updateData.img = `/assets/${req.file.filename}`;
     }
-    const service = await Service.findByIdAndUpdate(req.params.id, updateData, { new: true });
-    if (!service) {
-      return res.status(404).json({ error: "Service not found" });
+    const category = await Category.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    if (!category) {
+      return res.status(404).json({ error: "Category not found" });
     }
-    res.json({ message: "Service updated successfully", service });
+    res.json({ message: "Category updated successfully", category });
   } catch (error) {
-    console.error("Error updating service:", error);
-    res.status(500).json({ error: "Failed to update service" });
+    console.error("Error updating category:", error);
+    res.status(500).json({ error: "Failed to update category" });
   }
 });
 
-app.delete("/api/services/:id", async (req, res) => {
+// Delete category
+app.delete("/api/categories/:id", async (req, res) => {
   try {
-    const service = await Service.findByIdAndDelete(req.params.id);
-    if (!service) {
-      return res.status(404).json({ error: "Service not found" });
+    const category = await Category.findByIdAndDelete(req.params.id);
+    if (!category) {
+      return res.status(404).json({ error: "Category not found" });
     }
-    res.json({ message: "Service deleted successfully" });
+    res.json({ message: "Category deleted successfully" });
   } catch (error) {
-    console.error("Error deleting service:", error);
-    res.status(500).json({ error: "Failed to delete service" });
+    console.error("Error deleting category:", error);
+    res.status(500).json({ error: "Failed to delete category" });
   }
 });
 
@@ -1003,8 +1010,9 @@ app.get("/api/static-data", (req, res) => {
   }
 });
 
+// Updated static routes with categories
 const staticRoutes = [
-  'logo','logo1', 'services', 'banner', 'carousel', 'book', 'salon', 
+  'logo','logo1', 'categories', 'banner', 'carousel', 'book', 'salon', 
   'salonforwomen', 'advanced', 'super', 'smartlock', 'images', 
   'cart', 'added', 'upi', 'card', 'net'
 ];
@@ -1282,8 +1290,8 @@ app.get("/api/salonforwomen", async (req, res) => {
     }
     // Fallback to static data
     const staticData = readStaticData();
-    if (staticData && staticData.services) {
-      return res.json({ salonforwomen: staticData.services });
+    if (staticData && staticData.categories) {
+      return res.json({ salonforwomen: staticData.categories });
     }
     res.status(404).json({ error: "No salon for women data found" });
   } catch (error) {
@@ -1292,23 +1300,23 @@ app.get("/api/salonforwomen", async (req, res) => {
   }
 });
 
-// Get services for other categories
-app.get("/api/services/:category", async (req, res) => {
+// Get packages for specific category
+app.get("/api/packages/:category", async (req, res) => {
   try {
     const { category } = req.params;
-    const services = await Package.find({ category: category });
-    if (services.length > 0) {
-      return res.json({ services });
+    const packages = await Package.find({ category: category });
+    if (packages.length > 0) {
+      return res.json({ packages });
     }
     // Fallback to static data
     const staticData = readStaticData();
-    const categoryServices = staticData?.services?.filter(s => 
-      s.name.toLowerCase().includes(category.toLowerCase())
+    const categoryPackages = staticData?.book?.filter(b => 
+      b.name.toLowerCase().includes(category.toLowerCase())
     ) || [];
-    res.json({ services: categoryServices });
+    res.json({ packages: categoryPackages });
   } catch (error) {
-    console.error(`Error fetching ${category} services:`, error);
-    res.status(500).json({ error: `Failed to fetch ${category} services` });
+    console.error(`Error fetching ${category} packages:`, error);
+    res.status(500).json({ error: `Failed to fetch ${category} packages` });
   }
 });
 

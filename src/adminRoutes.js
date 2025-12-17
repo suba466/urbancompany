@@ -43,7 +43,7 @@ const upload = multer({
   }
 });
 
-// User Schema with profileImage field (Changed from Staff to User)
+// User Schema
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
@@ -54,7 +54,7 @@ const userSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
   permissions: {
     Dashboard: { type: Boolean, default: false },
-    Users: { type: Boolean, default: false }, // Changed from Staff to Users
+    Users: { type: Boolean, default: false },
     Customer: { type: Boolean, default: false },
     Category: { type: Boolean, default: false },
     Product: { type: Boolean, default: false },
@@ -66,7 +66,7 @@ const userSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-const User = mongoose.model("User", userSchema); // Changed from Staff to User
+const User = mongoose.model("User", userSchema);
 
 // Admin Schema
 const adminSchema = new mongoose.Schema({
@@ -97,19 +97,19 @@ const customerSchema = new mongoose.Schema({
 
 const Customer = mongoose.model("Customer", customerSchema);
 
-
-// In adminRoutes.js, fix the SubCategory schema
-const subCategorySchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  description: String,
-  parentCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'Service', required: true },
+// Category Schema (Changed from Service to Category)
+const categorySchema = new mongoose.Schema({
+  name: String,
+  key: String,
   img: { type: String, default: "/assets/default-category.png" },
-  order: { type: Number, default: 0 },
+  description: String,
   isActive: { type: Boolean, default: true },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  order: { type: Number, default: 0 },
+  createdAt: { type: Date, default: Date.now }
 });
-const SubCategory = mongoose.model("SubCategory", subCategorySchema);
+
+const Category = mongoose.models.Category || mongoose.model("Category", categorySchema);
+
 // Initialize default admin
 export const initializeAdmin = async () => {
   try {
@@ -216,7 +216,7 @@ router.post("/login", async (req, res) => {
         role: 'admin',
         permissions: {
           Dashboard: true,
-          Users: true, // Changed from Staff to Users
+          Users: true,
           Customer: true,
           Category: true,
           Product: true,
@@ -242,7 +242,7 @@ router.post("/login", async (req, res) => {
         role: admin.role,
         permissions: {
           Dashboard: true,
-          Users: true, // Changed from Staff to Users
+          Users: true,
           Customer: true,
           Category: true,
           Product: true,
@@ -259,7 +259,7 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// User Login with JWT (Changed from staff-login to user-login)
+// User Login with JWT
 router.post("/user-login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -355,7 +355,7 @@ router.get("/profile", checkPermission('Dashboard'), async (req, res) => {
   }
 });
 
-// Get User Profile (Changed from staff-profile to user-profile)
+// Get User Profile
 router.get("/user-profile", checkPermission('Dashboard'), async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -391,7 +391,7 @@ router.get("/dashboard", checkPermission('Dashboard'), async (req, res) => {
   try {
     const totalCustomers = await Customer.countDocuments();
     const totalBookings = await mongoose.model("Booking").countDocuments();
-    const totalCategories = await mongoose.model("Service").countDocuments();
+    const totalCategories = await Category.countDocuments();
     const totalPackages = await mongoose.model("Package").countDocuments();
     
     const totalRevenue = await mongoose.model("Booking").aggregate([
@@ -495,7 +495,7 @@ router.get("/dashboard", checkPermission('Dashboard'), async (req, res) => {
   }
 });
 
-// Get all users with pagination (Changed from staff to users)
+// Get all users with pagination
 router.get("/users", checkPermission('Users'), async (req, res) => {
   try {
     const { page = 1, limit = 20, search = "" } = req.query;
@@ -536,7 +536,7 @@ router.get("/users", checkPermission('Users'), async (req, res) => {
   }
 });
 
-// Get single user (Changed from staff to user)
+// Get single user
 router.get("/users/:id", checkPermission('Users'), async (req, res) => {
   try {
     const { id } = req.params;
@@ -557,7 +557,7 @@ router.get("/users/:id", checkPermission('Users'), async (req, res) => {
   }
 });
 
-// Create new user WITH PROFILE IMAGE UPLOAD (Changed from staff to user)
+// Create new user WITH PROFILE IMAGE UPLOAD
 router.post("/users", checkPermission('Users'), upload.single('profileImage'), async (req, res) => {
   try {
     const {
@@ -653,7 +653,7 @@ router.post("/users", checkPermission('Users'), upload.single('profileImage'), a
   }
 });
 
-// Update user WITH PROFILE IMAGE UPLOAD (Changed from staff to user)
+// Update user WITH PROFILE IMAGE UPLOAD
 router.put("/users/:id", checkPermission('Users'), upload.single('profileImage'), async (req, res) => {
   try {
     const { id } = req.params;
@@ -720,7 +720,7 @@ router.put("/users/:id", checkPermission('Users'), upload.single('profileImage')
   }
 });
 
-// Delete user (Changed from staff to user)
+// Delete user
 router.delete("/users/:id", checkPermission('Users'), async (req, res) => {
   try {
     const { id } = req.params;
@@ -931,11 +931,10 @@ router.delete("/customers/:id", checkPermission('Customer'), async (req, res) =>
   }
 });
 
-// Services (Categories) routes
-router.get("/services", checkPermission('Category'), async (req, res) => {
+// Categories routes (Changed from services to categories)
+router.get("/categories", checkPermission('Category'), async (req, res) => {
   try {
-    const Service = mongoose.model("Service");
-    const { page = 1, limit = 20, search = "", sort="-createdAt"} = req.query;
+    const { page = 1, limit = 20, search = "", sort = "-createdAt" } = req.query;
     const skip = (page - 1) * limit;
 
     let query = {};
@@ -946,16 +945,16 @@ router.get("/services", checkPermission('Category'), async (req, res) => {
       ];
     }
     
-    const services = await Service.find(query)
+    const categories = await Category.find(query)
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
 
-    const total = await Service.countDocuments(query);
+    const total = await Category.countDocuments(query);
 
     res.json({
       success: true,
-      services,
+      categories,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -965,15 +964,15 @@ router.get("/services", checkPermission('Category'), async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error fetching services:", error);
-    res.status(500).json({ error: "Failed to fetch services" });
+    console.error("Error fetching categories:", error);
+    res.status(500).json({ error: "Failed to fetch categories" });
   }
 });
 
-// Create new service WITH image upload
-router.post("/services", checkPermission('Category'), upload.single('image'), async (req, res) => {
+// Create new category WITH image upload
+router.post("/categories", checkPermission('Category'), upload.single('image'), async (req, res) => {
   try {
-    const { name, description, isActive = true, key } = req.body;
+    const { name, description, isActive = true, key, order } = req.body;
 
     // Handle image upload
     let imageUrl = "/assets/default-category.png";
@@ -983,43 +982,43 @@ router.post("/services", checkPermission('Category'), upload.single('image'), as
     }
 
     if (!name) {
-      return res.status(400).json({ error: "Service name is required" });
+      return res.status(400).json({ error: "Category name is required" });
     }
 
-    const Service = mongoose.model("Service");
-    const service = new Service({
+    const category = new Category({
       name,
       key: key || name.toLowerCase().replace(/ /g, '-'),
       description: description || "",
       img: imageUrl,
+      order: order || 0,
       isActive: isActive !== undefined ? isActive : true
     });
 
-    await service.save();
+    await category.save();
 
-    console.log("Service created successfully");
+    console.log("Category created successfully");
 
     res.status(201).json({
       success: true,
-      message: "Service created successfully",
-      service
+      message: "Category created successfully",
+      category
     });
 
   } catch (error) {
-    console.error("Error creating service:", error);
-    res.status(500).json({ error: "Failed to create service" });
+    console.error("Error creating category:", error);
+    res.status(500).json({ error: "Failed to create category" });
   }
 });
 
-router.put("/services/:id", checkPermission('Category'), upload.single('image'), async (req, res) => {
+// Update category
+router.put("/categories/:id", checkPermission('Category'), upload.single('image'), async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
 
-    const Service = mongoose.model("Service");
-    const service = await Service.findById(id);
-    if (!service) {
-      return res.status(404).json({ error: "Service not found" });
+    const category = await Category.findById(id);
+    if (!category) {
+      return res.status(404).json({ error: "Category not found" });
     }
 
     // Handle image upload
@@ -1028,8 +1027,8 @@ router.put("/services/:id", checkPermission('Category'), upload.single('image'),
       console.log("Updated category image:", updateData.img);
       
       // Optional: Delete old image if not default
-      if (service.img && service.img !== "/assets/default-category.png") {
-        const oldImagePath = path.join(__dirname, '..', service.img);
+      if (category.img && category.img !== "/assets/default-category.png") {
+        const oldImagePath = path.join(__dirname, '..', category.img);
         if (fs.existsSync(oldImagePath)) {
           fs.unlinkSync(oldImagePath);
           console.log("Deleted old image:", oldImagePath);
@@ -1037,80 +1036,78 @@ router.put("/services/:id", checkPermission('Category'), upload.single('image'),
       }
     }
 
-    const updatedService = await Service.findByIdAndUpdate(
+    const updatedCategory = await Category.findByIdAndUpdate(
       id,
       updateData,
       { new: true, runValidators: true }
     );
 
-    console.log("Service updated successfully");
+    console.log("Category updated successfully");
 
     res.json({
       success: true,
-      message: "Service updated successfully",
-      service: updatedService
+      message: "Category updated successfully",
+      category: updatedCategory
     });
 
   } catch (error) {
-    console.error("Error updating service:", error);
-    res.status(500).json({ error: "Failed to update service" });
+    console.error("Error updating category:", error);
+    res.status(500).json({ error: "Failed to update category" });
   }
 });
 
-// Toggle service status
-router.put("/services/:id/toggle-status", checkPermission('Category'), async (req, res) => {
+// Toggle category status
+router.put("/categories/:id/toggle-status", checkPermission('Category'), async (req, res) => {
   try {
     const { id } = req.params;
     const { isActive } = req.body;
     
-    const Service = mongoose.model("Service");
-    const service = await Service.findById(id);
-    if (!service) {
-      return res.status(404).json({ error: "Service not found" });
+    const category = await Category.findById(id);
+    if (!category) {
+      return res.status(404).json({ error: "Category not found" });
     }
     
-    service.isActive = isActive !== undefined ? isActive : !service.isActive;
-    await service.save();
+    category.isActive = isActive !== undefined ? isActive : !category.isActive;
+    await category.save();
     
     res.json({
       success: true,
-      message: `Service ${service.isActive ? 'enabled' : 'disabled'} successfully`,
-      service
+      message: `Category ${category.isActive ? 'enabled' : 'disabled'} successfully`,
+      category
     });
     
   } catch (error) {
-    console.error("Error toggling service status:", error);
-    res.status(500).json({ error: "Failed to update service status" });
+    console.error("Error toggling category status:", error);
+    res.status(500).json({ error: "Failed to update category status" });
   }
 });
 
-// Delete service
-router.delete("/services/:id", checkPermission('Category'), async (req, res) => {
+// Delete category
+router.delete("/categories/:id", checkPermission('Category'), async (req, res) => {
   try {
-    const Service = mongoose.model("Service");
-    const service = await Service.findById(req.params.id);
-    if (!service) {
-      return res.status(404).json({ error: "Service not found" });
+    const category = await Category.findById(req.params.id);
+    if (!category) {
+      return res.status(404).json({ error: "Category not found" });
     }
 
     // Delete image file if exists and is not default
-    if (service.img && service.img !== "/assets/default-category.png") {
-      const imagePath = path.join(__dirname, '..', service.img);
+    if (category.img && category.img !== "/assets/default-category.png") {
+      const imagePath = path.join(__dirname, '..', category.img);
       if (fs.existsSync(imagePath)) {
         fs.unlinkSync(imagePath);
-        console.log("Deleted service image:", imagePath);
+        console.log("Deleted category image:", imagePath);
       }
     }
 
-    await Service.findByIdAndDelete(req.params.id);
+    await Category.findByIdAndDelete(req.params.id);
     res.json({ 
       success: true,
-      message: "Service deleted successfully" 
+      message: "Category deleted successfully" 
     });
 
   } catch (error) {
-    console.error("Error deleting service:", error);
-    res.status(500).json({ error: "Failed to delete service" });
+    console.error("Error deleting category:", error);
+    res.status(500).json({ error: "Failed to delete category" });
   }
 });
 
@@ -1306,9 +1303,9 @@ router.post("/bulk-delete", async (req, res) => {
 
     // Check permission based on entity
     const permissionMap = {
-      'users': 'Users', // Changed from 'staff' to 'users'
+      'users': 'Users',
       'customers': 'Customer',
-      'services': 'Category',
+      'categories': 'Category',
       'packages': 'Product',
       'bookings': 'Bookings'
     };
@@ -1330,17 +1327,17 @@ router.post("/bulk-delete", async (req, res) => {
     let message = "";
 
     switch(entity) {
-      case 'users': // Changed from 'staff'
-        model = User; // Changed from Staff to User
-        message = "user(s)"; // Changed from staff member(s)
+      case 'users':
+        model = User;
+        message = "user(s)";
         break;
       case 'customers':
         model = Customer;
         message = "customer(s)";
         break;
-      case 'services':
-        model = mongoose.model("Service");
-        message = "service(s)";
+      case 'categories':
+        model = Category;
+        message = "category(ies)";
         break;
       case 'packages':
         model = mongoose.model("Package");
@@ -1355,13 +1352,13 @@ router.post("/bulk-delete", async (req, res) => {
     }
 
     // Get records to handle file deletion if needed
-    if (entity === 'services') {
-      const services = await model.find({ _id: { $in: ids } });
+    if (entity === 'categories') {
+      const categories = await model.find({ _id: { $in: ids } });
       
       // Delete image files
-      services.forEach(service => {
-        if (service.img && service.img !== "/assets/default-category.png") {
-          const imagePath = path.join(__dirname, '..', service.img);
+      categories.forEach(category => {
+        if (category.img && category.img !== "/assets/default-category.png") {
+          const imagePath = path.join(__dirname, '..', category.img);
           if (fs.existsSync(imagePath)) {
             fs.unlinkSync(imagePath);
           }
@@ -1416,155 +1413,6 @@ router.post("/bulk-delete", async (req, res) => {
   }
 });
 
-router.get("/subcategories", checkPermission('Category'), async (req, res) => {
-  try {
-    const { page = 1, limit = 20, search = "", sort = "-createdAt" } = req.query;
-    const skip = (page - 1) * limit;
 
-    let query = {};
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } }
-      ];
-    }
-
-    const subcategories = await SubCategory.find(query)
-      .populate('parentCategory', 'name')
-      .sort(sort)
-      .skip(skip)
-      .limit(parseInt(limit));
-
-    const total = await SubCategory.countDocuments(query);
-
-    res.json({
-      success: true,
-      subcategories,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / limit)
-      }
-    });
-  } catch (error) {
-    console.error("Error fetching subcategories:", error);
-    res.status(500).json({ error: "Failed to fetch subcategories" });
-  }
-});
-
-// Create subcategory
-router.post("/subcategories", checkPermission('Category'), upload.single('image'), async (req, res) => {
-  try {
-    const { name, description, parentCategory, order, isActive } = req.body;
-
-    if (!name || !parentCategory) {
-      return res.status(400).json({ error: "Name and parent category are required" });
-    }
-
-    // Handle image upload
-    let imageUrl = "/assets/default-category.png";
-    if (req.file) {
-      imageUrl = `/assets/${req.file.filename}`;
-    }
-
-    const subcategory = new SubCategory({
-      name,
-      description: description || "",
-      parentCategory,
-      img: imageUrl,
-      order: order || 0,
-      isActive: isActive !== undefined ? isActive : true
-    });
-
-    await subcategory.save();
-
-    // Populate parent category name for response
-    await subcategory.populate('parentCategory', 'name');
-
-    res.status(201).json({
-      success: true,
-      message: "Sub-category created successfully",
-      subcategory
-    });
-
-  } catch (error) {
-    console.error("Error creating subcategory:", error);
-    res.status(500).json({ error: "Failed to create subcategory" });
-  }
-});
-
-// Update subcategory
-router.put("/subcategories/:id", checkPermission('Category'), upload.single('image'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updateData = req.body;
-
-    const subcategory = await SubCategory.findById(id);
-    if (!subcategory) {
-      return res.status(404).json({ error: "Sub-category not found" });
-    }
-
-    // Handle image upload
-    if (req.file) {
-      updateData.img = `/assets/${req.file.filename}`;
-      
-      // Delete old image if not default
-      if (subcategory.img && subcategory.img !== "/assets/default-category.png") {
-        const oldImagePath = path.join(__dirname, '..', subcategory.img);
-        if (fs.existsSync(oldImagePath)) {
-          fs.unlinkSync(oldImagePath);
-        }
-      }
-    }
-
-    const updatedSubCategory = await SubCategory.findByIdAndUpdate(
-      id,
-      { ...updateData, updatedAt: new Date() },
-      { new: true, runValidators: true }
-    ).populate('parentCategory', 'name');
-
-    res.json({
-      success: true,
-      message: "Sub-category updated successfully",
-      subcategory: updatedSubCategory
-    });
-
-  } catch (error) {
-    console.error("Error updating subcategory:", error);
-    res.status(500).json({ error: "Failed to update subcategory" });
-  }
-});
-
-// Delete subcategory
-router.delete("/subcategories/:id", checkPermission('Category'), async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const subcategory = await SubCategory.findById(id);
-    if (!subcategory) {
-      return res.status(404).json({ error: "Sub-category not found" });
-    }
-
-    // Delete image if not default
-    if (subcategory.img && subcategory.img !== "/assets/default-category.png") {
-      const imagePath = path.join(__dirname, '..', subcategory.img);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
-    }
-
-    await SubCategory.findByIdAndDelete(id);
-
-    res.json({
-      success: true,
-      message: "Sub-category deleted successfully"
-    });
-
-  } catch (error) {
-    console.error("Error deleting subcategory:", error);
-    res.status(500).json({ error: "Failed to delete subcategory" });
-  }
-});
 
 export default router;

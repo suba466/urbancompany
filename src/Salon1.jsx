@@ -233,7 +233,7 @@ function Salon1() {
       <Row>
         {/* Left Column */}
         <Col xs={12} md={7} style={{ border: "1px solid rgba(192,192,195,1)", padding: "15px" }} className='suppad'>
-          <h4 className="fw-semibold mt-4">Wedding essentials</h4>
+          <h4 className="fw-semibold mt-4">Super Saver Package</h4>
           {/* PACKAGES */}
           {(Array.isArray(packages) ? packages : []).map((pkg) => {
             const inCart = carts.find(c => c.title === pkg.title);

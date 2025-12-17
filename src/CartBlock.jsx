@@ -58,7 +58,7 @@ function CartBlock({
 
           {sortedCarts.map((c) => {
             const price = safePrice(c.price) * (c.count || 1);
-            const isMainPackage = c.title === "Wedding glow Package";
+            const isMainPackage = c.title === "Make your own package";
 
             return (
               <div key={c._id} className="mb-3">
