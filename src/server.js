@@ -54,7 +54,11 @@ const upload = multer({
 
 // --- MongoDB Connection ---
 mongoose.connect("mongodb://localhost:27017/suba")
-  .then(() => console.log(" MongoDB connected"))
+  .then(() => {
+    console.log(" MongoDB connected successfully");
+    // Initialize default categories after connection
+    initializeDefaultCategories();
+  })
   .catch(err => console.error(" MongoDB connection error:", err));
 
 // --- SCHEMAS ---
@@ -100,7 +104,7 @@ const cartSchema = new mongoose.Schema({
 
 const Cart = mongoose.models.Cart || mongoose.model("Cart", cartSchema);
 
-// Category Schema (Changed from Service to Category)
+// Category Schema
 const categorySchema = new mongoose.Schema({
   name: String,
   key: String,
@@ -151,7 +155,7 @@ const userSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-// FIXED: Check if models already exist before creating
+// Check if models already exist before creating
 const Customer = mongoose.models.Customer || mongoose.model("Customer", customerSchema);
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 
@@ -188,9 +192,250 @@ const bookingSchema = new mongoose.Schema({
 
 const Booking = mongoose.models.Booking || mongoose.model("Booking", bookingSchema);
 
+// ============================================
+// FIX: Initialize Default Categories Function
+// ============================================
+const initializeDefaultCategories = async () => {
+  try {
+    console.log("Checking for default categories...");
+    
+    const defaultCategories = [
+      {
+        name: "Salon for women",
+        key: "salon",
+        description: "Hair, beauty & salon services",
+        img: "/assets/salon.webp",
+        order: 1,
+        isActive: true
+      },
+      {
+        name: "AC & Appliance Repair",
+        key: "ac",
+        description: "AC, refrigerator & appliance services",
+        img: "/assets/ac.webp",
+        order: 2,
+        isActive: true
+      },
+      {
+        name: "Cleaning",
+        key: "clean",
+        description: "Home & office cleaning services",
+        img: "/assets/clean.webp",
+        order: 3,
+        isActive: true
+      },
+      {
+        name: "Electrician, Plumber & Carpenters",
+        key: "electric",
+        description: "Repair & installation services",
+        img: "/assets/electric.webp",
+        order: 4,
+        isActive: true
+      },
+      {
+        name: "Native Water Purifier",
+        key: "native",
+        description: "Water purifier installation & repair",
+        img: "/assets/native.webp",
+        order: 5,
+        isActive: true
+      }
+    ];
+
+    let createdCount = 0;
+    
+    for (const catData of defaultCategories) {
+      // Check if category exists by key
+      const existingCategory = await Category.findOne({ 
+        $or: [
+          { key: catData.key },
+          { name: catData.name }
+        ]
+      });
+      
+      if (!existingCategory) {
+        const category = new Category(catData);
+        await category.save();
+        createdCount++;
+        console.log(`Created default category: ${catData.name}`);
+      } else {
+        // Update existing category to ensure it's active
+        if (!existingCategory.isActive || existingCategory.img !== catData.img) {
+          await Category.findByIdAndUpdate(existingCategory._id, {
+            isActive: true,
+            img: catData.img,
+            order: catData.order
+          });
+          console.log(`Updated existing category: ${catData.name}`);
+        }
+      }
+    }
+    
+    console.log(`Categories initialization complete. Created/Updated: ${createdCount} categories`);
+    
+  } catch (error) {
+    console.error("Error initializing default categories:", error);
+  }
+};
+
 app.use("/api/admin", adminRoutes);
 
-// User Login (Changed from staff to user)
+// ============================================
+// FIX: Enhanced Debug Endpoint for Categories
+// ============================================
+app.get("/api/debug-categories", async (req, res) => {
+  try {
+    console.log("=== DEBUG: Checking MongoDB categories ===");
+    
+    // Check all categories (including inactive)
+    const allCategories = await Category.find({});
+    console.log(`Found ${allCategories.length} total categories in DB:`);
+    
+    if (allCategories.length === 0) {
+      console.log("Database has NO categories at all!");
+    } else {
+      allCategories.forEach(cat => {
+        console.log(`- ID: ${cat._id}`);
+        console.log(`  Name: ${cat.name}`);
+        console.log(`  Key: ${cat.key}`);
+        console.log(`  Active: ${cat.isActive}`);
+        console.log(`  Image: ${cat.img}`);
+        console.log(`  Order: ${cat.order}`);
+        console.log(`  Created: ${cat.createdAt}`);
+        console.log(`---`);
+      });
+    }
+    
+    // Check active categories
+    const activeCategories = await Category.find({ isActive: true });
+    console.log(`Found ${activeCategories.length} active categories`);
+    
+    res.json({
+      success: true,
+      allCategories,
+      activeCategories,
+      total: allCategories.length,
+      active: activeCategories.length,
+      message: allCategories.length === 0 ? "Database is empty. Try /api/seed-categories" : "OK"
+    });
+  } catch (error) {
+    console.error("Debug error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
+// FIX: Seed Categories Endpoint
+// ============================================
+app.post("/api/seed-categories", async (req, res) => {
+  try {
+    console.log("=== SEEDING: Creating sample categories ===");
+    
+    const sampleCategories = [
+      {
+        name: "Salon for women",
+        key: "salon",
+        description: "Hair, beauty & salon services",
+        img: "/assets/salon.webp",
+        order: 1,
+        isActive: true
+      },
+      {
+        name: "AC & Appliance Repair",
+        key: "ac",
+        description: "AC, refrigerator & appliance services",
+        img: "/assets/ac.webp",
+        order: 2,
+        isActive: true
+      },
+      {
+        name: "Cleaning",
+        key: "clean",
+        description: "Home & office cleaning services",
+        img: "/assets/clean.webp",
+        order: 3,
+        isActive: true
+      },
+      {
+        name: "Electrician, Plumber & Carpenters",
+        key: "electric",
+        description: "Repair & installation services",
+        img: "/assets/electric.webp",
+        order: 4,
+        isActive: true
+      },
+      {
+        name: "Native Water Purifier",
+        key: "native",
+        description: "Water purifier installation & repair",
+        img: "/assets/native.webp",
+        order: 5,
+        isActive: true
+      }
+    ];
+    
+    let created = 0;
+    let updated = 0;
+    let results = [];
+    
+    for (const catData of sampleCategories) {
+      // Check if category already exists
+      const exists = await Category.findOne({ 
+        $or: [
+          { key: catData.key },
+          { name: catData.name }
+        ]
+      });
+      
+      if (!exists) {
+        const category = new Category(catData);
+        await category.save();
+        created++;
+        results.push({ action: "created", name: catData.name });
+        console.log(`✓ Created category: ${catData.name}`);
+      } else {
+        // Update existing to ensure it's active
+        await Category.findOneAndUpdate(
+          { _id: exists._id },
+          { 
+            ...catData, 
+            isActive: true,
+            updatedAt: new Date()
+          },
+          { new: true }
+        );
+        updated++;
+        results.push({ action: "updated", name: catData.name });
+        console.log(`✓ Updated category: ${catData.name}`);
+      }
+    }
+    
+    // Verify the seeding worked
+    const totalCategories = await Category.countDocuments({ isActive: true });
+    
+    res.json({
+      success: true,
+      message: `Categories seeded successfully!`,
+      details: {
+        created,
+        updated,
+        totalActive: totalCategories,
+        results
+      },
+      action: "Visit /api/categories to see the results"
+    });
+    
+  } catch (error) {
+    console.error("Error seeding categories:", error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message,
+      suggestion: "Make sure MongoDB is running on localhost:27017"
+    });
+  }
+});
+
+// User Login
 app.post("/api/user-login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -821,7 +1066,201 @@ const writeStaticData = (data) => {
 };
 
 initializeStaticData();
+// ============================================
+// FIXED: Enhanced Categories API Route
+// ============================================
+app.get("/api/categories", async (req, res) => {
+  try {
+    console.log("=== API: Fetching active categories ===");
+    
+    // Try to get categories from MongoDB
+    let categories = await Category.find({ isActive: true })
+      .sort({ order: 1, name: 1 });
+    
+    console.log(`Found ${categories.length} active categories in MongoDB`);
+    
+    // If no categories in MongoDB, fall back to static data
+    if (categories.length === 0) {
+      console.log("No active categories in MongoDB, checking static data...");
+      const staticData = readStaticData();
+      
+      if (staticData && staticData.categories && staticData.categories.length > 0) {
+        // Format static data to match MongoDB schema
+        categories = staticData.categories.map((cat, index) => ({
+          _id: `static_${cat.key}`,
+          name: cat.name,
+          key: cat.key,
+          img: cat.img,
+          description: cat.description || `Service for ${cat.name}`,
+          isActive: true,
+          order: index,
+          createdAt: new Date()
+        }));
+        
+        console.log(`Loaded ${categories.length} categories from static data`);
+      } else {
+        console.log("Static data also has no categories!");
+      }
+    }
+    
+    // Log the categories being returned
+    console.log(`Returning ${categories.length} categories to frontend`);
+    
+    // RETURN IN THE CORRECT FORMAT THAT FRONTEND EXPECTS
+    return res.json({ 
+      success: true,
+      categories: categories || [], // Make sure categories array exists
+      count: categories.length,
+      message: categories.length === 0 ? "No active categories found" : "Categories fetched successfully"
+    });
+    
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    
+    // Return proper error response
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to fetch categories",
+      categories: [], // Always return empty array on error
+      count: 0
+    });
+  }
+});
 
+// Get all categories (including inactive)
+app.get("/api/all-categories", async (req, res) => {
+  try {
+    const categories = await Category.find()
+      .sort({ order: 1, name: 1 });
+    res.json({ 
+      categories,
+      count: categories.length 
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch categories" });
+  }
+});
+
+// Create new category
+app.post("/api/categories", upload.single('image'), async (req, res) => {
+  try {
+    const { name, key, description, order, isActive = true } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ error: "Category name is required" });
+    }
+    
+    // Use uploaded image or default
+    let img = "/assets/default-category.png";
+    if (req.file) {
+      img = `/assets/${req.file.filename}`;
+    }
+    
+    const categoryKey = key || name.toLowerCase().replace(/ /g, '-');
+    
+    // Check if category already exists
+    const existingCategory = await Category.findOne({ 
+      $or: [
+        { key: categoryKey },
+        { name: name }
+      ]
+    });
+    
+    if (existingCategory) {
+      return res.status(400).json({ 
+        error: `Category with name '${name}' or key '${categoryKey}' already exists` 
+      });
+    }
+    
+    const category = new Category({
+      name,
+      key: categoryKey,
+      description: description || `Service for ${name}`,
+      img,
+      order: order || 0,
+      isActive: isActive !== undefined ? isActive : true
+    });
+    
+    await category.save();
+    
+    console.log(`Created new category: ${name} (${categoryKey})`);
+    
+    res.status(201).json({ 
+      success: true,
+      message: "Category created successfully", 
+      category 
+    });
+    
+  } catch (error) {
+    console.error("Error creating category:", error);
+    res.status(500).json({ error: "Failed to create category" });
+  }
+});
+
+// Update category
+app.put("/api/categories/:id", upload.single('image'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, key, description, order, isActive } = req.body;
+    
+    const updateData = { 
+      name, 
+      key, 
+      description, 
+      order, 
+      isActive,
+      updatedAt: new Date() 
+    };
+    
+    if (req.file) {
+      updateData.img = `/assets/${req.file.filename}`;
+      
+      // Optional: Delete old image if not default
+      const oldCategory = await Category.findById(id);
+      if (oldCategory && oldCategory.img !== "/assets/default-category.png") {
+        const oldImagePath = path.join(__dirname, oldCategory.img);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      }
+    }
+    
+    const category = await Category.findByIdAndUpdate(id, updateData, { new: true });
+    
+    if (!category) {
+      return res.status(404).json({ error: "Category not found" });
+    }
+    
+    res.json({ 
+      success: true,
+      message: "Category updated successfully", 
+      category 
+    });
+    
+  } catch (error) {
+    console.error("Error updating category:", error);
+    res.status(500).json({ error: "Failed to update category" });
+  }
+});
+
+// Delete category
+app.delete("/api/categories/:id", async (req, res) => {
+  try {
+    const category = await Category.findByIdAndDelete(req.params.id);
+    if (!category) {
+      return res.status(404).json({ error: "Category not found" });
+    }
+    res.json({ 
+      success: true,
+      message: "Category deleted successfully" 
+    });
+  } catch (error) {
+    console.error("Error deleting category:", error);
+    res.status(500).json({ error: "Failed to delete category" });
+  }
+});
+
+// ---------- Banner Routes ----------
 app.get("/api/banner", async (req, res) => {
   try {
     const banner = await Banner.findOne({ isActive: true }).sort({ order: 1 });
@@ -915,92 +1354,7 @@ app.delete("/api/banners/:id", async (req, res) => {
   }
 });
 
-// Get active categories
-app.get("/api/categories", async (req, res) => {
-  try {
-    console.log(" Fetching categories from MongoDB with isActive: true");
-   
-    const categories = await Category.find({ isActive: true })
-      .sort({ order: 1, name: 1 })
-    
-    console.log(`Found ${categories.length} active categories`);
-    
-    // Always return MongoDB results, even if empty
-    return res.json({ categories });
-    
-  } catch (error) {
-    console.error("Error fetching categories:", error);
-    res.json({ categories: [] });
-  }
-});
-
-// Get all categories (including inactive)
-app.get("/api/all-categories", async (req, res) => {
-  try {
-    const categories = await Category.find()
-      .sort({ order: 1, name: 1 })
-    res.json({ categories });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch categories" });
-  }
-});
-
-// Create new category
-app.post("/api/categories", upload.single('image'), async (req, res) => {
-  try {
-    const { name, key, description, order, isActive = true } = req.body;
-    if (!req.file) {
-      return res.status(400).json({ error: "Image is required" });
-    }
-    const category = new Category({
-      name,
-      key: key || name.toLowerCase().replace(/ /g, '-'),
-      description,
-      img: `/assets/${req.file.filename}`,
-      order: order || 0,
-      isActive: isActive !== undefined ? isActive : true
-    });
-    await category.save();
-    res.status(201).json({ message: "Category created successfully", category });
-  } catch (error) {
-    console.error("Error creating category:", error);
-    res.status(500).json({ error: "Failed to create category" });
-  }
-});
-
-// Update category
-app.put("/api/categories/:id", upload.single('image'), async (req, res) => {
-  try {
-    const { name, key, description, order, isActive } = req.body;
-    const updateData = { name, key, description, order, isActive };
-    if (req.file) {
-      updateData.img = `/assets/${req.file.filename}`;
-    }
-    const category = await Category.findByIdAndUpdate(req.params.id, updateData, { new: true });
-    if (!category) {
-      return res.status(404).json({ error: "Category not found" });
-    }
-    res.json({ message: "Category updated successfully", category });
-  } catch (error) {
-    console.error("Error updating category:", error);
-    res.status(500).json({ error: "Failed to update category" });
-  }
-});
-
-// Delete category
-app.delete("/api/categories/:id", async (req, res) => {
-  try {
-    const category = await Category.findByIdAndDelete(req.params.id);
-    if (!category) {
-      return res.status(404).json({ error: "Category not found" });
-    }
-    res.json({ message: "Category deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting category:", error);
-    res.status(500).json({ error: "Failed to delete category" });
-  }
-});
-
+// Static data routes
 app.get("/api/static-data", (req, res) => {
   const data = readStaticData();
   if (data) {
@@ -1179,6 +1533,7 @@ app.delete("/api/delete-section/:section/:key", (req, res) => {
   }
 });
 
+// Package routes
 app.get("/api/packages", async (req, res) => {
   try {
     const packages = await Package.find();
@@ -1221,6 +1576,7 @@ app.delete("/api/packages/:id", async (req, res) => {
   }
 });
 
+// Cart routes
 app.get("/api/carts", async (req, res) => {
   try {
     const carts = await Cart.find();
@@ -1326,7 +1682,8 @@ app.get("/api/health", (req, res) => {
     status: "OK", 
     message: "Server is running",
     timestamp: new Date().toISOString(),
-    version: "1.0.0"
+    version: "1.0.0",
+    database: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
   });
 });
 
@@ -1346,4 +1703,7 @@ app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
 
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`=== Server running on http://localhost:${PORT} ===`);
+  console.log(`=== Categories will be auto-initialized ===`);
+});

@@ -9,7 +9,7 @@ import { Alert, Spinner } from "react-bootstrap";
 
 function Banner() {
   const [banner, setBanner] = useState(null);
-  const [services, setServices] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -27,76 +27,71 @@ function Banner() {
     }
   };
 
- const fetchServices = async () => {
-  try {
-    setError(null);
-    console.log("Fetching services from API...");
-    const res = await fetch("http://localhost:5000/api/services");
-    
-    if (!res.ok) {
-      console.error("Failed to fetch services:", res.status, res.statusText);
-      throw new Error(`HTTP ${res.status}: Failed to fetch services`);
-    }
-    
-    const data = await res.json();
-    console.log("API Response:", data);
-    
-    if (data.services && Array.isArray(data.services)) {
-      // Debug: Log each service's isActive status
-      data.services.forEach(service => {
-        console.log(`Service: ${service.name}, isActive: ${service.isActive}`);
-      });
+  const fetchCategories = async () => {
+    try {
+      setError(null);
+      setLoading(true);
+      console.log("Fetching categories from API...");
+      const response = await fetch("http://localhost:5000/api/categories");
       
-      console.log(`Found ${data.services.length} active services`);
-      
-      // Sort by order if available, otherwise by name
-      const sortedServices = data.services.sort((a, b) => {
-        if (a.order !== undefined && b.order !== undefined) {
-          return a.order - b.order;
-        }
-        return a.name?.localeCompare(b.name) || 0;
-      });
-      
-      setServices(sortedServices);
-      
-      // Show message if no active services
-      if (sortedServices.length === 0) {
-        setError("No services currently available");
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: Failed to fetch categories`);
       }
-    } else {
-      console.warn("No services array in response:", data);
-      setServices([]);
-      setError("No services available");
+      
+      const data = await response.json();
+      console.log("API Response:", data);
+      
+      // Check if data has categories array
+      if (data.categories && Array.isArray(data.categories)) {
+        // Debug: Log each category
+        data.categories.forEach(category => {
+          console.log(`Category: ${category.name}`);
+        });
+        
+        console.log(`Found ${data.categories.length} categories`);
+        
+        // Sort by order if available, otherwise by name
+        const sortedCategories = data.categories.sort((a, b) => {
+          if (a.order !== undefined && b.order !== undefined) {
+            return a.order - b.order;
+          }
+          return a.name?.localeCompare(b.name) || 0;
+        });
+        
+        setCategories(sortedCategories);
+        
+        // Show message if no categories
+        if (sortedCategories.length === 0) {
+          setError("No categories currently available");
+        }
+      } else {
+        console.warn("No categories array in response:", data);
+        setCategories([]);
+        setError("No categories available");
+      }
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+      setError("Failed to load categories");
+      setCategories([]);
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error("Error fetching services:", err);
-    setError("Failed to load services");
-    setServices([]);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   useEffect(() => {
     fetchBanner();
-    fetchServices();
+    fetchCategories();
   }, []);
 
-
-
-  // Handle service click
-  const handleServiceClick = (service) => {
-    const category = service.category || service.key || service.name || "";
-    
-    console.log("Service clicked:", {
-      name: service.name,
-      category: service.category,
-      key: service.key,
-      routeCategory: category.toLowerCase()
+  // Handle category click
+  const handleCategoryClick = (category) => {
+    console.log("Category clicked:", {
+      name: category.name,
+      key: category.key
     });
     
-    if (service.key) {
-      switch(service.key.toLowerCase()) {
+    if (category.key) {
+      switch(category.key.toLowerCase()) {
         case 'salon':
           navigate("/salon");
           break;
@@ -116,36 +111,24 @@ function Banner() {
           navigate("/plumbing");
           break;
         default:
-          navigate("/services");
+          navigate("/categories");
       }
-    } else if (service.category) {
-      switch(service.category.toLowerCase()) {
-        case 'salon':
-        case 'beauty':
-          navigate("/salon");
-          break;
-        case 'ac repair':
-        case 'appliance':
-          navigate("/ac-repair");
-          break;
-        case 'cleaning':
-          navigate("/cleaning");
-          break;
-        case 'repair':
-        case 'electrician':
-        case 'plumbing':
-          navigate("/electrician");
-          break;
-        case 'water':
-          navigate("/water-purifier");
-          break;
-        default:
-          navigate("/services");
+    } else if (category.name) {
+      if (category.name.toLowerCase().includes("salon")) {
+        navigate("/salon");
+      } else if (category.name.toLowerCase().includes("ac")) {
+        navigate("/ac-repair");
+      } else if (category.name.toLowerCase().includes("clean")) {
+        navigate("/cleaning");
+      } else if (category.name.toLowerCase().includes("electric")) {
+        navigate("/electrician");
+      } else if (category.name.toLowerCase().includes("water")) {
+        navigate("/water-purifier");
+      } else {
+        navigate("/categories");
       }
-    } else if (service.name.toLowerCase().includes("salon")) {
-      navigate("/salon");
     } else {
-      navigate("/services");
+      navigate("/categories");
     }
   };
 
@@ -159,176 +142,167 @@ function Banner() {
     );
   }
 
-  // Render service image with fallback
-  const renderServiceImage = (service) => {
-    const imageUrl = service.img 
-      ? `http://localhost:5000${service.img}`
+  // Render category image with fallback
+  const renderCategoryImage = (category) => {
+    const imageUrl = category.img 
+      ? `http://localhost:5000${category.img}`
       : 'http://localhost:5000/assets/default-category.png';
     
     return (
-      <div >
+      <div>
         <img
           src={imageUrl}
-          alt={service.name}
+          alt={category.name}
+          style={{ width: '60px', height: '60px', objectFit: 'cover' }}
         />
       </div>
     );
   };
 
-  // Dynamic layout based on number of services
-  const renderServicesGrid = () => {
-    const totalServices = services.length;
+  // Dynamic layout based on number of categories (EXACTLY like first code)
+  const renderCategoriesGrid = () => {
+    const totalCategories = categories.length;
     
-    if (totalServices === 0) {
+    if (totalCategories === 0) {
       return (
         <Alert variant="info" className="text-center">
-          No services available. Add categories in the admin panel.
+          No categories available. Add categories in the admin panel.
         </Alert>
       );
     }
     
-    // For 1-2 services: show in first row only
-    if (totalServices <= 2) {
+    // For 1-2 categories: show in first row only
+    if (totalCategories <= 2) {
       return (
         <>
           <div className="first-row d-flex">
-            {services.map((s, index) => (
+            {categories.map((c, index) => (
               <div
-                key={s._id || index}
-                className="services first-row-item d-flex align-items-center justify-content-between"
-                onClick={() => handleServiceClick(s)}
-                style={{ cursor: "pointer" }}
-              >
-                <p className="first-row-text text-center">{s.name}</p>
-                {renderServiceImage(s)}
+                key={c._id || index}
+                className=" first-row-item d-flex align-items-center justify-content-between"
+                onClick={() => handleCategoryClick(c)}>
+                <p className="first-row-text text-center mb-0">{c.name}</p>
+                {renderCategoryImage(c)}
               </div>
             ))}
           </div>
           {/* Empty second row */}
           <div className="first-row d-flex" style={{ visibility: 'hidden', height: '0' }}>
-            <div className="services second-row-item" style={{ width: '33.33%' }}></div>
-            <div className="services second-row-item" style={{ width: '33.33%' }}></div>
-            <div className="services second-row-item" style={{ width: '33.33%' }}></div>
+            <div className="categories second-row-item" style={{ width: '33.33%' }}></div>
+            <div className="categories second-row-item" style={{ width: '33.33%' }}></div>
+            <div className="categories second-row-item" style={{ width: '33.33%' }}></div>
           </div>
         </>
       );
     }
     
-    // For 3 services: show 2 in first row, 1 in second row
-    if (totalServices === 3) {
-      const firstRow = services.slice(0, 2);
-      const secondRow = services.slice(2, 3);
+    // For 3 categories: show 2 in first row, 1 in second row
+    if (totalCategories === 3) {
+      const firstRow = categories.slice(0, 2);
+      const secondRow = categories.slice(2, 3);
       
       return (
         <>
           <div className="first-row d-flex">
-            {firstRow.map((s, index) => (
+            {firstRow.map((c, index) => (
               <div
-                key={s._id || index}
-                className="services first-row-item d-flex align-items-center justify-content-between"
-                onClick={() => handleServiceClick(s)}
-                style={{ cursor: "pointer" }}
-              >
-                <p className="first-row-text text-center">{s.name}</p>
-                {renderServiceImage(s)}
+                key={c._id || index}
+                className=" first-row-item d-flex align-items-center justify-content-between"
+                onClick={() => handleCategoryClick(c)}>
+                <p className="first-row-text text-center mb-0">{c.name}</p>
+                {renderCategoryImage(c)}
               </div>
             ))}
           </div>
           <div className="first-row d-flex">
-            {secondRow.map((s, index) => (
+            {secondRow.map((c, index) => (
               <div
-                key={s._id || index}
-                className="services second-row-item d-flex flex-column align-items-center position-relative"
-                onClick={() => handleServiceClick(s)}
-                style={{ cursor: "pointer" }}
-              >
+                key={c._id || index}
+                className=" second-row-item d-flex flex-column align-items-center position-relative"
+                onClick={() => handleCategoryClick(c)}>
                 <div className="img-box w-100 d-flex justify-content-center align-items-center">
-                  {renderServiceImage(s)}
+                  {renderCategoryImage(c)}
                 </div>
-                <p className="first-row-text text-center">{s.name}</p>
+                <p className="first-row-text text-center mb-0 mt-2">{c.name}</p>
               </div>
             ))}
             {/* Add empty items to complete the row */}
-            <div className="services second-row-item" style={{ width: '33.33%', visibility: 'hidden' }}></div>
-            <div className="services second-row-item" style={{ width: '33.33%', visibility: 'hidden' }}></div>
+            <div className="categories second-row-item" style={{ width: '33.33%', visibility: 'hidden' }}></div>
+            <div className="categories second-row-item" style={{ width: '33.33%', visibility: 'hidden' }}></div>
           </div>
         </>
       );
     }
     
-    // For 4 services: show 2 in first row, 2 in second row
-    if (totalServices === 4) {
-      const firstRow = services.slice(0, 2);
-      const secondRow = services.slice(2, 4);
+    // For 4 categories: show 2 in first row, 2 in second row
+    if (totalCategories === 4) {
+      const firstRow = categories.slice(0, 2);
+      const secondRow = categories.slice(2, 4);
       
       return (
         <>
           <div className="first-row d-flex">
-            {firstRow.map((s, index) => (
+            {firstRow.map((c, index) => (
               <div
-                key={s._id || index}
-                className="services first-row-item d-flex align-items-center justify-content-between"
-                onClick={() => handleServiceClick(s)}
-                style={{ cursor: "pointer" }}
-              >
-                <p className="first-row-text text-center">{s.name}</p>
-                {renderServiceImage(s)}
+                key={c._id || index}
+                className=" first-row-item d-flex align-items-center justify-content-between"
+                onClick={() => handleCategoryClick(c)}
+               >
+                <p className="first-row-text text-center mb-0">{c.name}</p>
+                {renderCategoryImage(c)}
               </div>
             ))}
           </div>
           <div className="first-row d-flex">
-            {secondRow.map((s, index) => (
+            {secondRow.map((c, index) => (
               <div
-                key={s._id || index}
-                className="services second-row-item d-flex flex-column align-items-center position-relative"
-                onClick={() => handleServiceClick(s)}
-                style={{ cursor: "pointer" }}
-              >
+                key={c._id || index}
+                className=" second-row-item d-flex flex-column align-items-center position-relative"
+                onClick={() => handleCategoryClick(c)}
+               >
                 <div className="img-box w-100 d-flex justify-content-center align-items-center">
-                  {renderServiceImage(s)}
+                  {renderCategoryImage(c)}
                 </div>
-                <p className="first-row-text text-center">{s.name}</p>
+                <p className="first-row-text text-center mb-0 mt-2">{c.name}</p>
               </div>
             ))}
             {/* Add empty item to complete the row */}
-            <div className="services second-row-item" style={{ width: '33.33%', visibility: 'hidden' }}></div>
+            <div className="categories second-row-item" style={{ width: '33.33%', visibility: 'hidden' }}></div>
           </div>
         </>
       );
     }
     
-    // For 5 services: show 2 in first row, 3 in second row
-    if (totalServices === 5) {
-      const firstRow = services.slice(0, 2);
-      const secondRow = services.slice(2, 5);
+    // For 5 categories: show 2 in first row, 3 in second row
+    if (totalCategories === 5) {
+      const firstRow = categories.slice(0, 2);
+      const secondRow = categories.slice(2, 5);
       
       return (
         <>
           <div className="first-row d-flex">
-            {firstRow.map((s, index) => (
+            {firstRow.map((c, index) => (
               <div
-                key={s._id || index}
-                className="services first-row-item d-flex align-items-center justify-content-between"
-                onClick={() => handleServiceClick(s)}
-                style={{ cursor: "pointer" }}
+                key={c._id || index}
+                className="categories first-row-item d-flex align-items-center justify-content-between"
+                onClick={() => handleCategoryClick(c)}
               >
-                <p className="first-row-text text-center">{s.name}</p>
-                {renderServiceImage(s)}
+                <p className="first-row-text text-center mb-0">{c.name}</p>
+                {renderCategoryImage(c)}
               </div>
             ))}
           </div>
           <div className="first-row d-flex">
-            {secondRow.map((s, index) => (
+            {secondRow.map((c, index) => (
               <div
-                key={s._id || index}
-                className="services second-row-item d-flex flex-column align-items-center position-relative"
-                onClick={() => handleServiceClick(s)}
-                style={{ cursor: "pointer" }}
+                key={c._id || index}
+                className="categories second-row-item d-flex flex-column align-items-center position-relative"
+                onClick={() => handleCategoryClick(c)}
               >
                 <div className="img-box w-100 d-flex justify-content-center align-items-center">
-                  {renderServiceImage(s)}
+                  {renderCategoryImage(c)}
                 </div>
-                <p className="first-row-text text-center">{s.name}</p>
+                <p className="first-row-text text-center mb-0 mt-2">{c.name}</p>
               </div>
             ))}
           </div>
@@ -336,56 +310,52 @@ function Banner() {
       );
     }
     
-    // For 6 or more services: show 2 in first row, 3 in second row, and add more rows if needed
-    if (totalServices >= 6) {
-      const firstRow = services.slice(0, 2);
-      const secondRow = services.slice(2, 5);
-      const extraRows = services.slice(5);
+    // For 6 or more categories: show 2 in first row, 3 in second row, and add more rows if needed
+    if (totalCategories >= 6) {
+      const firstRow = categories.slice(0, 2);
+      const secondRow = categories.slice(2, 5);
+      const extraRows = categories.slice(5);
       
       return (
         <>
           <div className="first-row d-flex">
-            {firstRow.map((s, index) => (
+            {firstRow.map((c, index) => (
               <div
-                key={s._id || index}
-                className="services first-row-item d-flex align-items-center justify-content-between"
-                onClick={() => handleServiceClick(s)}
-                style={{ cursor: "pointer" }}
-              >
-                <p className="first-row-text text-center">{s.name}</p>
-                {renderServiceImage(s)}
+                key={c._id || index}
+                className=" first-row-item d-flex align-items-center justify-content-between"
+                onClick={() => handleCategoryClick(c)}
+               >
+                <p className="first-row-text text-center mb-0">{c.name}</p>
+                {renderCategoryImage(c)}
               </div>
             ))}
           </div>
           <div className="first-row d-flex">
-            {secondRow.map((s, index) => (
+            {secondRow.map((c, index) => (
               <div
-                key={s._id || index}
-                className="services second-row-item d-flex flex-column align-items-center position-relative"
-                onClick={() => handleServiceClick(s)}
-                style={{ cursor: "pointer" }}
+                key={c._id || index}
+                className="categories second-row-item d-flex flex-column align-items-center position-relative"
+                onClick={() => handleCategoryClick(c)}
               >
                 <div className="img-box w-100 d-flex justify-content-center align-items-center">
-                  {renderServiceImage(s)}
+                  {renderCategoryImage(c)}
                 </div>
-                <p className="first-row-text text-center">{s.name}</p>
+                <p className="first-row-text text-center mb-0 mt-2">{c.name}</p>
               </div>
             ))}
           </div>
           
-          {/* Additional rows for extra services */}
+          {/* Additional rows for extra categories */}
           {extraRows.length > 0 && (
             <div className="mt-3">
               <div className="first-row d-flex">
-                {extraRows.map((s, index) => (
+                {extraRows.map((c, index) => (
                   <div
-                    key={s._id || index}
-                    className="services first-row-item d-flex align-items-center justify-content-between"
-                    onClick={() => handleServiceClick(s)}
-                   
-                  >
-                    {renderServiceImage(s)}
-                    <p className="mb-0" style={{ fontSize: "12px" }}>{s.name}</p>
+                    key={c._id || index}
+                    className=" first-row-item d-flex align-items-center justify-content-between"
+                    onClick={() => handleCategoryClick(c)}>
+                    {renderCategoryImage(c)}
+                    <p className="mb-0" style={{ fontSize: "12px" }}>{c.name}</p>
                   </div>
                 ))}
               </div>
@@ -413,8 +383,8 @@ function Banner() {
           <div className="service-box">
             <p className="service-heading home">What are you looking for?</p>
             
-            {/* Dynamic services grid */}
-            {renderServicesGrid()}
+            {/* Dynamic categories grid with exact same layout logic */}
+            {renderCategoriesGrid()}
           </div>
 
           {/* Ratings Row */}
@@ -472,6 +442,7 @@ function Banner() {
               src={`http://localhost:5000${banner.img}`}
               alt="Banner"
               className="banner-img w-100"
+              style={{ maxHeight: "400px", objectFit: "cover", borderRadius: "10px" }}
               onError={(e) => {
                 e.target.src = 'http://localhost:5000/assets/default.png';
               }}

@@ -22,7 +22,6 @@ import {
 } from './downloadUtils';
 import "./Urbancom.css";
 
-
 function AdminPanel() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState(null);
@@ -133,10 +132,27 @@ function AdminPanel() {
   const [editCategory, setEditCategory] = useState({
     name: '',
     description: '',
-    category: '',
+    key: '',
     order: 0,
     isActive: true
   });
+  
+  // Product Management States (Packages)
+  const [products, setProducts] = useState([]);
+  const [productSearch, setProductSearch] = useState('');
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [selectAllProducts, setSelectAllProducts] = useState(false);
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    description: '',
+    category: '',
+    price: '',
+    discountPrice: '',
+    stock: 0,
+    isActive: true
+  });
+  
   // Bookings Management States
   const [bookings, setBookings] = useState([]);
   const [bookingSearch, setBookingSearch] = useState('');
@@ -168,54 +184,54 @@ function AdminPanel() {
   const [adminProfile, setAdminProfile] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
 
-  // Format permissions with badges - Updated for consistent padding
-const formatPermissions = (permissions) => {
-  if (!permissions) return <Badge bg="dark" className="me-1 px-3 py-2">None</Badge>;
-  
-  const activePermissions = Object.entries(permissions)
-    .filter(([key, value]) => value)
-    .map(([key]) => key);
-  
-  if (activePermissions.length === 0) return <Badge bg="dark" className="me-1 px-3 py-2">None</Badge>;
-  
-  const permissionGradients = {
-    'Dashboard': 'linear-gradient(135deg, #141E30 0%, #243B55 100%)',
-    'Users': 'linear-gradient(135deg, #0F2027 0%, #203A43 100%)',
-    'Customer': 'linear-gradient(135deg, #1A2980 0%, #26D0CE 100%)',
-    'Category': 'linear-gradient(135deg, #232526 0%, #414345 100%)',
-    'Product': 'linear-gradient(135deg, #8E0E00 0%, #1F1C18 100%)',
-    'Bookings': 'linear-gradient(135deg, #3A1C71 0%, #d82739ff 50%, #FFAF7B 100%)',
-    'Reports': 'linear-gradient(135deg, #16222A 0%, #3A6073 100%)',
-    'Settings': 'linear-gradient(135deg, #000000 0%, #434343 100%)'
-  };
+  // Format permissions with badges
+  const formatPermissions = (permissions) => {
+    if (!permissions) return <Badge bg="dark" className="me-1 px-3 py-2">None</Badge>;
+    
+    const activePermissions = Object.entries(permissions)
+      .filter(([key, value]) => value)
+      .map(([key]) => key);
+    
+    if (activePermissions.length === 0) return <Badge bg="dark" className="me-1 px-3 py-2">None</Badge>;
+    
+    const permissionGradients = {
+      'Dashboard': 'linear-gradient(135deg, #141E30 0%, #243B55 100%)',
+      'Users': 'linear-gradient(135deg, #0F2027 0%, #203A43 100%)',
+      'Customer': 'linear-gradient(135deg, #1A2980 0%, #26D0CE 100%)',
+      'Category': 'linear-gradient(135deg, #232526 0%, #414345 100%)',
+      'Product': 'linear-gradient(135deg, #8E0E00 0%, #1F1C18 100%)',
+      'Bookings': 'linear-gradient(135deg, #3A1C71 0%, #d82739ff 50%, #FFAF7B 100%)',
+      'Reports': 'linear-gradient(135deg, #16222A 0%, #3A6073 100%)',
+      'Settings': 'linear-gradient(135deg, #000000 0%, #434343 100%)'
+    };
 
-  return (
-    <div className="d-flex flex-wrap" style={{ gap: '6px' }}>
-      {activePermissions.map((permission) => {
-        const gradient = permissionGradients[permission] || 'linear-gradient(135deg, #2C3E50 0%, #4CA1AF 100%)';
-        const textColor = '#ffffff';
-        
-        return (
-          <span
-            key={permission}
-            className="badge"
-            style={{
-              background: gradient,
-              color: textColor,
-              borderRadius: '15px',
-              fontSize: "13.5px",
-              boxShadow: '0 3px 8px rgba(0,0,0,0.3)',
-              lineHeight: '1.4',
-              display: 'inline-flex',
-              minHeight: '28px'
-            }}>
-            {permission}
-          </span>
-        );
-      })}
-    </div>
-  );
-};
+    return (
+      <div className="d-flex flex-wrap" style={{ gap: '6px' }}>
+        {activePermissions.map((permission) => {
+          const gradient = permissionGradients[permission] || 'linear-gradient(135deg, #2C3E50 0%, #4CA1AF 100%)';
+          const textColor = '#ffffff';
+          
+          return (
+            <span
+              key={permission}
+              className="badge"
+              style={{
+                background: gradient,
+                color: textColor,
+                borderRadius: '15px',
+                fontSize: "13.5px",
+                boxShadow: '0 3px 8px rgba(0,0,0,0.3)',
+                lineHeight: '1.4',
+                display: 'inline-flex',
+                minHeight: '28px'
+              }}>
+              {permission}
+            </span>
+          );
+        })}
+      </div>
+    );
+  };
 
   const validateUserForm = () => {
     const errors = {};
@@ -280,7 +296,6 @@ const formatPermissions = (permissions) => {
       }
     }));
   };
-
 
   const fetchAdminProfile = async () => {
     try {
@@ -461,37 +476,38 @@ const formatPermissions = (permissions) => {
     }
   };
 
- const fetchUsers = async (page = 1, search = '', perPage = userPerPage) => {
-  try {
-    let url = `http://localhost:5000/api/admin/users?page=${page}&limit=${perPage}&search=${search}`;
-    
-    console.log('Fetching users:', { page, perPage, search });
-    
-    const response = await fetch(url, {
-      headers: getAuthHeaders()
-    });
-    const data = await response.json();
-    
-    if (data.success) {
-      console.log('Users fetched successfully:', {
-        page: data.pagination?.page || page,
-        totalPages: data.pagination?.pages || totalPages,
-        totalItems: data.pagination?.total || userTotalItems,
-        usersCount: data.users?.length || 0
-      });
+  const fetchUsers = async (page = 1, search = '', perPage = userPerPage) => {
+    try {
+      let url = `http://localhost:5000/api/admin/users?page=${page}&limit=${perPage}&search=${search}`;
       
-      setUsers(data.users || []);
-      setUserTotalPages(data.pagination?.pages || 1);
-      setUserTotalItems(data.pagination?.total || 0);
-      setSelectedUsers([]);
-      setSelectAllUsers(false);
-      setUserPerPage(perPage);
-      setUserPage(page);
+      console.log('Fetching users:', { page, perPage, search });
+      
+      const response = await fetch(url, {
+        headers: getAuthHeaders()
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('Users fetched successfully:', {
+          page: data.pagination?.page || page,
+          totalPages: data.pagination?.pages || totalPages,
+          totalItems: data.pagination?.total || userTotalItems,
+          usersCount: data.users?.length || 0
+        });
+        
+        setUsers(data.users || []);
+        setUserTotalPages(data.pagination?.pages || 1);
+        setUserTotalItems(data.pagination?.total || 0);
+        setSelectedUsers([]);
+        setSelectAllUsers(false);
+        setUserPerPage(perPage);
+        setUserPage(page);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
     }
-  } catch (error) {
-    console.error('Error fetching users:', error);
-  }
-};
+  };
+
   const fetchCustomers = async (page = 1, search = '', perPage = customerPerPage) => {
     try {
       let url = `http://localhost:5000/api/admin/customers?page=${page}&limit=${perPage}&search=${search}`;
@@ -513,55 +529,55 @@ const formatPermissions = (permissions) => {
     }
   };
 
- const fetchCategories = async (page = 1, search = '', perPage = categoryPerPage) => {
-  try {
-    console.log(`Fetching categories from admin API... Page: ${page}, Search: ${search}, PerPage: ${perPage}`);
-    
-    let url = `http://localhost:5000/api/admin/services?page=${page}&limit=${perPage}&sort=-createdAt`;
-    
-    if (search) {
-      url += `&search=${encodeURIComponent(search)}`;
-    }
-    
-    const response = await fetch(url, {
-      headers: getAuthHeaders()
-    });
-    
-    if (!response.ok) {
-      console.error("Failed to fetch categories:", response.status);
-      setCategories([]);
-      return;
-    }
-    
-    const data = await response.json();
-    console.log("Categories API response:", data);
-    
-    if (data.success && data.services && Array.isArray(data.services)) {
-      console.log(`Found ${data.services.length} categories`);
+  const fetchCategories = async (page = 1, search = '', perPage = categoryPerPage) => {
+    try {
+      console.log(`Fetching categories from admin API... Page: ${page}, Search: ${search}, PerPage: ${perPage}`);
       
-      const formattedCategories = data.services.map(service => ({
-        ...service,
-        img: service.img || '/assets/default-category.png'
-      }));
+      let url = `http://localhost:5000/api/admin/categories?page=${page}&limit=${perPage}&sort=-createdAt`;
       
-      setCategories(formattedCategories);
-      
-      // Set pagination data if available
-      if (data.pagination) {
-        setCategoryTotalPages(data.pagination.pages || 1);
-        setCategoryTotalItems(data.pagination.total || 0);
-        setCategoryPerPage(data.pagination.limit || perPage);
-        setCategoryPage(data.pagination.page || page);
+      if (search) {
+        url += `&search=${encodeURIComponent(search)}`;
       }
-    } else {
-      console.error("Invalid response format:", data);
+      
+      const response = await fetch(url, {
+        headers: getAuthHeaders()
+      });
+      
+      if (!response.ok) {
+        console.error("Failed to fetch categories:", response.status);
+        setCategories([]);
+        return;
+      }
+      
+      const data = await response.json();
+      console.log("Categories API response:", data);
+      
+      if (data.success && data.categories && Array.isArray(data.categories)) {
+        console.log(`Found ${data.categories.length} categories`);
+        
+        const formattedCategories = data.categories.map(category => ({
+          ...category,
+          img: category.img || '/assets/default-category.png'
+        }));
+        
+        setCategories(formattedCategories);
+        
+        // Set pagination data if available
+        if (data.pagination) {
+          setCategoryTotalPages(data.pagination.pages || 1);
+          setCategoryTotalItems(data.pagination.total || 0);
+          setCategoryPerPage(data.pagination.limit || perPage);
+          setCategoryPage(data.pagination.page || page);
+        }
+      } else {
+        console.error("Invalid response format:", data);
+        setCategories([]);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
       setCategories([]);
     }
-  } catch (error) {
-    console.error('Error fetching categories:', error);
-    setCategories([]);
-  }
-};
+  };
 
   const fetchProducts = async () => {
     try {
@@ -696,9 +712,28 @@ const formatPermissions = (permissions) => {
     setSelectAllCustomers(!selectAllCustomers);
   };
 
+  const handleCategorySelect = (categoryId) => {
+    setSelectedCategories(prev => {
+      if (prev.includes(categoryId)) {
+        return prev.filter(id => id !== categoryId);
+      } else {
+        return [...prev, categoryId];
+      }
+    });
+  };
+
+  const handleSelectAllCategories = () => {
+    if (selectAllCategories) {
+      setSelectedCategories([]);
+    } else {
+      setSelectedCategories(categories.map(c => c._id));
+    }
+    setSelectAllCategories(!selectAllCategories);
+  };
+
   const updateCategory = async (categoryId, updateData) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/services/${categoryId}`, {
+      const response = await fetch(`http://localhost:5000/api/admin/categories/${categoryId}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(updateData)
@@ -754,83 +789,83 @@ const formatPermissions = (permissions) => {
   };
 
   // Common bulk delete function
-const handleBulkDelete = async (entity, selectedIds) => {
-  if (selectedIds.length === 0) return;
-  
-  const entityNames = {
-    'users': 'user(s)',
-    'customers': 'customer(s)',
-    'categories': 'category(ies)',
-    'products': 'product(s)',
-    'bookings': 'booking(s)'
-  };
+  const handleBulkDelete = async (entity, selectedIds) => {
+    if (selectedIds.length === 0) return;
+    
+    const entityNames = {
+      'users': 'user(s)',
+      'customers': 'customer(s)',
+      'categories': 'category(ies)',
+      'products': 'product(s)',
+      'bookings': 'booking(s)'
+    };
 
-  const backendEntityMap = {
-    'users': 'users',
-    'customers': 'customers',
-    'categories': 'services',
-    'products': 'packages', 
-    'bookings': 'bookings'
-  };
+    const backendEntityMap = {
+      'users': 'users',
+      'customers': 'customers',
+      'categories': 'categories',
+      'products': 'packages', 
+      'bookings': 'bookings'
+    };
 
-  const backendEntity = backendEntityMap[entity];
-  
-  // Single confirmation alert
-  if (window.confirm(`Are you sure you want to delete ${selectedIds.length} ${entityNames[entity]}?`)) {
-    try {
-      const response = await fetch('http://localhost:5000/api/admin/bulk-delete', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ 
-          entity: backendEntity,
-          ids: selectedIds 
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        // Single success notification
-        alert(`Successfully deleted ${selectedIds.length} ${entityNames[entity]}`);
+    const backendEntity = backendEntityMap[entity];
+    
+    // Single confirmation alert
+    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} ${entityNames[entity]}?`)) {
+      try {
+        const response = await fetch('http://localhost:5000/api/admin/bulk-delete', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ 
+            entity: backendEntity,
+            ids: selectedIds 
+          })
+        });
         
-        // Reset selection and refresh data
-        switch(entity) {
-          case 'users':
-            setSelectedUsers([]);
-            setSelectAllUsers(false);
-            fetchUsers(userPage, userSearch, userPerPage);
-            break;
-          case 'customers':
-            setSelectedCustomers([]);
-            setSelectAllCustomers(false);
-            fetchCustomers(customerPage, customerSearch, customerPerPage);
-            break;
-          case 'categories':
-            setSelectedCategories([]);
-            setSelectAllCategories(false);
-            fetchCategories(categoryPage, categorySearch, categoryPerPage);
-            break;
-          case 'products':
-            setSelectedProducts([]);
-            setSelectAllProducts(false);
-            fetchProducts();
-            break;
-          case 'bookings':
-            setSelectedBookings([]);
-            setSelectAllBookings(false);
-            fetchBookings(bookingPage, bookingSearch, bookingStatus, bookingPerPage);
-            fetchDashboardData();
-            break;
+        const data = await response.json();
+        
+        if (data.success) {
+          // Single success notification
+          alert(`Successfully deleted ${selectedIds.length} ${entityNames[entity]}`);
+          
+          // Reset selection and refresh data
+          switch(entity) {
+            case 'users':
+              setSelectedUsers([]);
+              setSelectAllUsers(false);
+              fetchUsers(userPage, userSearch, userPerPage);
+              break;
+            case 'customers':
+              setSelectedCustomers([]);
+              setSelectAllCustomers(false);
+              fetchCustomers(customerPage, customerSearch, customerPerPage);
+              break;
+            case 'categories':
+              setSelectedCategories([]);
+              setSelectAllCategories(false);
+              fetchCategories(categoryPage, categorySearch, categoryPerPage);
+              break;
+            case 'products':
+              setSelectedProducts([]);
+              setSelectAllProducts(false);
+              fetchProducts();
+              break;
+            case 'bookings':
+              setSelectedBookings([]);
+              setSelectAllBookings(false);
+              fetchBookings(bookingPage, bookingSearch, bookingStatus, bookingPerPage);
+              fetchDashboardData();
+              break;
+          }
+        } else {
+          alert(data.error || `Failed to delete ${entity}`);
         }
-      } else {
-        alert(data.error || `Failed to delete ${entity}`);
+      } catch (error) {
+        console.error(`Error deleting ${entity}:`, error);
+        alert(`Failed to delete ${entity}`);
       }
-    } catch (error) {
-      console.error(`Error deleting ${entity}:`, error);
-      alert(`Failed to delete ${entity}`);
     }
-  }
-};
+  };
 
   // Helper function to display password (always shows 6 dots)
   const displayPassword = () => {
@@ -838,23 +873,23 @@ const handleBulkDelete = async (entity, selectedIds) => {
   };
 
   // Function to get initials from name
-const getInitials = (name) => {
-  if (!name || name.trim() === '') return 'NA';
-  
-  // Clean up the name and get initials
-  const parts = name.trim().split(' ');
-  if (parts.length === 0) return 'NA';
-  
-  // Get first letter of first part
-  let initials = parts[0][0].toUpperCase();
-  
-  // Get first letter of last part if exists and different from first
-  if (parts.length > 1 && parts[parts.length - 1][0].toUpperCase() !== initials) {
-    initials += parts[parts.length - 1][0].toUpperCase();
-  }
-  
-  return initials;
-};
+  const getInitials = (name) => {
+    if (!name || name.trim() === '') return 'NA';
+    
+    // Clean up the name and get initials
+    const parts = name.trim().split(' ');
+    if (parts.length === 0) return 'NA';
+    
+    // Get first letter of first part
+    let initials = parts[0][0].toUpperCase();
+    
+    // Get first letter of last part if exists and different from first
+    if (parts.length > 1 && parts[parts.length - 1][0].toUpperCase() !== initials) {
+      initials += parts[parts.length - 1][0].toUpperCase();
+    }
+    
+    return initials;
+  };
 
   const handleMenuClick = (menu) => {
     // Check permission before switching menu
@@ -875,7 +910,7 @@ const getInitials = (name) => {
 
     const requiredPermission = permissionMap[menu];
 
-     setActiveMenu(menu);
+    setActiveMenu(menu);
     setIsEditingUser(false);
     setEditUserId(null);
     setIsEditingCategory(false);
@@ -923,7 +958,7 @@ const getInitials = (name) => {
       setEditCategory({
         name: '',
         description: '',
-        category: '',
+        key: '',
         order: 0,
         isActive: true
       });
@@ -1565,7 +1600,7 @@ const getInitials = (name) => {
             </Nav.Link>
           )}
 
-           {/* Customer Management */}
+          {/* Customer Management */}
           {(userRole === 'admin' || hasPermission('Customer')) && (
             <Nav.Link 
               className={`mb-2 ${activeMenu === 'manage-customers' ? 'active' : ''}`}
@@ -2398,236 +2433,236 @@ const getInitials = (name) => {
           </div>
         );
 
-     case 'manage-users':
-    return (
-      <div>
-        <Card className="shadow-lg">
-          <Card.Body style={{ marginLeft: "23px", marginRight: "10px" }}>
-            <h5 className="mb-0 fw-semibold">
-              User Management
-              <span className="text-muted mx-2" style={{ fontSize: "14px", fontWeight: "normal" }}>•</span>
-              <span className="text-muted" style={{ fontSize: "14px", fontWeight: "normal" }}>Manage Users</span>
-            </h5>
-          </Card.Body>
-        </Card>
-        <br />
-        <Card className="shadow-lg" style={{ border: "5px" }}>
-          <Card.Header className="border-0" style={{ backgroundColor: "white" }}>
-            <Row style={{ marginLeft: "12px", marginRight: "10px" }}>
-              <Col style={{ marginTop: "10px" }}>
-                <h5 className="mb-1 fw-semibold">Manage users</h5>
-                <p className='text-muted' style={{ fontSize: "10.5px" }}>Use this form to update user profiles</p>
-              </Col>
-              <Col>
-                {/* Single TableControls component with all features */}
-                <TableControls
-                  itemsPerPage={userPerPage}
-                  onItemsPerPageChange={(perPage) => {
-                    setUserPerPage(perPage);
-                    fetchUsers(1, userSearch, perPage);
-                  }}
-                  currentPage={userPage}
-                  totalPages={userTotalPages}
-                  totalItems={userTotalItems}
-                  onPageChange={(page) => {
-                    setUserPage(page);
-                    fetchUsers(page, userSearch, userPerPage);
-                  }}
-                  searchValue={userSearch}
-                  onSearchChange={(e) => {
-                    setUserSearch(e.target.value);
-                    fetchUsers(1, e.target.value, userPerPage);
-                  }}
-                  searchPlaceholder="Search users..."
-                  onDownloadPDF={() => {
-                    const tableElement = document.querySelector('.table-responsive');
-                    exportAsPDF(tableElement, 'users');
-                  }}
-                  onDownloadExcel={() => {
-                    const userData = prepareUserDataForExport(users);
-                    exportAsExcel(userData, 'users');
-                  }}
-                  onDownloadCSV={() => {
-                    const userData = prepareUserDataForExport(users);
-                    const headers = getCSVHeadersFromData(userData);
-                    exportAsCSV(userData, headers, 'users');
-                  }}selectedCount={selectedUsers.length}
-                  onBulkDelete={() => handleBulkDelete('users', selectedUsers)}
-                  showBulkActions={false} 
-                  bulkEntityName="users"
-                />
-              </Col>
-            </Row>
-          </Card.Header>
-          <Card.Body style={{ marginLeft: "20px", marginRight: "20px" }}>
-            
-            
-            {/* Bulk Selection Alert - Similar to Categories component */}
-            {selectedUsers.length > 0 && (
-              <Alert variant="dark" className="d-flex justify-content-between align-items-center mb-3">
-                <span>
-                  <i className="bi bi-check-circle-fill me-2"></i>
-                  {selectedUsers.length} user(s) selected
-                </span>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() => handleBulkDelete('users', selectedUsers)}
-                >
-                  <i className="bi bi-trash me-2"></i>Delete Selected
-                </Button>
-              </Alert>
-            )}
-            
-            <div className="table-responsive">
-              <Table striped bordered hover style={{ border: "2px solid" }} >
-                <thead>
-                  <tr>
-                    <th>
-                      <Form.Check
-                        type="checkbox"
-                        checked={selectAllUsers}
-                        onChange={handleSelectAllUsers}
-                        style={{
-                          fontSize: "14px",
-                          '--bs-border-width': '2px',
-                          '--bs-border-color': '#000000',
-                        }}
-                      />
-                    </th>
-                    <th>Photo</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Contact no</th>
-                    <th>Password</th>
-                    <th>Permissions</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user) => (
-                    <tr key={user._id}>
-                      <td>
-                        <Form.Check
-                          type="checkbox"
-                          checked={selectedUsers.includes(user._id)}
-                          onChange={() => handleUserSelect(user._id)}
-                          style={{
-                            fontSize: "14px",
-                            '--bs-border-width': '2px',
-                            '--bs-border-color': '#000000',
-                          }}
-                        />
-                      </td>
-                      
-                      <td>
-                    <div style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '50%',
-                      overflow: 'hidden',
-                      border: '2px solid #dee2e6'
-                    }}>
-                      {user.profileImage ? (
-                        <img
-                          src={`http://localhost:5000${user.profileImage}`}
-                          alt={user.name}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                          }}
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.parentElement.innerHTML = `
-                              <div style="
-                                width: 100%;
-                                height: 100%;
-                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                color: white;
-                                font-weight: bold;
-                                font-size: 16px;
-                              ">
-                                ${getInitials(user.name)}
-                              </div>
-                            `;
-                          }}
-                        />
-                      ) : (
-                        <div style={{
-                          width: '100%',
-                          height: '100%',
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontWeight: 'bold',
-                          fontSize: '16px'
-                        }}>
-                          {getInitials(user.name)}
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                      
-                      <td>
-                        {user.name}
-                      </td>
-                      <td>
-                        <div className="text-truncate" style={{ maxWidth: '200px' }}>
-                          {user.email}
-                        </div>
-                      </td>
-                      <td>{user.phone}</td>
-                      <td>
-                        {displayPassword(user.password)}
-                      </td>
-                      <td>
-                        <div style={{ maxWidth: '200px' }}>
-                          {formatPermissions(user.permissions)}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="d-flex gap-1">
-                          <Button
-                            variant="warning"
-                            size="sm"
-                            onClick={() => handleEditUser(user)}
-                            title="Edit User"
-                          >
-                            <MdModeEdit />
-                          </Button>
-                          <Button
-                            variant="dark"
-                            size="sm"
-                            onClick={() => handleViewUser(user)}
-                            title="View User Details"
-                          >
-                            <IoEyeSharp />
-                          </Button>
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => deleteUser(user._id)}
-                            title="Delete User"
-                          >
-                            <MdOutlineDelete />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </div>
-          </Card.Body>
-        </Card>
-      </div>
-  );
+      case 'manage-users':
+        return (
+          <div>
+            <Card className="shadow-lg">
+              <Card.Body style={{ marginLeft: "23px", marginRight: "10px" }}>
+                <h5 className="mb-0 fw-semibold">
+                  User Management
+                  <span className="text-muted mx-2" style={{ fontSize: "14px", fontWeight: "normal" }}>•</span>
+                  <span className="text-muted" style={{ fontSize: "14px", fontWeight: "normal" }}>Manage Users</span>
+                </h5>
+              </Card.Body>
+            </Card>
+            <br />
+            <Card className="shadow-lg" style={{ border: "5px" }}>
+              <Card.Header className="border-0" style={{ backgroundColor: "white" }}>
+                <Row style={{ marginLeft: "12px", marginRight: "10px" }}>
+                  <Col style={{ marginTop: "10px" }}>
+                    <h5 className="mb-1 fw-semibold">Manage users</h5>
+                    <p className='text-muted' style={{ fontSize: "10.5px" }}>Use this form to update user profiles</p>
+                  </Col>
+                  <Col>
+                    {/* Single TableControls component with all features */}
+                    <TableControls
+                      itemsPerPage={userPerPage}
+                      onItemsPerPageChange={(perPage) => {
+                        setUserPerPage(perPage);
+                        fetchUsers(1, userSearch, perPage);
+                      }}
+                      currentPage={userPage}
+                      totalPages={userTotalPages}
+                      totalItems={userTotalItems}
+                      onPageChange={(page) => {
+                        setUserPage(page);
+                        fetchUsers(page, userSearch, userPerPage);
+                      }}
+                      searchValue={userSearch}
+                      onSearchChange={(e) => {
+                        setUserSearch(e.target.value);
+                        fetchUsers(1, e.target.value, userPerPage);
+                      }}
+                      searchPlaceholder="Search users..."
+                      onDownloadPDF={() => {
+                        const tableElement = document.querySelector('.table-responsive');
+                        exportAsPDF(tableElement, 'users');
+                      }}
+                      onDownloadExcel={() => {
+                        const userData = prepareUserDataForExport(users);
+                        exportAsExcel(userData, 'users');
+                      }}
+                      onDownloadCSV={() => {
+                        const userData = prepareUserDataForExport(users);
+                        const headers = getCSVHeadersFromData(userData);
+                        exportAsCSV(userData, headers, 'users');
+                      }}
+                      selectedCount={selectedUsers.length}
+                      onBulkDelete={() => handleBulkDelete('users', selectedUsers)}
+                      showBulkActions={false} 
+                      bulkEntityName="users"
+                    />
+                  </Col>
+                </Row>
+              </Card.Header>
+              <Card.Body style={{ marginLeft: "20px", marginRight: "20px" }}>
+                
+                {/* Bulk Selection Alert - Similar to Categories component */}
+                {selectedUsers.length > 0 && (
+                  <Alert variant="dark" className="d-flex justify-content-between align-items-center mb-3">
+                    <span>
+                      <i className="bi bi-check-circle-fill me-2"></i>
+                      {selectedUsers.length} user(s) selected
+                    </span>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => handleBulkDelete('users', selectedUsers)}
+                    >
+                      <i className="bi bi-trash me-2"></i>Delete Selected
+                    </Button>
+                  </Alert>
+                )}
+                
+                <div className="table-responsive">
+                  <Table striped bordered hover style={{ border: "2px solid" }} >
+                    <thead>
+                      <tr>
+                        <th>
+                          <Form.Check
+                            type="checkbox"
+                            checked={selectAllUsers}
+                            onChange={handleSelectAllUsers}
+                            style={{
+                              fontSize: "14px",
+                              '--bs-border-width': '2px',
+                              '--bs-border-color': '#000000',
+                            }}
+                          />
+                        </th>
+                        <th>Photo</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Contact no</th>
+                        <th>Password</th>
+                        <th>Permissions</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map((user) => (
+                        <tr key={user._id}>
+                          <td>
+                            <Form.Check
+                              type="checkbox"
+                              checked={selectedUsers.includes(user._id)}
+                              onChange={() => handleUserSelect(user._id)}
+                              style={{
+                                fontSize: "14px",
+                                '--bs-border-width': '2px',
+                                '--bs-border-color': '#000000',
+                              }}
+                            />
+                          </td>
+                          
+                          <td>
+                            <div style={{
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: '50%',
+                              overflow: 'hidden',
+                              border: '2px solid #dee2e6'
+                            }}>
+                              {user.profileImage ? (
+                                <img
+                                  src={`http://localhost:5000${user.profileImage}`}
+                                  alt={user.name}
+                                  style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover'
+                                  }}
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.parentElement.innerHTML = `
+                                      <div style="
+                                        width: 100%;
+                                        height: 100%;
+                                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        color: white;
+                                        font-weight: bold;
+                                        font-size: 16px;
+                                      ">
+                                        ${getInitials(user.name)}
+                                      </div>
+                                    `;
+                                  }}
+                                />
+                              ) : (
+                                <div style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: 'white',
+                                  fontWeight: 'bold',
+                                  fontSize: '16px'
+                                }}>
+                                  {getInitials(user.name)}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          
+                          <td>
+                            {user.name}
+                          </td>
+                          <td>
+                            <div className="text-truncate" style={{ maxWidth: '200px' }}>
+                              {user.email}
+                            </div>
+                          </td>
+                          <td>{user.phone}</td>
+                          <td>
+                            {displayPassword(user.password)}
+                          </td>
+                          <td>
+                            <div style={{ maxWidth: '200px' }}>
+                              {formatPermissions(user.permissions)}
+                            </div>
+                          </td>
+                          <td>
+                            <div className="d-flex gap-1">
+                              <Button
+                                variant="warning"
+                                size="sm"
+                                onClick={() => handleEditUser(user)}
+                                title="Edit User"
+                              >
+                                <MdModeEdit />
+                              </Button>
+                              <Button
+                                variant="dark"
+                                size="sm"
+                                onClick={() => handleViewUser(user)}
+                                title="View User Details"
+                              >
+                                <IoEyeSharp />
+                              </Button>
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={() => deleteUser(user._id)}
+                                title="Delete User"
+                              >
+                                <MdOutlineDelete />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
+              </Card.Body>
+            </Card>
+          </div>
+        );
         
       case 'manage-customers':
         if (!hasPermission('Customer')) {
@@ -2730,58 +2765,58 @@ const getInitials = (name) => {
                             />
                           </td>
                           <td>
-                          <div style={{ 
-                            width: '50px', 
-                            height: '50px', 
-                            borderRadius: '50%', 
-                            overflow: 'hidden',
-                            border: '2px solid #dee2e6'
-                          }}>
-                            {customer.profileImage ? (
-                              <img 
-                                src={`http://localhost:5000${customer.profileImage}`} 
-                                alt={customer.name}
-                                style={{ 
+                            <div style={{ 
+                              width: '50px', 
+                              height: '50px', 
+                              borderRadius: '50%', 
+                              overflow: 'hidden',
+                              border: '2px solid #dee2e6'
+                            }}>
+                              {customer.profileImage ? (
+                                <img 
+                                  src={`http://localhost:5000${customer.profileImage}`} 
+                                  alt={customer.name}
+                                  style={{ 
+                                    width: '100%', 
+                                    height: '100%', 
+                                    objectFit: 'cover'
+                                  }}
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.parentElement.innerHTML = `
+                                      <div style="
+                                        width: 100%;
+                                        height: 100%;
+                                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        color: white;
+                                        font-weight: bold;
+                                        font-size: 18px;
+                                      ">
+                                        ${getInitials(customer.name)}
+                                      </div>
+                                    `;
+                                  }}
+                                />
+                              ) : (
+                                <div style={{ 
                                   width: '100%', 
                                   height: '100%', 
-                                  objectFit: 'cover'
-                                }}
-                                onError={(e) => {
-                                  e.target.style.display = 'none';
-                                  e.target.parentElement.innerHTML = `
-                                    <div style="
-                                      width: 100%;
-                                      height: 100%;
-                                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                      display: flex;
-                                      align-items: center;
-                                      justify-content: center;
-                                      color: white;
-                                      font-weight: bold;
-                                      font-size: 18px;
-                                    ">
-                                      ${getInitials(customer.name)}
-                                    </div>
-                                  `;
-                                }}
-                              />
-                            ) : (
-                              <div style={{ 
-                                width: '100%', 
-                                height: '100%', 
-                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'white',
-                                fontWeight: 'bold',
-                                fontSize: '18px'
-                              }}>
-                                {getInitials(customer.name)}
-                              </div>
-                            )}
-                          </div>
-                        </td>
+                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: 'white',
+                                  fontWeight: 'bold',
+                                  fontSize: '18px'
+                                }}>
+                                  {getInitials(customer.name)}
+                                </div>
+                              )}
+                            </div>
+                          </td>
                           <td><strong>{customer.name}</strong></td>
                           <td>{customer.email}</td>
                           <td>{customer.phone}</td>
@@ -2814,50 +2849,52 @@ const getInitials = (name) => {
           </div>
         );
         
-    case 'manage-categories':
-  return (
-    <Categories 
-      categories={categories}
-      onEdit={(category) => {
-        setIsEditingCategory(true);
-        setEditCategoryId(category._id);
-        setEditCategory(category);
-        setActiveMenu('add-category');
-      }}
-      // Remove the confirmation alert here
-      onDelete={(categoryId) => {
-        // Directly call bulk delete with single ID
-        handleBulkDelete('categories', [categoryId]);
-      }}
-      onBulkDelete={(selectedIds) => {
-        handleBulkDelete('categories', selectedIds);
-      }}
-      onToggleStatus={(categoryId, isActive) => {
-        updateCategory(categoryId, { isActive });
-      }}
-      
-      // Add these pagination props:
-      currentPage={categoryPage}
-      totalPages={categoryTotalPages}
-      totalItems={categoryTotalItems}
-      onPageChange={(page) => {
-        setCategoryPage(page);
-        fetchCategories(page, categorySearch, categoryPerPage);
-      }}
-      
-      // Add these search props:
-      searchQuery={categorySearch}
-      onSearchChange={(value) => {
-        setCategorySearch(value);
-        fetchCategories(1, value, categoryPerPage);
-      }}
-      itemsPerPage={categoryPerPage}
-      onItemsPerPageChange={(perPage) => {
-        setCategoryPerPage(perPage);
-        fetchCategories(1, categorySearch, perPage);
-      }}
-    />
-  );
+      case 'manage-categories':
+        return (
+          <Categories 
+            categories={categories}
+            selectedCategories={selectedCategories}
+            selectAllCategories={selectAllCategories}
+            onSelect={handleCategorySelect}
+            onSelectAll={handleSelectAllCategories}
+            onEdit={(category) => {
+              setIsEditingCategory(true);
+              setEditCategoryId(category._id);
+              setEditCategory(category);
+              setActiveMenu('add-category');
+            }}
+            onDelete={(categoryId) => {
+              handleBulkDelete('categories', [categoryId]);
+            }}
+            onBulkDelete={(selectedIds) => {
+              handleBulkDelete('categories', selectedIds);
+            }}
+            onToggleStatus={(categoryId, isActive) => {
+              updateCategory(categoryId, { isActive });
+            }}
+            
+            // Add these pagination props:
+            currentPage={categoryPage}
+            totalPages={categoryTotalPages}
+            totalItems={categoryTotalItems}
+            onPageChange={(page) => {
+              setCategoryPage(page);
+              fetchCategories(page, categorySearch, categoryPerPage);
+            }}
+            
+            // Add these search props:
+            searchQuery={categorySearch}
+            onSearchChange={(value) => {
+              setCategorySearch(value);
+              fetchCategories(1, value, categoryPerPage);
+            }}
+            itemsPerPage={categoryPerPage}
+            onItemsPerPageChange={(perPage) => {
+              setCategoryPerPage(perPage);
+              fetchCategories(1, categorySearch, perPage);
+            }}
+          />
+        );
         
       case 'add-category':
         if (!hasPermission('Category')) {
@@ -2880,9 +2917,9 @@ const getInitials = (name) => {
                 const formDataToSend = new FormData();
                 formDataToSend.append('name', formData.name);
                 formDataToSend.append('description', formData.description);
-                formDataToSend.append('category', formData.category || 'General');
-                formDataToSend.append('order', formData.order);
-                formDataToSend.append('isActive', formData.isActive);
+                formDataToSend.append('key', formData.key || formData.name.toLowerCase().replace(/ /g, '-'));
+                formDataToSend.append('order', formData.order || 0);
+                formDataToSend.append('isActive', formData.isActive !== undefined ? formData.isActive : true);
                 
                 if (imageFile) {
                   formDataToSend.append('image', imageFile);
@@ -2891,8 +2928,8 @@ const getInitials = (name) => {
                 }
 
                 const url = isEditingCategory 
-                  ? `http://localhost:5000/api/admin/services/${editCategoryId}`
-                  : 'http://localhost:5000/api/admin/services';
+                  ? `http://localhost:5000/api/admin/categories/${editCategoryId}`
+                  : 'http://localhost:5000/api/admin/categories';
                 
                 const response = await fetch(url, {
                   method: isEditingCategory ? 'PUT' : 'POST',
@@ -2928,6 +2965,7 @@ const getInitials = (name) => {
             }}
           />
         );     
+        
       case 'add-product':
         if (!hasPermission('Product')) {
           return (
@@ -3768,62 +3806,62 @@ const getInitials = (name) => {
             {selectedUserDetails && (
               <div>
                 <div className="text-center mb-4">
-                <div className="mb-3">
-                  {selectedUserDetails.profileImage ? (
-                    <img 
-                      src={`http://localhost:5000${selectedUserDetails.profileImage}`} 
-                      alt={selectedUserDetails.name}
-                      style={{ 
+                  <div className="mb-3">
+                    {selectedUserDetails.profileImage ? (
+                      <img 
+                        src={`http://localhost:5000${selectedUserDetails.profileImage}`} 
+                        alt={selectedUserDetails.name}
+                        style={{ 
+                          width: '100px', 
+                          height: '100px', 
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          border: '3px solid #dee2e6'
+                        }}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.parentElement.innerHTML = `
+                            <div style="
+                              width: 100px;
+                              height: 100px;
+                              border-radius: 50%;
+                              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                              display: flex;
+                              align-items: center;
+                              justify-content: center;
+                              color: white;
+                              font-weight: bold;
+                              font-size: 32px;
+                              margin: 0 auto;
+                              border: 3px solid #dee2e6
+                            ">
+                              ${getInitials(selectedUserDetails.name)}
+                            </div>
+                          `;
+                        }}
+                      />
+                    ) : (
+                      <div style={{ 
                         width: '100px', 
                         height: '100px', 
                         borderRadius: '50%',
-                        objectFit: 'cover',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        fontSize: '32px',
+                        margin: '0 auto',
                         border: '3px solid #dee2e6'
-                      }}
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.parentElement.innerHTML = `
-                          <div style="
-                            width: 100px;
-                            height: 100px;
-                            border-radius: 50%;
-                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            color: white;
-                            font-weight: bold;
-                            font-size: 32px;
-                            margin: 0 auto;
-                            border: 3px solid #dee2e6
-                          ">
-                            ${getInitials(selectedUserDetails.name)}
-                          </div>
-                        `;
-                      }}
-                    />
-                  ) : (
-                    <div style={{ 
-                      width: '100px', 
-                      height: '100px', 
-                      borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontWeight: 'bold',
-                      fontSize: '32px',
-                      margin: '0 auto',
-                      border: '3px solid #dee2e6'
-                    }}>
-                      {getInitials(selectedUserDetails.name)}
-                    </div>
-                  )}
+                      }}>
+                        {getInitials(selectedUserDetails.name)}
+                      </div>
+                    )}
+                  </div>
+                  <h5 className="mb-1">{selectedUserDetails.name}</h5>
+                  <p className="text-muted mb-3">{selectedUserDetails.designation}</p>
                 </div>
-                <h5 className="mb-1">{selectedUserDetails.name}</h5>
-                <p className="text-muted mb-3">{selectedUserDetails.designation}</p>
-              </div>
 
                 <div className="list-group list-group-flush">
                   <div className="list-group-item px-0 border-top-0">
