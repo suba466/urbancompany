@@ -56,8 +56,6 @@ const upload = multer({
 mongoose.connect("mongodb://localhost:27017/suba")
   .then(() => {
     console.log(" MongoDB connected successfully");
-    // Initialize default categories after connection
-    initializeDefaultCategories();
   })
   .catch(err => console.error(" MongoDB connection error:", err));
 
@@ -192,97 +190,9 @@ const bookingSchema = new mongoose.Schema({
 
 const Booking = mongoose.models.Booking || mongoose.model("Booking", bookingSchema);
 
-// ============================================
-// FIX: Initialize Default Categories Function
-// ============================================
-const initializeDefaultCategories = async () => {
-  try {
-    console.log("Checking for default categories...");
-    
-    const defaultCategories = [
-      {
-        name: "Salon for women",
-        key: "salon",
-        description: "Hair, beauty & salon services",
-        img: "/assets/salon.webp",
-        order: 1,
-        isActive: true
-      },
-      {
-        name: "AC & Appliance Repair",
-        key: "ac",
-        description: "AC, refrigerator & appliance services",
-        img: "/assets/ac.webp",
-        order: 2,
-        isActive: true
-      },
-      {
-        name: "Cleaning",
-        key: "clean",
-        description: "Home & office cleaning services",
-        img: "/assets/clean.webp",
-        order: 3,
-        isActive: true
-      },
-      {
-        name: "Electrician, Plumber & Carpenters",
-        key: "electric",
-        description: "Repair & installation services",
-        img: "/assets/electric.webp",
-        order: 4,
-        isActive: true
-      },
-      {
-        name: "Native Water Purifier",
-        key: "native",
-        description: "Water purifier installation & repair",
-        img: "/assets/native.webp",
-        order: 5,
-        isActive: true
-      }
-    ];
 
-    let createdCount = 0;
-    
-    for (const catData of defaultCategories) {
-      // Check if category exists by key
-      const existingCategory = await Category.findOne({ 
-        $or: [
-          { key: catData.key },
-          { name: catData.name }
-        ]
-      });
-      
-      if (!existingCategory) {
-        const category = new Category(catData);
-        await category.save();
-        createdCount++;
-        console.log(`Created default category: ${catData.name}`);
-      } else {
-        // Update existing category to ensure it's active
-        if (!existingCategory.isActive || existingCategory.img !== catData.img) {
-          await Category.findByIdAndUpdate(existingCategory._id, {
-            isActive: true,
-            img: catData.img,
-            order: catData.order
-          });
-          console.log(`Updated existing category: ${catData.name}`);
-        }
-      }
-    }
-    
-    console.log(`Categories initialization complete. Created/Updated: ${createdCount} categories`);
-    
-  } catch (error) {
-    console.error("Error initializing default categories:", error);
-  }
-};
 
 app.use("/api/admin", adminRoutes);
-
-// ============================================
-// FIX: Enhanced Debug Endpoint for Categories
-// ============================================
 app.get("/api/debug-categories", async (req, res) => {
   try {
     console.log("=== DEBUG: Checking MongoDB categories ===");
@@ -1066,63 +976,47 @@ const writeStaticData = (data) => {
 };
 
 initializeStaticData();
-// ============================================
-// FIXED: Enhanced Categories API Route
-// ============================================
 app.get("/api/categories", async (req, res) => {
   try {
-    console.log("=== API: Fetching active categories ===");
+    console.log("Fetching categories...");
     
-    // Try to get categories from MongoDB
+    // FIRST: Try to get from MongoDB (your dynamic database)
     let categories = await Category.find({ isActive: true })
       .sort({ order: 1, name: 1 });
     
-    console.log(`Found ${categories.length} active categories in MongoDB`);
-    
-    // If no categories in MongoDB, fall back to static data
+    // SECOND: If MongoDB has no categories, use static JSON file
     if (categories.length === 0) {
-      console.log("No active categories in MongoDB, checking static data...");
+      console.log("No categories in MongoDB, using static data");
       const staticData = readStaticData();
       
-      if (staticData && staticData.categories && staticData.categories.length > 0) {
-        // Format static data to match MongoDB schema
+      if (staticData && staticData.categories) {
         categories = staticData.categories.map((cat, index) => ({
-          _id: `static_${cat.key}`,
+          _id: `static_${cat.key || index}`,
           name: cat.name,
           key: cat.key,
           img: cat.img,
-          description: cat.description || `Service for ${cat.name}`,
+          description: cat.description || cat.name,
           isActive: true,
-          order: index,
-          createdAt: new Date()
+          order: index
         }));
-        
-        console.log(`Loaded ${categories.length} categories from static data`);
-      } else {
-        console.log("Static data also has no categories!");
       }
     }
     
-    // Log the categories being returned
-    console.log(`Returning ${categories.length} categories to frontend`);
-    
-    // RETURN IN THE CORRECT FORMAT THAT FRONTEND EXPECTS
-    return res.json({ 
+    // THIRD: If still no categories, return empty array
+    res.json({ 
       success: true,
-      categories: categories || [], // Make sure categories array exists
-      count: categories.length,
-      message: categories.length === 0 ? "No active categories found" : "Categories fetched successfully"
+      categories: categories || [],
+      count: categories ? categories.length : 0,
+      source: categories.length > 0 ? "database" : "static"
     });
     
   } catch (error) {
     console.error("Error fetching categories:", error);
-    
-    // Return proper error response
-    res.status(500).json({ 
+    res.json({ 
       success: false,
-      error: "Failed to fetch categories",
-      categories: [], // Always return empty array on error
-      count: 0
+      categories: [],
+      count: 0,
+      error: "Failed to fetch categories" 
     });
   }
 });

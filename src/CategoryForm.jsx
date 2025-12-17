@@ -1,4 +1,3 @@
-// In CategoryForm.js
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Row, Col, Card, Alert } from 'react-bootstrap';
 
@@ -6,6 +5,8 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    key: '',
+    order: 0,
     isActive: true
   });
   const [imageFile, setImageFile] = useState(null);
@@ -17,7 +18,8 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
       setFormData({
         name: categoryData.name || '',
         description: categoryData.description || '',
-        category: categoryData.category || 'General',
+        key: categoryData.key || categoryData.name?.toLowerCase().replace(/ /g, '-') || '',
+        order: categoryData.order || 0,
         isActive: categoryData.isActive !== undefined ? categoryData.isActive : true
       });
       
@@ -117,7 +119,7 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
           
           <Form onSubmit={handleSubmit}>
             <Row className="mb-3">
-              {/* Name Field - Full Width */}
+              {/* Name Field */}
               <Col md={6}>
                 <Form.Group className="mb-4">
                   <Form.Control
@@ -135,8 +137,30 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
                 </Form.Group>
               </Col>
               
-              {/* Description Field - Full Width */}
+              {/* Key Field */}
               <Col md={6}>
+                <Form.Group className="mb-4">
+                  <Form.Control
+                    type="text"
+                    value={formData.key}
+                    onChange={(e) => setFormData({...formData, key: e.target.value})}
+                    placeholder="URL Key (auto-generated)"
+                    style={{ 
+                      border: "2px solid #000000",
+                      borderRadius: "5px", 
+                      height:"45px"
+                    }}
+                  />
+                  <small className="text-muted">
+                    Leave empty to auto-generate from category name
+                  </small>
+                </Form.Group>
+              </Col>
+            </Row>
+
+            {/* Description Field - Full Width */}
+            <Row className="mb-3">
+              <Col md={12}>
                 <Form.Group className="mb-4">
                   <Form.Control
                     type="text"
@@ -145,21 +169,58 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
                     placeholder="Description"
                     style={{ 
                       border: "2px solid #000000",
-                      borderRadius: "5px", height:"45px"
+                      borderRadius: "5px", 
+                      height:"45px"
                     }}
                   />
                 </Form.Group>
               </Col>
             </Row>
             
-            {/* Image Upload Section - Centered with reduced width */}
+            {/* Order Field */}
+            <Row className="mb-3">
+              <Col md={6}>
+                <Form.Group className="mb-4">
+                  <Form.Control
+                    type="number"
+                    value={formData.order}
+                    onChange={(e) => setFormData({...formData, order: parseInt(e.target.value) || 0})}
+                    placeholder="Order"
+                    style={{ 
+                      border: "2px solid #000000",
+                      borderRadius: "5px",
+                      height:"45px"
+                    }}
+                  />
+                  <small className="text-muted">
+                    Display order (lower numbers appear first)
+                  </small>
+                </Form.Group>
+              </Col>
+              
+              {/* Active Status */}
+              <Col md={6}>
+                <Form.Group className="mb-4">
+                  <Form.Check
+                    type="switch"
+                    id="category-active"
+                    label="Active Category"
+                    checked={formData.isActive}
+                    onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
+                    className="mt-3"
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+            
+            {/* Image Upload Section */}
             <div className="mb-3">
               <Form.Group>
                 <Form.Label className="fw-semibold mb-3 d-block text-center">Category Image</Form.Label>
                 <div className="d-flex justify-content-center">
                   <div style={{ 
                     width: '100%',
-                    maxWidth: '400px' // Reduced width
+                    maxWidth: '400px'
                   }}>
                     <div style={{ 
                       border: "2px dashed #000000",

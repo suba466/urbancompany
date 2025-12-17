@@ -16,10 +16,14 @@ import {
 
 function Categories({
   categories,
+  selectedCategories = [],
+  selectAllCategories = false,
+  onSelect,
+  onSelectAll,
   onEdit,
   onDelete,
   onToggleStatus,
-  itemsPerPage = 10,onBulkDelete,
+  itemsPerPage = 10,
   onItemsPerPageChange,
   searchQuery = "",
   onSearchChange,
@@ -30,8 +34,6 @@ function Categories({
   totalItems = 0,
   onPageChange
 }) {
-  const [selectedCategories, setSelectedCategories] = useState([]);
-  const [selectAll, setSelectAll] = useState(false);
   const [loadingImages, setLoadingImages] = useState({});
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const [perPage, setPerPage] = useState(itemsPerPage);
@@ -49,36 +51,26 @@ function Categories({
       return (
         (category.name && category.name.toLowerCase().includes(searchTerm)) ||
         (category.description && category.description.toLowerCase().includes(searchTerm)) ||
-        (category.category && category.category.toLowerCase().includes(searchTerm)) ||
         (category.key && category.key.toLowerCase().includes(searchTerm))
       );
     });
   }, [categories, localSearch]);
 
   const handleSelect = (categoryId) => {
-    setSelectedCategories(prev => {
-      if (prev.includes(categoryId)) {
-        return prev.filter(id => id !== categoryId);
-      } else {
-        return [...prev, categoryId];
-      }
-    });
+    if (onSelect) {
+      onSelect(categoryId);
+    }
   };
 
   const handleSelectAll = () => {
-    if (selectAll) {
-      setSelectedCategories([]);
-    } else {
-      setSelectedCategories(filteredCategories.map(c => c._id));
+    if (onSelectAll) {
+      onSelectAll();
     }
-    setSelectAll(!selectAll);
   };
 
   const handleBulkDeleteClick = () => {
-    if (selectedCategories.length > 0 && onBulkDelete) {
-      onBulkDelete(selectedCategories);
-      setSelectedCategories([]);
-      setSelectAll(false);
+    if (selectedCategories.length > 0 && onDelete) {
+      onDelete(selectedCategories);
     }
   };
 
@@ -137,12 +129,6 @@ function Categories({
     const headers = getCSVHeadersFromData(dataForExport);
     exportAsCSV(dataForExport, headers, 'categories');
   };
-
-  // Reset selection when categories change
-  useEffect(() => {
-    setSelectedCategories([]);
-    setSelectAll(false);
-  }, [categories]);
 
   // Update local search when prop changes
   useEffect(() => {
@@ -232,34 +218,40 @@ function Categories({
               <p className='text-muted' style={{ fontSize: "10.5px" }}>Use this form to update category details</p>
             </Col>
             <Col>
-             {/* Table Controls */}
-          <TableControls
-            // Pagination props
-            itemsPerPage={perPage}
-            onItemsPerPageChange={handlePerPageChange}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            onPageChange={onPageChange}
-            
-            // Search props
-            searchValue={localSearch}
-            onSearchChange={handleSearchChange}
-            searchPlaceholder="Search categories..."
-            
-            // Download props
-            onDownloadPDF={handleDownloadPDF}
-            onDownloadExcel={handleDownloadExcel}
-            onDownloadCSV={handleDownloadCSV}
-            dataType="categories"
-            
-            // Additional options
-            showPerPage={true}
-            showDownload={true}
-            showSearch={true}
-            // Add this to force show arrows
-            showPagination={true}
-          /></Col>
+              {/* Table Controls */}
+              <TableControls
+                // Pagination props
+                itemsPerPage={perPage}
+                onItemsPerPageChange={handlePerPageChange}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                onPageChange={onPageChange}
+                
+                // Search props
+                searchValue={localSearch}
+                onSearchChange={handleSearchChange}
+                searchPlaceholder="Search categories..."
+                
+                // Download props
+                onDownloadPDF={handleDownloadPDF}
+                onDownloadExcel={handleDownloadExcel}
+                onDownloadCSV={handleDownloadCSV}
+                dataType="categories"
+                
+                // Bulk actions
+                selectedCount={selectedCategories.length}
+                onBulkDelete={handleBulkDeleteClick}
+                showBulkActions={selectedCategories.length > 0}
+                bulkEntityName="categories"
+                
+                // Additional options
+                showPerPage={true}
+                showDownload={true}
+                showSearch={true}
+                showPagination={true}
+              />
+            </Col>
           </Row>
         </Card.Header>
 
@@ -280,6 +272,7 @@ function Categories({
               </Button>
             </Alert>
           )}
+          
           {/* Categories Table */}
           {loading ? (
             <div className="text-center py-5">
@@ -294,10 +287,10 @@ function Categories({
                 <Table striped bordered hover style={{border:"2px solid"}}>
                   <thead>
                     <tr>
-                      <th >
+                      <th>
                         <Form.Check
                           type="checkbox"
-                          checked={selectAll}
+                          checked={selectAllCategories}
                           onChange={handleSelectAll}
                           style={{ 
                             fontSize: "14px",
@@ -306,17 +299,17 @@ function Categories({
                           }}
                         />
                       </th>
-                      <th >Image</th>
+                      <th>Image</th>
                       <th>Name</th>
                       <th>Description</th>
-                      <th >Status</th>
-                      <th >Actions</th>
+                      <th>Status</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredCategories.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="text-center py-4">
+                        <td colSpan={6} className="text-center py-4">
                           <div className="mb-3">
                             <i className="bi bi-search" style={{ fontSize: '48px', color: '#6c757d' }}></i>
                           </div>
@@ -427,7 +420,6 @@ function Categories({
                                   size="sm"
                                   onClick={() => onEdit && onEdit(category)}
                                   title="Edit Category"
-                                  
                                 >
                                   <MdModeEdit />
                                 </Button>
@@ -436,7 +428,6 @@ function Categories({
                                   size="sm"
                                   onClick={() => handleViewCategory(category)}
                                   title="View Category Details"
-                                  
                                 >
                                   <IoEyeSharp />
                                 </Button>
@@ -445,7 +436,6 @@ function Categories({
                                   size="sm"
                                   onClick={() => onDelete && onDelete(category._id)}
                                   title="Delete Category"
-                                  
                                 >
                                   <MdOutlineDelete />
                                 </Button>
@@ -489,7 +479,9 @@ function Categories({
 
       {/* Category Details Modal */}
       <Modal show={showCategoryModal} onHide={() => setShowCategoryModal(false)} centered>
-        <Button type="button" onClick={() => setShowUserDetails(false)} className="position-absolute border-0 justify-content-center closebtn p-0">X</Button>
+        <Modal.Header closeButton>
+          <Modal.Title>Category Details</Modal.Title>
+        </Modal.Header>
         <Modal.Body>
           {selectedCategory && (
             <div>
@@ -602,7 +594,6 @@ function Categories({
               }
             }}
           >
-            
             Edit
           </Button>
         </Modal.Footer>
