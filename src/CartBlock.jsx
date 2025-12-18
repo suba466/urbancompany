@@ -128,14 +128,6 @@ function CartBlock({
                   <Button
                     className="text-start fw-semibold mt-2 editbtn"
                     onClick={() => onEdit(c)}
-                    style={{
-                      backgroundColor: "transparent",
-                      border: "1px solid #8b5cf6",
-                      color: "#8b5cf6",
-                      padding: "4px 12px",
-                      fontSize: "12px",
-                      borderRadius: "6px"
-                    }}
                   >
                     Edit
                   </Button>
@@ -151,9 +143,6 @@ function CartBlock({
                 height: "36px", 
                 fontSize: "12px", 
                 marginTop: "10px",
-                backgroundColor: "#8b5cf6",
-                border: "none",
-                borderRadius: "8px"
               }}
               onClick={() => navigate("/cart")}
             >

@@ -9,6 +9,8 @@ import { MdOutlineDelete } from "react-icons/md";
 import { FcBusinessman, FcPlanner, FcBullish, FcSupport } from "react-icons/fc";
 import Categories from './Categories';
 import CategoryForm from './CategoryForm';
+import SubcategoryForm from './SubcategoryForm';
+import Subcategories from './Subcategories';
 import { IoEyeSharp } from "react-icons/io5";
 import TableControls from './TableControls';
 import { 
@@ -136,6 +138,18 @@ function AdminPanel() {
     order: 0,
     isActive: true
   });
+
+  // Subcategory States
+  const [subcategories, setSubcategories] = useState([]);
+  const [selectedSubcategories, setSelectedSubcategories] = useState([]);
+  const [selectAllSubcategories, setSelectAllSubcategories] = useState(false);
+  const [showAddSubcategoryForm, setShowAddSubcategoryForm] = useState(false);
+  const [subcategoryEditId, setSubcategoryEditId] = useState(null);
+  const [subcategorySearch, setSubcategorySearch] = useState('');
+  const [subcategoryPage, setSubcategoryPage] = useState(1);
+  const [subcategoryTotalPages, setSubcategoryTotalPages] = useState(1);
+  const [subcategoryPerPage, setSubcategoryPerPage] = useState(10);
+  const [subcategoryTotalItems, setSubcategoryTotalItems] = useState(0);
   
   // Product Management States (Packages)
   const [products, setProducts] = useState([]);
@@ -578,6 +592,147 @@ function AdminPanel() {
       setCategories([]);
     }
   };
+  
+  // Fetch subcategories function
+  const fetchSubcategories = async (page = 1, search = '', perPage = subcategoryPerPage) => {
+    try {
+      console.log(`Fetching subcategories... Page: ${page}, Search: ${search}, PerPage: ${perPage}`);
+      
+      let url = `http://localhost:5000/api/admin/subcategories?page=${page}&limit=${perPage}&sort=-createdAt`;
+      
+      if (search) {
+        url += `&search=${encodeURIComponent(search)}`;
+      }
+      
+      const response = await fetch(url, {
+        headers: getAuthHeaders()
+      });
+      
+      if (!response.ok) {
+        console.error("Failed to fetch subcategories:", response.status);
+        setSubcategories([]);
+        return;
+      }
+      
+      const data = await response.json();
+      console.log("Subcategories API response:", data);
+      
+      if (data.success && data.subcategories && Array.isArray(data.subcategories)) {
+        console.log(`Found ${data.subcategories.length} subcategories`);
+        
+        const formattedSubcategories = data.subcategories.map(sub => ({
+          ...sub,
+          img: sub.img || '/assets/default-subcategory.png',
+          categoryName: sub.categoryId?.name || sub.categoryName || 'Unknown'
+        }));
+        
+        setSubcategories(formattedSubcategories);
+        
+        // Set pagination data if available
+        if (data.pagination) {
+          setSubcategoryTotalPages(data.pagination.pages || 1);
+          setSubcategoryTotalItems(data.pagination.total || 0);
+          setSubcategoryPerPage(data.pagination.limit || perPage);
+          setSubcategoryPage(data.pagination.page || page);
+        }
+      } else {
+        console.error("Invalid response format:", data);
+        setSubcategories([]);
+      }
+    } catch (error) {
+      console.error('Error fetching subcategories:', error);
+      setSubcategories([]);
+    }
+  };
+
+  // Subcategory selection handlers
+  const handleSubcategorySelect = (subcategoryId) => {
+    setSelectedSubcategories(prev => {
+      if (prev.includes(subcategoryId)) {
+        return prev.filter(id => id !== subcategoryId);
+      } else {
+        return [...prev, subcategoryId];
+      }
+    });
+  };
+
+  const handleSelectAllSubcategories = () => {
+    if (selectAllSubcategories) {
+      setSelectedSubcategories([]);
+    } else {
+      setSelectedSubcategories(subcategories.map(s => s._id));
+    }
+    setSelectAllSubcategories(!selectAllSubcategories);
+  };
+
+  // Update subcategory status
+  const updateSubcategoryStatus = async (subcategoryId, isActive) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/admin/subcategories/${subcategoryId}/toggle-status`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ isActive })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        fetchSubcategories(subcategoryPage, subcategorySearch, subcategoryPerPage);
+      } else {
+        console.error("Failed to update subcategory status:", data.error);
+      }
+    } catch (error) {
+      console.error('Error updating subcategory status:', error);
+    }
+  };
+
+  // Delete subcategory
+  const deleteSubcategory = async (subcategoryId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/admin/subcategories/${subcategoryId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        alert('Subcategory deleted successfully');
+        fetchSubcategories(subcategoryPage, subcategorySearch, subcategoryPerPage);
+      } else {
+        alert(data.error || 'Failed to delete subcategory');
+      }
+    } catch (error) {
+      console.error('Error deleting subcategory:', error);
+      alert('Failed to delete subcategory');
+    }
+  };
+
+  // Bulk delete subcategories
+  const handleBulkDeleteSubcategories = async (selectedIds) => {
+    if (selectedIds.length === 0) return;
+    
+    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} subcategory(ies)?`)) {
+      try {
+        const response = await fetch('http://localhost:5000/api/admin/subcategories/bulk-delete', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ ids: selectedIds })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          alert(`Successfully deleted ${data.deletedCount} subcategory(ies)`);
+          setSelectedSubcategories([]);
+          setSelectAllSubcategories(false);
+          fetchSubcategories(subcategoryPage, subcategorySearch, subcategoryPerPage);
+        } else {
+          alert(data.error || 'Failed to delete subcategories');
+        }
+      } catch (error) {
+        console.error('Error bulk deleting subcategories:', error);
+        alert('Failed to delete subcategories');
+      }
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -900,6 +1055,8 @@ function AdminPanel() {
       'manage-customers': 'Customer',
       'add-category': 'Category',
       'manage-categories': 'Category',
+      'add-subcategory': 'Category',
+      'manage-subcategories': 'Category',
       'add-product': 'Product',
       'manage-products': 'Product',
       'bookings': 'Bookings',
@@ -964,6 +1121,12 @@ function AdminPanel() {
       });
     }
     
+    // Reset subcategory edit state
+    if (menu !== 'add-subcategory') {
+      setSubcategoryEditId(null);
+      setShowAddSubcategoryForm(false);
+    }
+    
     // Fetch data based on menu
     switch(menu) {
       case 'dashboard':
@@ -988,6 +1151,14 @@ function AdminPanel() {
       case 'manage-categories':
         setShowAddCategoryModal(false);
         fetchCategories();
+        break;
+      case 'add-subcategory':
+        setShowAddSubcategoryForm(true);
+        fetchCategories();
+        break;
+      case 'manage-subcategories':
+        setShowAddSubcategoryForm(false);
+        fetchSubcategories();
         break;
       case 'add-product':
         setShowAddProductModal(true);
@@ -1262,27 +1433,6 @@ function AdminPanel() {
     }
   };
 
-  const updateBookingStatus = async (bookingId, status) => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/admin/bookings/${bookingId}/status`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ status })
-      });
-      const data = await response.json();
-      if (data.success) {
-        alert('Booking status updated successfully');
-        fetchBookings(bookingPage, bookingSearch, bookingStatus, bookingPerPage);
-        fetchDashboardData();
-      } else {
-        alert(data.error || 'Failed to update booking status');
-      }
-    } catch (error) {
-      console.error('Error updating booking status:', error);
-      alert('Failed to update booking status');
-    }
-  };
-
   const deleteBooking = async (bookingId) => {
     if (window.confirm('Are you sure you want to delete this booking?')) {
       try {
@@ -1524,8 +1674,8 @@ function AdminPanel() {
               <Dropdown.Toggle 
                 as={Nav.Link} 
                 style={{ 
-                  color: ['add-category', 'manage-categories'].includes(activeMenu) ? '#000' : 'white',
-                  background: ['add-category', 'manage-categories'].includes(activeMenu) ? 'white' : 'transparent',
+                  color: ['add-category', 'manage-categories', 'add-subcategory', 'manage-subcategories'].includes(activeMenu) ? '#000' : 'white',
+                  background: ['add-category', 'manage-categories', 'add-subcategory', 'manage-subcategories'].includes(activeMenu) ? 'white' : 'transparent',
                   borderRadius: '8px',
                   padding: '10px 15px',
                   display: 'flex',
@@ -1546,6 +1696,13 @@ function AdminPanel() {
                 )}
                 <Dropdown.Item onClick={() => handleMenuClick('manage-categories')}>
                   <i className="bi bi-folder-fill me-2"></i>Manage Categories
+                </Dropdown.Item>
+                <Dropdown.Divider />
+                <Dropdown.Item onClick={() => handleMenuClick('add-subcategory')}>
+                  <i className="bi bi-folder-plus me-2"></i>Add Subcategory
+                </Dropdown.Item>
+                <Dropdown.Item onClick={() => handleMenuClick('manage-subcategories')}>
+                  <i className="bi bi-folder-symlink-fill me-2"></i>Manage Subcategories
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
@@ -1682,6 +1839,8 @@ function AdminPanel() {
       'manage-customers': 'Customer',
       'add-category': 'Category',
       'manage-categories': 'Category',
+      'add-subcategory': 'Category',
+      'manage-subcategories': 'Category',
       'add-product': 'Product',
       'manage-products': 'Product',
       'bookings': 'Bookings',
@@ -2964,7 +3123,144 @@ function AdminPanel() {
               handleMenuClick('manage-categories');
             }}
           />
-        );     
+        );
+
+      case 'add-subcategory':
+        if (!hasPermission('Category')) {
+          return (
+            <Card className="border-0 shadow-sm">
+              <Card.Body className="text-center py-5">
+                <h3 className="text-danger">Access Denied</h3>
+                <p>You don't have permission to add subcategories.</p>
+              </Card.Body>
+            </Card>
+          );
+        }
+        
+        return (
+          <div className="p-3">
+            <Card className="shadow-lg">
+              <Card.Body style={{ marginLeft: "23px", marginRight: "10px" }}>
+                <h5 className="mb-0 fw-semibold">
+                  Subcategory Management
+                  <span className="text-muted mx-2" style={{ fontSize: "14px", fontWeight: "normal" }}>•</span>
+                  <span className="text-muted" style={{ fontSize: "14px", fontWeight: "normal" }}>
+                    {subcategoryEditId ? 'Edit Subcategory' : 'Add New Subcategory'}
+                  </span>
+                </h5>
+              </Card.Body>
+            </Card>
+            <br />
+            <SubcategoryForm
+              categories={categories.filter(cat => cat.isActive)}
+              subcategoryData={subcategoryEditId ? subcategories.find(s => s._id === subcategoryEditId) : null}
+              onSubmit={async (formData, imageFile) => {
+                try {
+                  const formDataToSend = new FormData();
+                  formDataToSend.append('name', formData.name);
+                  formDataToSend.append('categoryId', formData.categoryId);
+                  formDataToSend.append('description', formData.description);
+                  formDataToSend.append('key', formData.key || formData.name.toLowerCase().replace(/ /g, '-'));
+                  formDataToSend.append('order', formData.order || 0);
+                  formDataToSend.append('isActive', formData.isActive !== undefined ? formData.isActive : true);
+                  
+                  if (imageFile) {
+                    formDataToSend.append('image', imageFile);
+                  } else if (subcategoryEditId) {
+                    const existingSub = subcategories.find(s => s._id === subcategoryEditId);
+                    if (existingSub && existingSub.img) {
+                      formDataToSend.append('img', existingSub.img);
+                    }
+                  }
+
+                  const url = subcategoryEditId 
+                    ? `http://localhost:5000/api/admin/subcategories/${subcategoryEditId}`
+                    : 'http://localhost:5000/api/admin/subcategories';
+                  
+                  const response = await fetch(url, {
+                    method: subcategoryEditId ? 'PUT' : 'POST',
+                    headers: { 
+                      'Authorization': `Bearer ${getAuthToken()}`
+                    },
+                    body: formDataToSend
+                  });
+                  
+                  const data = await response.json();
+                  if (data.success) {
+                    alert(`Subcategory ${subcategoryEditId ? 'updated' : 'added'} successfully!`);
+                    
+                    // Reset form and navigate back
+                    setSubcategoryEditId(null);
+                    setShowAddSubcategoryForm(false);
+                    fetchSubcategories();
+                    handleMenuClick('manage-subcategories');
+                  } else {
+                    alert(data.error || `Failed to ${subcategoryEditId ? 'update' : 'add'} subcategory`);
+                  }
+                } catch (error) {
+                  console.error(`Error ${subcategoryEditId ? 'updating' : 'adding'} subcategory:`, error);
+                  alert(`Failed to ${subcategoryEditId ? 'update' : 'add'} subcategory`);
+                }
+              }}
+              onCancel={() => {
+                setSubcategoryEditId(null);
+                setShowAddSubcategoryForm(false);
+                handleMenuClick('manage-subcategories');
+              }}
+            />
+          </div>
+        );
+
+      case 'manage-subcategories':
+        if (!hasPermission('Category')) {
+          return (
+            <Card className="border-0 shadow-sm">
+              <Card.Body className="text-center py-5">
+                <h3 className="text-danger">Access Denied</h3>
+                <p>You don't have permission to manage subcategories.</p>
+              </Card.Body>
+            </Card>
+          );
+        }
+        
+        return (
+          <Subcategories
+            subcategories={subcategories}
+            selectedSubcategories={selectedSubcategories}
+            selectAllSubcategories={selectAllSubcategories}
+            onSelect={handleSubcategorySelect}
+            onSelectAll={handleSelectAllSubcategories}
+            onEdit={(subcategory) => {
+              setSubcategoryEditId(subcategory._id);
+              setShowAddSubcategoryForm(true);
+              setActiveMenu('add-subcategory');
+            }}
+            onDelete={deleteSubcategory}
+            onBulkDelete={handleBulkDeleteSubcategories}
+            onToggleStatus={updateSubcategoryStatus}
+            currentPage={subcategoryPage}
+            totalPages={subcategoryTotalPages}
+            totalItems={subcategoryTotalItems}
+            onPageChange={(page) => {
+              setSubcategoryPage(page);
+              fetchSubcategories(page, subcategorySearch, subcategoryPerPage);
+            }}
+            searchQuery={subcategorySearch}
+            onSearchChange={(value) => {
+              setSubcategorySearch(value);
+              fetchSubcategories(1, value, subcategoryPerPage);
+            }}
+            itemsPerPage={subcategoryPerPage}
+            onItemsPerPageChange={(perPage) => {
+              setSubcategoryPerPage(perPage);
+              fetchSubcategories(1, subcategorySearch, perPage);
+            }}
+            onAddSubcategory={() => {
+              setShowAddSubcategoryForm(true);
+              setActiveMenu('add-subcategory');
+            }}
+          />
+        );
         
       case 'add-product':
         if (!hasPermission('Product')) {

@@ -82,6 +82,11 @@ const packageSchema = new mongoose.Schema({
   duration: String,
   description: String,
   category: String,
+  subcategory: String,
+  subcategoryId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Subcategory' 
+  },
   items: [{ text: String, description: String }],
   content: [{ value: String, details: String }],
   ratingBreak: [{ stars: Number, value: Number, count: String }]
@@ -102,7 +107,7 @@ const cartSchema = new mongoose.Schema({
 
 const Cart = mongoose.models.Cart || mongoose.model("Cart", cartSchema);
 
-// Category Schema
+// Category Schema (Updated with subcategories)
 const categorySchema = new mongoose.Schema({
   name: String,
   key: String,
@@ -110,10 +115,34 @@ const categorySchema = new mongoose.Schema({
   description: String,
   isActive: { type: Boolean, default: true },
   order: { type: Number, default: 0 },
+  hasSubcategories: { type: Boolean, default: false },
+  subcategories: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Subcategory'
+  }],
   createdAt: { type: Date, default: Date.now }
 });
 
 const Category = mongoose.models.Category || mongoose.model("Category", categorySchema);
+
+// Subcategory Schema
+const subcategorySchema = new mongoose.Schema({
+  name: String,
+  key: String,
+  categoryId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Category' 
+  },
+  categoryName: String,
+  description: String,
+  img: { type: String, default: "/assets/default-subcategory.png" },
+  isActive: { type: Boolean, default: true },
+  order: { type: Number, default: 0 },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+const Subcategory = mongoose.models.Subcategory || mongoose.model("Subcategory", subcategorySchema);
 
 // Customer Schema
 const customerSchema = new mongoose.Schema({
@@ -129,7 +158,7 @@ const customerSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-// User Schema (Changed from Staff to User)
+// User Schema
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
@@ -153,11 +182,7 @@ const userSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-// Check if models already exist before creating
-const Customer = mongoose.models.Customer || mongoose.model("Customer", customerSchema);
-const User = mongoose.models.User || mongoose.model("User", userSchema);
-
-// --- Bookings Schema ---
+// Booking Schema
 const bookingSchema = new mongoose.Schema({
   customerId: String,
   customerEmail: String,
@@ -188,10 +213,11 @@ const bookingSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const Customer = mongoose.models.Customer || mongoose.model("Customer", customerSchema);
+const User = mongoose.models.User || mongoose.model("User", userSchema);
 const Booking = mongoose.models.Booking || mongoose.model("Booking", bookingSchema);
 
-
-
+// Admin Routes
 app.use("/api/admin", adminRoutes);
 app.get("/api/debug-categories", async (req, res) => {
   try {
@@ -234,116 +260,6 @@ app.get("/api/debug-categories", async (req, res) => {
   }
 });
 
-// ============================================
-// FIX: Seed Categories Endpoint
-// ============================================
-app.post("/api/seed-categories", async (req, res) => {
-  try {
-    console.log("=== SEEDING: Creating sample categories ===");
-    
-    const sampleCategories = [
-      {
-        name: "Salon for women",
-        key: "salon",
-        description: "Hair, beauty & salon services",
-        img: "/assets/salon.webp",
-        order: 1,
-        isActive: true
-      },
-      {
-        name: "AC & Appliance Repair",
-        key: "ac",
-        description: "AC, refrigerator & appliance services",
-        img: "/assets/ac.webp",
-        order: 2,
-        isActive: true
-      },
-      {
-        name: "Cleaning",
-        key: "clean",
-        description: "Home & office cleaning services",
-        img: "/assets/clean.webp",
-        order: 3,
-        isActive: true
-      },
-      {
-        name: "Electrician, Plumber & Carpenters",
-        key: "electric",
-        description: "Repair & installation services",
-        img: "/assets/electric.webp",
-        order: 4,
-        isActive: true
-      },
-      {
-        name: "Native Water Purifier",
-        key: "native",
-        description: "Water purifier installation & repair",
-        img: "/assets/native.webp",
-        order: 5,
-        isActive: true
-      }
-    ];
-    
-    let created = 0;
-    let updated = 0;
-    let results = [];
-    
-    for (const catData of sampleCategories) {
-      // Check if category already exists
-      const exists = await Category.findOne({ 
-        $or: [
-          { key: catData.key },
-          { name: catData.name }
-        ]
-      });
-      
-      if (!exists) {
-        const category = new Category(catData);
-        await category.save();
-        created++;
-        results.push({ action: "created", name: catData.name });
-        console.log(`✓ Created category: ${catData.name}`);
-      } else {
-        // Update existing to ensure it's active
-        await Category.findOneAndUpdate(
-          { _id: exists._id },
-          { 
-            ...catData, 
-            isActive: true,
-            updatedAt: new Date()
-          },
-          { new: true }
-        );
-        updated++;
-        results.push({ action: "updated", name: catData.name });
-        console.log(`✓ Updated category: ${catData.name}`);
-      }
-    }
-    
-    // Verify the seeding worked
-    const totalCategories = await Category.countDocuments({ isActive: true });
-    
-    res.json({
-      success: true,
-      message: `Categories seeded successfully!`,
-      details: {
-        created,
-        updated,
-        totalActive: totalCategories,
-        results
-      },
-      action: "Visit /api/categories to see the results"
-    });
-    
-  } catch (error) {
-    console.error("Error seeding categories:", error);
-    res.status(500).json({ 
-      success: false,
-      error: error.message,
-      suggestion: "Make sure MongoDB is running on localhost:27017"
-    });
-  }
-});
 
 // User Login
 app.post("/api/user-login", async (req, res) => {
@@ -1154,6 +1070,8 @@ app.delete("/api/categories/:id", async (req, res) => {
   }
 });
 
+
+
 // ---------- Banner Routes ----------
 app.get("/api/banner", async (req, res) => {
   try {
@@ -1570,6 +1488,77 @@ app.get("/api/packages/:category", async (req, res) => {
   }
 });
 
+app.get("/api/subcategories", async (req, res) => {
+  try {
+    const subcategories = await Subcategory.find({ isActive: true })
+      .sort({ order: 1, name: 1 })
+      .populate('categoryId', 'name key');
+    
+    res.json({ 
+      success: true,
+      subcategories: subcategories || [],
+      count: subcategories ? subcategories.length : 0
+    });
+  } catch (error) {
+    console.error("Error fetching subcategories:", error);
+    res.status(500).json({ error: "Failed to fetch subcategories" });
+  }
+});
+
+app.get("/api/subcategories/:categoryKey", async (req, res) => {
+  try {
+    const { categoryKey } = req.params;
+    
+    // Find category by key
+    const category = await Category.findOne({ key: categoryKey });
+    if (!category) {
+      return res.status(404).json({ error: "Category not found" });
+    }
+    
+    const subcategories = await Subcategory.find({ 
+      categoryId: category._id,
+      isActive: true 
+    }).sort({ order: 1, name: 1 });
+    
+    res.json({ 
+      success: true,
+      subcategories: subcategories || [],
+      categoryName: category.name,
+      count: subcategories ? subcategories.length : 0
+    });
+  } catch (error) {
+    console.error("Error fetching subcategories by category:", error);
+    res.status(500).json({ error: "Failed to fetch subcategories" });
+  }
+});
+
+// Get packages by subcategory
+app.get("/api/packages/subcategory/:subcategoryKey", async (req, res) => {
+  try {
+    const { subcategoryKey } = req.params;
+    
+    const subcategory = await Subcategory.findOne({ key: subcategoryKey });
+    if (!subcategory) {
+      return res.status(404).json({ error: "Subcategory not found" });
+    }
+    
+    const packages = await Package.find({ 
+      subcategoryId: subcategory._id,
+      category: subcategory.categoryName 
+    });
+    
+    res.json({ 
+      success: true,
+      packages: packages || [],
+      subcategoryName: subcategory.name,
+      count: packages ? packages.length : 0
+    });
+  } catch (error) {
+    console.error("Error fetching packages by subcategory:", error);
+    res.status(500).json({ error: "Failed to fetch packages" });
+  }
+});
+
 // Health check endpoint
 app.get("/api/health", (req, res) => {
   res.json({ 
@@ -1599,5 +1588,5 @@ app.use((req, res) => {
 
 app.listen(PORT, () => {
   console.log(`=== Server running on http://localhost:${PORT} ===`);
-  console.log(`=== Categories will be auto-initialized ===`);
+ 
 });

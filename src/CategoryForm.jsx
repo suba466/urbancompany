@@ -136,31 +136,7 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
                   />
                 </Form.Group>
               </Col>
-              
-              {/* Key Field */}
               <Col md={6}>
-                <Form.Group className="mb-4">
-                  <Form.Control
-                    type="text"
-                    value={formData.key}
-                    onChange={(e) => setFormData({...formData, key: e.target.value})}
-                    placeholder="URL Key (auto-generated)"
-                    style={{ 
-                      border: "2px solid #000000",
-                      borderRadius: "5px", 
-                      height:"45px"
-                    }}
-                  />
-                  <small className="text-muted">
-                    Leave empty to auto-generate from category name
-                  </small>
-                </Form.Group>
-              </Col>
-            </Row>
-
-            {/* Description Field - Full Width */}
-            <Row className="mb-3">
-              <Col md={12}>
                 <Form.Group className="mb-4">
                   <Form.Control
                     type="text"
@@ -177,41 +153,6 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
               </Col>
             </Row>
             
-            {/* Order Field */}
-            <Row className="mb-3">
-              <Col md={6}>
-                <Form.Group className="mb-4">
-                  <Form.Control
-                    type="number"
-                    value={formData.order}
-                    onChange={(e) => setFormData({...formData, order: parseInt(e.target.value) || 0})}
-                    placeholder="Order"
-                    style={{ 
-                      border: "2px solid #000000",
-                      borderRadius: "5px",
-                      height:"45px"
-                    }}
-                  />
-                  <small className="text-muted">
-                    Display order (lower numbers appear first)
-                  </small>
-                </Form.Group>
-              </Col>
-              
-              {/* Active Status */}
-              <Col md={6}>
-                <Form.Group className="mb-4">
-                  <Form.Check
-                    type="switch"
-                    id="category-active"
-                    label="Active Category"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
-                    className="mt-3"
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
             
             {/* Image Upload Section */}
             <div className="mb-3">

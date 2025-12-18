@@ -479,10 +479,9 @@ function Categories({
 
       {/* Category Details Modal */}
       <Modal show={showCategoryModal} onHide={() => setShowCategoryModal(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Category Details</Modal.Title>
-        </Modal.Header>
         <Modal.Body>
+          <Button type="button" onClick={() => setShowCategoryModal(false)} className="position-absolute border-0 justify-content-center closebtn p-0">X</Button>
+          <Modal.Title>Category Details</Modal.Title>
           {selectedCategory && (
             <div>
               <div className="text-center mb-4">
@@ -492,8 +491,8 @@ function Categories({
                       src={`http://localhost:5000${selectedCategory.img}`} 
                       alt={selectedCategory.name}
                       style={{ 
-                        width: '150px', 
-                        height: '150px', 
+                        width: '100px', 
+                        height: '100px', 
                         objectFit: 'cover',
                         borderRadius: '12px',
                         border: '3px solid #dee2e6'
@@ -518,7 +517,7 @@ function Categories({
                     </div>
                   )}
                 </div>
-                <h4 className="mb-1">{selectedCategory.name}</h4>
+                <h5 className="mb-1">{selectedCategory.name}</h5>
               </div>
 
               <div className="list-group list-group-flush">

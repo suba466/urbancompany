@@ -59,11 +59,6 @@ function Banner() {
         });
         
         setCategories(sortedCategories);
-        
-        // Show message if no categories
-        if (sortedCategories.length === 0) {
-          setError("No categories currently available");
-        }
       } else {
         console.warn("No categories array in response:", data);
         setCategories([]);
@@ -83,54 +78,35 @@ function Banner() {
     fetchCategories();
   }, []);
 
-  // Handle category click
-  const handleCategoryClick = (category) => {
-    console.log("Category clicked:", {
-      name: category.name,
-      key: category.key
-    });
-    
-    if (category.key) {
-      switch(category.key.toLowerCase()) {
-        case 'salon':
-          navigate("/salon");
-          break;
-        case 'ac':
-          navigate("/ac-repair");
-          break;
-        case 'clean':
-          navigate("/cleaning");
-          break;
-        case 'electric':
-          navigate("/electrician");
-          break;
-        case 'native':
-          navigate("/water-purifier");
-          break;
-        case 'plumbing':
-          navigate("/plumbing");
-          break;
-        default:
-          navigate("/categories");
-      }
-    } else if (category.name) {
-      if (category.name.toLowerCase().includes("salon")) {
-        navigate("/salon");
-      } else if (category.name.toLowerCase().includes("ac")) {
-        navigate("/ac-repair");
-      } else if (category.name.toLowerCase().includes("clean")) {
-        navigate("/cleaning");
-      } else if (category.name.toLowerCase().includes("electric")) {
-        navigate("/electrician");
-      } else if (category.name.toLowerCase().includes("water")) {
-        navigate("/water-purifier");
-      } else {
-        navigate("/categories");
-      }
-    } else {
-      navigate("/categories");
+const ROUTE_MAPPINGS = {
+  'salon': '/salon',
+  'ac': '/ac-repair',
+  'clean': '/cleaning',
+  'electric': '/electrician',
+  'water': '/water-purifier',
+  'plumb': '/plumbing' 
+};
+
+// Then update handleCategoryClick:
+const handleCategoryClick = (category) => {
+  console.log("Category clicked:", { name: category.name });
+  
+  if (!category.name) {
+    navigate("/categories");
+    return;
+  }
+  const nameLower = category.name.toLowerCase();
+  // Check each route mapping
+  for (const [keyword, route] of Object.entries(ROUTE_MAPPINGS)) {
+    if (nameLower.includes(keyword)) {
+      navigate(route);
+      return;
     }
-  };
+  }
+  
+  // Default fallback
+  navigate("/categories");
+};
 
   if (loading) {
     return (
@@ -334,7 +310,7 @@ function Banner() {
             {secondRow.map((c, index) => (
               <div
                 key={c._id || index}
-                className="categories second-row-item d-flex flex-column align-items-center position-relative"
+                className=" second-row-item d-flex flex-column align-items-center position-relative"
                 onClick={() => handleCategoryClick(c)}
               >
                 <div className="img-box w-100 d-flex justify-content-center align-items-center">
