@@ -833,14 +833,6 @@ const initializeStaticData = () => {
         { key:"cleanup", img:"/assets/cleanup.png" },
         { key:"haircare", img:"/assets/haircare.png" }
       ],
-      salonforwomen: [
-        { name:"Super saver packages", key:"super", img:"/assets/super.webp" },
-        { name:"Waxing & threading", key:"thread", img:"/assets/thread.webp" },
-        { name:"Signature facial", key:"signature", img:"/assets/signature.webp" },
-        { name:"Cleanup", key:"cleanup", img:"/assets/cleanup.webp" },
-        { name:"Pedicure & manicure", key:"cure", img:"/assets/cure.webp" },
-        { name:"Hair, bleach & detan", key:"hairbleach", img:"/assets/hairbleach.webp" }
-      ],
       advanced: [
         { price:"₹799", value:"₹1,098", title:"Roll-on waxing", tit:"Full arms, legs & underarms", text:"Extra 25% off for new users*", key:"facial", img:"/assets/facial.jpg" },
         { pri:"Just launched", title:"Advanced tools", tit:"& ingredients", text:"Facial & clean", key:"advanced", img:"/assets/advanced.jpg" }
@@ -1179,7 +1171,7 @@ app.get("/api/static-data", (req, res) => {
 // Updated static routes with categories
 const staticRoutes = [
   'logo','logo1', 'categories', 'banner', 'carousel', 'book', 'salon', 
-  'salonforwomen', 'advanced', 'super', 'smartlock', 'images', 
+   'advanced', 'super', 'smartlock', 'images', 
   'cart', 'added', 'upi', 'card', 'net'
 ];
 

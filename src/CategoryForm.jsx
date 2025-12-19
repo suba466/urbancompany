@@ -77,6 +77,11 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
     }
   };
 
+  // Trigger file input click
+  const triggerFileInput = () => {
+    document.getElementById('categoryImageUpload').click();
+  };
+
   return (
     <div className="p-3">
       <Card className="shadow-lg">
@@ -128,11 +133,7 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
                     required
                     placeholder="Category name"
-                    style={{ 
-                      border: "2px solid #000000",
-                      borderRadius: "5px",
-                      height:"45px"
-                    }}
+                    className='cate'
                   />
                 </Form.Group>
               </Col>
@@ -143,109 +144,107 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
                     placeholder="Description"
-                    style={{ 
-                      border: "2px solid #000000",
-                      borderRadius: "5px", 
-                      height:"45px"
-                    }}
+                    className='cate'
                   />
                 </Form.Group>
               </Col>
             </Row>
             
-            
-            {/* Image Upload Section */}
-            <div className="mb-3">
-              <Form.Group>
-                <Form.Label className="fw-semibold mb-3 d-block text-center">Category Image</Form.Label>
-                <div className="d-flex justify-content-center">
-                  <div style={{ 
-                    width: '100%',
-                    maxWidth: '400px'
-                  }}>
+            {/* Image Upload Section - Made consistent with SubcategoryForm */}
+            <Row className="mb-3">
+              <Col md={12}>
+                <Form.Group className="mb-4">
+                  <Form.Label className="fw-semibold mb-3 d-block text-center">
+                    Category Image
+                  </Form.Label>
+                  <div className="d-flex justify-content-center">
                     <div style={{ 
-                      border: "2px dashed #000000",
-                      borderRadius: "12px",
-                      backgroundColor: "#f8f9fa",
-                      marginBottom: "15px",
-                      overflow: 'hidden'
+                      width: '100%',
+                      maxWidth: '400px'
                     }}>
-                      {previewUrl ? (
-                        <div className="text-center p-3">
-                          <img 
-                            src={previewUrl} 
-                            alt="Preview" 
+                      {/* Make the entire dashed box clickable */}
+                      <div 
+                        style={{ 
+                          border: "2px dashed #000000",
+                          borderRadius: "12px",
+                          backgroundColor: "#f8f9fa",
+                          marginBottom: "15px",
+                          overflow: 'hidden',
+                          cursor: 'pointer'  // Add cursor pointer to entire box
+                        }}
+                        onClick={triggerFileInput}  // Make entire box clickable
+                      >
+                        {previewUrl ? (
+                          <div className="text-center p-3">
+                            <img 
+                              src={previewUrl} 
+                              alt="Preview" 
+                              style={{ 
+                                width: '150px', 
+                                height: '150px', 
+                                objectFit: 'cover',
+                                borderRadius: '8px',
+                                border: "1px solid #dee2e6",
+                                margin: '10px auto'
+                              }}
+                            />
+                            <p 
+                              className="text-muted mb-0" 
+                              style={{ fontSize: '12px', cursor: 'pointer' }}
+                            >
+                              Click to change image
+                            </p>
+                          </div>
+                        ) : (
+                          <div 
+                            className="d-flex flex-column align-items-center justify-content-center p-4"
                             style={{ 
-                              width: '150px', 
-                              height: '150px', 
-                              objectFit: 'cover',
-                              borderRadius: '8px',
-                              border: "1px solid #dee2e6",
-                              margin: '10px auto'
+                              minHeight: '180px'
                             }}
-                          />
-                        </div>
-                      ) : (
-                        <div 
-                          className="d-flex flex-column align-items-center justify-content-center p-4"
-                          style={{ 
-                            minHeight: '180px',
-                            cursor: 'pointer'
-                          }}
-                          onClick={() => document.getElementById('imageUpload').click()}
-                        >
-                          <i 
-                            className="bi bi-cloud-arrow-up" 
-                            style={{ 
-                              fontSize: '40px', 
-                              color: '#6c757d',
-                              marginBottom: '10px'
-                            }}
-                          ></i>
-                          <p className="text-muted mb-1">Click to upload image</p>
-                          <p className="text-muted" style={{ fontSize: '12px' }}>
-                            JPG, PNG up to 5MB
-                          </p>
-                          <p className="text-muted" style={{ fontSize: '12px' }}>
-                            Recommended: 300x300px
-                          </p>
-                        </div>
-                      )}
+                          >
+                            <i 
+                              className="bi bi-cloud-arrow-up" 
+                              style={{ 
+                                fontSize: '40px', 
+                                color: '#6c757d',
+                                marginBottom: '10px'
+                              }}
+                            ></i>
+                            <p className="text-muted mb-1">Click to upload image</p>
+                            <p className="text-muted" style={{ fontSize: '12px' }}>
+                              JPG, PNG up to 5MB
+                            </p>
+                            <p className="text-muted" style={{ fontSize: '12px' }}>
+                              Recommended: 300x300px
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      
                       <Form.Control
-                        id="imageUpload"
+                        id="categoryImageUpload"
                         type="file"
                         accept="image/*"
                         onChange={handleImageChange}
                         className="d-none"
                       />
+                      
+                      {imageFile && (
+                        <p className="text-muted text-center mb-0" style={{ fontSize: '12px' }}>
+                          Selected: {imageFile.name}
+                        </p>
+                      )}
                     </div>
-                    
-                    <Button 
-                      variant="outline-dark" 
-                      className="w-100"
-                      onClick={() => document.getElementById('imageUpload').click()}
-                      style={{ 
-                        border: "2px solid #000000",
-                        height: '45px'
-                      }}
-                    >
-                      <i className="bi bi-upload me-2"></i>
-                      {previewUrl ? 'Change Image' : 'Upload Image'}
-                    </Button>
                   </div>
-                </div>
-              </Form.Group>
-            </div>
+                </Form.Group>
+              </Col>
+            </Row>
             
             <div className="d-flex justify-content-center gap-3 ">
               <Button 
                 variant="outline-dark" 
                 onClick={handleCancel}
-                style={{ 
-                  minWidth: '100px',
-                  borderRadius: "50px",
-                  height: '45px'
-                }}
+                className='cat'
               >
                 Cancel
               </Button>
@@ -253,11 +252,7 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
               <Button 
                 variant="dark" 
                 type="submit"
-                style={{ 
-                  minWidth: '100px',
-                  borderRadius: "50px",
-                  height: '45px'
-                }}
+                className='cat'
               >
                 <i className={`bi ${isEditing ? 'bi-pencil' : 'bi-plus-circle'} me-2`}></i>
                 {isEditing ? 'Update' : 'Submit'}

@@ -188,12 +188,9 @@ const Subcategories = ({
                   </th>
                   <th style={{ width: '80px' }}>Image</th>
                   <th>Name</th>
-                  <th>Key</th>
-                  <th>Parent Category</th>
+                  <th>Category</th>
                   <th>Description</th>
-                  <th style={{ width: '80px' }}>Order</th>
                   <th style={{ width: '100px' }}>Status</th>
-                  <th style={{ width: '120px' }}>Created</th>
                   <th style={{ width: '120px' }}>Actions</th>
                 </tr>
               </thead>
@@ -238,25 +235,6 @@ const Subcategories = ({
                                 height: '100%',
                                 objectFit: 'cover'
                               }}
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.parentElement.innerHTML = `
-                                  <div style="
-                                    width: 100%;
-                                    height: 100%;
-                                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: center;
-                                    color: white;
-                                    font-weight: bold;
-                                    font-size: 16px;
-                                    border-radius: 6px;
-                                  ">
-                                    ${subcategory.name.charAt(0).toUpperCase()}
-                                  </div>
-                                `;
-                              }}
                             />
                           ) : (
                             <div style={{
@@ -280,33 +258,20 @@ const Subcategories = ({
                         <strong>{subcategory.name}</strong>
                       </td>
                       <td>
-                        <code>{subcategory.key}</code>
-                      </td>
-                      <td>
-                        <Badge bg="info" className="me-1">
                           {subcategory.categoryName || 'Unknown'}
-                        </Badge>
                       </td>
                       <td>
                         <div className="text-truncate" style={{ maxWidth: '200px' }}>
                           {subcategory.description || 'No description'}
                         </div>
                       </td>
-                      <td className="text-center">
-                        {subcategory.order}
-                      </td>
                       <td>
                         <Form.Check
                           type="switch"
                           checked={subcategory.isActive}
                           onChange={() => onToggleStatus(subcategory._id, !subcategory.isActive)}
-                          label={subcategory.isActive ? 'Active' : 'Inactive'}
+                          label={subcategory.isActive ? 'Enable' : 'Disable'}
                         />
-                      </td>
-                      <td>
-                        <small className="text-muted">
-                          {new Date(subcategory.createdAt).toLocaleDateString()}
-                        </small>
                       </td>
                       <td>
                         <div className="d-flex gap-1">

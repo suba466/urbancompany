@@ -78,35 +78,35 @@ function Banner() {
     fetchCategories();
   }, []);
 
-const ROUTE_MAPPINGS = {
-  'salon': '/salon',
-  'ac': '/ac-repair',
-  'clean': '/cleaning',
-  'electric': '/electrician',
-  'water': '/water-purifier',
-  'plumb': '/plumbing' 
-};
+  const ROUTE_MAPPINGS = {
+    'salon': '/salon',
+    'ac': '/ac-repair',
+    'clean': '/cleaning',
+    'electric': '/electrician',
+    'water': '/water-purifier',
+    'plumb': '/plumbing' 
+  };
 
-// Then update handleCategoryClick:
-const handleCategoryClick = (category) => {
-  console.log("Category clicked:", { name: category.name });
-  
-  if (!category.name) {
-    navigate("/categories");
-    return;
-  }
-  const nameLower = category.name.toLowerCase();
-  // Check each route mapping
-  for (const [keyword, route] of Object.entries(ROUTE_MAPPINGS)) {
-    if (nameLower.includes(keyword)) {
-      navigate(route);
+  // Then update handleCategoryClick:
+  const handleCategoryClick = (category) => {
+    console.log("Category clicked:", { name: category.name });
+    
+    if (!category.name) {
+      navigate("/categories");
       return;
     }
-  }
-  
-  // Default fallback
-  navigate("/categories");
-};
+    const nameLower = category.name.toLowerCase();
+    // Check each route mapping
+    for (const [keyword, route] of Object.entries(ROUTE_MAPPINGS)) {
+      if (nameLower.includes(keyword)) {
+        navigate(route);
+        return;
+      }
+    }
+    
+    // Default fallback
+    navigate("/categories");
+  };
 
   if (loading) {
     return (
@@ -135,7 +135,52 @@ const handleCategoryClick = (category) => {
     );
   };
 
-  // Dynamic layout based on number of categories (EXACTLY like first code)
+  // Helper function to render a row with exactly 3 items
+  const renderThreeColumnRow = (rowCategories, rowIndex) => {
+    // Create array with 3 items, filling empty slots with null
+    const items = [];
+    for (let i = 0; i < 3; i++) {
+      if (i < rowCategories.length) {
+        items.push(rowCategories[i]);
+      } else {
+        items.push(null); // Empty slot
+      }
+    }
+    
+    return (
+      <div key={`row-${rowIndex}`} className="first-row d-flex">
+        {items.map((category, index) => {
+          // If category is null (empty slot), render empty div
+          if (!category) {
+            return (
+              <div
+                key={`empty-${rowIndex}-${index}`}
+                className="categories second-row-item"
+                style={{ width: '33.33%', visibility: 'hidden' }}
+              >
+                {/* Empty placeholder */}
+              </div>
+            );
+          }
+          
+          return (
+            <div
+              key={category._id || `category-${rowIndex}-${index}`}
+              className="categories second-row-item d-flex flex-column align-items-center position-relative"
+              onClick={() => handleCategoryClick(category)}
+            >
+              <div className="img-box w-100 d-flex justify-content-center align-items-center">
+                {renderCategoryImage(category)}
+              </div>
+              <p className="first-row-text text-center mb-0 mt-2">{category.name}</p>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // Dynamic layout based on number of categories
   const renderCategoriesGrid = () => {
     const totalCategories = categories.length;
     
@@ -155,27 +200,23 @@ const handleCategoryClick = (category) => {
             {categories.map((c, index) => (
               <div
                 key={c._id || index}
-                className=" first-row-item d-flex align-items-center justify-content-between"
+                className="first-row-item d-flex align-items-center justify-content-between"
                 onClick={() => handleCategoryClick(c)}>
                 <p className="first-row-text text-center mb-0">{c.name}</p>
                 {renderCategoryImage(c)}
               </div>
             ))}
           </div>
-          {/* Empty second row */}
-          <div className="first-row d-flex" style={{ visibility: 'hidden', height: '0' }}>
-            <div className="categories second-row-item" style={{ width: '33.33%' }}></div>
-            <div className="categories second-row-item" style={{ width: '33.33%' }}></div>
-            <div className="categories second-row-item" style={{ width: '33.33%' }}></div>
-          </div>
+          {/* Empty second row with 3 invisible items */}
+          {renderThreeColumnRow([], 1)}
         </>
       );
     }
     
-    // For 3 categories: show 2 in first row, 1 in second row
+    // For 3 categories: show 2 in first row, 1 in second row (with 2 empty spaces)
     if (totalCategories === 3) {
       const firstRow = categories.slice(0, 2);
-      const secondRow = categories.slice(2, 3);
+      const secondRow = categories.slice(2, 3); // Just 1 item
       
       return (
         <>
@@ -183,37 +224,23 @@ const handleCategoryClick = (category) => {
             {firstRow.map((c, index) => (
               <div
                 key={c._id || index}
-                className=" first-row-item d-flex align-items-center justify-content-between"
+                className="first-row-item d-flex align-items-center justify-content-between"
                 onClick={() => handleCategoryClick(c)}>
                 <p className="first-row-text text-center mb-0">{c.name}</p>
                 {renderCategoryImage(c)}
               </div>
             ))}
           </div>
-          <div className="first-row d-flex">
-            {secondRow.map((c, index) => (
-              <div
-                key={c._id || index}
-                className=" second-row-item d-flex flex-column align-items-center position-relative"
-                onClick={() => handleCategoryClick(c)}>
-                <div className="img-box w-100 d-flex justify-content-center align-items-center">
-                  {renderCategoryImage(c)}
-                </div>
-                <p className="first-row-text text-center mb-0 mt-2">{c.name}</p>
-              </div>
-            ))}
-            {/* Add empty items to complete the row */}
-            <div className="categories second-row-item" style={{ width: '33.33%', visibility: 'hidden' }}></div>
-            <div className="categories second-row-item" style={{ width: '33.33%', visibility: 'hidden' }}></div>
-          </div>
+          {/* Second row with 1 item and 2 empty spaces */}
+          {renderThreeColumnRow(secondRow, 1)}
         </>
       );
     }
     
-    // For 4 categories: show 2 in first row, 2 in second row
+    // For 4 categories: show 2 in first row, 2 in second row (with 1 empty space)
     if (totalCategories === 4) {
       const firstRow = categories.slice(0, 2);
-      const secondRow = categories.slice(2, 4);
+      const secondRow = categories.slice(2, 4); // 2 items
       
       return (
         <>
@@ -221,7 +248,7 @@ const handleCategoryClick = (category) => {
             {firstRow.map((c, index) => (
               <div
                 key={c._id || index}
-                className=" first-row-item d-flex align-items-center justify-content-between"
+                className="first-row-item d-flex align-items-center justify-content-between"
                 onClick={() => handleCategoryClick(c)}
                >
                 <p className="first-row-text text-center mb-0">{c.name}</p>
@@ -229,30 +256,16 @@ const handleCategoryClick = (category) => {
               </div>
             ))}
           </div>
-          <div className="first-row d-flex">
-            {secondRow.map((c, index) => (
-              <div
-                key={c._id || index}
-                className=" second-row-item d-flex flex-column align-items-center position-relative"
-                onClick={() => handleCategoryClick(c)}
-               >
-                <div className="img-box w-100 d-flex justify-content-center align-items-center">
-                  {renderCategoryImage(c)}
-                </div>
-                <p className="first-row-text text-center mb-0 mt-2">{c.name}</p>
-              </div>
-            ))}
-            {/* Add empty item to complete the row */}
-            <div className="categories second-row-item" style={{ width: '33.33%', visibility: 'hidden' }}></div>
-          </div>
+          {/* Second row with 2 items and 1 empty space */}
+          {renderThreeColumnRow(secondRow, 1)}
         </>
       );
     }
     
-    // For 5 categories: show 2 in first row, 3 in second row
+    // For 5 categories: show 2 in first row, 3 in second row (full row)
     if (totalCategories === 5) {
       const firstRow = categories.slice(0, 2);
-      const secondRow = categories.slice(2, 5);
+      const secondRow = categories.slice(2, 5); // 3 items
       
       return (
         <>
@@ -268,29 +281,29 @@ const handleCategoryClick = (category) => {
               </div>
             ))}
           </div>
-          <div className="first-row d-flex">
-            {secondRow.map((c, index) => (
-              <div
-                key={c._id || index}
-                className="categories second-row-item d-flex flex-column align-items-center position-relative"
-                onClick={() => handleCategoryClick(c)}
-              >
-                <div className="img-box w-100 d-flex justify-content-center align-items-center">
-                  {renderCategoryImage(c)}
-                </div>
-                <p className="first-row-text text-center mb-0 mt-2">{c.name}</p>
-              </div>
-            ))}
-          </div>
+          {/* Second row with all 3 items (no empty spaces) */}
+          {renderThreeColumnRow(secondRow, 1)}
         </>
       );
     }
     
-    // For 6 or more categories: show 2 in first row, 3 in second row, and add more rows if needed
+    // For 6 or more categories
     if (totalCategories >= 6) {
       const firstRow = categories.slice(0, 2);
       const secondRow = categories.slice(2, 5);
-      const extraRows = categories.slice(5);
+      const remainingCategories = categories.slice(5);
+      
+      // Calculate how many additional rows we need
+      const totalAdditionalRows = Math.ceil(remainingCategories.length / 3);
+      const additionalRows = [];
+      
+      // Create additional rows
+      for (let i = 0; i < totalAdditionalRows; i++) {
+        const startIndex = i * 3;
+        const endIndex = startIndex + 3;
+        const rowCategories = remainingCategories.slice(startIndex, endIndex);
+        additionalRows.push(renderThreeColumnRow(rowCategories, i + 2));
+      }
       
       return (
         <>
@@ -298,7 +311,7 @@ const handleCategoryClick = (category) => {
             {firstRow.map((c, index) => (
               <div
                 key={c._id || index}
-                className=" first-row-item d-flex align-items-center justify-content-between"
+                className="first-row-item d-flex align-items-center justify-content-between"
                 onClick={() => handleCategoryClick(c)}
                >
                 <p className="first-row-text text-center mb-0">{c.name}</p>
@@ -306,37 +319,12 @@ const handleCategoryClick = (category) => {
               </div>
             ))}
           </div>
-          <div className="first-row d-flex">
-            {secondRow.map((c, index) => (
-              <div
-                key={c._id || index}
-                className=" second-row-item d-flex flex-column align-items-center position-relative"
-                onClick={() => handleCategoryClick(c)}
-              >
-                <div className="img-box w-100 d-flex justify-content-center align-items-center">
-                  {renderCategoryImage(c)}
-                </div>
-                <p className="first-row-text text-center mb-0 mt-2">{c.name}</p>
-              </div>
-            ))}
-          </div>
           
-          {/* Additional rows for extra categories */}
-          {extraRows.length > 0 && (
-            <div className="mt-3">
-              <div className="first-row d-flex">
-                {extraRows.map((c, index) => (
-                  <div
-                    key={c._id || index}
-                    className=" first-row-item d-flex align-items-center justify-content-between"
-                    onClick={() => handleCategoryClick(c)}>
-                    {renderCategoryImage(c)}
-                    <p className="mb-0" style={{ fontSize: "12px" }}>{c.name}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Second row */}
+          {renderThreeColumnRow(secondRow, 1)}
+          
+          {/* Additional rows */}
+          {additionalRows}
         </>
       );
     }
@@ -356,7 +344,7 @@ const handleCategoryClick = (category) => {
             Home services at your <br /> doorstep
           </h3>
 
-          <div className="service-box">
+          <div className="service-box" >
             <p className="service-heading home">What are you looking for?</p>
             
             {/* Dynamic categories grid with exact same layout logic */}

@@ -203,7 +203,6 @@ const checkPermission = (permission) => {
     return res.status(403).json({ error: "You don't have permission to access this resource" });
   };
 };
-// ==================== PUBLIC ROUTES (NO AUTH NEEDED) ====================
 
 // Admin Login with JWT
 router.post("/login", async (req, res) => {

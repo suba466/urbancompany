@@ -54,7 +54,7 @@
   border: 1px solid #8a8888ff;
   border-radius: 5px;
   margin-top: 30px;
-  width: 400px;
+  width: 500px;
   padding: 13px;
 }
 .service-heading {
@@ -475,6 +475,17 @@
 .form-control:focus {
   border-color: #667eea;
   box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.cate{ 
+  border: 2px solid #000000;
+  border-radius: 5px;
+  height:45px;
+}
+.cat{
+  min-width: 100px;
+  border-radius: 50px;
+  height: 45px; 
 }
 
 /* Responsive adjustments */

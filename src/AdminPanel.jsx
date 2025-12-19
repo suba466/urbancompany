@@ -1668,7 +1668,7 @@ function AdminPanel() {
             </Dropdown>
           )}
           
-          {/* Category Management */}
+          {/* Category Catalog - New Structure */}
           {(userRole === 'admin' || hasPermission('Category')) && (
             <Dropdown className="mb-2">
               <Dropdown.Toggle 
@@ -1684,25 +1684,41 @@ function AdminPanel() {
                 }}
               >
                 <span>
-                  <i className="bi bi-tags me-2"></i>Category
+                  <i className="bi bi-diagram-3 me-2"></i>Category Catalog
                 </span>
                 <i className="bi bi-chevron-down ms-auto"></i>
               </Dropdown.Toggle>
               <Dropdown.Menu style={{ width: '100%' }}>
-                {userRole === 'admin' && (
-                  <Dropdown.Item onClick={() => handleMenuClick('add-category')}>
-                    <i className="bi bi-folder-plus me-2"></i>Add Category
-                  </Dropdown.Item>
-                )}
-                <Dropdown.Item onClick={() => handleMenuClick('manage-categories')}>
-                  <i className="bi bi-folder-fill me-2"></i>Manage Categories
+                {/* Category Section */}
+                <div className="px-3 py-2 text-muted small">
+                  <i className="bi bi-tags me-1"></i> Category
+                </div>
+                <Dropdown.Item onClick={() => handleMenuClick('add-category')}>
+                  <div className="ms-3">
+                    <i className="bi bi-plus-circle me-2"></i>Add Category
+                  </div>
                 </Dropdown.Item>
+                <Dropdown.Item onClick={() => handleMenuClick('manage-categories')}>
+                  <div className="ms-3">
+                    <i className="bi bi-list-check me-2"></i>Manage Categories
+                  </div>
+                </Dropdown.Item>
+                
                 <Dropdown.Divider />
+                
+                {/* Subcategory Section */}
+                <div className="px-3 py-2 text-muted small">
+                  <i className="bi bi-diagram-2 me-1"></i> Subcategory
+                </div>
                 <Dropdown.Item onClick={() => handleMenuClick('add-subcategory')}>
-                  <i className="bi bi-folder-plus me-2"></i>Add Subcategory
+                  <div className="ms-3">
+                    <i className="bi bi-plus-circle me-2"></i>Add Subcategory
+                  </div>
                 </Dropdown.Item>
                 <Dropdown.Item onClick={() => handleMenuClick('manage-subcategories')}>
-                  <i className="bi bi-folder-symlink-fill me-2"></i>Manage Subcategories
+                  <div className="ms-3">
+                    <i className="bi bi-list-check me-2"></i>Manage Subcategories
+                  </div>
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
@@ -1850,27 +1866,6 @@ function AdminPanel() {
     };
 
     const requiredPermission = permissionMap[activeMenu];
-    
-    if (requiredPermission && !hasPermission(requiredPermission)) {
-      // Show access denied message briefly
-      setTimeout(() => {
-        handleMenuClick('dashboard');
-      }, 100);
-      
-      return (
-        <Container className="text-center py-5">
-          <Card className="border-0 shadow-sm">
-            <Card.Body>
-              <h3 className="text-danger">Access Denied</h3>
-              <p>You don't have permission to access this section.</p>
-              <p>Redirecting to Dashboard...</p>
-              <Spinner animation="border" variant="primary" />
-            </Card.Body>
-          </Card>
-        </Container>
-      );
-    }
-
     switch(activeMenu) {
       case 'profile':
         return (
@@ -2053,7 +2048,7 @@ function AdminPanel() {
           <>
             <Row className="mb-4">
               <Col md={3}>
-                <Card className="text-center border-0 shadow-sm">
+                <Card className="text-center border-0 shadow-lg">
                   <Card.Body className="py-4">
                     <div className="d-flex align-items-center justify-content-center mb-3">
                       <div>
@@ -2066,7 +2061,7 @@ function AdminPanel() {
                 </Card>
               </Col>
               <Col md={3}>
-                <Card className="text-center border-0 shadow-sm">
+                <Card className="text-center border-0 shadow-lg">
                   <Card.Body className="py-4">
                     <div className="d-flex align-items-center justify-content-center mb-3">
                       <div>
@@ -2079,7 +2074,7 @@ function AdminPanel() {
                 </Card>
               </Col>
               <Col md={3}>
-                <Card className="text-center border-0 shadow-sm">
+                <Card className="text-center border-0 shadow-lg">
                   <Card.Body className="py-4">
                     <div className="d-flex align-items-center justify-content-center mb-3">
                       <div >
@@ -2092,7 +2087,7 @@ function AdminPanel() {
                 </Card>
               </Col>
               <Col md={3}>
-                <Card className="text-center border-0 shadow-sm">
+                <Card className="text-center border-0 shadow-lg">
                   <Card.Body className="py-4">
                     <div className="d-flex align-items-center justify-content-center mb-2">
                       <div >
@@ -2108,7 +2103,7 @@ function AdminPanel() {
 
             <Row className="mb-4">
               <Col md={8}>
-                <Card className="border-0 shadow-sm">
+                <Card className="border-0 shadow-lg">
                   <Card.Header className="border-0">
                     <h5>Recent Bookings</h5>
                   </Card.Header>
@@ -2190,7 +2185,7 @@ function AdminPanel() {
                 </Card>
               </Col>
               <Col md={4}>
-                <Card className="border-0 shadow-sm">
+                <Card className="border-0 shadow-lg">
                   <Card.Header className="border-0">
                     <h5>Recent Customers</h5>
                   </Card.Header>
@@ -2266,18 +2261,7 @@ function AdminPanel() {
           </>
         );
 
-      case 'add-user':
-        if (!hasPermission('Users')) {
-          return (
-            <Card className="border-0 shadow-sm">
-              <Card.Body className="text-center py-5">
-                <h3 className="text-danger">Access Denied</h3>
-                <p>You don't have permission to add users.</p>
-              </Card.Body>
-            </Card>
-          );
-        }
-        
+      case 'add-user':    
         return (
           <div className="p-3" >
             <Card className="shadow-lg " >
@@ -2333,14 +2317,13 @@ function AdminPanel() {
                       <Form.Group>
                         <Form.Control
                           type="text" 
-                          style={{borderRadius:"5px",border:"2px solid #000000",height:"45px"}}
+                          className='cate py-3 '
                           value={newUser.name}
                           onChange={(e) => setNewUser({...newUser, name: e.target.value})}
                           onBlur={() => handleFieldBlur('users', 'name')}
                           required
                           placeholder="Name"
                           autoComplete="name"
-                          className="py-3 "
                         />
                         {touchedFields.users?.name && formErrors.users?.name && (
                           <small className="text-danger d-block mt-1">{formErrors.users.name}</small>
@@ -2351,14 +2334,13 @@ function AdminPanel() {
                       <Form.Group>
                         <Form.Control
                           type="email" 
-                          style={{borderRadius:"5px",border:"2px solid #000000",height:"45px"}}
+                           className='cate py-3 '
                           value={newUser.email}
                           onChange={(e) => setNewUser({...newUser, email: e.target.value})}
                           onBlur={() => handleFieldBlur('users', 'email')}
                           required
                           placeholder="E-mail"
                           autoComplete="email"
-                          className="py-3"
                         />
                         {touchedFields.users?.email && formErrors.users?.email && (
                           <small className="text-danger d-block mt-1">{formErrors.users.email}</small>
@@ -2391,7 +2373,7 @@ function AdminPanel() {
                       <Form.Group>
                         <Form.Select
                           value={newUser.designation}
-                          style={{borderRadius:"5px",border:"2px solid #000000",height:"45px"}}
+                          className='cate  '
                           onChange={(e) => setNewUser({...newUser, designation: e.target.value})}
                           onBlur={() => handleFieldBlur('users', 'designation')}
                           required
@@ -2422,10 +2404,10 @@ function AdminPanel() {
                             onChange={(e) => setNewUser({...newUser, password: e.target.value})}
                             onBlur={() => handleFieldBlur('users', 'password')}
                             placeholder="Password"
-                            style={{borderRadius:"5px",border:"2px solid #000000",height:"45px"}}
+                             className='cate py-3 '
                             autoComplete="new-password"
                             required
-                            className="py-3"
+                           
                           />
                           {touchedFields.users?.password && formErrors.users?.password && (
                             <small className="text-danger d-block mt-1">{formErrors.users.password}</small>
@@ -2440,10 +2422,10 @@ function AdminPanel() {
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             onBlur={() => handleFieldBlur('users', 'confirmPassword')}
                             placeholder="Confirm password"
-                            style={{borderRadius:"5px",border:"2px solid #000000",height:"45px"}}
+                             className='cate py-3 '
                             autoComplete="new-password"
                             required
-                            className="py-3"
+                            
                           />
                           {touchedFields.users?.confirmPassword && formErrors.users?.confirmPassword && (
                             <small className="text-danger d-block mt-1">{formErrors.users.confirmPassword}</small>
@@ -2824,17 +2806,6 @@ function AdminPanel() {
         );
         
       case 'manage-customers':
-        if (!hasPermission('Customer')) {
-          return (
-            <Card className="border-0 shadow-sm">
-              <Card.Body className="text-center py-5">
-                <h3 className="text-danger">Access Denied</h3>
-                <p>You don't have permission to manage customers.</p>
-              </Card.Body>
-            </Card>
-          );
-        }
-        
         return (
           <div>
             <Card className="shadow-lg">
@@ -2844,7 +2815,7 @@ function AdminPanel() {
               </Card.Body>
             </Card>
             <br />
-            <Card className="border-0 shadow-sm">
+            <Card className="border-0 shadow-lg">
               <Card.Header className="border-0">
                 <div>
                   <h5 className="mb-1 fw-semibold">Manage Customers</h5>
@@ -2940,24 +2911,7 @@ function AdminPanel() {
                                     height: '100%', 
                                     objectFit: 'cover'
                                   }}
-                                  onError={(e) => {
-                                    e.target.style.display = 'none';
-                                    e.target.parentElement.innerHTML = `
-                                      <div style="
-                                        width: 100%;
-                                        height: 100%;
-                                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                        display: flex;
-                                        align-items: center;
-                                        justify-content: center;
-                                        color: white;
-                                        font-weight: bold;
-                                        font-size: 18px;
-                                      ">
-                                        ${getInitials(customer.name)}
-                                      </div>
-                                    `;
-                                  }}
+                                  
                                 />
                               ) : (
                                 <div style={{ 
@@ -3058,7 +3012,7 @@ function AdminPanel() {
       case 'add-category':
         if (!hasPermission('Category')) {
           return (
-            <Card className="border-0 shadow-sm">
+            <Card className="border-0 shadow-lg">
               <Card.Body className="text-center py-5">
                 <h3 className="text-danger">Access Denied</h3>
                 <p>You don't have permission to add categories.</p>
@@ -3126,23 +3080,12 @@ function AdminPanel() {
         );
 
       case 'add-subcategory':
-        if (!hasPermission('Category')) {
-          return (
-            <Card className="border-0 shadow-sm">
-              <Card.Body className="text-center py-5">
-                <h3 className="text-danger">Access Denied</h3>
-                <p>You don't have permission to add subcategories.</p>
-              </Card.Body>
-            </Card>
-          );
-        }
-        
         return (
           <div className="p-3">
             <Card className="shadow-lg">
               <Card.Body style={{ marginLeft: "23px", marginRight: "10px" }}>
                 <h5 className="mb-0 fw-semibold">
-                  Subcategory Management
+                  Category Catalog
                   <span className="text-muted mx-2" style={{ fontSize: "14px", fontWeight: "normal" }}>•</span>
                   <span className="text-muted" style={{ fontSize: "14px", fontWeight: "normal" }}>
                     {subcategoryEditId ? 'Edit Subcategory' : 'Add New Subcategory'}
@@ -3214,7 +3157,7 @@ function AdminPanel() {
       case 'manage-subcategories':
         if (!hasPermission('Category')) {
           return (
-            <Card className="border-0 shadow-sm">
+            <Card className="border-0 shadow-lg">
               <Card.Body className="text-center py-5">
                 <h3 className="text-danger">Access Denied</h3>
                 <p>You don't have permission to manage subcategories.</p>
@@ -3265,7 +3208,7 @@ function AdminPanel() {
       case 'add-product':
         if (!hasPermission('Product')) {
           return (
-            <Card className="border-0 shadow-sm">
+            <Card className="border-0 shadow-lg">
               <Card.Body className="text-center py-5">
                 <h3 className="text-danger">Access Denied</h3>
                 <p>You don't have permission to add products.</p>
@@ -3275,7 +3218,7 @@ function AdminPanel() {
         }
         
         return (
-          <Card className="border-0 shadow-sm">
+          <Card className="border-0 shadow-lg">
             <Card.Header className="border-0 d-flex justify-content-between align-items-center">
               <div>
                 <h5 className="mb-0">Add New Product</h5>
@@ -3407,7 +3350,7 @@ function AdminPanel() {
       case 'manage-products':
         if (!hasPermission('Product')) {
           return (
-            <Card className="border-0 shadow-sm">
+            <Card className="border-0 shadow-lg">
               <Card.Body className="text-center py-5">
                 <h3 className="text-danger">Access Denied</h3>
                 <p>You don't have permission to manage products.</p>
@@ -3417,7 +3360,7 @@ function AdminPanel() {
         }
         
         return (
-          <Card className="border-0 shadow-sm">
+          <Card className="border-0 shadow-lg">
             <Card.Header className="border-0 d-flex justify-content-between align-items-center">
               <div>
                 <h5 className="mb-0">Manage Products</h5>
@@ -3556,7 +3499,7 @@ function AdminPanel() {
       case 'bookings':
         if (!hasPermission('Bookings')) {
           return (
-            <Card className="border-0 shadow-sm">
+            <Card className="border-0 shadow-lg">
               <Card.Body className="text-center py-5">
                 <h3 className="text-danger">Access Denied</h3>
                 <p>You don't have permission to manage bookings.</p>
@@ -3566,7 +3509,7 @@ function AdminPanel() {
         }
         
         return (
-          <Card className="border-0 shadow-sm">
+          <Card className="border-0 shadow-lg">
             <Card.Header className="border-0 d-flex justify-content-between align-items-center">
               <div>
                 <h5 className="mb-0">Booking Management</h5>
@@ -3754,7 +3697,7 @@ function AdminPanel() {
       case 'reports':
         if (!hasPermission('Reports')) {
           return (
-            <Card className="border-0 shadow-sm">
+            <Card className="border-0 shadow-lg">
               <Card.Body className="text-center py-5">
                 <h3 className="text-danger">Access Denied</h3>
                 <p>You don't have permission to view reports.</p>
@@ -3767,7 +3710,7 @@ function AdminPanel() {
           <>
             <Row className="mb-4">
               <Col md={3}>
-                <Card className="text-center border-0 shadow-sm">
+                <Card className="text-center border-0 shadow-lg">
                   <Card.Body className="py-4">
                     <h5 className="text-muted mb-2">Daily Bookings</h5>
                     <h2 className="mb-0" style={{ color: "#667eea" }}>{reports.dailyBookings}</h2>
@@ -3775,7 +3718,7 @@ function AdminPanel() {
                 </Card>
               </Col>
               <Col md={3}>
-                <Card className="text-center border-0 shadow-sm">
+                <Card className="text-center border-0 shadow-lg">
                   <Card.Body className="py-4">
                     <h5 className="text-muted mb-2">Monthly Revenue</h5>
                     <h2 className="mb-0" style={{ color: "#38b2ac" }}>₹{reports.monthlyRevenue.toLocaleString()}</h2>
@@ -3783,7 +3726,7 @@ function AdminPanel() {
                 </Card>
               </Col>
               <Col md={3}>
-                <Card className="text-center border-0 shadow-sm">
+                <Card className="text-center border-0 shadow-lg">
                   <Card.Body className="py-4">
                     <h5 className="text-muted mb-2">Customer Growth</h5>
                     <h2 className="mb-0" style={{ color: "#ed64a6" }}>{reports.customerGrowth}</h2>
@@ -3791,7 +3734,7 @@ function AdminPanel() {
                 </Card>
               </Col>
               <Col md={3}>
-                <Card className="text-center border-0 shadow-sm">
+                <Card className="text-center border-0 shadow-lg">
                   <Card.Body className="py-4">
                     <h5 className="text-muted mb-2">Avg. Order Value</h5>
                     <h2 className="mb-0" style={{ color: "#764ba2" }}>₹1,250</h2>
@@ -3800,7 +3743,7 @@ function AdminPanel() {
               </Col>
             </Row>
 
-            <Card className="border-0 shadow-sm mb-4">
+            <Card className="border-0 shadow-lg mb-4">
               <Card.Header className="border-0">
                 <h5>Top Categories by Revenue</h5>
               </Card.Header>
@@ -3834,7 +3777,7 @@ function AdminPanel() {
               </Card.Body>
             </Card>
 
-            <Card className="border-0 shadow-sm">
+            <Card className="border-0 shadow-lg">
               <Card.Header className="border-0 d-flex justify-content-between align-items-center">
                 <h5 className="mb-0">Report Actions</h5>
                 <Dropdown>
@@ -3934,7 +3877,7 @@ function AdminPanel() {
       case 'settings':
         if (!hasPermission('Settings')) {
           return (
-            <Card className="border-0 shadow-sm">
+            <Card className="border-0 shadow-lg">
               <Card.Body className="text-center py-5">
                 <h3 className="text-danger">Access Denied</h3>
                 <p>You don't have permission to access settings.</p>
@@ -3944,7 +3887,7 @@ function AdminPanel() {
         }
         
         return (
-          <Card className="border-0 shadow-sm">
+          <Card className="border-0 shadow-lg">
             <Card.Header className="border-0">
               <h5 className="mb-0">Settings</h5>
               <p className="text-muted mb-0">Manage system settings</p>
@@ -4027,7 +3970,7 @@ function AdminPanel() {
         minWidth: '0'
       }}>
         {/* Top Navbar */}
-        <Navbar bg="light" expand="lg" className="shadow-sm">
+        <Navbar bg="light" expand="lg" className="shadow-lg">
           <Container fluid>
             <Button variant="light" onClick={() => setSidebarOpen(!sidebarOpen)} className="me-3">
               <i className={`bi bi-${sidebarOpen ? 'chevron-left' : 'chevron-right'}`}></i>
@@ -4114,27 +4057,7 @@ function AdminPanel() {
                           objectFit: 'cover',
                           border: '3px solid #dee2e6'
                         }}
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.parentElement.innerHTML = `
-                            <div style="
-                              width: 100px;
-                              height: 100px;
-                              border-radius: 50%;
-                              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                              display: flex;
-                              align-items: center;
-                              justify-content: center;
-                              color: white;
-                              font-weight: bold;
-                              font-size: 32px;
-                              margin: 0 auto;
-                              border: 3px solid #dee2e6
-                            ">
-                              ${getInitials(selectedUserDetails.name)}
-                            </div>
-                          `;
-                        }}
+                        
                       />
                     ) : (
                       <div style={{ 

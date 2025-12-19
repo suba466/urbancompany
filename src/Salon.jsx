@@ -3,6 +3,7 @@ import { MdStars } from "react-icons/md";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Salon1 from './Salon1.jsx';
+import { Alert } from "react-bootstrap";
 
 function Salon() {
   const [salon, setSalon] = useState([]);
@@ -287,15 +288,19 @@ function Salon() {
           </p>
 
           <div className="mt-4 super position-sticky">
-            {/* Only show "Salon Services" header if we have active subcategories */}
-            {hasSubcategories && salonSubcategories.length > 0 && (
-              <div className="d-flex align-items-center left" style={{ marginBottom: "15px" }}>
+            <div className="d-flex align-items-center left" style={{ marginBottom: "15px" }}>
                 <span className="fw-semibold" style={{ fontSize: "14px", color: "rgba(116,116,117,1)" }}>
-                  Salon Services
+                 Select a service
                 </span>
                 <div style={{ flex: 1, height: "1px", backgroundColor: "rgba(227,227,227,1)" }}></div>
               </div>
-            )}
+            {!loading && (!hasSubcategories || salonSubcategories.length === 0) && (
+            <div >
+              <Alert variant="info" className="text-center">
+                No services available. Please check back later.
+              </Alert>
+            </div>
+          )}
 
             {/* Show loading only if actively fetching */}
             {loading ? (
@@ -306,12 +311,10 @@ function Salon() {
                 <p className="mt-2" style={{ fontSize: "12px" }}>Checking services...</p>
               </div>
             ) : hasSubcategories && salonSubcategories.length > 0 ? (
-              // Only show subcategories if we have ACTIVE ones
               <div className="d-flex flex-wrap left">
                 {salonSubcategories.map((subcategory, index) => {
-                  // Double-check isActive status before rendering
                   if (subcategory.isActive === false) {
-                    return null; // Skip inactive subcategories
+                    return null; 
                   }
                   
                   return (
