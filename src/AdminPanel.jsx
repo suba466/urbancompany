@@ -1667,62 +1667,101 @@ function AdminPanel() {
               </Dropdown.Menu>
             </Dropdown>
           )}
-          
-          {/* Category Catalog - New Structure */}
-          {(userRole === 'admin' || hasPermission('Category')) && (
-            <Dropdown className="mb-2">
-              <Dropdown.Toggle 
-                as={Nav.Link} 
-                style={{ 
-                  color: ['add-category', 'manage-categories', 'add-subcategory', 'manage-subcategories'].includes(activeMenu) ? '#000' : 'white',
-                  background: ['add-category', 'manage-categories', 'add-subcategory', 'manage-subcategories'].includes(activeMenu) ? 'white' : 'transparent',
-                  borderRadius: '8px',
-                  padding: '10px 15px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <span>
-                  <i className="bi bi-diagram-3 me-2"></i>Category Catalog
-                </span>
-                <i className="bi bi-chevron-down ms-auto"></i>
-              </Dropdown.Toggle>
-              <Dropdown.Menu style={{ width: '100%' }}>
-                {/* Category Section */}
-                <div className="px-3 py-2 text-muted small">
-                  <i className="bi bi-tags me-1"></i> Category
-                </div>
-                <Dropdown.Item onClick={() => handleMenuClick('add-category')}>
-                  <div className="ms-3">
-                    <i className="bi bi-plus-circle me-2"></i>Add Category
-                  </div>
-                </Dropdown.Item>
-                <Dropdown.Item onClick={() => handleMenuClick('manage-categories')}>
-                  <div className="ms-3">
-                    <i className="bi bi-list-check me-2"></i>Manage Categories
-                  </div>
-                </Dropdown.Item>
-                
-                <Dropdown.Divider />
-                
-                {/* Subcategory Section */}
-                <div className="px-3 py-2 text-muted small">
-                  <i className="bi bi-diagram-2 me-1"></i> Subcategory
-                </div>
-                <Dropdown.Item onClick={() => handleMenuClick('add-subcategory')}>
-                  <div className="ms-3">
-                    <i className="bi bi-plus-circle me-2"></i>Add Subcategory
-                  </div>
-                </Dropdown.Item>
-                <Dropdown.Item onClick={() => handleMenuClick('manage-subcategories')}>
-                  <div className="ms-3">
-                    <i className="bi bi-list-check me-2"></i>Manage Subcategories
-                  </div>
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-          )}
+{/* Catalog with nested dropdowns for Category and Subcategory */}
+{(userRole === 'admin' || hasPermission('Category')) && (
+  <Dropdown className="mb-2">
+    <Dropdown.Toggle 
+      as={Nav.Link} 
+      style={{ 
+        color: ['add-category', 'manage-categories', 'add-subcategory', 'manage-subcategories'].includes(activeMenu) ? '#000' : 'white',
+        background: ['add-category', 'manage-categories', 'add-subcategory', 'manage-subcategories'].includes(activeMenu) ? 'white' : 'transparent',
+        borderRadius: '8px',
+        padding: '10px 15px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}
+    >
+      <span>
+        <i className="bi bi-diagram-3 me-2"></i>Catalog
+      </span>
+      <i className="bi bi-chevron-down ms-auto"></i>
+    </Dropdown.Toggle>
+    <Dropdown.Menu style={{ width: '100%' }}>
+      {/* Category Dropdown */}
+      <Dropdown className="dropdown-submenu">
+        <Dropdown.Toggle 
+          as={Nav.Link} 
+          style={{ 
+            color: ['add-category', 'manage-categories'].includes(activeMenu) ? '#000' : '#6c757d',
+            background: 'transparent',
+            borderRadius: '0',
+            padding: '8px 15px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: '100%'
+          }}
+        >
+          <span>
+            <i className="bi bi-tags me-2"></i>Category
+          </span>
+          <i className="bi bi-chevron-right ms-auto"></i>
+        </Dropdown.Toggle>
+        <Dropdown.Menu style={{ 
+          position: 'absolute',
+          left: '100%',
+          top: '0',
+          width: '180px',
+          marginTop: '-1px'
+        }}>
+          <Dropdown.Item onClick={() => handleMenuClick('add-category')}>
+            <i className="bi bi-plus-circle me-2"></i>Add Category
+          </Dropdown.Item>
+          <Dropdown.Item onClick={() => handleMenuClick('manage-categories')}>
+            <i className="bi bi-list-check me-2"></i>Manage Categories
+          </Dropdown.Item>
+        </Dropdown.Menu>
+      </Dropdown>
+      
+      {/* Subcategory Dropdown */}
+      <Dropdown className="dropdown-submenu">
+        <Dropdown.Toggle 
+          as={Nav.Link} 
+          style={{ 
+            color: ['add-subcategory', 'manage-subcategories'].includes(activeMenu) ? '#000' : '#6c757d',
+            background: 'transparent',
+            borderRadius: '0',
+            padding: '8px 15px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: '100%'
+          }}
+        >
+          <span>
+            <i className="bi bi-diagram-2 me-2"></i>Subcategory
+          </span>
+          <i className="bi bi-chevron-right ms-auto"></i>
+        </Dropdown.Toggle>
+        <Dropdown.Menu style={{ 
+          position: 'absolute',
+          left: '100%',
+          top: '0',
+          width: '180px',
+          marginTop: '-1px'
+        }}>
+          <Dropdown.Item onClick={() => handleMenuClick('add-subcategory')}>
+            <i className="bi bi-plus-circle me-2"></i>Add Subcategory
+          </Dropdown.Item>
+          <Dropdown.Item onClick={() => handleMenuClick('manage-subcategories')}>
+            <i className="bi bi-list-check me-2"></i>Manage Subcategories
+          </Dropdown.Item>
+        </Dropdown.Menu>
+      </Dropdown>
+    </Dropdown.Menu>
+  </Dropdown>
+)}
           
           {/* Product Management */}
           {(userRole === 'admin' || hasPermission('Product')) && (
@@ -3010,17 +3049,6 @@ function AdminPanel() {
         );
         
       case 'add-category':
-        if (!hasPermission('Category')) {
-          return (
-            <Card className="border-0 shadow-lg">
-              <Card.Body className="text-center py-5">
-                <h3 className="text-danger">Access Denied</h3>
-                <p>You don't have permission to add categories.</p>
-              </Card.Body>
-            </Card>
-          );
-        }
-        
         return (
           <CategoryForm 
             isEditing={isEditingCategory}
@@ -3085,7 +3113,7 @@ function AdminPanel() {
             <Card className="shadow-lg">
               <Card.Body style={{ marginLeft: "23px", marginRight: "10px" }}>
                 <h5 className="mb-0 fw-semibold">
-                  Category Catalog
+                  Catalog
                   <span className="text-muted mx-2" style={{ fontSize: "14px", fontWeight: "normal" }}>•</span>
                   <span className="text-muted" style={{ fontSize: "14px", fontWeight: "normal" }}>
                     {subcategoryEditId ? 'Edit Subcategory' : 'Add New Subcategory'}
@@ -3155,17 +3183,6 @@ function AdminPanel() {
         );
 
       case 'manage-subcategories':
-        if (!hasPermission('Category')) {
-          return (
-            <Card className="border-0 shadow-lg">
-              <Card.Body className="text-center py-5">
-                <h3 className="text-danger">Access Denied</h3>
-                <p>You don't have permission to manage subcategories.</p>
-              </Card.Body>
-            </Card>
-          );
-        }
-        
         return (
           <Subcategories
             subcategories={subcategories}
@@ -3206,17 +3223,6 @@ function AdminPanel() {
         );
         
       case 'add-product':
-        if (!hasPermission('Product')) {
-          return (
-            <Card className="border-0 shadow-lg">
-              <Card.Body className="text-center py-5">
-                <h3 className="text-danger">Access Denied</h3>
-                <p>You don't have permission to add products.</p>
-              </Card.Body>
-            </Card>
-          );
-        }
-        
         return (
           <Card className="border-0 shadow-lg">
             <Card.Header className="border-0 d-flex justify-content-between align-items-center">
@@ -3348,17 +3354,6 @@ function AdminPanel() {
         );
 
       case 'manage-products':
-        if (!hasPermission('Product')) {
-          return (
-            <Card className="border-0 shadow-lg">
-              <Card.Body className="text-center py-5">
-                <h3 className="text-danger">Access Denied</h3>
-                <p>You don't have permission to manage products.</p>
-              </Card.Body>
-            </Card>
-          );
-        }
-        
         return (
           <Card className="border-0 shadow-lg">
             <Card.Header className="border-0 d-flex justify-content-between align-items-center">
@@ -3497,17 +3492,6 @@ function AdminPanel() {
         );
 
       case 'bookings':
-        if (!hasPermission('Bookings')) {
-          return (
-            <Card className="border-0 shadow-lg">
-              <Card.Body className="text-center py-5">
-                <h3 className="text-danger">Access Denied</h3>
-                <p>You don't have permission to manage bookings.</p>
-              </Card.Body>
-            </Card>
-          );
-        }
-        
         return (
           <Card className="border-0 shadow-lg">
             <Card.Header className="border-0 d-flex justify-content-between align-items-center">
@@ -3695,17 +3679,6 @@ function AdminPanel() {
         );
 
       case 'reports':
-        if (!hasPermission('Reports')) {
-          return (
-            <Card className="border-0 shadow-lg">
-              <Card.Body className="text-center py-5">
-                <h3 className="text-danger">Access Denied</h3>
-                <p>You don't have permission to view reports.</p>
-              </Card.Body>
-            </Card>
-          );
-        }
-        
         return (
           <>
             <Row className="mb-4">
@@ -3875,16 +3848,6 @@ function AdminPanel() {
         );
 
       case 'settings':
-        if (!hasPermission('Settings')) {
-          return (
-            <Card className="border-0 shadow-lg">
-              <Card.Body className="text-center py-5">
-                <h3 className="text-danger">Access Denied</h3>
-                <p>You don't have permission to access settings.</p>
-              </Card.Body>
-            </Card>
-          );
-        }
         
         return (
           <Card className="border-0 shadow-lg">
