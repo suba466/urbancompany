@@ -74,7 +74,7 @@ function AdminPanel() {
       Dashboard: false,
       Users: false,
       Customer: false,
-      Category: false,
+      Catalog: false,
       Product: false,
       Bookings: false,
       Reports: false,
@@ -212,7 +212,7 @@ function AdminPanel() {
       'Dashboard': 'linear-gradient(135deg, #141E30 0%, #243B55 100%)',
       'Users': 'linear-gradient(135deg, #0F2027 0%, #203A43 100%)',
       'Customer': 'linear-gradient(135deg, #1A2980 0%, #26D0CE 100%)',
-      'Category': 'linear-gradient(135deg, #232526 0%, #414345 100%)',
+      'Catalog': 'linear-gradient(135deg, #232526 0%, #61809fff 100%)',
       'Product': 'linear-gradient(135deg, #8E0E00 0%, #1F1C18 100%)',
       'Bookings': 'linear-gradient(135deg, #3A1C71 0%, #d82739ff 50%, #FFAF7B 100%)',
       'Reports': 'linear-gradient(135deg, #16222A 0%, #3A6073 100%)',
@@ -247,44 +247,50 @@ function AdminPanel() {
     );
   };
 
-  const validateUserForm = () => {
-    const errors = {};
-    
-    if (!newUser.name.trim()) {
-      errors.name = 'Name is required';
+const validateUserForm = () => {
+  const errors = {};
+  
+  if (!newUser.name.trim()) {
+    errors.name = 'Name is required';
+  }
+  
+  if (!newUser.email.trim()) {
+    errors.email = 'Email is required';
+  } else if (!/\S+@\S+\.\S+/.test(newUser.email)) {
+    errors.email = 'Email is invalid';
+  }
+  
+  if (!newUser.phone.trim()) {
+    errors.phone = 'Phone is required';
+  } else if (!/^\d{10}$/.test(newUser.phone.replace(/\D/g, ''))) {
+    errors.phone = 'Phone must be 10 digits';
+  }
+  
+  if (!newUser.designation) {
+    errors.designation = 'Designation is required';
+  }
+  
+  // Password validation logic - FIXED VERSION
+  const isPasswordPlaceholder = newUser.password === '********';
+  const isPasswordEmpty = newUser.password.trim() === '';
+  
+  if (!isEditingUser) {
+    // For new users, always validate password
+    if (!newUser.password || newUser.password.trim() === '') {
+      errors.password = 'Password is required';
+    } else if (newUser.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
     }
     
-    if (!newUser.email.trim()) {
-      errors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(newUser.email)) {
-      errors.email = 'Email is invalid';
+    if (!confirmPassword) {
+      errors.confirmPassword = 'Please confirm password';
+    } else if (newUser.password !== confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
     }
-    
-    if (!newUser.phone.trim()) {
-      errors.phone = 'Phone is required';
-    } else if (!/^\d{10}$/.test(newUser.phone.replace(/\D/g, ''))) {
-      errors.phone = 'Phone must be 10 digits';
-    }
-    
-    if (!newUser.designation) {
-      errors.designation = 'Designation is required';
-    }
-    
-    // Skip password validation when editing (unless password is being changed)
-    if (!isEditingUser) {
-      if (!newUser.password) {
-        errors.password = 'Password is required';
-      } else if (newUser.password.length < 6) {
-        errors.password = 'Password must be at least 6 characters';
-      }
-      
-      if (!confirmPassword) {
-        errors.confirmPassword = 'Please confirm password';
-      } else if (newUser.password !== confirmPassword) {
-        errors.confirmPassword = 'Passwords do not match';
-      }
-    } else if (newUser.password !== '********' && newUser.password.length > 0) {
-      // If editing and password is being changed (not placeholder)
+  } else {
+    // For editing users
+    if (!isPasswordPlaceholder && !isPasswordEmpty) {
+      // User is changing password (not using placeholder and not empty)
       if (newUser.password.length < 6) {
         errors.password = 'Password must be at least 6 characters';
       }
@@ -294,11 +300,15 @@ function AdminPanel() {
       } else if (newUser.password !== confirmPassword) {
         errors.confirmPassword = 'Passwords do not match';
       }
+    } else if (isPasswordPlaceholder && confirmPassword && confirmPassword.trim() !== '') {
+      // User entered confirm password but didn't change password (still using placeholder)
+      errors.confirmPassword = 'Please leave confirm password empty if not changing password';
     }
-    
-    setFormErrors(prev => ({ ...prev, users: errors }));
-    return Object.keys(errors).length === 0;
-  };
+  }
+  
+  setFormErrors(prev => ({ ...prev, users: errors }));
+  return Object.keys(errors).length === 0;
+};
 
   // Handle field blur for immediate feedback
   const handleFieldBlur = (formType, fieldName) => {
@@ -1053,10 +1063,10 @@ function AdminPanel() {
       'add-user': 'Users',
       'manage-users': 'Users',
       'manage-customers': 'Customer',
-      'add-category': 'Category',
-      'manage-categories': 'Category',
-      'add-subcategory': 'Category',
-      'manage-subcategories': 'Category',
+      'add-category': 'Catalog',
+      'manage-categories': 'Catalog',
+      'add-subcategory': 'Catalog',
+      'manage-subcategories': 'Catalog',
       'add-product': 'Product',
       'manage-products': 'Product',
       'bookings': 'Bookings',
@@ -1085,7 +1095,7 @@ function AdminPanel() {
           Dashboard: false,
           Users: false,
           Customer: false,
-          Category: false,
+          Catalog: false,
           Product: false,
           Bookings: false,
           Reports: false,
@@ -1181,157 +1191,160 @@ function AdminPanel() {
     }
   };
 
-  const handleAddUser = async (e) => {
-    e.preventDefault();
-    setFormError('');
-    setFormSuccess(false);
+ const handleAddUser = async (e) => {
+  e.preventDefault();
+  setFormError('');
+  setFormSuccess(false);
+  
+  // Mark all fields as touched
+  const touched = {};
+  Object.keys(newUser).forEach(key => {
+    if (key !== 'permissions') touched[key] = true;
+  });
+  
+  // Mark password fields as touched when not editing or when password is being changed
+  const isPasswordPlaceholder = newUser.password === '********';
+  const isPasswordEmpty = newUser.password.trim() === '';
+  
+  if (!isEditingUser || (!isPasswordPlaceholder && !isPasswordEmpty)) {
+    touched.password = true;
+    touched.confirmPassword = true;
+  }
+  
+  setTouchedFields(prev => ({ ...prev, users: touched }));
+  
+  // Validate form
+  if (!validateUserForm()) {
+    setFormError("Please fix the errors in the form");
+    return;
+  }
+  
+  try {
+    // Create FormData for file upload
+    const formData = new FormData();
+    formData.append('name', newUser.name);
+    formData.append('email', newUser.email);
+    formData.append('phone', newUser.phone);
+    formData.append('designation', newUser.designation);
     
-    // Mark all fields as touched
-    const touched = {};
-    Object.keys(newUser).forEach(key => {
-      if (key !== 'permissions') touched[key] = true;
+    // Only send password if it's not the placeholder and not empty
+    if (!isPasswordPlaceholder && !isPasswordEmpty) {
+      formData.append('password', newUser.password);
+    }
+    
+    formData.append('permissions', JSON.stringify(newUser.permissions));
+    formData.append('isActive', newUser.isActive !== undefined ? newUser.isActive : true);
+    
+    // Add profile image if exists
+    if (profileImage) {
+      formData.append('profileImage', profileImage);
+    }
+    
+    const url = isEditingUser 
+      ? `http://localhost:5000/api/admin/users/${editUserId}`
+      : 'http://localhost:5000/api/admin/users';
+    
+    const method = isEditingUser ? 'PUT' : 'POST';
+    
+    const response = await fetch(url, {
+      method: method,
+      headers: {
+        'Authorization': `Bearer ${getAuthToken()}`
+      },
+      body: formData
     });
     
-    // Only require password fields when not editing or when password is being changed
-    if (!isEditingUser || (isEditingUser && newUser.password !== '********')) {
-      touched.password = true;
-      touched.confirmPassword = true;
-    }
+    const data = await response.json();
     
-    setTouchedFields(prev => ({ ...prev, users: touched }));
-    
-    // Validate form
-    if (!validateUserForm()) {
-      setFormError("Please fix the errors in the form");
-      return;
-    }
-    
-    try {
-      // Create FormData for file upload
-      const formData = new FormData();
-      formData.append('name', newUser.name);
-      formData.append('email', newUser.email);
-      formData.append('phone', newUser.phone);
-      formData.append('designation', newUser.designation);
+    if (data.success) {
+      // Show appropriate success message
+      setFormSuccess(true);
       
-      // Only send password if it's not the placeholder and not empty
-      if (newUser.password !== '********' && newUser.password.trim()) {
-        formData.append('password', newUser.password);
-      }
-      
-      formData.append('permissions', JSON.stringify(newUser.permissions));
-      formData.append('isActive', newUser.isActive !== undefined ? newUser.isActive : true);
-      
-      // Add profile image if exists
-      if (profileImage) {
-        formData.append('profileImage', profileImage);
-      }
-      
-      const url = isEditingUser 
-        ? `http://localhost:5000/api/admin/users/${editUserId}`
-        : 'http://localhost:5000/api/admin/users';
-      
-      const method = isEditingUser ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          'Authorization': `Bearer ${getAuthToken()}`
-        },
-        body: formData
+      // Reset form and errors
+      setNewUser({
+        name: '',
+        email: '',
+        phone: '',
+        designation: '',
+        password: '',
+        permissions: {
+          Dashboard: false,
+          Users: false,
+          Customer: false,
+          Catalog: false,
+          Product: false,
+          Bookings: false,
+          Reports: false,
+          Settings: false
+        }
       });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setFormSuccess(true);
-        
-        // Reset form and errors
-        setNewUser({
-          name: '',
-          email: '',
-          phone: '',
-          designation: '',
-          password: '',
-          permissions: {
-            Dashboard: false,
-            Users: false,
-            Customer: false,
-            Category: false,
-            Product: false,
-            Bookings: false,
-            Reports: false,
-            Settings: false
-          }
-        });
-        setConfirmPassword('');
-        setProfileImage(null);
-        setProfileImagePreview("");
-        setFormErrors(prev => ({ ...prev, users: {} }));
-        setTouchedFields(prev => ({ ...prev, users: {} }));
-        
-        // Reset editing state
-        setEditUserId(null);
-        setIsEditingUser(false);
-        
-        // Refresh user list
-        setTimeout(() => {
-          fetchUsers();
-        }, 500);
-        
-        setTimeout(() => {
-          setFormSuccess(false);
-        }, 5000);
-        
-      } else {
-        setFormError(data.error || (isEditingUser ? 'Failed to update user' : 'Failed to add user'));
-      }
-    } catch (error) {
-      console.error('Error saving user:', error);
-      setFormError(`Failed to ${isEditingUser ? 'update' : 'add'} user. Please try again.`);
-    }
-  };
-
-  // Function to handle editing user
-  const handleEditUser = (userMember) => {
-    setNewUser({
-      name: userMember.name || '',
-      email: userMember.email || '',
-      phone: userMember.phone || '',
-      designation: userMember.designation || '',
-      password: '********',
-      isActive: userMember.isActive !== undefined ? userMember.isActive : true,
-      permissions: userMember.permissions || {
-        Dashboard: false,
-        Users: false,
-        Customer: false,
-        Category: false,
-        Product: false,
-        Bookings: false,
-        Reports: false,
-        Settings: false
-      }
-    });
-    
-    // Set profile image preview if exists
-    if (userMember.profileImage) {
-      setProfileImagePreview(`http://localhost:5000${userMember.profileImage}`);
-    } else {
+      setConfirmPassword('');
+      setProfileImage(null);
       setProfileImagePreview("");
+      setFormErrors(prev => ({ ...prev, users: {} }));
+      setTouchedFields(prev => ({ ...prev, users: {} }));
+      
+      // Reset editing state
+      setEditUserId(null);
+      setIsEditingUser(false);
+      
+      // Refresh user list
+      setTimeout(() => {
+        fetchUsers();
+      }, 500);
+      
+      setTimeout(() => {
+        setFormSuccess(false);
+      }, 5000);
+      
+    } else {
+      setFormError(data.error || (isEditingUser ? 'Failed to update user' : 'Failed to add user'));
     }
-    
-    setEditUserId(userMember._id);
-    setIsEditingUser(true);
-    setActiveMenu('add-user');
-    setProfileImage(null);
-    setConfirmPassword(''); 
-    setFormSuccess(false); 
-    setFormError(''); 
-    
-    // Reset touched fields and errors
-    setTouchedFields(prev => ({ ...prev, users: {} }));
-    setFormErrors(prev => ({ ...prev, users: {} }));
-  };
+  } catch (error) {
+    console.error('Error saving user:', error);
+    setFormError(`Failed to ${isEditingUser ? 'update' : 'add'} user. Please try again.`);
+  }
+};
+
+const handleEditUser = (userMember) => {
+  setNewUser({
+    name: userMember.name || '',
+    email: userMember.email || '',
+    phone: userMember.phone || '',
+    designation: userMember.designation || '',
+    password: '********',
+    isActive: userMember.isActive !== undefined ? userMember.isActive : true,
+    permissions: userMember.permissions || {
+      Dashboard: false,
+      Users: false,
+      Customer: false,
+      Catalog: false, // Changed from Category to Catalog
+      Product: false,
+      Bookings: false,
+      Reports: false,
+      Settings: false
+    }
+  });
+  
+  // Set profile image preview if exists
+  if (userMember.profileImage) {
+    setProfileImagePreview(`http://localhost:5000${userMember.profileImage}`);
+  } else {
+    setProfileImagePreview("");
+  }
+  
+  setEditUserId(userMember._id);
+  setIsEditingUser(true);
+  setActiveMenu('add-user');
+  setProfileImage(null);
+  setConfirmPassword(''); 
+  setFormSuccess(false); 
+  setFormError(''); 
+  
+  // Reset touched fields and errors
+  setTouchedFields(prev => ({ ...prev, users: {} }));
+  setFormErrors(prev => ({ ...prev, users: {} }));
+};
 
   const handleAddProduct = async (e) => {
     e.preventDefault();
@@ -2322,10 +2335,10 @@ function AdminPanel() {
             <Card className="shadow-lg">
               <Card.Body className="p-6"  style={{marginLeft:"25px",marginRight:"25px"}}>
                 {formSuccess && (
-                  <Alert variant="success" style={{height:"50px"}} onClose={() => setFormSuccess(false)} dismissible>
-                    <p>{isEditingUser ? 'User updated successfully' : 'User has been added successfully'}</p>
-                  </Alert>
-                )}
+                <Alert variant="success" style={{height:"50px"}} onClose={() => setFormSuccess(false)} dismissible>
+                  <p>{isEditingUser ? 'User updated successfully' : 'User has been added successfully'}</p>
+                </Alert>
+              )}
                 
                 {formError && (
                   <Alert variant="danger" onClose={() => setFormError('')} dismissible>
@@ -2512,32 +2525,32 @@ function AdminPanel() {
                     <div className="px-1">
                       <Row className=" gy-2  gx-5">
                         {[
-                          'Dashboard',
-                          'Users',
-                          'Customer',
-                          'Category',
-                          'Product',
-                          'Bookings',
-                          'Reports',
-                          'Settings'
-                        ].map((permission) => (
-                          <Col xs={6} sm={4} md={3} lg={2} key={permission}>
-                            <div 
-                              className="d-flex align-items-center p-2 rounded"
-                              style={{
-                                cursor: 'pointer', 
-                                transition: 'all 0.2s',
-                                backgroundColor: newUser.permissions[permission] ? '#e9ecef' : 'transparent'
-                              }}
-                              onClick={() => setNewUser({
-                                ...newUser,
-                                permissions: {
-                                  ...newUser.permissions,
-                                  [permission]: !newUser.permissions[permission]
-                                }
-                              })}
-                            >
-                             <Form.Check
+                        'Dashboard',
+                        'Users',
+                        'Customer',
+                        'Catalog', 
+                        'Product',
+                        'Bookings',
+                        'Reports',
+                        'Settings'
+                      ].map((permission) => (
+                        <Col xs={6} sm={4} md={3} lg={2} key={permission}>
+                          <div 
+                            className="d-flex align-items-center p-2 rounded"
+                            style={{
+                              cursor: 'pointer', 
+                              transition: 'all 0.2s',
+                              backgroundColor: newUser.permissions[permission] ? '#e9ecef' : 'transparent'
+                            }}
+                            onClick={() => setNewUser({
+                              ...newUser,
+                              permissions: {
+                                ...newUser.permissions,
+                                [permission]: !newUser.permissions[permission]
+                              }
+                            })}
+                          >
+                            <Form.Check
                               type="checkbox"
                               id={`permission-${permission}`}
                               label={permission}
@@ -2556,9 +2569,9 @@ function AdminPanel() {
                                 '--bs-border-color': '#000000',
                               }}
                             />
-                            </div>
-                          </Col>
-                        ))}
+                          </div>
+                        </Col>
+                      ))}
                       </Row>
                     </div>
                   </Form.Group>
@@ -2566,38 +2579,38 @@ function AdminPanel() {
                   {/* Action Buttons */}
                   <div className="d-flex justify-content-center gap-3 mt-4">
                     <Button 
-                      variant="outline-dark" 
-                      onClick={() => {
-                        handleMenuClick('manage-users');
-                        setNewUser({
-                          name: '',
-                          email: '',
-                          phone: '',
-                          designation: '',
-                          password: '',
-                          permissions: {
-                            Dashboard: false,
-                            Users: false,
-                            Customer: false,
-                            Category: false,
-                            Product: false,
-                            Bookings: false,
-                            Reports: false,
-                            Settings: false
-                          }
-                        });
-                        setConfirmPassword('');
-                        setProfileImage(null);
-                        setProfileImagePreview("");
-                        if (isEditingUser) {
-                          setEditUserId(null);
-                          setIsEditingUser(false);
+                    variant="outline-dark" 
+                    onClick={() => {
+                      handleMenuClick('manage-users');
+                      setNewUser({
+                        name: '',
+                        email: '',
+                        phone: '',
+                        designation: '',
+                        password: '',
+                        permissions: {
+                          Dashboard: false,
+                          Users: false,
+                          Customer: false,
+                          Catalog: false, 
+                          Product: false,
+                          Bookings: false,
+                          Reports: false,
+                          Settings: false
                         }
-                      }}
-                      style={{ minWidth: '100px',borderRadius:"50px" }}
-                    >
-                      Cancel
-                    </Button>
+                      });
+                      setConfirmPassword('');
+                      setProfileImage(null);
+                      setProfileImagePreview("");
+                      if (isEditingUser) {
+                        setEditUserId(null);
+                        setIsEditingUser(false);
+                      }
+                    }}
+                    style={{ minWidth: '100px',borderRadius:"50px" }}
+                  >
+                    Cancel
+                  </Button>
                     <Button 
                       variant="dark" 
                       type="submit"
@@ -3078,21 +3091,7 @@ function AdminPanel() {
                     'Authorization': `Bearer ${getAuthToken()}`
                   },
                   body: formDataToSend
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                  alert(`Category ${isEditingCategory ? 'updated' : 'added'} successfully!`);
-                  
-                  // Reset form and navigate back
-                  setIsEditingCategory(false);
-                  setEditCategoryId(null);
-                  setEditCategory(null);
-                  fetchCategories();
-                  handleMenuClick('manage-categories');
-                } else {
-                  alert(data.error || `Failed to ${isEditingCategory ? 'update' : 'add'} category`);
-                }
+                });                
               } catch (error) {
                 console.error(`Error ${isEditingCategory ? 'updating' : 'adding'} category:`, error);
                 alert(`Failed to ${isEditingCategory ? 'update' : 'add'} category`);
@@ -3155,19 +3154,6 @@ function AdminPanel() {
                     },
                     body: formDataToSend
                   });
-                  
-                  const data = await response.json();
-                  if (data.success) {
-                    alert(`Subcategory ${subcategoryEditId ? 'updated' : 'added'} successfully!`);
-                    
-                    // Reset form and navigate back
-                    setSubcategoryEditId(null);
-                    setShowAddSubcategoryForm(false);
-                    fetchSubcategories();
-                    handleMenuClick('manage-subcategories');
-                  } else {
-                    alert(data.error || `Failed to ${subcategoryEditId ? 'update' : 'add'} subcategory`);
-                  }
                 } catch (error) {
                   console.error(`Error ${subcategoryEditId ? 'updating' : 'adding'} subcategory:`, error);
                   alert(`Failed to ${subcategoryEditId ? 'update' : 'add'} subcategory`);

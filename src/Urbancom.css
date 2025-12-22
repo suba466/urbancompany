@@ -54,7 +54,6 @@
   border: 1px solid #8a8888ff;
   border-radius: 5px;
   margin-top: 30px;
-  width: 500px;
   padding: 13px;
 }
 .service-heading {
@@ -694,10 +693,11 @@
   .navbar-toggler { display: none; }
   .mobile-only { display: none !important; }
   .desktop-only { display: flex; }
-}
 
+}
 .desktop-only { display: flex; }
 .mobile-only { display: none; }
+
 
 @media (max-width: 992px) {
   .service-box {

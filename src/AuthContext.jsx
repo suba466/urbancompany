@@ -25,24 +25,24 @@ export const AuthProvider = ({ children }) => {
     if (storedUser) {
       try {
         const userData = JSON.parse(storedUser);
-        console.log("📂 Loading user from localStorage:", userData);
+        console.log(" Loading user from localStorage:", userData);
         setUserInfo(userData);
         setIsLoggedIn(true);
       } catch (error) {
-        console.error("❌ Error parsing stored user:", error);
+        console.error(" Error parsing stored user:", error);
         localStorage.removeItem('urbanUser');
       }
     }
   }, []);
 
   const login = (userData) => {
-    console.log("🔑 Login called with data:", userData);
+    console.log(" Login called with data:", userData);
     
     // Accept either userId, customerId, or id
     const userId = userData.userId || userData.customerId || userData.id;
     
     if (!userId) {
-      console.error("❌ No user ID provided during login!");
+      console.error(" No user ID provided during login!");
       alert("Login failed: User ID missing");
       return;
     }
@@ -57,18 +57,18 @@ export const AuthProvider = ({ children }) => {
       title: userData.title || 'Ms'
     };
 
-    console.log("💾 Storing user info:", userInfoToStore);
+    console.log(" Storing user info:", userInfoToStore);
     
     setUserInfo(userInfoToStore);
     setIsLoggedIn(true);
     
     // Save to localStorage
     localStorage.setItem('urbanUser', JSON.stringify(userInfoToStore));
-    console.log("✅ User saved to localStorage");
+    console.log(" User saved to localStorage");
   };
 
   const logout = () => {
-    console.log("🚪 Logging out user");
+    console.log(" Logging out user");
     setUserInfo({
       id: '',
       name: '',

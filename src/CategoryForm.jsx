@@ -9,75 +9,87 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
     order: 0,
     isActive: true
   });
+
   const [imageFile, setImageFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
-  const [error, setError] = useState('');
+  const [formSuccess, setFormSuccess] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (isEditing && categoryData) {
       setFormData({
         name: categoryData.name || '',
         description: categoryData.description || '',
-        key: categoryData.key || categoryData.name?.toLowerCase().replace(/ /g, '-') || '',
+        key:
+          categoryData.key ||
+          categoryData.name?.toLowerCase().replace(/ /g, '-') ||
+          '',
         order: categoryData.order || 0,
-        isActive: categoryData.isActive !== undefined ? categoryData.isActive : true
+        isActive:
+          categoryData.isActive !== undefined
+            ? categoryData.isActive
+            : true
       });
-      
+
       if (categoryData.img) {
         setPreviewUrl(`http://localhost:5000${categoryData.img}`);
       }
     }
   }, [isEditing, categoryData]);
 
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.name.trim()) {
+      newErrors.name = 'Category name is required';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        setError('Please select an image file');
-        return;
-      }
-      
-      // Validate file size (5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        setError('Image size should be less than 5MB');
-        return;
-      }
-      
-      setImageFile(file);
-      setError('');
-      
-      // Create preview URL
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setFormError('Please select an image file');
+      return;
     }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setFormError('Image size should be less than 5MB');
+      return;
+    }
+
+    setImageFile(file);
+    setFormError('');
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewUrl(reader.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!formData.name.trim()) {
-      setError('Category name is required');
-      return;
-    }
-    
+    setFormSuccess(false);
+    setFormError('');
+
+    if (!validateForm()) return;
+
     try {
       await onSubmit(formData, imageFile);
+      setFormSuccess(true);
+
+      setTimeout(() => {
+        setFormSuccess(false);
+      }, 5000);
     } catch (err) {
-      setError(err.message || 'Failed to save category');
+      setFormError(err.message || 'Failed to save category');
     }
   };
 
-  const handleCancel = () => {
-    if (onCancel) {
-      onCancel();
-    }
-  };
-
-  // Trigger file input click
   const triggerFileInput = () => {
     document.getElementById('categoryImageUpload').click();
   };
@@ -85,177 +97,178 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
   return (
     <div className="p-3">
       <Card className="shadow-lg">
-        <Card.Body style={{marginLeft:"25px",marginRight:"25px"}}>
+        <Card.Body style={{ marginLeft: '25px', marginRight: '25px' }}>
           <h5 className="mb-0 fw-semibold">
-            {isEditing ? 'Edit Category' : (
+            {isEditing ? (
+              'Edit Category'
+            ) : (
               <>
                 Category Management
-                <span className="text-muted mx-2" style={{fontSize:"14px",fontWeight:"normal"}}>•</span>
-                <span className="text-muted " style={{fontSize:"14px",fontWeight:"normal"}}>New Category</span>
+                <span
+                  className="text-muted mx-2"
+                  style={{ fontSize: '14px' }}
+                >
+                  •
+                </span>
+                <span className="text-muted" style={{ fontSize: '14px' }}>
+                  New Category
+                </span>
               </>
             )}
           </h5>
         </Card.Body>
-      </Card> 
-      
+      </Card>
+
       <br />
-      
+
       <Card className="border-0 shadow-lg">
-        <Card.Body style={{marginLeft:"25px",marginRight:"25px"}}>
-          {error && (
-            <Alert variant="danger" onClose={() => setError('')} dismissible>
-              {error}
+        <Card.Body style={{ marginLeft: '25px', marginRight: '25px' }}>
+          <h5 className="fw-semibold mb-1">
+          {isEditing ? 'Edit Category' : 'New Category'}
+        </h5>
+        <p className="text-muted" style={{ fontSize: '12px' }}>
+          {isEditing
+            ? 'Use below form to edit Category'
+            : 'Use below form to create a new Category'}
+        </p>
+          {formSuccess && (
+            <Alert
+              variant="success"
+              style={{ height: '50px' }}
+              onClose={() => setFormSuccess(false)}
+              dismissible
+            >
+              <p className="mb-0">
+                {isEditing
+                  ? 'Category updated successfully'
+                  : 'Category added successfully'}
+              </p>
             </Alert>
           )}
-          
-          <div className="mb-4">
-            {isEditing ? (
-              <>
-                <h5 className="fw-semibold mb-1">Edit Category</h5>
-                <p className='text-muted' style={{fontSize:"12px"}}>Update the category details</p>
-              </>
-            ) : (
-              <>
-                <h5 className="fw-semibold mb-1">New Category</h5>
-                <p className='text-muted' style={{fontSize:"12px"}}>Use the below form to create a new category</p>
-              </>
-            )}
-          </div>
-          
+
+          {formError && (
+            <Alert
+              variant="danger"
+              onClose={() => setFormError('')}
+              dismissible
+            >
+              <Alert.Heading>Error!</Alert.Heading>
+              <p>{formError}</p>
+            </Alert>
+          )}
+
           <Form onSubmit={handleSubmit}>
             <Row className="mb-3">
-              {/* Name Field */}
               <Col md={6}>
                 <Form.Group className="mb-4">
                   <Form.Control
                     type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    required
                     placeholder="Category name"
-                    className='cate'
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    isInvalid={!!errors.name}
+                    className="cate"
                   />
+                  <Form.Control.Feedback type="invalid">
+                    {errors.name}
+                  </Form.Control.Feedback>
                 </Form.Group>
               </Col>
+
               <Col md={6}>
                 <Form.Group className="mb-4">
                   <Form.Control
                     type="text"
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
                     placeholder="Description"
-                    className='cate'
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        description: e.target.value
+                      })
+                    }
+                    className="cate"
                   />
                 </Form.Group>
               </Col>
             </Row>
-            
-            {/* Image Upload Section - Made consistent with SubcategoryForm */}
-            <Row className="mb-3">
-              <Col md={12}>
+
+            <Row>
+              <Col md={6}>
                 <Form.Group className="mb-4">
-                  <Form.Label className="fw-semibold mb-3 d-block text-center">
+                  <Form.Label className="fw-semibold">
                     Category Image
                   </Form.Label>
-                  <div className="d-flex justify-content-center">
-                    <div style={{ 
-                      width: '100%',
-                      maxWidth: '400px'
-                    }}>
-                      {/* Make the entire dashed box clickable */}
-                      <div 
-                        style={{ 
-                          border: "2px dashed #000000",
-                          borderRadius: "12px",
-                          backgroundColor: "#f8f9fa",
-                          marginBottom: "15px",
-                          overflow: 'hidden',
-                          cursor: 'pointer'  // Add cursor pointer to entire box
-                        }}
-                        onClick={triggerFileInput}  // Make entire box clickable
-                      >
+
+                  <div
+                    className="text-center"
+                    style={{
+                      border: '2px dashed #000',
+                      borderRadius: '5px',height:"100px",
+                      backgroundColor: '#f8f9fa',
+                      cursor: 'pointer'
+                    }}
+                    onClick={triggerFileInput}
+                  >
+                    <div className="d-flex align-items-center h-100">
+                      <div style={{ width: '100px' }}>
                         {previewUrl ? (
-                          <div className="text-center p-3">
-                            <img 
-                              src={previewUrl} 
-                              alt="Preview" 
-                              style={{ 
-                                width: '150px', 
-                                height: '150px', 
-                                objectFit: 'cover',
-                                borderRadius: '8px',
-                                border: "1px solid #dee2e6",
-                                margin: '10px auto'
-                              }}
-                            />
-                            <p 
-                              className="text-muted mb-0" 
-                              style={{ fontSize: '12px', cursor: 'pointer' }}
-                            >
-                              Click to change image
-                            </p>
-                          </div>
-                        ) : (
-                          <div 
-                            className="d-flex flex-column align-items-center justify-content-center p-4"
-                            style={{ 
-                              minHeight: '180px'
+                          <img
+                            src={previewUrl}
+                            alt="Preview"
+                            style={{
+                              width: '80px',
+                              height: '80px',
+                              objectFit: 'cover',
+                              borderRadius: '8px'
                             }}
-                          >
-                            <i 
-                              className="bi bi-cloud-arrow-up" 
-                              style={{ 
-                                fontSize: '40px', 
-                                color: '#6c757d',
-                                marginBottom: '10px'
-                              }}
-                            ></i>
-                            <p className="text-muted mb-1">Click to upload image</p>
-                            <p className="text-muted" style={{ fontSize: '12px' }}>
-                              JPG, PNG up to 5MB
-                            </p>
-                            <p className="text-muted" style={{ fontSize: '12px' }}>
-                              Recommended: 300x300px
-                            </p>
-                          </div>
+                          />
+                        ) : (
+                          <i
+                            className="bi bi-image"
+                            style={{ fontSize: '40px' }}
+                          ></i>
                         )}
                       </div>
-                      
-                      <Form.Control
-                        id="categoryImageUpload"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageChange}
-                        className="d-none"
-                      />
-                      
-                      {imageFile && (
-                        <p className="text-muted text-center mb-0" style={{ fontSize: '12px' }}>
-                          Selected: {imageFile.name}
+
+                      <div className="flex-grow-1 text-center">
+                        <p className="mb-1 fw-semibold">
+                          {previewUrl
+                            ? 'Click to change image'
+                            : 'Click to upload image'}
                         </p>
-                      )}
+                        <p className="text-muted mb-0" style={{ fontSize: '12px' }}>
+                          JPG, PNG up to 5MB
+                        </p>
+                      </div>
                     </div>
                   </div>
+
+                  <Form.Control
+                    id="categoryImageUpload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="d-none"
+                  />
                 </Form.Group>
               </Col>
             </Row>
-            
-            <div className="d-flex justify-content-center gap-3 ">
-              <Button 
-                variant="outline-dark" 
-                onClick={handleCancel}
-                className='cat'
-              >
+
+            <div className="d-flex justify-content-center gap-3">
+              <Button variant="outline-dark" onClick={onCancel} className="cat">
                 Cancel
               </Button>
-              
-              <Button 
-                variant="dark" 
-                type="submit"
-                className='cat'
-              >
-                <i className={`bi ${isEditing ? 'bi-pencil' : 'bi-plus-circle'} me-2`}></i>
-                {isEditing ? 'Update' : 'Submit'}
+
+              <Button variant="dark" type="submit" className="cat">
+                <i
+                  className={`bi ${
+                    isEditing ? 'bi-pencil' : 'bi-plus-circle'
+                  } me-2`}
+                ></i>
+                Submit
               </Button>
             </div>
           </Form>

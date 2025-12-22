@@ -58,7 +58,7 @@ const userSchema = new mongoose.Schema({
     Dashboard: { type: Boolean, default: false },
     Users: { type: Boolean, default: false },
     Customer: { type: Boolean, default: false },
-    Category: { type: Boolean, default: false },
+    Catalog: { type: Boolean, default: false },
     Product: { type: Boolean, default: false },
     Bookings: { type: Boolean, default: false },
     Reports: { type: Boolean, default: false },
@@ -268,7 +268,7 @@ router.post("/login", async (req, res) => {
           Dashboard: true,
           Users: true,
           Customer: true,
-          Category: true,
+          Catalog: true,
           Product: true,
           Bookings: true,
           Reports: true,
@@ -628,7 +628,7 @@ router.post("/users", checkPermission('Users'), upload.single('profileImage'), a
         Dashboard: false,
         Users: false,
         Customer: false,
-        Category: false,
+        Catalog: false, 
         Product: false,
         Bookings: false,
         Reports: false,
@@ -956,7 +956,7 @@ router.delete("/customers/:id", checkPermission('Customer'), async (req, res) =>
 });
 
 // Categories routes (Changed from services to categories)
-router.get("/categories", checkPermission('Category'), async (req, res) => {
+router.get("/categories", checkPermission('Catalog'), async (req, res) => {
   try {
     const { page = 1, limit = 20, search = "", sort = "-createdAt" } = req.query;
     const skip = (page - 1) * limit;
@@ -1563,7 +1563,7 @@ router.delete("/subcategories/:id", checkPermission('Category'), async (req, res
   }
 });
 
-router.get("/subcategories", async (req, res) => {
+router.get("/subcategories", checkPermission('Catalog'), async (req, res) => {
   try {
     const { 
       page = 1, 
@@ -1942,8 +1942,8 @@ router.post("/bulk-delete", async (req, res) => {
     const permissionMap = {
       'users': 'Users',
       'customers': 'Customer',
-      'categories': 'Category',
-      'subcategories': 'Category',
+      'categories': 'Catalog',
+      'subcategories': 'Catalog',
       'packages': 'Product',
       'bookings': 'Bookings'
     };

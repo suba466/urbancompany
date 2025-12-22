@@ -327,7 +327,7 @@ function Salon() {
                         transition: "transform 0.2s",
                         padding: "10px",
                         borderRadius: "8px",
-                        flex: "0 0 calc(33.333% - 10px)",
+                        flex: "0 0 calc(31.333% - 10px)",
                         margin: "0 5px 10px 5px",
                         textAlign: "center"
                       }}
@@ -340,8 +340,6 @@ function Salon() {
                           backgroundColor: "white",
                           width: "60px",
                           height: "60px",
-                          borderRadius: "8px",
-                          border: "1px solid #e0e0e0",
                           overflow: "hidden",
                           margin: "0 auto 5px"
                         }}
@@ -356,47 +354,20 @@ function Salon() {
                           }
                           alt={subcategory.name}
                           className="object-fit-cover"
-                          style={{ 
-                            width: "100%", 
-                            height: "100%",
-                            objectFit: "cover"
-                          }}
                           onError={(e) => {
                             e.target.src = "http://localhost:5000/assets/placeholder.png";
                           }}
                         />
                       </div>
-                      <p style={{
-                        fontSize: "12px", 
-                        fontWeight: "500",
-                        margin: "0",
-                        color: "#333",
-                        lineHeight: "1.2"
-                      }}>
+                      <p style={{fontSize:"12px"}}>
                         {subcategory.name}
                       </p>
-                      {/* Optional: Show active/inactive badge for debugging */}
-                      {process.env.NODE_ENV === 'development' && (
-                        <span 
-                          style={{ 
-                            fontSize: "8px", 
-                            color: subcategory.isActive === false ? "red" : "green",
-                            display: "block",
-                            marginTop: "2px"
-                          }}
-                        >
-                          {subcategory.isActive === false ? "Inactive" : "Active"}
-                        </span>
-                      )}
                     </div>
                   );
                 })}
               </div>
             ) : (
-              // If no active subcategories, show nothing (completely empty box)
-              <div style={{ minHeight: "50px" }}>
-                {/* Completely empty - no message, no button, nothing */}
-              </div>
+              ""
             )}
           </div>
         </Col>
