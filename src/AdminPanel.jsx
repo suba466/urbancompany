@@ -198,6 +198,41 @@ function AdminPanel() {
   const [adminProfile, setAdminProfile] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
 
+  // Add this function in your AdminPanel component
+const checkTokenExpiration = () => {
+  const token = localStorage.getItem('authToken');
+  if (!token) return false;
+  
+  try {
+    // Decode the JWT token to check expiration
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const currentTime = Math.floor(Date.now() / 1000);
+    
+    // Check if token is expired
+    if (payload.exp < currentTime) {
+      // Token expired, logout user
+      localStorage.clear();
+      setIsLoggedIn(false);
+      setUserRole(null);
+      setUserPermissions(null);
+      alert('Your session has expired. Please login again.');
+      return false;
+    }
+    
+    // Check if token will expire in less than 5 minutes (optional)
+    // This gives a warning before full expiration
+    const fiveMinutesFromNow = currentTime + (5 * 60);
+    if (payload.exp < fiveMinutesFromNow) {
+      // Token will expire soon, you can show a warning here
+      console.log('Token will expire soon');
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error checking token expiration:', error);
+    return false;
+  }
+};
   // Format permissions with badges
   const formatPermissions = (permissions) => {
     if (!permissions) return <Badge bg="dark" className="me-1 px-3 py-2">None</Badge>;
@@ -361,14 +396,61 @@ const validateUserForm = () => {
     return localStorage.getItem('authToken');
   };
 
-  // Set authentication headers
-  const getAuthHeaders = () => {
-    const token = getAuthToken();
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    };
+ // Update getAuthHeaders function
+const getAuthHeaders = () => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('No authentication token found');
+  }
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
   };
+};
+
+// Create a wrapper function for API calls that handles token expiration
+const makeApiCall = async (url, options = {}) => {
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...options.headers,
+        ...getAuthHeaders()
+      }
+    });
+    
+    const data = await response.json();
+    
+    // Check if token expired
+    if (data.expired || (response.status === 401 && data.error?.includes('expired'))) {
+      // Token expired, logout user
+      localStorage.clear();
+      setIsLoggedIn(false);
+      setUserRole(null);
+      setUserPermissions(null);
+      alert('Your session has expired. Please login again.');
+      return null;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('API call error:', error);
+    
+    // If it's an authentication error, logout
+    if (error.message.includes('No authentication token') || 
+        error.message.includes('401') ||
+        error.message.includes('token')) {
+      localStorage.clear();
+      setIsLoggedIn(false);
+      setUserRole(null);
+      setUserPermissions(null);
+      alert('Authentication error. Please login again.');
+    }
+    
+    return null;
+  }
+};
+
 
   const fetchAdminLogo = async () => {
     try {
@@ -414,28 +496,28 @@ const validateUserForm = () => {
       console.log('Login response:', data);
       
       if (data.success) {
-        setIsLoggedIn(true);
-        
-        // ALWAYS reset to dashboard when logging in
-        setActiveMenu('dashboard');
-        
-        // Store token and user info
-        localStorage.setItem('authToken', data.token);
-        
-        if (isAdminEmail) {
-          localStorage.setItem('userRole', 'admin');
-          localStorage.setItem('userPermissions', JSON.stringify(data.admin?.permissions || {}));
-          setUserRole('admin');
-          setUserPermissions(data.admin?.permissions || {});
-        } else {
-          localStorage.setItem('userRole', 'user');
-          localStorage.setItem('userPermissions', JSON.stringify(data.user?.permissions || {}));
-          setUserRole('user');
-          setUserPermissions(data.user?.permissions || {});
-        }
-        
-        fetchDashboardData();
+      // Store token and user info FIRST
+      localStorage.setItem('authToken', data.token);
+      
+      if (isAdminEmail) {
+        localStorage.setItem('userRole', 'admin');
+        localStorage.setItem('userPermissions', JSON.stringify(data.admin?.permissions || {}));
       } else {
+        localStorage.setItem('userRole', 'user');
+        localStorage.setItem('userPermissions', JSON.stringify(data.user?.permissions || {}));
+      }
+      
+      // Set state values
+      setIsLoggedIn(true);
+      setUserRole(isAdminEmail ? 'admin' : 'user');
+      setUserPermissions(isAdminEmail ? data.admin?.permissions || {} : data.user?.permissions || {});
+      
+      // ALWAYS reset to dashboard when logging in
+      setActiveMenu('dashboard');
+      
+      // Fetch dashboard data
+      fetchDashboardData();
+    }else {
         // If admin login fails, try user login
         if (isAdminEmail) {
           console.log('Admin login failed, trying user login...');
@@ -474,31 +556,29 @@ const validateUserForm = () => {
     }
   };
 
-  const fetchDashboardData = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/admin/dashboard', {
-        headers: getAuthHeaders()
-      });
-      const data = await response.json();
-      if (data.success) {
-        setStats(data.stats);
-        
-        const transformedBookings = data.recentBookings?.map(booking => {
-          const customer = data.recentCustomers?.find(u => u.email === booking.customerEmail);
-          return {
-            ...booking,
-            customerProfileImage: customer?.profileImage || '',
-            customerName: customer?.name || booking.customerName
-          };
-        }) || [];
-        
-        setRecentBookings(transformedBookings);
-        setRecentCustomers(data.recentCustomers || []);
-      }
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+  // Update your fetch functions to use makeApiCall
+const fetchDashboardData = async () => {
+  try {
+    const data = await makeApiCall('http://localhost:5000/api/admin/dashboard');
+    if (data && data.success) {
+      setStats(data.stats);
+      
+      const transformedBookings = data.recentBookings?.map(booking => {
+        const customer = data.recentCustomers?.find(u => u.email === booking.customerEmail);
+        return {
+          ...booking,
+          customerProfileImage: customer?.profileImage || '',
+          customerName: customer?.name || booking.customerName
+        };
+      }) || [];
+      
+      setRecentBookings(transformedBookings);
+      setRecentCustomers(data.recentCustomers || []);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+  }
+};
 
   const fetchUsers = async (page = 1, search = '', perPage = userPerPage) => {
     try {
@@ -1469,7 +1549,11 @@ const handleEditUser = (userMember) => {
   };
 
   useEffect(() => {
-    // Check if user is already logged in
+  // Check token expiration on component mount
+  const isTokenValid = checkTokenExpiration();
+  
+  if (isTokenValid) {
+    // Token is valid, proceed with login
     const token = localStorage.getItem('authToken');
     const role = localStorage.getItem('userRole');
     const permissions = localStorage.getItem('userPermissions');
@@ -1479,7 +1563,7 @@ const handleEditUser = (userMember) => {
       setUserRole(role);
       setUserPermissions(JSON.parse(permissions));
       
-      // ALWAYS start with dashboard on page load
+      // IMPORTANT: Set active menu to dashboard
       setActiveMenu('dashboard');
       
       fetchDashboardData();
@@ -1492,9 +1576,18 @@ const handleEditUser = (userMember) => {
         fetchUserProfile();
       }
     }
-    
-    fetchAdminLogo();
-  }, []);
+  }
+  
+  fetchAdminLogo();
+  
+  // Set up interval to check token expiration every minute
+  const interval = setInterval(() => {
+    checkTokenExpiration();
+  }, 60000); // Check every minute
+  
+  // Clean up interval on component unmount
+  return () => clearInterval(interval);
+}, []);
 
   if (!isLoggedIn) {
     return (
@@ -1875,18 +1968,30 @@ const handleEditUser = (userMember) => {
         </Nav>
         
         <div className="px-3 mt-4">
-          <Button 
-            variant="outline-light" 
-            className="w-100"
-            onClick={() => {
-              localStorage.clear();
-              setIsLoggedIn(false);
-              setUserRole(null);
-              setUserPermissions(null);
-            }}
-          >
-            <i className="bi bi-box-arrow-left me-2"></i>Logout
-          </Button>
+        <Button 
+          variant="outline-light" 
+          className="w-100"
+          onClick={() => {
+            // Clear all local storage
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userPermissions');
+            
+            // Reset all state
+            setIsLoggedIn(false);
+            setUserRole(null);
+            setUserPermissions(null);
+            setActiveMenu('dashboard');
+            
+            // Clear any intervals or timeouts
+            // (if you added the activity tracking)
+            
+            // Show logout message
+            alert('You have been logged out successfully.');
+          }}
+        >
+        <i className="bi bi-box-arrow-left me-2"></i>Logout
+      </Button>
         </div>
       </div>
     );
@@ -1894,10 +1999,10 @@ const handleEditUser = (userMember) => {
 
   const renderContent = () => {
     // ALWAYS default to dashboard if no menu is active
-    if (!activeMenu) {
-      setActiveMenu('dashboard');
-      return null;
-    }
+     if (!activeMenu || activeMenu === '') {
+    setActiveMenu('dashboard');
+    return null;
+  }
     
     // Check permission for current menu
     const permissionMap = {
@@ -3968,13 +4073,17 @@ const handleEditUser = (userMember) => {
                     </Dropdown.Item>
                     <Dropdown.Divider />
                     <Dropdown.Item onClick={() => {
-                      localStorage.clear();
-                      setIsLoggedIn(false);
-                      setUserRole(null);
-                      setUserPermissions(null);
-                    }}>
-                      <i className="bi bi-box-arrow-right me-2"></i>Logout
-                    </Dropdown.Item>
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('userRole');
+                    localStorage.removeItem('userPermissions');
+                    setIsLoggedIn(false);
+                    setUserRole(null);
+                    setUserPermissions(null);
+                    setActiveMenu('dashboard');
+                    alert('Logged out successfully.');
+                  }}>
+                    <i className="bi bi-box-arrow-right me-2"></i>Logout
+                  </Dropdown.Item>
                   </Dropdown.Menu>
                 </Dropdown>
               </Nav>
