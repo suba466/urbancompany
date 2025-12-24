@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Card, Table, Form, Button, Alert,
   Row, Col, Spinner
@@ -17,7 +17,7 @@ const Subcategories = ({
   onDelete,
   onBulkDelete,
   onToggleStatus,
-  onView,                // 👈 NEW
+  onView,                
   currentPage = 1,
   totalPages = 1,
   totalItems = 0,
@@ -29,6 +29,29 @@ const Subcategories = ({
   onAddSubcategory,
   loading = false
 }) => {
+  // Local state for search - initialize with prop value
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+
+  // Update local search when prop changes
+  useEffect(() => {
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
+
+  // Filter subcategories based on search term (client-side filtering)
+  const filteredSubcategories = useMemo(() => {
+    // Fix: Check if localSearch is a string before calling trim()
+    if (!localSearch || typeof localSearch !== 'string' || !localSearch.trim()) {
+      return subcategories;
+    }
+    
+    const searchTerm = localSearch.toLowerCase().trim();
+    return subcategories.filter(sub => {
+      return (
+        (sub.name && sub.name.toLowerCase().includes(searchTerm)) ||
+        (sub.categoryName && sub.categoryName.toLowerCase().includes(searchTerm)) 
+      );
+    });
+  }, [subcategories, localSearch]);
 
   const handleDelete = (subcategory) => {
     const confirmDelete = window.confirm(
@@ -40,7 +63,7 @@ const Subcategories = ({
   };
 
   const handleExport = (format) => {
-    const data = subcategories.map(sub => ({
+    const data = filteredSubcategories.map(sub => ({
       'Subcategory ID': sub._id,
       'Name': sub.name,
       'Parent Category': sub.categoryName,
@@ -64,6 +87,23 @@ const Subcategories = ({
     a.download = 'subcategories.csv';
     a.click();
     window.URL.revokeObjectURL(url);
+  };
+
+  // Handle search change - FIXED: Accept event object
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setLocalSearch(value);
+    if (onSearchChange) {
+      onSearchChange(value);
+    }
+  };
+
+  // Clear search
+  const handleClearSearch = () => {
+    setLocalSearch('');
+    if (onSearchChange) {
+      onSearchChange('');
+    }
   };
 
   if (loading) {
@@ -106,8 +146,8 @@ const Subcategories = ({
                 totalPages={totalPages}
                 totalItems={totalItems}
                 onPageChange={onPageChange}
-                searchValue={searchQuery}
-                onSearchChange={onSearchChange}
+                searchValue={localSearch} // Use localSearch here
+                onSearchChange={handleSearchChange} // This now passes the event
                 searchPlaceholder="Search subcategories..."
                 onDownloadCSV={() => handleExport('csv')}
                 selectedCount={selectedSubcategories.length}
@@ -120,6 +160,7 @@ const Subcategories = ({
         </Card.Header>
 
         <Card.Body>
+
           {selectedSubcategories.length > 0 && (
             <Alert variant="dark" className="d-flex justify-content-between">
               <span>{selectedSubcategories.length} selected</span>
@@ -134,7 +175,7 @@ const Subcategories = ({
           )}
 
           <div className="table-responsive">
-            <Table bordered hover>
+            <Table striped bordered hover style={{border:"2px solid"}}>
               <thead>
                 <tr>
                   <th>
@@ -152,14 +193,26 @@ const Subcategories = ({
               </thead>
 
               <tbody>
-                {subcategories.length === 0 ? (
+                {filteredSubcategories.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="text-center">
-                      No subcategories found
+                    <td colSpan="6" className="text-center py-4">
+                      {localSearch && typeof localSearch === 'string' && localSearch.trim() ? (
+                        <div>
+                          <i className="bi bi-search mb-3" style={{ fontSize: '48px', color: '#6c757d' }}></i>
+                          <h5>No Subcategories Found</h5>
+                          <p className="text-muted">No subcategories match "{localSearch}"</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <i className="bi bi-folder2-open mb-3" style={{ fontSize: '48px', color: '#6c757d' }}></i>
+                          <h5>No Subcategories Found</h5>
+                          <p className="text-muted">No subcategories available. Click "Add Subcategory" to create one.</p>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ) : (
-                  subcategories.map(sub => (
+                  filteredSubcategories.map(sub => (
                     <tr key={sub._id}>
                       <td>
                         <Form.Check
@@ -180,7 +233,9 @@ const Subcategories = ({
                         />
                       </td>
 
-                      <td><strong>{sub.name}</strong></td>
+                      <td>
+                        <strong>{sub.name}</strong>
+                      </td>
                       <td>{sub.categoryName || 'Unknown'}</td>
 
                       <td>
@@ -197,21 +252,21 @@ const Subcategories = ({
                       <td>
                         <div className="d-flex gap-1">
                           <Button
-                            variant="info"
-                            size="sm"
-                            title="View"
-                            onClick={() => onView(sub)}   // 👈 VIEW
-                          >
-                            <IoEyeSharp />
-                          </Button>
-
-                          <Button
                             variant="warning"
                             size="sm"
                             title="Edit"
                             onClick={() => onEdit(sub)}
                           >
                             <MdModeEdit />
+                          </Button>
+
+                          <Button
+                            variant="dark"
+                            size="sm"
+                            title="View"
+                            onClick={() => onView(sub)}
+                          >
+                            <IoEyeSharp />
                           </Button>
 
                           <Button

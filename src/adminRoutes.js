@@ -159,18 +159,26 @@ export const initializeAdmin = async () => {
 
 // ==================== AUTHENTICATION MIDDLEWARE ====================
 
-// JWT Authentication Middleware
+// JWT Authentication Middleware with better error handling
 const verifyToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   
   if (!authHeader) {
-    return res.status(401).json({ error: "Access denied. No token provided." });
+    return res.status(401).json({ 
+      success: false,
+      error: "Access denied. No token provided.",
+      expired: false 
+    });
   }
   
   const token = authHeader.split(' ')[1];
   
   if (!token) {
-    return res.status(401).json({ error: "Access denied. No token provided." });
+    return res.status(401).json({ 
+      success: false,
+      error: "Access denied. No token provided.",
+      expired: false 
+    });
   }
   
   try {
@@ -178,8 +186,27 @@ const verifyToken = (req, res, next) => {
     req.user = decoded;
     next();
   } catch (error) {
-    console.error("JWT verification error:", error);
-    return res.status(401).json({ error: "Invalid or expired token" });
+    console.error("JWT verification error:", error.message);
+    
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ 
+        success: false,
+        error: "Session expired. Please login again.",
+        expired: true 
+      });
+    } else if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ 
+        success: false,
+        error: "Invalid token.",
+        expired: false 
+      });
+    } else {
+      return res.status(401).json({ 
+        success: false,
+        error: "Authentication failed.",
+        expired: false 
+      });
+    }
   }
 };
 
@@ -350,6 +377,7 @@ router.post("/user-login", async (req, res) => {
 
 // Apply JWT authentication middleware to all routes below
 router.use(verifyToken);
+
 
 // Get Admin Profile
 router.get("/profile", checkPermission('Dashboard'), async (req, res) => {

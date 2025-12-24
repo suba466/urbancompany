@@ -1,3 +1,4 @@
+import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Shine from './Shine.jsx';
 import Banner from './Banner.jsx';
@@ -8,14 +9,14 @@ import Salon from './Salon.jsx';
 import { AuthProvider } from './AuthContext';
 import { CartProvider } from './CartContext'; 
 import CartSummary from './CartSummary'; 
-import AdminPanel from './AdminPanel.jsx';
+import AdminPanel from './AdminPanel.jsx'; 
 
 function Urban() {
   return (
     <AuthProvider>
       <CartProvider>
         <Routes>
-          {/* Routes WITH navbar */}
+          {/* Public routes */}
           <Route path='/' element={
             <>
               <Urbanav/> 
@@ -33,11 +34,13 @@ function Urban() {
           
           <Route path='/cart-summary' element={<CartSummary/>}/>
           <Route path='/cart' element={<><Urbanav/><CartPage/></>}/>
-          <Route path='/admin' element={<><AdminPanel/></>}/>
+          
+          {/* Admin routes */}
+          <Route path='/admin/*' element={<AdminPanel/>}/>
         </Routes>
       </CartProvider>
     </AuthProvider>
-  )
+  );
 }
 
 export default Urban;
