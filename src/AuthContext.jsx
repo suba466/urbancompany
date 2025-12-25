@@ -4,13 +4,17 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 const AuthContext = createContext();
 
 export const useAuth = () => {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
 };
 
 export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userInfo, setUserInfo] = useState({
-    id: '',  // Change userId to id
+    id: '',
     name: '',
     email: '',
     phone: '',
@@ -48,7 +52,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     const userInfoToStore = {
-      id: userId,  // Use consistent field name
+      id: userId,
       name: userData.name || '',
       email: userData.email || '',
       phone: userData.phone || '',
@@ -84,11 +88,7 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     isLoggedIn,
-    userInfo: {
-      ...userInfo,
-      customerId: userInfo.id,  // Add backward compatibility
-      userId: userInfo.id       // Add backward compatibility
-    },
+    userInfo,
     login,
     logout
   };

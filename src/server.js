@@ -59,24 +59,39 @@ mongoose.connect("mongodb://localhost:27017/suba")
   })
   .catch(err => console.error(" MongoDB connection error:", err));
 
+// Add this to your existing Package schema in server.js
 const packageSchema = new mongoose.Schema({
-  title: String,
-  rating: String,
-  bookings: String,
-  price: String,
-  originalPrice: String,
-  duration: String,
-  description: String,
-  category: String,
-  subcategory: String,
-  subcategoryId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Subcategory' 
-  },
-  items: [{ text: String, description: String }],
-  content: [{ value: String, details: String }],
-  ratingBreak: [{ stars: Number, value: Number, count: String }]
+  name: String,           // Product name (e.g., "Premium Hair Care Package")
+  title: String,          // Display title (can be same as name or custom)
+  rating: String,         // "4.82"
+  bookings: String,       // "1.5M"
+  price: String,          // "₹868"
+  originalPrice: String,  // "₹938"
+  discountPrice: String,  // Optional discount price
+  duration: String,       // "90 mins"
+  description: String,    // Detailed description
+  category: String,       // Main category (e.g., "Salon for women")
+  subcategory: String,    // Subcategory name (e.g., "Hair Care")
+  subcategoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Subcategory' },
+  items: [{ 
+    name: String,         // Service item name (e.g., "Hair Wash")
+    description: String   // Item description
+  }],
+  content: [{ 
+    title: String,        // Content title
+    description: String   // Content details
+  }],
+  ratingBreak: [{ 
+    stars: Number,        // 5
+    value: Number,        // 100
+    count: String         // "1.5M"
+  }],
+  stock: { type: Number, default: 0 },  // Stock quantity
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
 });
+
 
 const Package = mongoose.models.Package || mongoose.model("Package", packageSchema);
 

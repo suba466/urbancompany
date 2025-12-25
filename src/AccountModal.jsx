@@ -37,7 +37,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
     password: ""
   });
 
-  // Profile editing states - INCLUDING profileFile for image upload
+  // Profile editing states
   const [profileData, setProfileData] = useState({
     title: "Ms",
     name: "",
@@ -49,44 +49,52 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
 
   const { isLoggedIn, userInfo, login, logout } = useAuth();
   
-  // Create alias for backward compatibility
-  const customerInfo = userInfo || {};
+  // Create safe reference for backward compatibility
+  const customerInfo = userInfo || {
+    id: '',
+    name: '',
+    email: '',
+    phone: '',
+    city: '',
+    profileImage: '',
+    title: 'Ms'
+  };
 
   // Update the useEffect that loads profile data
   useEffect(() => {
-    if (isLoggedIn && show && customerInfo?.email) {
+    if (isLoggedIn && show && userInfo.email) {
       loadCustomerData();
       
       // Initialize profile data with customer info
       setProfileData({
-        title: customerInfo?.title || "Ms",
-        name: customerInfo?.name || "",
-        email: customerInfo?.email || "",
-        phone: customerInfo?.phone || "",
-        city: customerInfo?.city || "",
+        title: userInfo.title || "Ms",
+        name: userInfo.name || "",
+        email: userInfo.email || "",
+        phone: userInfo.phone || "",
+        city: userInfo.city || "",
         profileFile: null
       });
 
       console.log("Profile data initialized with:", {
-        name: customerInfo?.name,
-        email: customerInfo?.email,
-        phone: customerInfo?.phone,
-        city: customerInfo?.city,
-        title: customerInfo?.title
+        name: userInfo.name,
+        email: userInfo.email,
+        phone: userInfo.phone,
+        city: userInfo.city,
+        title: userInfo.title
       });
     }
-  }, [isLoggedIn, show, customerInfo]);
+  }, [isLoggedIn, show, userInfo]);
 
   // Add this useEffect to debug the booking loading
   useEffect(() => {
     console.log("Debug - Current state:", {
       isLoggedIn,
-      customerInfo,
+      userInfo,
       bookingsCount: bookings.length,
       bookings,
       loadingBookings
     });
-  }, [bookings, loadingBookings, isLoggedIn, customerInfo]);
+  }, [bookings, loadingBookings, isLoggedIn, userInfo]);
 
   // Add this function to check all bookings in database
   const checkAllBookings = async () => {
@@ -99,7 +107,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
         
         // Check if any booking matches current customer's email
         const customerBookings = allBookings.filter(booking => 
-          booking.customerEmail === customerInfo?.email
+          booking.customerEmail === userInfo.email
         );
         console.log("Customer's bookings:", customerBookings);
       }
@@ -111,13 +119,13 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
   const loadCustomerData = async () => {
     try {
       setLoadingBookings(true);
-      if (!customerInfo?.email) {
+      if (!userInfo.email) {
         console.log("No email found");
         setBookings([]);
         return;
       }
       
-      const customerEmail = customerInfo?.email;
+      const customerEmail = userInfo.email;
       console.log("Fetching bookings for:", customerEmail);
       
       // Load bookings from server
@@ -135,7 +143,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
       // Load plans from same email
       const plansResponse = await fetch(`http://localhost:5000/api/plans/${customerEmail}`);
       if (plansResponse.ok) {
-        const plansData = await plansResponse.json();
+        const plansData = await plansData.json();
         setPlans(plansData.plans || []);
       }
       
@@ -490,17 +498,14 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
   const handleProfileSave = async () => {
     console.log("=== DEBUG START ===");
     console.log("📋 Profile data to save:", profileData);
-    console.log("👤 Full customerInfo object:", customerInfo);
-    console.log("🆔 Customer ID value:", customerInfo?.customerId || customerInfo?.id);
-    console.log("🆔 Customer ID type:", typeof (customerInfo?.customerId || customerInfo?.id));
+    console.log("👤 Full userInfo object:", userInfo);
+    console.log("🆔 Customer ID value:", userInfo.id);
+    console.log("🆔 Customer ID type:", typeof userInfo.id);
     console.log("=== DEBUG END ===");
     
-    // Get the customer ID from either field
-    const customerId = customerInfo?.customerId || customerInfo?.id;
-    
     // Validation
-    if (!customerId || customerId === "undefined" || customerId === "") {
-      console.error("❌ Invalid customerId:", customerId);
+    if (!userInfo.id || userInfo.id === "undefined" || userInfo.id === "") {
+      console.error("❌ Invalid customerId:", userInfo.id);
       alert("Customer ID is missing or invalid. Please:\n1. Log out\n2. Clear browser cache\n3. Log in again");
       return;
     }
@@ -534,7 +539,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
     try {
       // Create FormData for file upload
       const formData = new FormData();
-      formData.append('customerId', customerId); // Use the correct customerId
+      formData.append('customerId', userInfo.id);
       formData.append('name', profileData.name);
       formData.append('email', profileData.email);
       formData.append('phone', profileData.phone);
@@ -549,7 +554,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
 
       console.log("📤 Sending update request to server...");
       console.log("🔗 Endpoint: http://localhost:5000/api/update-profile");
-      console.log("🆔 Customer ID being sent:", customerId);
+      console.log("🆔 Customer ID being sent:", userInfo.id);
 
       const response = await fetch("http://localhost:5000/api/update-profile", {
         method: "POST",
@@ -569,8 +574,8 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
         }
         
         // Update customer info in context
-        const updatedCustomerInfo = {
-          ...customerInfo,
+        const updatedUserInfo = {
+          ...userInfo,
           name: data.customer.name,
           email: data.customer.email,
           phone: data.customer.phone,
@@ -579,8 +584,8 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
           profileImage: data.customer.profileImage
         };
         
-        console.log("🔄 Updating context with:", updatedCustomerInfo);
-        login(updatedCustomerInfo);
+        console.log("🔄 Updating context with:", updatedUserInfo);
+        login(updatedUserInfo);
 
         setProfilePreview(null);
         setCurrentView("main");
@@ -607,11 +612,6 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
 
   // Render profile picture component
   const renderProfilePicture = (pictureUrl, size = 80, editable = false, onEditClick = null) => {
-    // Handle undefined pictureUrl
-    if (!pictureUrl) {
-      pictureUrl = "";
-    }
-    
     // Construct full URL if it's a relative path
     const getFullImageUrl = (url) => {
       if (!url) return null;
@@ -912,10 +912,10 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
   // Render profile editing view
   const renderProfileEditView = () => {
     console.log("Edit View - Current Profile Data:", profileData);
-    console.log("Edit View - Current Customer Info:", customerInfo);
+    console.log("Edit View - Current User Info:", userInfo);
     
     // Use preview if exists, otherwise use existing profile image
-    const displayImage = profilePreview || customerInfo?.profileImage;
+    const displayImage = profilePreview || userInfo.profileImage;
     
     return (
       <div>
@@ -968,7 +968,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
                         key={title}
                         type="button"
                         className={`btn border-0 rounded-0 flex-fill ${
-                          (profileData.title || customerInfo?.title || "Ms") === title 
+                          (profileData.title || userInfo.title || "Ms") === title 
                             ? 'btn-dark' 
                             : 'btn-outline-secondary'
                         }`}
@@ -991,7 +991,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
                   <div className="">
                     <Form.Control
                       type="text"
-                      value={profileData.name || customerInfo?.name || ""}
+                      value={profileData.name || userInfo.name || ""}
                       onChange={(e) => handleProfileChange('name', e.target.value)}
                       className="border-0 p-0"
                       style={{ 
@@ -1013,7 +1013,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
               <div>
                 <Form.Control
                   type="email"
-                  value={profileData.email || customerInfo?.email || ""}
+                  value={profileData.email || userInfo.email || ""}
                   onChange={(e) => handleProfileChange('email', e.target.value)}
                   placeholder="Enter email"
                   className="border-0 p-0"
@@ -1033,7 +1033,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
               <p className="text-muted small mb-0" style={{fontSize:"12px"}}>Phone Number</p>
               <Form.Control
                 type="tel"
-                value={profileData.phone || customerInfo?.phone || ""}
+                value={profileData.phone || userInfo.phone || ""}
                 onChange={(e) => handleProfileChange('phone', e.target.value.replace(/\D/g, ""))}
                 placeholder="Enter phone number"
                 className="border-0 p-0"
@@ -1053,7 +1053,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
               <p className="text-muted small mb-0" style={{fontSize:"12px"}}>City</p>
               <Form.Control
                 type="text"
-                value={profileData.city || customerInfo?.city || ""}
+                value={profileData.city || userInfo.city || ""}
                 onChange={(e) => handleProfileChange('city', e.target.value)}
                 placeholder="Enter your city"
                 className="border-0 p-0"
@@ -1091,7 +1091,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
     );
   };
 
-  // In AccountModal.jsx, update the renderBookingsView function
+  // Render bookings view
   const renderBookingsView = () => {
     // Calculate total for each booking
     const calculateBookingTotal = (booking) => {
@@ -1342,8 +1342,15 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
 
   // Render main view after login with profile picture
   const renderMainViewAfterLogin = () => {
-    console.log("🔍 Debug - customerInfo in renderMainViewAfterLogin:", customerInfo);
-    console.log("🔍 Debug - profileImage value:", customerInfo?.profileImage);
+    // Debug logging
+    console.log("Debug - In renderMainViewAfterLogin");
+    console.log("Debug - userInfo:", userInfo);
+    console.log("Debug - customerInfo:", customerInfo);
+    
+    if (!userInfo) {
+      console.error("userInfo is undefined!");
+      return <div className="p-3">Loading user information...</div>;
+    }
     
     return (
       <div>
@@ -1353,13 +1360,13 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
           onClick={() => handleNavigation("profile-details")}
         >
           <div className="d-flex align-items-center gap-3">
-            {renderProfilePicture(customerInfo?.profileImage, 60, false)}
+            {renderProfilePicture(userInfo.profileImage, 60, false)}
             <div className="flex-grow-1">
-              <h5 className="fw-semibold mb-1">{customerInfo?.name || "Customer"}</h5>
+              <h5 className="fw-semibold mb-1">{userInfo.name || "Customer"}</h5>
               <p className="small text-muted mb-0">
-                +91 {customerInfo?.phone || ""}
+                +91 {userInfo.phone || ""}
               </p>
-                <p className="small text-muted mb-1">{customerInfo?.email || ""}</p>
+              <p className="small text-muted mb-1">{userInfo.email || ""}</p>
             </div>
             <MdOutlineArrowForwardIos size={14} className="text-muted" />
           </div>
@@ -1575,7 +1582,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
               <Col xs={2}></Col>
             </Row>
           </Container>
-          <Button type="button" onClick={() => setShowSlotModal(false)} className="position-absolute border-0 justify-content-center closebtn p-0">X</Button>
+          <Button type="button" onClick={() => onHide()} className="position-absolute border-0 justify-content-center closebtn p-0">X</Button>
         </Modal.Header>
         
         <Modal.Body>

@@ -15,6 +15,7 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
   const [formSuccess, setFormSuccess] = useState(false);
   const [formError, setFormError] = useState('');
   const [errors, setErrors] = useState({});
+  const [touchedFields, setTouchedFields] = useState({});
 
   useEffect(() => {
     if (isEditing && categoryData) {
@@ -38,11 +39,90 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
     }
   }, [isEditing, categoryData]);
 
+  // Field-by-field validation
+  const validateField = (fieldName, value) => {
+    const newErrors = { ...errors };
+    
+    switch (fieldName) {
+      case 'name':
+        if (!value.trim()) {
+          newErrors.name = 'Category name is required';
+        } else {
+          delete newErrors.name;
+        }
+        break;
+        
+      case 'description':
+        if (!value.trim()) {
+          newErrors.description = 'Description is required';
+        } else {
+          delete newErrors.description;
+        }
+        break;
+        
+      case 'key':
+        if (!value.trim()) {
+          newErrors.key = 'Key is required';
+        } else if (!/^[a-z0-9-]+$/.test(value)) {
+          newErrors.key = 'Key can only contain lowercase letters, numbers, and hyphens';
+        } else {
+          delete newErrors.key;
+        }
+        break;
+        
+      default:
+        break;
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleFieldChange = (fieldName, value) => {
+    setFormData({ ...formData, [fieldName]: value });
+    
+    // Auto-validate if field was touched before
+    if (touchedFields[fieldName]) {
+      validateField(fieldName, value);
+    }
+  };
+
+  const handleFieldBlur = (fieldName) => {
+    setTouchedFields({ ...touchedFields, [fieldName]: true });
+    validateField(fieldName, formData[fieldName]);
+  };
+
   const validateForm = () => {
+    // Mark all fields as touched
+    const allTouched = {};
+    ['name', 'description', 'key'].forEach(field => {
+      allTouched[field] = true;
+    });
+    setTouchedFields(allTouched);
+    
     const newErrors = {};
+    
     if (!formData.name.trim()) {
       newErrors.name = 'Category name is required';
     }
+    
+    if (!formData.description.trim()) {
+      newErrors.description = 'Description is required';
+    }
+    
+    if (!formData.key.trim()) {
+      newErrors.key = 'Key is required';
+    } else if (!/^[a-z0-9-]+$/.test(formData.key)) {
+      newErrors.key = 'Key can only contain lowercase letters, numbers, and hyphens';
+    }
+    
+    // Auto-generate key from name if key is empty
+    if (!formData.key.trim() && formData.name.trim()) {
+      const generatedKey = formData.name.toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '');
+      setFormData(prev => ({ ...prev, key: generatedKey }));
+      delete newErrors.key; // Remove key error since we generated it
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -76,11 +156,26 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
     setFormSuccess(false);
     setFormError('');
 
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      setFormError("Please fix the errors in the form");
+      return;
+    }
 
     try {
-      await onSubmit(formData, imageFile);
+      // Auto-generate key from name if empty
+      let finalFormData = { ...formData };
+      if (!finalFormData.key.trim() && finalFormData.name.trim()) {
+        const generatedKey = finalFormData.name.toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '');
+        finalFormData.key = generatedKey;
+      }
+      
+      await onSubmit(finalFormData, imageFile);
       setFormSuccess(true);
+      
+      // Reset form if not editing
+      if (!isEditing) {
+        resetForm();
+      }
 
       setTimeout(() => {
         setFormSuccess(false);
@@ -90,9 +185,31 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      description: '',
+      key: '',
+      order: 0,
+      isActive: true
+    });
+    setImageFile(null);
+    setPreviewUrl('');
+    setErrors({});
+    setTouchedFields({});
+  };
+
   const triggerFileInput = () => {
     document.getElementById('categoryImageUpload').click();
   };
+
+  // Auto-generate key when name changes
+  useEffect(() => {
+    if (formData.name && !formData.key && !isEditing) {
+      const generatedKey = formData.name.toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '');
+      setFormData(prev => ({ ...prev, key: generatedKey }));
+    }
+  }, [formData.name, isEditing]);
 
   return (
     <div className="p-3">
@@ -124,13 +241,14 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
       <Card className="border-0 shadow-lg">
         <Card.Body style={{ marginLeft: '25px', marginRight: '25px' }}>
           <h5 className="fw-semibold mb-1">
-          {isEditing ? 'Edit Category' : 'New Category'}
-        </h5>
-        <p className="text-muted" style={{ fontSize: '12px' }}>
-          {isEditing
-            ? 'Use below form to edit Category'
-            : 'Use below form to create a new Category'}
-        </p>
+            {isEditing ? 'Edit Category' : 'New Category'}
+          </h5>
+          <p className="text-muted" style={{ fontSize: '12px' }}>
+            {isEditing
+              ? 'Use below form to edit Category'
+              : 'Use below form to create a new Category'}
+          </p>
+          
           {formSuccess && (
             <Alert
               variant="success"
@@ -157,23 +275,25 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
             </Alert>
           )}
 
-          <Form onSubmit={handleSubmit}>
-            <Row className="mb-3">
+          <Form onSubmit={handleSubmit} noValidate>
+            <Row className="mb-2">
               <Col md={6}>
                 <Form.Group className="mb-4">
                   <Form.Control
                     type="text"
                     placeholder="Category name"
                     value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    isInvalid={!!errors.name}
-                    className="cate"
+                    onChange={(e) => handleFieldChange('name', e.target.value)}
+                    onBlur={() => handleFieldBlur('name')}
+                    isInvalid={touchedFields.name && !!errors.name}
+                    className={`cate ${touchedFields.name && errors.name ? 'is-invalid' : ''}`}
+                    required
                   />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.name}
-                  </Form.Control.Feedback>
+                  {touchedFields.name && errors.name && (
+                    <Form.Control.Feedback type="invalid">
+                      {errors.name}
+                    </Form.Control.Feedback>
+                  )}
                 </Form.Group>
               </Col>
 
@@ -183,19 +303,21 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
                     type="text"
                     placeholder="Description"
                     value={formData.description}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        description: e.target.value
-                      })
-                    }
-                    className="cate"
+                    onChange={(e) => handleFieldChange('description', e.target.value)}
+                    onBlur={() => handleFieldBlur('description')}
+                    isInvalid={touchedFields.description && !!errors.description}
+                    className={`cate ${touchedFields.description && errors.description ? 'is-invalid' : ''}`}
+                    required
                   />
+                  {touchedFields.description && errors.description && (
+                    <Form.Control.Feedback type="invalid">
+                      {errors.description}
+                    </Form.Control.Feedback>
+                  )}
                 </Form.Group>
               </Col>
             </Row>
-
-            <Row>
+            <Row className="mb-4">
               <Col md={6}>
                 <Form.Group className="mb-4">
                   <Form.Label className="fw-semibold">
@@ -205,8 +327,9 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
                   <div
                     className="text-center"
                     style={{
-                      border: '2px dashed #000',
-                      borderRadius: '5px',height:"100px",
+                      border: `2px ${previewUrl ? 'solid' : 'dashed'} #000`,
+                      borderRadius: '5px',
+                      height: '100px',
                       backgroundColor: '#f8f9fa',
                       cursor: 'pointer'
                     }}
@@ -253,12 +376,26 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
                     onChange={handleImageChange}
                     className="d-none"
                   />
+                  
+                  {!previewUrl && !isEditing && (
+                    <small className="text-danger d-block mt-1">
+                      Category image is recommended
+                    </small>
+                  )}
                 </Form.Group>
               </Col>
             </Row>
 
             <div className="d-flex justify-content-center gap-3">
-              <Button variant="outline-dark" onClick={onCancel} className="cat">
+              <Button 
+                variant="outline-dark" 
+                onClick={() => {
+                  resetForm();
+                  onCancel();
+                }} 
+                className="cat"
+                type="button"
+              >
                 Cancel
               </Button>
 
@@ -268,7 +405,7 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
                     isEditing ? 'bi-pencil' : 'bi-plus-circle'
                   } me-2`}
                 ></i>
-                Submit
+                {isEditing ? 'Update' : 'Submit'}
               </Button>
             </div>
           </Form>

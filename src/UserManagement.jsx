@@ -110,7 +110,157 @@ function UserManagement({ isAdding, isEditing, userId }) {
     }
   };
 
+  // Field-by-field validation
+  const validateField = (name, value) => {
+    const errors = { ...formErrors };
+    
+    switch (name) {
+      case 'name':
+        if (!value.trim()) {
+          errors.name = 'Name is required';
+        } else {
+          delete errors.name;
+        }
+        break;
+        
+      case 'email':
+        if (!value.trim()) {
+          errors.email = 'Email is required';
+        } else if (!/\S+@\S+\.\S+/.test(value)) {
+          errors.email = 'Email is invalid';
+        } else {
+          delete errors.email;
+        }
+        break;
+        
+      case 'phone':
+        if (!value.trim()) {
+          errors.phone = 'Phone is required';
+        } else if (!/^\d{10}$/.test(value.replace(/\D/g, ''))) {
+          errors.phone = 'Phone must be 10 digits';
+        } else {
+          delete errors.phone;
+        }
+        break;
+        
+      case 'designation':
+        if (!value) {
+          errors.designation = 'Designation is required';
+        } else {
+          delete errors.designation;
+        }
+        break;
+        
+      case 'password':
+        const isPasswordPlaceholder = value === '********';
+        const isPasswordEmpty = value.trim() === '';
+        
+        if (!isEditingUser) {
+          if (!value || value.trim() === '') {
+            errors.password = 'Password is required';
+          } else if (value.length < 6) {
+            errors.password = 'Password must be at least 6 characters';
+          } else {
+            delete errors.password;
+          }
+        } else {
+          if (!isPasswordPlaceholder && !isPasswordEmpty) {
+            if (value.length < 6) {
+              errors.password = 'Password must be at least 6 characters';
+            } else {
+              delete errors.password;
+            }
+          } else {
+            delete errors.password;
+          }
+        }
+        break;
+        
+      case 'confirmPassword':
+        const isPasswordPlaceholderCP = newUser.password === '********';
+        const isPasswordEmptyCP = newUser.password.trim() === '';
+        
+        if (!isEditingUser) {
+          if (!value) {
+            errors.confirmPassword = 'Please confirm password';
+          } else if (newUser.password !== value) {
+            errors.confirmPassword = 'Passwords do not match';
+          } else {
+            delete errors.confirmPassword;
+          }
+        } else {
+          if (!isPasswordPlaceholderCP && !isPasswordEmptyCP) {
+            if (!value) {
+              errors.confirmPassword = 'Please confirm password';
+            } else if (newUser.password !== value) {
+              errors.confirmPassword = 'Passwords do not match';
+            } else {
+              delete errors.confirmPassword;
+            }
+          } else if (isPasswordPlaceholderCP && value && value.trim() !== '') {
+            errors.confirmPassword = 'Please leave confirm password empty if not changing password';
+          } else {
+            delete errors.confirmPassword;
+          }
+        }
+        break;
+        
+      default:
+        break;
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleFieldChange = (field, value) => {
+    if (field === 'password') {
+      setNewUser({ ...newUser, password: value });
+    } else if (field === 'confirmPassword') {
+      setConfirmPassword(value);
+    } else {
+      setNewUser({ ...newUser, [field]: value });
+    }
+    
+    // Auto-validate if field was touched before
+    if (touchedFields[field]) {
+      validateField(field, value);
+    }
+  };
+
+  const handleFieldBlur = (field) => {
+    setTouchedFields({ ...touchedFields, [field]: true });
+    
+    let value;
+    if (field === 'password') {
+      value = newUser.password;
+    } else if (field === 'confirmPassword') {
+      value = confirmPassword;
+    } else {
+      value = newUser[field];
+    }
+    
+    validateField(field, value);
+  };
+
   const validateUserForm = () => {
+    // Mark all fields as touched
+    const allTouched = {};
+    Object.keys(newUser).forEach(key => {
+      if (key !== 'permissions') allTouched[key] = true;
+    });
+    
+    const isPasswordPlaceholder = newUser.password === '********';
+    const isPasswordEmpty = newUser.password.trim() === '';
+    
+    if (!isEditingUser || (!isPasswordPlaceholder && !isPasswordEmpty)) {
+      allTouched.password = true;
+      allTouched.confirmPassword = true;
+    }
+    
+    setTouchedFields(allTouched);
+    
+    // Validate all fields
     const errors = {};
     
     if (!newUser.name.trim()) {
@@ -133,8 +283,8 @@ function UserManagement({ isAdding, isEditing, userId }) {
       errors.designation = 'Designation is required';
     }
     
-    const isPasswordPlaceholder = newUser.password === '********';
-    const isPasswordEmpty = newUser.password.trim() === '';
+    const isPasswordPlaceholderVal = newUser.password === '********';
+    const isPasswordEmptyVal = newUser.password.trim() === '';
     
     if (!isEditingUser) {
       if (!newUser.password || newUser.password.trim() === '') {
@@ -149,7 +299,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
         errors.confirmPassword = 'Passwords do not match';
       }
     } else {
-      if (!isPasswordPlaceholder && !isPasswordEmpty) {
+      if (!isPasswordPlaceholderVal && !isPasswordEmptyVal) {
         if (newUser.password.length < 6) {
           errors.password = 'Password must be at least 6 characters';
         }
@@ -159,7 +309,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
         } else if (newUser.password !== confirmPassword) {
           errors.confirmPassword = 'Passwords do not match';
         }
-      } else if (isPasswordPlaceholder && confirmPassword && confirmPassword.trim() !== '') {
+      } else if (isPasswordPlaceholderVal && confirmPassword && confirmPassword.trim() !== '') {
         errors.confirmPassword = 'Please leave confirm password empty if not changing password';
       }
     }
@@ -172,21 +322,6 @@ function UserManagement({ isAdding, isEditing, userId }) {
     e.preventDefault();
     setFormError('');
     setFormSuccess(false);
-    
-    const touched = {};
-    Object.keys(newUser).forEach(key => {
-      if (key !== 'permissions') touched[key] = true;
-    });
-    
-    const isPasswordPlaceholder = newUser.password === '********';
-    const isPasswordEmpty = newUser.password.trim() === '';
-    
-    if (!isEditingUser || (!isPasswordPlaceholder && !isPasswordEmpty)) {
-      touched.password = true;
-      touched.confirmPassword = true;
-    }
-    
-    setTouchedFields(touched);
     
     if (!validateUserForm()) {
       setFormError("Please fix the errors in the form");
@@ -233,26 +368,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
       if (data.success) {
         setFormSuccess(true);
         if (!isEditingUser) {
-          setNewUser({
-            name: '',
-            email: '',
-            phone: '',
-            designation: '',
-            password: '',
-            permissions: {
-              Dashboard: false,
-              Users: false,
-              Customer: false,
-              Catalog: false,
-              Product: false,
-              Bookings: false,
-              Reports: false,
-              Settings: false
-            }
-          });
-          setConfirmPassword('');
-          setProfileImage(null);
-          setProfileImagePreview("");
+          resetForm();
         }
         setFormErrors({});
         setTouchedFields({});
@@ -263,6 +379,33 @@ function UserManagement({ isAdding, isEditing, userId }) {
       console.error('Error saving user:', error);
       setFormError(`Failed to ${isEditingUser ? 'update' : 'add'} user. Please try again.`);
     }
+  };
+
+  const resetForm = () => {
+    setNewUser({
+      name: '',
+      email: '',
+      phone: '',
+      designation: '',
+      password: '',
+      permissions: {
+        Dashboard: false,
+        Users: false,
+        Customer: false,
+        Catalog: false,
+        Product: false,
+        Bookings: false,
+        Reports: false,
+        Settings: false
+      }
+    });
+    setConfirmPassword('');
+    setProfileImage(null);
+    setProfileImagePreview("");
+    setFormErrors({});
+    setTouchedFields({});
+    setEditUserId(null);
+    setIsEditingUser(false);
   };
 
   const handleEditUser = (userMember) => {
@@ -297,8 +440,8 @@ function UserManagement({ isAdding, isEditing, userId }) {
     setConfirmPassword(''); 
     setFormSuccess(false); 
     setFormError(''); 
-    setTouchedFields({});
     setFormErrors({});
+    setTouchedFields({});
   };
 
   const deleteUser = async (userId) => {
@@ -441,9 +584,9 @@ function UserManagement({ isAdding, isEditing, userId }) {
 
   if (isAdding || isEditingUser) {
     return (
-      <div className="p-3" >
-        <Card className="shadow-lg " >
-          <Card.Body  style={{marginLeft:"25px",marginRight:"25px"}}>
+      <div className="p-3">
+        <Card className="shadow-lg">
+          <Card.Body style={{marginLeft:"25px",marginRight:"25px"}}>
             <h5 className="mb-0 fw-semibold">
               {isEditingUser ? 'Edit User' : (
                 <>
@@ -459,12 +602,12 @@ function UserManagement({ isAdding, isEditing, userId }) {
         <br />
         
         <Card className="shadow-lg">
-          <Card.Body className="p-6"  style={{marginLeft:"25px",marginRight:"25px"}}>
+          <Card.Body className="p-6" style={{marginLeft:"25px",marginRight:"25px"}}>
             {formSuccess && (
-            <Alert variant="success" style={{height:"50px"}} onClose={() => setFormSuccess(false)} dismissible>
-              <p>{isEditingUser ? 'User updated successfully' : 'User has been added successfully'}</p>
-            </Alert>
-          )}
+              <Alert variant="success" style={{height:"50px"}} onClose={() => setFormSuccess(false)} dismissible>
+                <p>{isEditingUser ? 'User updated successfully' : 'User has been added successfully'}</p>
+              </Alert>
+            )}
             
             {formError && (
               <Alert variant="danger" onClose={() => setFormError('')} dismissible>
@@ -487,17 +630,17 @@ function UserManagement({ isAdding, isEditing, userId }) {
               )}
             </div>
             
-            <Form onSubmit={handleAddUser} className="pt-2">
-             
+            <Form onSubmit={handleAddUser} className="pt-2" noValidate>
               {/* First Row with Name and Email */}
-              <Row  className="mb-4 gx-5">
+              <Row className="mb-4 gx-5">
                 <Col md={6}>
                   <Form.Group>
                     <Form.Control
                       type="text" 
-                      className='cate py-3 '
+                      className={`cate py-3 ${touchedFields.name && formErrors.name ? 'is-invalid' : ''}`}
                       value={newUser.name}
-                      onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+                      onChange={(e) => handleFieldChange('name', e.target.value)}
+                      onBlur={() => handleFieldBlur('name')}
                       required
                       placeholder="Name"
                       autoComplete="name"
@@ -511,9 +654,10 @@ function UserManagement({ isAdding, isEditing, userId }) {
                   <Form.Group>
                     <Form.Control
                       type="email" 
-                       className='cate py-3 '
+                      className={`cate py-3 ${touchedFields.email && formErrors.email ? 'is-invalid' : ''}`}
                       value={newUser.email}
-                      onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                      onChange={(e) => handleFieldChange('email', e.target.value)}
+                      onBlur={() => handleFieldBlur('email')}
                       required
                       placeholder="E-mail"
                       autoComplete="email"
@@ -526,18 +670,23 @@ function UserManagement({ isAdding, isEditing, userId }) {
               </Row>
 
               {/* Second Row with Contact Number and Designation */}
-              <Row  className="mb-4 gx-5">
+              <Row className="mb-4 gx-5">
                 <Col md={6}>
                   <Form.Group>
                     <Form.Control
                       type="tel" 
-                      style={{borderRadius:"5px",border:"2px solid #000000",height:"45px"}}
+                      className={`py-3 ${touchedFields.phone && formErrors.phone ? 'is-invalid' : ''}`}
+                      style={{
+                        borderRadius: "5px",
+                        border: touchedFields.phone && formErrors.phone ? "2px solid #dc3545" : "2px solid #000000",
+                        height: "45px"
+                      }}
                       value={newUser.phone}
-                      onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
+                      onChange={(e) => handleFieldChange('phone', e.target.value)}
+                      onBlur={() => handleFieldBlur('phone')}
                       required
                       placeholder="Contact number"
                       autoComplete="tel"
-                      className="py-3"
                     />
                     {touchedFields.phone && formErrors.phone && (
                       <small className="text-danger d-block mt-1">{formErrors.phone}</small>
@@ -548,8 +697,9 @@ function UserManagement({ isAdding, isEditing, userId }) {
                   <Form.Group>
                     <Form.Select
                       value={newUser.designation}
-                      className='cate  '
-                      onChange={(e) => setNewUser({...newUser, designation: e.target.value})}
+                      className={`cate ${touchedFields.designation && formErrors.designation ? 'is-invalid' : ''}`}
+                      onChange={(e) => handleFieldChange('designation', e.target.value)}
+                      onBlur={() => handleFieldBlur('designation')}
                       required
                     >
                       <option value="">Select Designation</option>
@@ -567,46 +717,55 @@ function UserManagement({ isAdding, isEditing, userId }) {
                 </Col>
               </Row>
 
-              {/* Password Fields - Only when not editing */}
-              {!isEditingUser && (
-                <Row  className="mb-4 gx-5">
-                  <Col md={3}>
-                    <Form.Group>
-                      <Form.Control
-                        type="password"
-                        value={newUser.password}
-                        onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                        placeholder="Password"
-                         className='cate py-3 '
-                        autoComplete="new-password"
-                        required
-                       
-                      />
-                      {touchedFields.password && formErrors.password && (
-                        <small className="text-danger d-block mt-1">{formErrors.password}</small>
-                      )}
-                    </Form.Group>
-                  </Col>
-                  <Col md={3} className="mb-3">
-                    <Form.Group>
-                      <Form.Control
-                        type="password"
-                        value={confirmPassword} 
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="Confirm password"
-                         className='cate py-3 '
-                        autoComplete="new-password"
-                        required
-                        
-                      />
-                      {touchedFields.confirmPassword && formErrors.confirmPassword && (
-                        <small className="text-danger d-block mt-1">{formErrors.confirmPassword}</small>
-                      )}
-                    </Form.Group>
-                  </Col>
-                  <Col md={6} >
+              {/* Password Fields */}
+              <Row className="mb-4 gx-5">
+                <Col md={3}>
                   <Form.Group>
-                   <Form.Control
+                    <Form.Control
+                      type="password"
+                      className={`cate py-3 ${touchedFields.password && formErrors.password ? 'is-invalid' : ''}`}
+                      value={newUser.password}
+                      onChange={(e) => handleFieldChange('password', e.target.value)}
+                      onBlur={() => handleFieldBlur('password')}
+                      placeholder="Password"
+                      autoComplete={isEditingUser ? "off" : "new-password"}
+                      required={!isEditingUser}
+                    />
+                    {touchedFields.password && formErrors.password && (
+                      <small className="text-danger d-block mt-1">{formErrors.password}</small>
+                    )}
+                    {isEditingUser && (
+                      <small className="text-muted d-block mt-1">
+                        Leave as "********" to keep current password
+                      </small>
+                    )}
+                  </Form.Group>
+                </Col>
+                <Col md={3}>
+                  <Form.Group>
+                    <Form.Control
+                      type="password"
+                      className={`cate py-3 ${touchedFields.confirmPassword && formErrors.confirmPassword ? 'is-invalid' : ''}`}
+                      value={confirmPassword}
+                      onChange={(e) => handleFieldChange('confirmPassword', e.target.value)}
+                      onBlur={() => handleFieldBlur('confirmPassword')}
+                      placeholder="Confirm password"
+                      autoComplete={isEditingUser ? "off" : "new-password"}
+                      required={!isEditingUser}
+                    />
+                    {touchedFields.confirmPassword && formErrors.confirmPassword && (
+                      <small className="text-danger d-block mt-1">{formErrors.confirmPassword}</small>
+                    )}
+                    {isEditingUser && (
+                      <small className="text-muted d-block mt-1">
+                        Leave empty if not changing password
+                      </small>
+                    )}
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Control
                       type="file"
                       accept="image/*"
                       onChange={(e) => {
@@ -617,7 +776,11 @@ function UserManagement({ isAdding, isEditing, userId }) {
                         }
                       }}
                       className="py-2"
-                      style={{borderRadius:"5px",border:"2px solid #000000",height:"45px"}}
+                      style={{
+                        borderRadius: "5px",
+                        border: "2px solid #000000",
+                        height: "45px"
+                      }}
                     />
                     
                     {profileImagePreview && (
@@ -628,70 +791,69 @@ function UserManagement({ isAdding, isEditing, userId }) {
                           style={{ 
                             width: '100px', 
                             height: '60px', 
-                            objectFit: 'cover'
+                            objectFit: 'cover',
+                            borderRadius: '5px'
                           }}
                         />
-                        
                       </div>
                     )}
                   </Form.Group>
                 </Col>
-                </Row>
-              )}
+              </Row>
 
               {/* Permissions Section */}
               <Form.Group className="my-4">
                 <Form.Label className='fw-semibold mb-43' style={{fontSize:"14px"}}>Permissions</Form.Label>
                 <div className="px-1">
-                  <Row className=" gy-2  gx-5">
+                  <Row className="gy-2 gx-5">
                     {[
-                    'Dashboard',
-                    'Users',
-                    'Customer',
-                    'Catalog', 
-                    'Product',
-                    'Bookings',
-                    'Reports',
-                    'Settings'
-                  ].map((permission) => (
-                    <Col xs={6} sm={4} md={3} lg={2} key={permission}>
-                      <div 
-                        className="d-flex align-items-center p-2 rounded"
-                        style={{
-                          cursor: 'pointer', 
-                          transition: 'all 0.2s',
-                          backgroundColor: newUser.permissions[permission] ? '#e9ecef' : 'transparent'
-                        }}
-                        onClick={() => setNewUser({
-                          ...newUser,
-                          permissions: {
-                            ...newUser.permissions,
-                            [permission]: !newUser.permissions[permission]
-                          }
-                        })}
-                      >
-                        <Form.Check
-                          type="checkbox"
-                          id={`permission-${permission}`}
-                          label={permission}
-                          checked={newUser.permissions[permission] || false}
-                          onChange={(e) => setNewUser({
+                      'Dashboard',
+                      'Users',
+                      'Customer',
+                      'Catalog', 
+                      'Product',
+                      'Bookings',
+                      'Reports',
+                      'Settings'
+                    ].map((permission) => (
+                      <Col xs={6} sm={4} md={3} lg={2} key={permission}>
+                        <div 
+                          className="d-flex align-items-center p-2 rounded"
+                          style={{
+                            cursor: 'pointer', 
+                            transition: 'all 0.2s',
+                            backgroundColor: newUser.permissions[permission] ? '#e9ecef' : 'transparent'
+                          }}
+                          onClick={() => setNewUser({
                             ...newUser,
                             permissions: {
                               ...newUser.permissions,
-                              [permission]: e.target.checked
+                              [permission]: !newUser.permissions[permission]
                             }
                           })}
-                          className="mb-0"
-                          style={{ 
-                            fontSize: "13px",
-                            '--bs-border-width': '2px',
-                            '--bs-border-color': '#000000',
-                          }}
-                        />
-                      </div>
-                    </Col>
-                  ))}
+                        >
+                          <Form.Check
+                            type="checkbox"
+                            id={`permission-${permission}`}
+                            label={permission}
+                            checked={newUser.permissions[permission] || false}
+                            onChange={(e) => setNewUser({
+                              ...newUser,
+                              permissions: {
+                                ...newUser.permissions,
+                                [permission]: e.target.checked
+                              }
+                            })}
+                            className="mb-0"
+                            style={{ 
+                              fontSize: "13px",
+                              '--bs-border-width': '2px',
+                              '--bs-border-color': '#000000',
+                            }}
+                          />
+                        </div>
+                      </Col>
+                    ))}
                   </Row>
                 </div>
               </Form.Group>
@@ -699,45 +861,23 @@ function UserManagement({ isAdding, isEditing, userId }) {
               {/* Action Buttons */}
               <div className="d-flex justify-content-center gap-3 mt-4">
                 <Button 
-                variant="outline-dark" 
-                onClick={() => {
-                  window.history.back();
-                  setNewUser({
-                    name: '',
-                    email: '',
-                    phone: '',
-                    designation: '',
-                    password: '',
-                    permissions: {
-                      Dashboard: false,
-                      Users: false,
-                      Customer: false,
-                      Catalog: false, 
-                      Product: false,
-                      Bookings: false,
-                      Reports: false,
-                      Settings: false
-                    }
-                  });
-                  setConfirmPassword('');
-                  setProfileImage(null);
-                  setProfileImagePreview("");
-                  if (isEditingUser) {
-                    setEditUserId(null);
-                    setIsEditingUser(false);
-                  }
-                }}
-                style={{ minWidth: '100px',borderRadius:"50px" }}
-              >
-                Cancel
-              </Button>
+                  variant="outline-dark" 
+                  onClick={() => {
+                    resetForm();
+                    window.history.back();
+                  }}
+                  style={{ minWidth: '100px', borderRadius: "50px" }}
+                  type="button"
+                >
+                  Cancel
+                </Button>
                 <Button 
                   variant="dark" 
                   type="submit"
-                  style={{ minWidth: '100px',borderRadius:"50px" }}
+                  style={{ minWidth: '100px', borderRadius: "50px" }}
                 >
                   <i className={`bi ${isEditingUser ? 'bi-pencil' : 'bi-person-plus'} me-2`}></i>
-                 Submit
+                  {isEditingUser ? 'Update' : 'Submit'}
                 </Button>
               </div>
             </Form>

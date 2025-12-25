@@ -117,7 +117,7 @@ const categorySchema = new mongoose.Schema({
 
 const Category = mongoose.models.Category || mongoose.model("Category", categorySchema);
 
-// Subcategory Schema - ADD THIS
+// Subcategory Schema
 const subcategorySchema = new mongoose.Schema({
   name: String,
   key: String,
@@ -135,6 +135,45 @@ const subcategorySchema = new mongoose.Schema({
 });
 
 const Subcategory = mongoose.models.Subcategory || mongoose.model("Subcategory", subcategorySchema);
+
+// ==================== PACKAGE SCHEMA ====================
+// Add this Package Schema with proper naming
+const packageSchema = new mongoose.Schema({
+  name: { type: String, required: true },           // Product name (e.g., "Premium Hair Care Package")
+  title: { type: String },                          // Display title (can be same as name or custom)
+  rating: { type: String, default: "4.5" },
+  bookings: { type: String, default: "100+" },
+  price: { type: String, required: true },          // Selling price
+  originalPrice: { type: String },                  // Original price
+  discountPrice: { type: String },                  // Discount price
+  duration: { type: String, required: true },       // Service duration
+  description: { type: String },                    // Detailed description
+  category: { type: String, required: true },       // Main category
+  subcategory: { type: String },                    // Subcategory name
+  subcategoryId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Subcategory' 
+  },
+  items: [{ 
+    name: { type: String },         // Service item name
+    description: { type: String }   // Item description
+  }],
+  content: [{ 
+    title: { type: String },        // Content title
+    description: { type: String }   // Content details
+  }],
+  ratingBreak: [{ 
+    stars: { type: Number, default: 5 },
+    value: { type: Number, default: 100 },
+    count: { type: String, default: "100+" }
+  }],
+  stock: { type: Number, default: 0 },              // Stock quantity
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+const Package = mongoose.models.Package || mongoose.model("Package", packageSchema);
 
 // Initialize default admin
 export const initializeAdmin = async () => {
@@ -230,6 +269,8 @@ const checkPermission = (permission) => {
     return res.status(403).json({ error: "You don't have permission to access this resource" });
   };
 };
+
+// ==================== ADMIN LOGIN ====================
 
 // Admin Login with JWT
 router.post("/login", async (req, res) => {
@@ -378,6 +419,348 @@ router.post("/user-login", async (req, res) => {
 // Apply JWT authentication middleware to all routes below
 router.use(verifyToken);
 
+// ==================== PACKAGE ROUTES ====================
+
+// Create new package
+router.post("/packages", checkPermission('Product'), async (req, res) => {
+  try {
+    const {
+      name,
+      title,
+      description,
+      category,
+      subcategory,
+      subcategoryId,
+      price,
+      originalPrice,
+      discountPrice,
+      rating,
+      bookings,
+      duration,
+      stock,
+      isActive,
+      items,
+      content,
+      ratingBreak
+    } = req.body;
+
+    // Validation
+    if (!name || !category || !price || !duration) {
+      return res.status(400).json({ 
+        success: false,
+        error: "Name, category, price, and duration are required" 
+      });
+    }
+
+    // Auto-generate title if not provided
+    let displayTitle = title;
+    if (!displayTitle && subcategory) {
+      displayTitle = `${subcategory} - ${name}`;
+    } else if (!displayTitle) {
+      displayTitle = name;
+    }
+
+    // Filter empty items
+    const filteredItems = items ? items.filter(item => 
+      item.name && item.name.trim() || item.description && item.description.trim()
+    ) : [];
+
+    const filteredContent = content ? content.filter(cont => 
+      cont.title && cont.title.trim() || cont.description && cont.description.trim()
+    ) : [];
+
+    // Create package
+    const newPackage = new Package({
+      name: name.trim(),
+      title: displayTitle.trim(),
+      description: description || "",
+      category,
+      subcategory: subcategory || null,
+      subcategoryId: subcategoryId || null,
+      price: price.toString(),
+      originalPrice: originalPrice || price.toString(),
+      discountPrice: discountPrice || "",
+      rating: rating || "4.5",
+      bookings: bookings || "100+",
+      duration,
+      stock: parseInt(stock) || 0,
+      isActive: isActive !== undefined ? isActive : true,
+      items: filteredItems.length > 0 ? filteredItems : [{ name: 'Service included', description: '' }],
+      content: filteredContent,
+      ratingBreak: ratingBreak || [{ stars: 5, value: 100, count: "100+" }],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    await newPackage.save();
+
+    console.log(`Package created: ${newPackage.name} (${newPackage._id})`);
+
+    res.status(201).json({
+      success: true,
+      message: "Package created successfully",
+      package: newPackage
+    });
+
+  } catch (error) {
+    console.error("Error creating package:", error);
+    if (error.code === 11000) {
+      return res.status(400).json({ 
+        success: false,
+        error: "Package with this name already exists" 
+      });
+    }
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ 
+        success: false,
+        error: error.message 
+      });
+    }
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to create package" 
+    });
+  }
+});
+
+// Get all packages with filters
+router.get("/packages", checkPermission('Product'), async (req, res) => {
+  try {
+    const { 
+      page = 1, 
+      limit = 20, 
+      search = "", 
+      category = "",
+      subcategory = "",
+      isActive 
+    } = req.query;
+    
+    const skip = (page - 1) * limit;
+
+    let query = {};
+    
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { title: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+        { category: { $regex: search, $options: "i" } }
+      ];
+    }
+    
+    if (category) {
+      query.category = category;
+    }
+    
+    if (subcategory) {
+      query.subcategory = subcategory;
+    }
+    
+    if (isActive !== undefined) {
+      query.isActive = isActive === 'true';
+    }
+
+    const packages = await Package.find(query)
+      .populate('subcategoryId', 'name key')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Package.countDocuments(query);
+
+    res.json({
+      success: true,
+      packages,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error("Error fetching packages:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to fetch packages" 
+    });
+  }
+});
+
+// Get single package - FIXED: Changed 'package' variable name to 'packageData'
+router.get("/packages/:id", checkPermission('Product'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const packageData = await Package.findById(id)  // Changed from 'package' to 'packageData'
+      .populate('subcategoryId', 'name key');
+    
+    if (!packageData) {
+      return res.status(404).json({ 
+        success: false,
+        error: "Package not found" 
+      });
+    }
+
+    res.json({
+      success: true,
+      package: packageData  // Return as 'package' in response but use 'packageData' in code
+    });
+
+  } catch (error) {
+    console.error("Error fetching package:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to fetch package" 
+    });
+  }
+});
+
+// Update package
+router.put("/packages/:id", checkPermission('Product'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    // Check if package exists
+    const existingPackage = await Package.findById(id);
+    if (!existingPackage) {
+      return res.status(404).json({ 
+        success: false,
+        error: "Package not found" 
+      });
+    }
+
+    // Auto-generate title if name or subcategory changes
+    if (updateData.name || updateData.subcategory) {
+      const newName = updateData.name || existingPackage.name;
+      const newSubcategory = updateData.subcategory || existingPackage.subcategory;
+      
+      if (!updateData.title && newSubcategory) {
+        updateData.title = `${newSubcategory} - ${newName}`;
+      } else if (!updateData.title) {
+        updateData.title = newName;
+      }
+    }
+
+    // Filter empty items
+    if (updateData.items) {
+      updateData.items = updateData.items.filter(item => 
+        item.name && item.name.trim() || item.description && item.description.trim()
+      );
+      if (updateData.items.length === 0) {
+        updateData.items = [{ name: 'Service included', description: '' }];
+      }
+    }
+
+    // Filter empty content
+    if (updateData.content) {
+      updateData.content = updateData.content.filter(cont => 
+        cont.title && cont.title.trim() || cont.description && cont.description.trim()
+      );
+    }
+
+    const updatedPackage = await Package.findByIdAndUpdate(
+      id,
+      { ...updateData, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    ).populate('subcategoryId', 'name key');
+
+    if (!updatedPackage) {
+      return res.status(404).json({ 
+        success: false,
+        error: "Package not found" 
+      });
+    }
+
+    console.log(`Package updated: ${updatedPackage.name} (${updatedPackage._id})`);
+
+    res.json({
+      success: true,
+      message: "Package updated successfully",
+      package: updatedPackage
+    });
+
+  } catch (error) {
+    console.error("Error updating package:", error);
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ 
+        success: false,
+        error: error.message 
+      });
+    }
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to update package" 
+    });
+  }
+});
+
+// Toggle package status - FIXED: Changed 'package' variable name to 'packageData'
+router.put("/packages/:id/toggle-status", checkPermission('Product'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+    
+    const packageData = await Package.findById(id);  // Changed from 'package' to 'packageData'
+    if (!packageData) {
+      return res.status(404).json({ 
+        success: false,
+        error: "Package not found" 
+      });
+    }
+    
+    packageData.isActive = isActive !== undefined ? isActive : !packageData.isActive;  // Updated reference
+    packageData.updatedAt = new Date();  // Updated reference
+    await packageData.save();  // Updated reference
+    
+    console.log(`Package ${packageData.isActive ? 'activated' : 'deactivated'}: ${packageData.name}`);  // Updated reference
+    
+    res.json({
+      success: true,
+      message: `Package ${packageData.isActive ? 'enabled' : 'disabled'} successfully`,  // Updated reference
+      package: packageData  // Updated reference
+    });
+    
+  } catch (error) {
+    console.error("Error toggling package status:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to update package status" 
+    });
+  }
+});
+
+// Delete package
+router.delete("/packages/:id", checkPermission('Product'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deletedPackage = await Package.findByIdAndDelete(id);
+    if (!deletedPackage) {
+      return res.status(404).json({ 
+        success: false,
+        error: "Package not found" 
+      });
+    }
+
+    console.log(`Package deleted: ${deletedPackage.name} (${deletedPackage._id})`);
+
+    res.json({
+      success: true,
+      message: "Package deleted successfully"
+    });
+
+  } catch (error) {
+    console.error("Error deleting package:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to delete package" 
+    });
+  }
+});
+
+// ==================== OTHER ROUTES (keeping existing routes) ====================
 
 // Get Admin Profile
 router.get("/profile", checkPermission('Dashboard'), async (req, res) => {
@@ -444,7 +827,7 @@ router.get("/dashboard", checkPermission('Dashboard'), async (req, res) => {
     const totalCustomers = await Customer.countDocuments();
     const totalBookings = await mongoose.model("Booking").countDocuments();
     const totalCategories = await Category.countDocuments();
-    const totalPackages = await mongoose.model("Package").countDocuments();
+    const totalPackages = await Package.countDocuments();
     
     const totalRevenue = await mongoose.model("Booking").aggregate([
       {
@@ -983,7 +1366,7 @@ router.delete("/customers/:id", checkPermission('Customer'), async (req, res) =>
   }
 });
 
-// Categories routes (Changed from services to categories)
+// Categories routes
 router.get("/categories", checkPermission('Catalog'), async (req, res) => {
   try {
     const { page = 1, limit = 20, search = "", sort = "-createdAt" } = req.query;
@@ -1299,49 +1682,6 @@ router.delete("/bookings/:id", checkPermission('Bookings'), async (req, res) => 
   }
 });
 
-// Get all packages
-router.get("/packages", checkPermission('Product'), async (req, res) => {
-  try {
-    const Package = mongoose.model("Package");
-    const { page = 1, limit = 20, search = "", category = "" } = req.query;
-    const skip = (page - 1) * limit;
-
-    let query = {};
-    if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } }
-      ];
-    }
-    
-    if (category) {
-      query.category = category;
-    }
-
-    const packages = await Package.find(query)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
-
-    const total = await Package.countDocuments(query);
-
-    res.json({
-      success: true,
-      packages,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / limit)
-      }
-    });
-
-  } catch (error) {
-    console.error("Error fetching packages:", error);
-    res.status(500).json({ error: "Failed to fetch packages" });
-  }
-});
-
 // Bulk delete
 router.post("/bulk-delete", async (req, res) => {
   try {
@@ -1392,7 +1732,7 @@ router.post("/bulk-delete", async (req, res) => {
         message = "category(ies)";
         break;
       case 'packages':
-        model = mongoose.model("Package");
+        model = Package;
         message = "package(s)";
         break;
       case 'bookings':
@@ -1640,6 +1980,29 @@ router.get("/subcategories", checkPermission('Catalog'), async (req, res) => {
   }
 });
 
+// In your adminRoutes.js file, ensure the subcategories API properly filters by category name
+// Add this route for better category-based filtering:
+
+router.get("/subcategories-by-category/:categoryName", checkPermission('Catalog'), async (req, res) => {
+  try {
+    const { categoryName } = req.params;
+    
+    const subcategories = await Subcategory.find({ 
+      categoryName: categoryName,
+      isActive: true 
+    })
+    .sort({ order: 1, name: 1 });
+    
+    res.json({
+      success: true,
+      subcategories: subcategories || [],
+      count: subcategories ? subcategories.length : 0
+    });
+  } catch (error) {
+    console.error("Error fetching subcategories by category:", error);
+    res.status(500).json({ error: "Failed to fetch subcategories" });
+  }
+});
 // Get subcategories by category
 router.get("/categories/:categoryId/subcategories", async (req, res) => {
   try {
@@ -1872,7 +2235,6 @@ router.delete("/subcategories/:id", async (req, res) => {
     });
 
     // Update any packages using this subcategory
-    const Package = mongoose.model("Package");
     await Package.updateMany(
       { subcategoryId: subcategory._id },
       { 
@@ -1924,7 +2286,6 @@ router.post("/subcategories/bulk-delete", async (req, res) => {
     });
 
     // Update packages
-    const Package = mongoose.model("Package");
     await Package.updateMany(
       { subcategoryId: { $in: ids } },
       { 
@@ -1951,125 +2312,6 @@ router.post("/subcategories/bulk-delete", async (req, res) => {
     console.error("Error bulk deleting subcategories:", error);
     res.status(500).json({ 
       error: "Failed to delete subcategories" 
-    });
-  }
-});
-
-// Update bulk delete route to include subcategories
-router.post("/bulk-delete", async (req, res) => {
-  try {
-    const { entity, ids } = req.body;
-    
-    if (!entity || !ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ 
-        error: "Entity type and IDs array are required" 
-      });
-    }
-
-    // Add subcategories to permission map
-    const permissionMap = {
-      'users': 'Users',
-      'customers': 'Customer',
-      'categories': 'Catalog',
-      'subcategories': 'Catalog',
-      'packages': 'Product',
-      'bookings': 'Bookings'
-    };
-
-    const requiredPermission = permissionMap[entity];
-    if (!requiredPermission) {
-      return res.status(400).json({ error: "Invalid entity type" });
-    }
-
-    let model;
-    let deletedCount = 0;
-    let message = "";
-
-    switch(entity) {
-      case 'users':
-        model = mongoose.model("User");
-        message = "user(s)";
-        break;
-      case 'customers':
-        model = mongoose.model("Customer");
-        message = "customer(s)";
-        break;
-      case 'categories':
-        model = Category;
-        message = "category(ies)";
-        break;
-      case 'subcategories':
-        model = Subcategory;
-        message = "subcategory(ies)";
-        break;
-      case 'packages':
-        model = mongoose.model("Package");
-        message = "package(s)";
-        break;
-      case 'bookings':
-        model = mongoose.model("Booking");
-        message = "booking(s)";
-        break;
-      default:
-        return res.status(400).json({ error: "Invalid entity type" });
-    }
-
-    // Get records to handle file deletion if needed
-    if (entity === 'categories') {
-      const categories = await model.find({ _id: { $in: ids } });
-      
-      // Delete image files and related subcategories
-      for (const category of categories) {
-        if (category.img && category.img !== "/assets/default-category.png") {
-          const imagePath = path.join(__dirname, '..', category.img);
-          if (fs.existsSync(imagePath)) {
-            fs.unlinkSync(imagePath);
-          }
-        }
-        
-        // Delete all subcategories under this category
-        if (category.subcategories && category.subcategories.length > 0) {
-          await Subcategory.deleteMany({ categoryId: category._id });
-        }
-      }
-    } else if (entity === 'subcategories') {
-      const subcategories = await model.find({ _id: { $in: ids } });
-      
-      // Delete image files
-      subcategories.forEach(subcategory => {
-        if (subcategory.img && subcategory.img !== "/assets/default-subcategory.png") {
-          const imagePath = path.join(__dirname, '..', subcategory.img);
-          if (fs.existsSync(imagePath)) {
-            fs.unlinkSync(imagePath);
-          }
-        }
-        
-        // Remove from parent categories
-        Category.findByIdAndUpdate(subcategory.categoryId, {
-          $pull: { subcategories: subcategory._id }
-        }).exec();
-      });
-    }
-
-    const result = await model.deleteMany({ _id: { $in: ids } });
-    deletedCount = result.deletedCount;
-
-    if (deletedCount === 0) {
-      return res.status(404).json({ 
-        error: `No ${entity} found to delete` 
-      });
-    }
-
-    res.json({
-      success: true,
-      message: `${deletedCount} ${message} deleted successfully`,
-      deletedCount
-    });
-
-  } catch (error) {
-    console.error(`Error bulk deleting ${entity}:`, error);
-    res.status(500).json({ 
-      error: `Failed to delete ${entity}` 
     });
   }
 });

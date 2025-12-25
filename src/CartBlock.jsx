@@ -13,23 +13,6 @@ function CartBlock({
 }) {
   const totalPrice = carts.reduce((acc, c) => acc + safePrice(c.price) * (c.count || 1), 0);
 
-  // Sort carts: carousel products first, then Wedding Glow Package pushed down, then others
-  const sortedCarts = [...carts].sort((a, b) => {
-    const weddingTitle = "Wedding glow Package";
-
-    // 1. Frequently added items from carousel first
-    const aFreq = a.isFrequentlyAdded ? 1 : 0;
-    const bFreq = b.isFrequentlyAdded ? 1 : 0;
-    if (aFreq !== bFreq) return bFreq - aFreq;
-
-    // 2. Push Wedding Glow Package to the bottom
-    if (a.title === weddingTitle && b.title !== weddingTitle) return 1;
-    if (b.title === weddingTitle && a.title !== weddingTitle) return -1;
-
-    // 3. Maintain original order for others
-    return 0;
-  });
-
   return (
     <div
       style={{
@@ -56,15 +39,29 @@ function CartBlock({
         <>
           <h5 className="fw-semibold mb-2">Cart</h5>
 
-          {sortedCarts.map((c) => {
+          {carts.map((c) => {
             const price = safePrice(c.price) * (c.count || 1);
-            const isMainPackage = c.title === "Make your own package";
+            
+            // FIRST TRY: Get the product name from cart item
+            // Check all possible fields where product name could be stored
+            const productName = c.name || c.serviceName || c.title || "Service";
+            
+            console.log("Cart item debug:", {
+              id: c._id,
+              name: c.name,
+              serviceName: c.serviceName,
+              title: c.title,
+              finalName: productName
+            });
 
             return (
               <div key={c._id} className="mb-3">
                 <Row className="align-items-center">
                   <Col>
-                    <p className="m-0" style={{ fontSize: "12px", fontWeight: "500" }}>{c.title}</p>
+                    {/* Show PRODUCT NAME here */}
+                    <p className="m-0" style={{ fontSize: "12px", fontWeight: "500" }}>
+                      {productName}
+                    </p>
                   </Col>
                   <Col xs={8} className="d-flex align-items-center justify-content-between gap-2">
                     <div
@@ -111,23 +108,30 @@ function CartBlock({
                   </Col>
                 </Row>
 
-                {/* Content list - Show ALL services for main packages */}
-                {isMainPackage && c.content && c.content.length > 0 && (
+                {/* Content list - Show services if available */}
+                {c.content && c.content.length > 0 && (
                   <div style={{ marginTop: "10px", fontSize: "12px", color: "#555" }}>
                     {c.content.map((item, i) => (
                       <p key={i} style={{ margin: "2px 0", lineHeight: "1.3" }}>
                         <GoDotFill style={{ fontSize: "10px", color: "#5a5959ff", marginRight: "4px" }} />
-                        {item.value ? `${item.value} : ${item.details}` : item.details}
+                        {item.details || item.title || "Service item"}
                       </p>
                     ))}
                   </div>
                 )}
 
-                {/* EDIT BUTTON - Only show for Wedding glow Package */}
-                {onEdit && isMainPackage && (
+                {/* EDIT BUTTON - Show for all packages */}
+                {onEdit && (
                   <Button
                     className="text-start fw-semibold mt-2 editbtn"
                     onClick={() => onEdit(c)}
+                    style={{
+                      backgroundColor: "transparent",
+                      border: "1px solid #ccc",
+                      color: "#333",
+                      padding: "2px 10px",
+                      fontSize: "12px"
+                    }}
                   >
                     Edit
                   </Button>

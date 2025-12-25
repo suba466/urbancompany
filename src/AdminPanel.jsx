@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom'; // Removed BrowserRouter import
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import AdminLayout from './AdminLayout';
 import AdminDashboard from './AdminDashboard';
 import UserManagement from './UserManagement';
@@ -17,9 +17,71 @@ function AdminPanel() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
+  const navigate = useNavigate();
 
+  // Detect page refresh
   useEffect(() => {
+    // Check if page was refreshed
+    const navigationEntries = window.performance.getEntriesByType('navigation');
+    const isPageRefresh = navigationEntries.length > 0 && 
+                         navigationEntries[0].type === 'reload';
+
+    // Check if coming from a refresh
+    const wasRefreshed = sessionStorage.getItem('wasRefreshed') === 'true';
+    
+    if (isPageRefresh || wasRefreshed) {
+      console.log('Page was refreshed, logging out...');
+      handleLogout();
+      // Clear the flag
+      sessionStorage.removeItem('wasRefreshed');
+    }
+
+    // Set flag for next refresh
+    sessionStorage.setItem('wasRefreshed', 'true');
+
+    // Check authentication status
     checkAuthStatus();
+
+    // Handle browser refresh
+    const handleBeforeUnload = () => {
+      sessionStorage.setItem('wasRefreshed', 'true');
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
+  // Check authentication status from localStorage
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = localStorage.getItem('authToken');
+      const role = localStorage.getItem('userRole');
+      
+      if (token && role) {
+        setIsLoggedIn(true);
+        setUserRole(role);
+        fetchUserProfile(role);
+      } else {
+        setIsLoggedIn(false);
+        setUserRole(null);
+      }
+    };
+
+    // Listen for storage changes (for logout from other tabs)
+    const handleStorageChange = (e) => {
+      if (e.key === 'authToken' || e.key === 'userRole') {
+        checkAuth();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const checkAuthStatus = () => {
@@ -30,12 +92,22 @@ function AdminPanel() {
       setIsLoggedIn(true);
       setUserRole(role);
       fetchUserProfile(role);
+    } else {
+      setIsLoggedIn(false);
+      setUserRole(null);
+      // Redirect to admin login
+      navigate('/admin');
     }
   };
 
   const fetchUserProfile = async (role) => {
     try {
       const token = localStorage.getItem('authToken');
+      if (!token) {
+        handleLogout();
+        return;
+      }
+
       const endpoint = role === 'admin' 
         ? 'http://localhost:5000/api/admin/profile'
         : 'http://localhost:5000/api/admin/user-profile';
@@ -47,28 +119,50 @@ function AdminPanel() {
         }
       });
       
+      if (response.status === 401) {
+        // Token expired or invalid
+        handleLogout();
+        return;
+      }
+      
       const data = await response.json();
       if (data.success) {
         setUserProfile(data.profile);
+      } else {
+        handleLogout();
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
+      handleLogout();
     }
   };
 
   const handleLogin = (token, role) => {
+    localStorage.setItem('authToken', token);
+    localStorage.setItem('userRole', role);
     setIsLoggedIn(true);
     setUserRole(role);
     fetchUserProfile(role);
+    // Clear refresh flag
+    sessionStorage.removeItem('wasRefreshed');
   };
 
   const handleLogout = () => {
+    // Clear all local storage
     localStorage.removeItem('authToken');
     localStorage.removeItem('userRole');
     localStorage.removeItem('userPermissions');
+    
+    // Clear state
     setIsLoggedIn(false);
     setUserRole(null);
     setUserProfile(null);
+    
+    // Clear refresh flag
+    sessionStorage.removeItem('wasRefreshed');
+    
+    // Redirect to admin login
+    navigate('/admin');
   };
 
   if (!isLoggedIn) {
@@ -76,7 +170,6 @@ function AdminPanel() {
   }
 
   return (
-    // REMOVED the <Router> wrapper here since it's already wrapped by parent
     <Routes>
       <Route 
         path="/" 
