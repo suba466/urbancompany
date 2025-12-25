@@ -9,9 +9,10 @@ function CartBlock({
   handleDecrease,
   navigate,
   hideViewButton = false,
-  onEdit, 
+  onEdit,
+  customerEmail = "" // Add this parameter
 }) {
-  const totalPrice = carts.reduce((acc, c) => acc + safePrice(c.price) * (c.count || 1), 0);
+  const totalPrice = carts.reduce((acc, c) => safePrice(c.price) * (c.count || 1), 0);
 
   return (
     <div
@@ -29,7 +30,6 @@ function CartBlock({
             className="w-50"
             style={{ padding: "10px" }}
             onError={(e) => {
-              // Fallback if cart image fails to load
               e.target.src = "http://localhost:5000/assets/placeholder.png";
             }}
           />
@@ -42,8 +42,7 @@ function CartBlock({
           {carts.map((c) => {
             const price = safePrice(c.price) * (c.count || 1);
             
-            // FIRST TRY: Get the product name from cart item
-            // Check all possible fields where product name could be stored
+            // Get the product name from cart item
             const productName = c.name || c.serviceName || c.title || "Service";
             
             console.log("Cart item debug:", {
@@ -51,14 +50,14 @@ function CartBlock({
               name: c.name,
               serviceName: c.serviceName,
               title: c.title,
-              finalName: productName
+              finalName: productName,
+              customerEmail: customerEmail
             });
 
             return (
               <div key={c._id} className="mb-3">
                 <Row className="align-items-center">
                   <Col>
-                    {/* Show PRODUCT NAME here */}
                     <p className="m-0" style={{ fontSize: "12px", fontWeight: "500" }}>
                       {productName}
                     </p>
@@ -120,7 +119,7 @@ function CartBlock({
                   </div>
                 )}
 
-                {/* EDIT BUTTON - Show for all packages */}
+                {/* EDIT BUTTON */}
                 {onEdit && (
                   <Button
                     className="text-start fw-semibold mt-2 editbtn"

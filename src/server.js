@@ -92,7 +92,6 @@ const packageSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-
 const Package = mongoose.models.Package || mongoose.model("Package", packageSchema);
 
 const cartSchema = new mongoose.Schema({
@@ -103,6 +102,12 @@ const cartSchema = new mongoose.Schema({
   category: String,
   count: { type: Number, default: 1 },
   content: [{ value: String, details: String }],
+  items: [{ 
+    name: String,
+    description: String 
+  }],
+  name: String, // Add this field for service name
+  customerEmail: String, // Add this to link cart to customer
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -183,7 +188,7 @@ const userSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-// Booking Schema
+// Booking Schema - Updated with cart items
 const bookingSchema = new mongoose.Schema({
   customerId: String,
   customerEmail: String,
@@ -202,6 +207,19 @@ const bookingSchema = new mongoose.Schema({
   technician: String,
   rating: Number,
   review: String,
+  // Cart items from booking
+  cartItems: [{
+    productId: String,
+    name: String,
+    title: String,
+    price: String,
+    originalPrice: String,
+    count: Number,
+    content: [{ value: String, details: String }],
+    items: [{ name: String, description: String }],
+    category: String
+  }],
+  // Individual service items
   items: [{
     name: String,
     quantity: Number,
@@ -220,11 +238,315 @@ const Booking = mongoose.models.Booking || mongoose.model("Booking", bookingSche
 
 // Admin Routes
 app.use("/api/admin", adminRoutes);
+
+// ==================== UPDATED BOOKING ROUTES ====================
+
+// Create new booking with cart items
+app.post("/api/bookings", async (req, res) => {
+  try {
+    const {
+      customerId,
+      customerEmail,
+      customerName,
+      customerPhone,
+      customerCity,
+      serviceName,
+      servicePrice,
+      originalPrice,
+      address,
+      scheduledDate,
+      scheduledTime,
+      items,
+      cartItems, // Add this parameter
+      slotExtraCharge,
+      tipAmount,
+      taxAmount,
+      paymentMethod
+    } = req.body;
+
+    console.log(" Received booking data:", {
+      customerEmail,
+      serviceName,
+      servicePrice,
+      itemsCount: items ? items.length : 0,
+      cartItemsCount: cartItems ? cartItems.length : 0,
+      hasCartItems: !!cartItems
+    });
+
+    if (!customerEmail) {
+      return res.status(400).json({ error: "Customer email is required" });
+    }
+
+    // Prepare booking items - use cartItems if available
+    let bookingItems = [];
+    let bookingCartItems = [];
+    let finalServiceName = serviceName || "Multiple Services";
+    let finalServicePrice = servicePrice || "0";
+
+    if (cartItems && cartItems.length > 0) {
+      console.log("Processing cart items for booking:", cartItems);
+      
+      // Save cart items for reference
+      bookingCartItems = cartItems.map(item => ({
+        productId: item.productId || item._id,
+        name: item.name || item.title || "Service",
+        title: item.title || item.name || "Service",
+        price: item.price || "0",
+        originalPrice: item.originalPrice || item.price || "0",
+        count: item.count || 1,
+        content: item.content || [],
+        items: item.items || [],
+        category: item.category || "General"
+      }));
+
+      // Convert cart items to service items format
+      bookingItems = cartItems.map(item => ({
+        name: item.name || item.title || "Service Item",
+        quantity: item.count || 1,
+        price: item.price ? item.price.toString() : "0"
+      }));
+
+      // Calculate total price from cart
+      const totalPrice = cartItems.reduce((sum, item) => {
+        const price = parseFloat(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
+        const count = item.count || 1;
+        return sum + (price * count);
+      }, 0);
+
+      finalServiceName = "Cart Booking - Multiple Services";
+      finalServicePrice = totalPrice.toString();
+
+      console.log(`Total calculated from cart: ₹${totalPrice}`);
+
+    } else if (items && items.length > 0) {
+      // Use the existing items format
+      bookingItems = items;
+      bookingCartItems = items.map(item => ({
+        name: item.name,
+        price: item.price,
+        count: item.quantity || 1
+      }));
+    } else {
+      // Single service booking
+      bookingItems = [{
+        name: finalServiceName || "Service",
+        quantity: 1,
+        price: finalServicePrice || "0"
+      }];
+      bookingCartItems = [{
+        name: finalServiceName || "Service",
+        price: finalServicePrice || "0",
+        count: 1
+      }];
+    }
+
+    const booking = new Booking({
+      customerId: customerId || `customer_${customerEmail}`,
+      customerEmail,
+      customerName: customerName || "Customer",
+      customerPhone: customerPhone || "",
+      customerCity: customerCity || "",
+      serviceName: finalServiceName,
+      servicePrice: finalServicePrice,
+      originalPrice: originalPrice || finalServicePrice,
+      address: address || {},
+      scheduledDate: scheduledDate ? new Date(scheduledDate) : new Date(),
+      scheduledTime: scheduledTime || "10:00 AM",
+      cartItems: bookingCartItems, // Save cart items
+      items: bookingItems, // Save service items
+      slotExtraCharge: slotExtraCharge || 0,
+      tipAmount: tipAmount || 0,
+      taxAmount: taxAmount || 0,
+      paymentMethod: paymentMethod || "UPI",
+      status: 'Confirmed',
+      paymentStatus: 'Paid',
+      bookingDate: new Date()
+    });
+
+    const savedBooking = await booking.save();
+
+    console.log(`✅ Booking created successfully:`, {
+      id: savedBooking._id,
+      email: savedBooking.customerEmail,
+      service: savedBooking.serviceName,
+      price: savedBooking.servicePrice,
+      cartItems: savedBooking.cartItems.length,
+      items: savedBooking.items.length
+    });
+
+    // Clear cart for this customer after successful booking
+    if (customerEmail) {
+      try {
+        const deleteResult = await Cart.deleteMany({ customerEmail: customerEmail });
+        console.log(`🗑️ Cleared ${deleteResult.deletedCount} cart items for: ${customerEmail}`);
+      } catch (cartError) {
+        console.error("Error clearing cart:", cartError);
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Booking created successfully",
+      booking: savedBooking
+    });
+
+  } catch (error) {
+    console.error("❌ Error creating booking:", error);
+    res.status(500).json({ error: "Failed to create booking: " + error.message });
+  }
+});
+
+// Get customer's bookings by email - Updated to include cart items
+app.get("/api/bookings/:email", async (req, res) => {
+  try {
+    const { email } = req.params;
+    
+    console.log(`📋 Fetching bookings for email: ${email}`);
+    
+    const bookings = await Booking.find({ customerEmail: email })
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    console.log(`✅ Found ${bookings.length} bookings for email: ${email}`);
+    
+    // Log details of first booking for debugging
+    if (bookings.length > 0) {
+      console.log("First booking details:", {
+        id: bookings[0]._id,
+        serviceName: bookings[0].serviceName,
+        cartItemsCount: bookings[0].cartItems?.length || 0,
+        itemsCount: bookings[0].items?.length || 0,
+        hasCartItems: !!bookings[0].cartItems
+      });
+    }
+    
+    res.json({
+      success: true,
+      bookings: bookings,
+      count: bookings.length
+    });
+
+  } catch (error) {
+    console.error("❌ Error fetching bookings:", error);
+    res.status(500).json({ error: "Failed to fetch bookings: " + error.message });
+  }
+});
+
+// Get cart items by customer email
+app.get("/api/cart/:email", async (req, res) => {
+  try {
+    const { email } = req.params;
+    
+    console.log(`🛒 Fetching cart for email: ${email}`);
+    
+    const cartItems = await Cart.find({ customerEmail: email })
+      .sort({ createdAt: -1 });
+
+    console.log(`✅ Found ${cartItems.length} cart items for email: ${email}`);
+    
+    res.json({
+      success: true,
+      cartItems: cartItems,
+      count: cartItems.length
+    });
+
+  } catch (error) {
+    console.error("❌ Error fetching cart:", error);
+    res.status(500).json({ error: "Failed to fetch cart: " + error.message });
+  }
+});
+
+// Add to cart with customer email
+app.post("/api/addcarts", async (req, res) => {
+  try {
+    const { productId, title, price, originalPrice, content, category, name, customerEmail } = req.body;
+    
+    console.log("📦 Adding to cart:", {
+      productId,
+      title,
+      name,
+      customerEmail,
+      price
+    });
+    
+    let existing = null;
+    if (productId) {
+      existing = await Cart.findOne({ productId, customerEmail });
+    }
+    
+    if (existing) {
+      existing.content = content;
+      existing.price = price;
+      existing.originalPrice = originalPrice;
+      existing.category = category || 'Salon for women';
+      existing.name = name || title;
+      existing.count = existing.count || 1;
+      await existing.save();
+      
+      console.log(`✅ Cart updated: ${existing.name}`);
+      
+      return res.json({ 
+        message: "Cart updated", 
+        cart: existing 
+      });
+    }
+    
+    const newCart = new Cart({
+      productId: productId || new mongoose.Types.ObjectId().toString(),
+      title: title || name,
+      name: name || title,
+      price,
+      originalPrice,
+      content,
+      category: category || 'Salon for women',
+      count: 1,
+      customerEmail: customerEmail || "guest"
+    });
+    
+    await newCart.save();
+    
+    console.log(`🆕 Cart added: ${newCart.name} for ${customerEmail}`);
+    
+    res.status(201).json({ 
+      message: "Cart added", 
+      cart: newCart 
+    });
+    
+  } catch (err) {
+    console.error("❌ Error in /api/addcarts:", err);
+    res.status(500).json({ error: "Failed to add/update cart" });
+  }
+});
+
+// Clear cart for customer
+app.delete("/api/cart/clear/:email", async (req, res) => {
+  try {
+    const { email } = req.params;
+    
+    console.log(`🗑️ Clearing cart for: ${email}`);
+    
+    const result = await Cart.deleteMany({ customerEmail: email });
+    
+    console.log(`✅ Cleared ${result.deletedCount} items from cart`);
+    
+    res.json({
+      success: true,
+      message: `Cleared ${result.deletedCount} items from cart`,
+      deletedCount: result.deletedCount
+    });
+    
+  } catch (error) {
+    console.error("❌ Error clearing cart:", error);
+    res.status(500).json({ error: "Failed to clear cart" });
+  }
+});
+
+// ==================== OTHER ROUTES ====================
+
 app.get("/api/debug-categories", async (req, res) => {
   try {
     console.log("=== DEBUG: Checking MongoDB categories ===");
     
-    // Check all categories (including inactive)
     const allCategories = await Category.find({});
     console.log(`Found ${allCategories.length} total categories in DB:`);
     
@@ -243,7 +565,6 @@ app.get("/api/debug-categories", async (req, res) => {
       });
     }
     
-    // Check active categories
     const activeCategories = await Category.find({ isActive: true });
     console.log(`Found ${activeCategories.length} active categories`);
     
@@ -260,7 +581,6 @@ app.get("/api/debug-categories", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
 
 // User Login
 app.post("/api/user-login", async (req, res) => {
@@ -287,10 +607,8 @@ app.post("/api/user-login", async (req, res) => {
       return res.status(400).json({ error: "Invalid email or password" });
     }
 
-    // Update last login
     await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
 
-    // Generate JWT token for user
     const token = jwt.sign(
       {
         id: user._id,
@@ -584,107 +902,6 @@ app.post("/api/update-profile", upload.single("profileImage"), async (req, res) 
   }
 });
 
-// Create new booking with email
-app.post("/api/bookings", async (req, res) => {
-  try {
-    const {
-      customerId,
-      customerEmail,
-      customerName,
-      customerPhone,
-      customerCity,
-      serviceName,
-      servicePrice,
-      originalPrice,
-      address,
-      scheduledDate,
-      scheduledTime,
-      items,
-      slotExtraCharge,
-      tipAmount,
-      taxAmount,
-      paymentMethod
-    } = req.body;
-
-    console.log(" Received booking data:", {
-      customerEmail,
-      serviceName,
-      servicePrice,
-      itemsCount: items ? items.length : 0
-    });
-
-    if (!customerEmail || !serviceName) {
-      return res.status(400).json({ error: "Customer email and service name are required" });
-    }
-
-    const booking = new Booking({
-      customerId: customerId || `customer_${customerEmail}`,
-      customerEmail,
-      customerName: customerName || "Customer",
-      customerPhone: customerPhone || "",
-      customerCity: customerCity || "",
-      serviceName,
-      servicePrice: servicePrice ? servicePrice.toString() : "0",
-      originalPrice: originalPrice ? originalPrice.toString() : "0",
-      address: address || {},
-      scheduledDate: scheduledDate ? new Date(scheduledDate) : new Date(),
-      scheduledTime: scheduledTime || "10:00 AM",
-      items: items || [],
-      slotExtraCharge: slotExtraCharge || 0,
-      tipAmount: tipAmount || 0,
-      taxAmount: taxAmount || 0,
-      paymentMethod: paymentMethod || "UPI",
-      status: 'Confirmed',
-      paymentStatus: 'Paid',
-      bookingDate: new Date()
-    });
-
-    const savedBooking = await booking.save();
-
-    console.log(` Booking created successfully:`, {
-      id: savedBooking._id,
-      email: savedBooking.customerEmail,
-      service: savedBooking.serviceName,
-      price: savedBooking.servicePrice
-    });
-
-    res.status(201).json({
-      success: true,
-      message: "Booking created successfully",
-      booking: savedBooking
-    });
-
-  } catch (error) {
-    console.error(" Error creating booking:", error);
-    res.status(500).json({ error: "Failed to create booking: " + error.message });
-  }
-});
-
-// Get customer's bookings by email
-app.get("/api/bookings/:email", async (req, res) => {
-  try {
-    const { email } = req.params;
-    
-    console.log(` Fetching bookings for email: ${email}`);
-    
-    const bookings = await Booking.find({ customerEmail: email })
-      .sort({ createdAt: -1 })
-      .limit(50);
-
-    console.log(` Found ${bookings.length} bookings for email: ${email}`);
-    
-    res.json({
-      success: true,
-      bookings: bookings,
-      count: bookings.length
-    });
-
-  } catch (error) {
-    console.error(" Error fetching bookings:", error);
-    res.status(500).json({ error: "Failed to fetch bookings: " + error.message });
-  }
-});
-
 // Delete booking
 app.delete("/api/bookings/:id", async (req, res) => {
   try {
@@ -717,6 +934,18 @@ app.get('/api/all-bookings', async (req, res) => {
   try {
     const bookings = await Booking.find({}).sort({ createdAt: -1 });
     console.log(`Total bookings in database: ${bookings.length}`);
+    
+    // Log details of each booking
+    bookings.forEach((booking, index) => {
+      console.log(`Booking ${index + 1}:`, {
+        id: booking._id,
+        email: booking.customerEmail,
+        service: booking.serviceName,
+        cartItems: booking.cartItems?.length || 0,
+        items: booking.items?.length || 0
+      });
+    });
+    
     res.json(bookings);
   } catch (error) {
     console.error("Error fetching all bookings:", error);
@@ -1286,46 +1515,13 @@ app.delete("/api/packages/:id", async (req, res) => {
   }
 });
 
-// Cart routes
+// Cart routes - Updated
 app.get("/api/carts", async (req, res) => {
   try {
     const carts = await Cart.find();
     res.json({ carts });
   } catch {
     res.status(500).json({ error: "Failed to fetch carts" });
-  }
-});
-
-app.post("/api/addcarts", async (req, res) => {
-  try {
-    const { productId, title, price, originalPrice, content, category } = req.body;
-    let existing = null;
-    if (productId) {
-      existing = await Cart.findOne({ productId });
-    }
-    if (existing) {
-      existing.content = content;
-      existing.price = price;
-      existing.originalPrice = originalPrice;
-      existing.category = category || 'Salon for women';
-      existing.count = existing.count || 1;
-      await existing.save();
-      return res.json({ message: "Cart updated", cart: existing });
-    }
-    const newCart = new Cart({
-      productId: productId || new mongoose.Types.ObjectId().toString(),
-      title,
-      price,
-      originalPrice,
-      content,
-      category: category || 'Salon for women',
-      count: 1,
-    });
-    await newCart.save();
-    res.status(201).json({ message: "Cart added", cart: newCart });
-  } catch (err) {
-    console.error("Error in /api/addcarts:", err);
-    res.status(500).json({ error: "Failed to add/update cart" });
   }
 });
 
@@ -1486,5 +1682,5 @@ app.use((req, res) => {
 
 app.listen(PORT, () => {
   console.log(`=== Server running on http://localhost:${PORT} ===`);
- 
+  console.log(`=== Cart items will now be saved with bookings ===`);
 });

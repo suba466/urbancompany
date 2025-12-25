@@ -96,26 +96,6 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
     });
   }, [bookings, loadingBookings, isLoggedIn, userInfo]);
 
-  // Add this function to check all bookings in database
-  const checkAllBookings = async () => {
-    try {
-      console.log("Checking ALL bookings in database...");
-      const response = await fetch("http://localhost:5000/api/all-bookings");
-      if (response.ok) {
-        const allBookings = await response.json();
-        console.log("All bookings in database:", allBookings);
-        
-        // Check if any booking matches current customer's email
-        const customerBookings = allBookings.filter(booking => 
-          booking.customerEmail === userInfo.email
-        );
-        console.log("Customer's bookings:", customerBookings);
-      }
-    } catch (error) {
-      console.error("Error checking all bookings:", error);
-    }
-  };
-
   const loadCustomerData = async () => {
     try {
       setLoadingBookings(true);
@@ -133,7 +113,26 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
       
       if (bookingsResponse.ok) {
         const bookingsData = await bookingsResponse.json();
-        console.log("Bookings received:", bookingsData.bookings);
+        console.log("📋 Bookings received:", {
+          count: bookingsData.bookings?.length || 0,
+          bookings: bookingsData.bookings
+        });
+        
+        // Debug: Check what's in each booking
+        if (bookingsData.bookings && bookingsData.bookings.length > 0) {
+          bookingsData.bookings.forEach((booking, index) => {
+            console.log(`Booking ${index + 1}:`, {
+              id: booking._id,
+              serviceName: booking.serviceName,
+              hasCartItems: !!booking.cartItems,
+              cartItemsCount: booking.cartItems?.length || 0,
+              hasItems: !!booking.items,
+              itemsCount: booking.items?.length || 0,
+              cartItems: booking.cartItems
+            });
+          });
+        }
+        
         setBookings(bookingsData.bookings || []);
       } else {
         console.log("Failed to fetch bookings");
@@ -143,7 +142,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
       // Load plans from same email
       const plansResponse = await fetch(`http://localhost:5000/api/plans/${customerEmail}`);
       if (plansResponse.ok) {
-        const plansData = await plansData.json();
+        const plansData = await plansResponse.json();
         setPlans(plansData.plans || []);
       }
       
@@ -201,13 +200,6 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
       });
     }
   }, [show, initialView]);
-
-  // Call checkAllBookings when bookings view loads
-  useEffect(() => {
-    if (currentView === "bookings" && isLoggedIn) {
-      checkAllBookings();
-    }
-  }, [currentView, isLoggedIn]);
 
   const handleBack = () => {
     if (["profile-details", "bookings", "plans", "help", "about", "edit-profile", "register", "login"].includes(currentView)) {
@@ -1091,18 +1083,23 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
     );
   };
 
-  // Render bookings view
+  // Render bookings view - UPDATED to show cart items
   const renderBookingsView = () => {
     // Calculate total for each booking
     const calculateBookingTotal = (booking) => {
       if (booking.isCurrent && totalPrice) {
         return totalPrice;
       }
-      if (booking.paymentBreakdown) {
-        return booking.paymentBreakdown.totalPrice || 0;
-      }
       if (booking.servicePrice) {
         return Number(booking.servicePrice) || 0;
+      }
+      // Calculate from cart items
+      if (booking.cartItems && booking.cartItems.length > 0) {
+        return booking.cartItems.reduce((sum, item) => {
+          const price = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
+          const count = item.count || 1;
+          return sum + (price * count);
+        }, 0);
       }
       // Calculate from items
       if (booking.items && booking.items.length > 0) {
@@ -1142,10 +1139,10 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
                     <div className="d-flex justify-content-between align-items-start mb-2">
                       <div>
                         <p className="fw-semibold mb-1">
-                          Order #{booking._id}
+                          Order #{booking._id?.toString().substring(0, 8) || "N/A"}
                         </p>
                         <p className="small text-muted mb-0">
-                          {new Date(booking.bookingDate || Date.now()).toLocaleDateString('en-IN', {
+                          {new Date(booking.bookingDate || booking.createdAt || Date.now()).toLocaleDateString('en-IN', {
                             weekday: 'short',
                             day: 'numeric',
                             month: 'short',
@@ -1158,12 +1155,45 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
                         booking.status === 'Completed' ? 'bg-primary' : 
                         booking.status === 'Cancelled' ? 'bg-danger' : 'bg-warning'
                       }`}>
-                        {booking.status}
+                        {booking.status || 'Confirmed'}
                       </span>
                     </div>
                     
-                    {/* Display individual services */}
-                    {booking.items && booking.items.length > 0 ? (
+                    {/* Display service name */}
+                    <div className="mb-3">
+                      <p className="small fw-semibold mb-2">
+                        Service: {booking.serviceName || "Multiple Services"}
+                      </p>
+                    </div>
+                    
+                    {/* Display CART ITEMS if available */}
+                    {booking.cartItems && booking.cartItems.length > 0 ? (
+                      <div className="mb-3">
+                        <p className="small fw-semibold mb-2">🛒 Cart Items:</p>
+                        <div>
+                          {booking.cartItems.map((item, index) => {
+                            const itemPrice = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
+                            const count = item.count || 1;
+                            const totalItemPrice = itemPrice * count;
+                            const itemName = item.name || item.title || `Item ${index + 1}`;
+                            
+                            return (
+                              <div key={index} className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                <div>
+                                  <p className="mb-1 small">{itemName}</p>
+                                  <p className="mb-0 text-muted" style={{ fontSize: "11px" }}>
+                                    Qty: {count} × ₹{itemPrice.toLocaleString('en-IN')}
+                                  </p>
+                                </div>
+                                <p className="mb-0 small">
+                                  ₹{totalItemPrice.toLocaleString('en-IN')}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : booking.items && booking.items.length > 0 ? (
                       <div className="mb-3">
                         <p className="small fw-semibold mb-2">Services:</p>
                         <div>
@@ -1188,19 +1218,13 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
                           })}
                         </div>
                       </div>
-                    ) : (
-                      <div className="mb-3">
-                        <p className="small text-muted mb-1">
-                          <strong>Service:</strong> {booking.serviceName || "Beauty Services"}
-                        </p>
-                      </div>
-                    )}
+                    ) : null}
 
-                    {/* Total Amount with taxes */}
-                    <div >
-                      <div className="d-flex justify-content-between mt-2 pt-2 ">
-                        <span>Amount to Pay (with tax):</span>
-                        <span >
+                    {/* Total Amount */}
+                    <div className="pt-2">
+                      <div className="d-flex justify-content-between mt-2 pt-2 border-top">
+                        <span className="fw-semibold">Total Amount:</span>
+                        <span className="fw-semibold">
                           ₹{bookingTotal.toLocaleString('en-IN')}
                         </span>
                       </div>
@@ -1208,7 +1232,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
 
                     {/* Address */}
                     {booking.address && (
-                      <div className="d-flex align-items-start mb-3">
+                      <div className="d-flex align-items-start mt-3">
                         <MdLocationOn size={14} className="text-muted mt-1 me-2 flex-shrink-0" />
                         <div className="flex-grow-1">
                           <p className="small text-muted mb-1">
@@ -1220,7 +1244,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
                       </div>
                     )}
 
-                    {/* Action buttons with CANCEL functionality */}
+                    {/* Action buttons */}
                     <div className="mt-3 pt-2 border-top d-flex gap-2">
                       <Button 
                         variant="outline-primary" 
@@ -1228,30 +1252,41 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
                         className="flex-grow-1"
                         onClick={() => {
                           // Create detailed message
-                          let details = `Booking Details\n`;
+                          let details = `📋 Booking Details\n`;
                           details += `────────────────\n`;
                           details += `Booking ID: ${booking._id}\n`;
-                          details += `Date: ${new Date(booking.bookingDate).toLocaleDateString('en-IN')}\n`;
+                          details += `Date: ${new Date(booking.bookingDate || booking.createdAt).toLocaleDateString('en-IN')}\n`;
                           details += `Time: ${booking.scheduledTime || "10:00 AM"}\n`;
-                          details += `Status: ${booking.status}\n\n`;
+                          details += `Status: ${booking.status || 'Confirmed'}\n\n`;
                           
-                          details += `🛒 Services:\n`;
-                          if (booking.items && booking.items.length > 0) {
+                          if (booking.cartItems && booking.cartItems.length > 0) {
+                            details += `🛒 Cart Items:\n`;
+                            booking.cartItems.forEach((item, index) => {
+                              const itemPrice = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
+                              const count = item.count || 1;
+                              const itemName = item.name || item.title || `Item ${index + 1}`;
+                              details += `  ${index + 1}. ${itemName}\n`;
+                              details += `     ₹${itemPrice} × ${count} = ₹${itemPrice * count}\n`;
+                            });
+                          } else if (booking.items && booking.items.length > 0) {
+                            details += `🛒 Services:\n`;
                             booking.items.forEach((item, index) => {
                               const itemPrice = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
                               const quantity = item.quantity || 1;
                               details += `  ${index + 1}. ${item.name}\n`;
                               details += `     ₹${itemPrice} × ${quantity} = ₹${itemPrice * quantity}\n`;
                             });
-                          } else {
-                            details += ` ${booking.serviceName}\n`;
                           }
                           
-                          details += `\nPayment Summary:\n`;
-                          details += `  Amount to Pay: ₹${bookingTotal}\n\n`;
+                          details += `\n💰 Payment Summary:\n`;
+                          details += `  Amount to Pay: ₹${bookingTotal}\n`;
                           
+                          if (booking.paymentMethod) {
+                            details += `  Payment Method: ${booking.paymentMethod}\n`;
+                          }
+                          
+                          details += `\n📍 Address:\n`;
                           if (booking.address) {
-                            details += `Address:\n`;
                             details += `  ${booking.address.doorNo ? booking.address.doorNo + ', ' : ''}`;
                             details += `${booking.address.mainText || ''}`;
                             details += `${booking.address.subText ? ', ' + booking.address.subText : ''}`;
@@ -1262,14 +1297,13 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
                       >
                         View Details
                       </Button>
-                      {/* DELETE BUTTON - For all bookings */}
+                      {/* DELETE BUTTON */}
                       <Button 
                         variant="outline-dark" 
                         size="sm"
                         onClick={async () => {
                           if (window.confirm("Are you sure you want to delete this booking record?")) {
                             try {
-                              // Call API to delete booking
                               const response = await fetch(`http://localhost:5000/api/bookings/${booking._id}`, {
                                 method: "DELETE"
                               });
