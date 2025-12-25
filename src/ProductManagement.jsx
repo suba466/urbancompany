@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Card, Table, Form, Button, Alert, 
-  Badge, Dropdown, Row, Col, Modal, InputGroup 
+  Badge, Row, Col, InputGroup 
 } from 'react-bootstrap';
 
 function ProductManagement({ isAdding }) {
@@ -9,7 +9,7 @@ function ProductManagement({ isAdding }) {
   const [productSearch, setProductSearch] = useState('');
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [selectAllProducts, setSelectAllProducts] = useState(false);
-  const [showAddProductModal, setShowAddProductModal] = useState(isAdding || false);
+  const [showFormView, setShowFormView] = useState(isAdding || false);
   const [newProduct, setNewProduct] = useState({
     name: '',
     title: '',
@@ -94,6 +94,7 @@ function ProductManagement({ isAdding }) {
     if (isAdding) {
       // Only fetch categories for form
       Promise.all([fetchCategories(), fetchSubcategories()]);
+      setShowFormView(true);
     } else {
       // Fetch everything for table view
       Promise.all([fetchProducts(), fetchCategories(), fetchSubcategories()]);
@@ -129,15 +130,11 @@ function ProductManagement({ isAdding }) {
     }
     
     try {
-      // Get the selected subcategory object
-      const selectedSub = filteredSubcategories.find(sub => sub.name === newProduct.subcategory);
-      
-      // Prepare product data - IMPORTANT: title should be subcategory name
+      // Prepare product data
       const productData = {
         ...newProduct,
-        title: newProduct.subcategory || newProduct.name, // Use subcategory name as title
+        title: newProduct.subcategory || newProduct.name,
         subcategory: newProduct.subcategory || null,
-        // Ensure numeric fields are numbers
         price: newProduct.price.toString(),
         originalPrice: newProduct.originalPrice || newProduct.price.toString(),
         discountPrice: newProduct.discountPrice || '',
@@ -159,7 +156,9 @@ function ProductManagement({ isAdding }) {
         setTimeout(() => {
           setFormSuccess(false);
           resetForm();
-          setShowAddProductModal(false);
+          setShowFormView(false);
+          // Refresh products list
+          fetchProducts();
         }, 2000);
       } else {
         alert(data.error || 'Failed to add product');
@@ -197,18 +196,17 @@ function ProductManagement({ isAdding }) {
     setNewProduct({ 
       ...newProduct, 
       category: category,
-      subcategory: '', // Reset subcategory when category changes
-      title: '' // Reset title
+      subcategory: '',
+      title: ''
     });
   };
 
   const handleSubcategoryChange = (e) => {
     const subcategory = e.target.value;
-    // When subcategory is selected, automatically set title to subcategory name
     setNewProduct({ 
       ...newProduct, 
       subcategory: subcategory,
-      title: subcategory // Set title to subcategory name
+      title: subcategory
     });
   };
 
@@ -324,10 +322,10 @@ function ProductManagement({ isAdding }) {
     setSelectAllProducts(!selectAllProducts);
   };
 
-  // If isAdding prop is true, show full page form
-  // Otherwise show table view
-  if (isAdding || showAddProductModal) {
+  // Show Form View (when adding new product)
+  if (showFormView) {
     return (
+      
       <div className="p-4">
         <Card className="shadow-lg mb-4">
           <Card.Body className="p-4">
@@ -338,7 +336,10 @@ function ProductManagement({ isAdding }) {
               </div>
               <Button 
                 variant="outline-secondary" 
-                onClick={() => setShowAddProductModal(false)}
+                onClick={() => {
+                  resetForm();
+                  setShowFormView(false);
+                }}
               >
                 <i className="bi bi-arrow-left me-2"></i>Back to Products
               </Button>
@@ -683,7 +684,7 @@ function ProductManagement({ isAdding }) {
                   type="button"
                   onClick={() => {
                     resetForm();
-                    setShowAddProductModal(false);
+                    setShowFormView(false);
                   }}
                   style={{ minWidth: '150px' }}
                 >
@@ -724,7 +725,7 @@ function ProductManagement({ isAdding }) {
             />
             <Button 
               variant="primary"
-              onClick={() => setShowAddProductModal(true)}
+              onClick={() => setShowFormView(true)}
             >
               <i className="bi bi-plus-circle me-2"></i>Add New Product
             </Button>
