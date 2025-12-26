@@ -875,9 +875,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
                   variant="dark" 
                   type="submit"
                   style={{ minWidth: '100px', borderRadius: "50px" }}
-                >
-                  <i className={`bi ${isEditingUser ? 'bi-pencil' : 'bi-person-plus'} me-2`}></i>
-                  {isEditingUser ? 'Update' : 'Submit'}
+                >Submit
                 </Button>
               </div>
             </Form>
@@ -960,7 +958,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
                 size="sm"
                 onClick={() => handleBulkDelete(selectedUsers)}
               >
-                <i className="bi bi-trash me-2"></i>Delete Selected
+                Delete Selected
               </Button>
             </Alert>
           )}

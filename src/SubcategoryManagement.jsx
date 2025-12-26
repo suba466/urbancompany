@@ -533,22 +533,6 @@ function SubcategoryManagement({ isAdding, isEditing }) {
                     />
                   </div>
                 </div>
-                {/* Created Date */}
-                {viewingSubcategory.createdAt && (
-                  <div className="list-group-item px-0">
-                    <small className="text-muted d-block">Created Date</small>
-                    <span>{formatDate(viewingSubcategory.createdAt)}</span>
-                  </div>
-                )}
-                
-                {/* Updated Date */}
-                {viewingSubcategory.updatedAt && (
-                  <div className="list-group-item px-0">
-                    <small className="text-muted d-block">Last Updated</small>
-                    <span>{formatDate(viewingSubcategory.updatedAt)}</span>
-                  </div>
-                )}
-                
                 {/* Image URL - At the bottom like categories modal */}
                 {viewingSubcategory.img && viewingSubcategory.img !== '/assets/default-subcategory.png' && (
                   <div className="list-group-item px-0 border-bottom-0">

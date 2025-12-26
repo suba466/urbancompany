@@ -136,45 +136,43 @@ const subcategorySchema = new mongoose.Schema({
 
 const Subcategory = mongoose.models.Subcategory || mongoose.model("Subcategory", subcategorySchema);
 
-// ==================== PACKAGE SCHEMA ====================
-// Add this Package Schema with proper naming
+// Package Schema
 const packageSchema = new mongoose.Schema({
-  name: { type: String, required: true },           // Product name (e.g., "Premium Hair Care Package")
-  title: { type: String },                          // Display title (can be same as name or custom)
+  name: { type: String, required: true },
+  title: { type: String },
   rating: { type: String, default: "4.5" },
   bookings: { type: String, default: "100+" },
-  price: { type: String, required: true },          // Selling price
-  originalPrice: { type: String },                  // Original price
-  discountPrice: { type: String },                  // Discount price
-  duration: { type: String, required: true },       // Service duration
-  description: { type: String },                    // Detailed description
-  category: { type: String, required: true },       // Main category
-  subcategory: { type: String },                    // Subcategory name
+  price: { type: String, required: true },
+  originalPrice: { type: String },
+  discountPrice: { type: String },
+  duration: { type: String, required: true },
+  description: { type: String },
+  category: { type: String, required: true },
+  subcategory: { type: String },
   subcategoryId: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Subcategory' 
   },
   items: [{ 
-    name: { type: String },         // Service item name
-    description: { type: String }   // Item description
+    name: { type: String },
+    description: { type: String }
   }],
   content: [{ 
-    title: { type: String },        // Content title
-    description: { type: String }   // Content details
+    title: { type: String },
+    description: { type: String }
   }],
   ratingBreak: [{ 
     stars: { type: Number, default: 5 },
     value: { type: Number, default: 100 },
     count: { type: String, default: "100+" }
   }],
-  stock: { type: Number, default: 0 },              // Stock quantity
-  isActive: { type: Boolean, default: true },
+  stock: { type: Number, default: 0 },
+  isActive: { type: Boolean, default: true }, 
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
 
 const Package = mongoose.models.Package || mongoose.model("Package", packageSchema);
-
 // Initialize default admin
 export const initializeAdmin = async () => {
   try {
@@ -2312,6 +2310,41 @@ router.post("/subcategories/bulk-delete", async (req, res) => {
     console.error("Error bulk deleting subcategories:", error);
     res.status(500).json({ 
       error: "Failed to delete subcategories" 
+    });
+  }
+});
+
+// Add this route for toggling package status - NEW ROUTE
+router.put("/packages/:id/status", checkPermission('Product'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+    
+    const packageData = await Package.findById(id);
+    if (!packageData) {
+      return res.status(404).json({ 
+        success: false,
+        error: "Package not found" 
+      });
+    }
+    
+    packageData.isActive = isActive !== undefined ? isActive : !packageData.isActive;
+    packageData.updatedAt = new Date();
+    await packageData.save();
+    
+    console.log(`Package ${packageData.isActive ? 'activated' : 'deactivated'}: ${packageData.name}`);
+    
+    res.json({
+      success: true,
+      message: `Package ${packageData.isActive ? 'enabled' : 'disabled'} successfully`,
+      package: packageData
+    });
+    
+  } catch (error) {
+    console.error("Error toggling package status:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to update package status" 
     });
   }
 });

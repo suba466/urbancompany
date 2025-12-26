@@ -268,7 +268,7 @@ function Categories({
                 size="sm"
                 onClick={handleBulkDeleteClick}
               >
-                <i className="bi bi-trash me-2"></i>Delete Selected
+                Delete Selected
               </Button>
             </Alert>
           )}
@@ -478,7 +478,7 @@ function Categories({
       </Card>
 
       {/* Category Details Modal */}
-      <Modal show={showCategoryModal} onHide={() => setShowCategoryModal(false)} centered>
+      <Modal show={showCategoryModal} onHide={() => setShowCategoryModal(false)} centered >
         <Modal.Body>
           <Button type="button" onClick={() => setShowCategoryModal(false)} className="position-absolute border-0 justify-content-center closebtn p-0">X</Button>
           <Modal.Title> <h5>Category Details</h5></Modal.Title>
@@ -559,14 +559,6 @@ function Categories({
                     />
                   </div>
                 </div>
-                
-                {selectedCategory.createdAt && (
-                  <div className="list-group-item px-0">
-                    <small className="text-muted d-block">Created Date</small>
-                    <span>{formatDate(selectedCategory.createdAt)}</span>
-                  </div>
-                )}
-                
                 {selectedCategory.img && (
                   <div className="list-group-item px-0 border-bottom-0">
                     <small className="text-muted d-block">Image URL</small>

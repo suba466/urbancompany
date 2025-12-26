@@ -1679,8 +1679,117 @@ app.use((error, req, res, next) => {
 app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
+// Get active packages only (for frontend)
+app.get("/api/active-packages", async (req, res) => {
+  try {
+    const packages = await Package.find({ isActive: true })
+      .sort({ createdAt: -1 });
+    
+    res.json({ 
+      success: true,
+      packages: packages || [],
+      count: packages ? packages.length : 0
+    });
+  } catch (error) {
+    console.error("Error fetching active packages:", error);
+    res.status(500).json({ error: "Failed to fetch packages" });
+  }
+});
+// Debug endpoint to see all packages
+app.get("/api/debug-packages", async (req, res) => {
+  try {
+    const allPackages = await Package.find().sort({ createdAt: -1 });
+    const activePackages = await Package.find({ isActive: true }).sort({ createdAt: -1 });
+    
+    console.log(`=== DEBUG: Found ${allPackages.length} total packages ===`);
+    console.log(`=== DEBUG: Found ${activePackages.length} active packages ===`);
+    
+    allPackages.forEach(pkg => {
+      console.log(`Package: ${pkg.name}`);
+      console.log(`  ID: ${pkg._id}`);
+      console.log(`  Category: ${pkg.category}`);
+      console.log(`  isActive: ${pkg.isActive}`);
+      console.log(`  Price: ${pkg.price}`);
+      console.log(`---`);
+    });
+    
+    res.json({
+      success: true,
+      total: allPackages.length,
+      active: activePackages.length,
+      allPackages: allPackages,
+      activePackages: activePackages
+    });
+  } catch (error) {
+    console.error("Debug error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+// Get packages for specific category
+app.get("/api/packages/:category", async (req, res) => {
+  try {
+    const { category } = req.params;
+    const packages = await Package.find({ category: category });
+    if (packages.length > 0) {
+      return res.json({ packages });
+    }
+    // Fallback to static data
+    const staticData = readStaticData();
+    const categoryPackages = staticData?.book?.filter(b => 
+      b.name.toLowerCase().includes(category.toLowerCase())
+    ) || [];
+    res.json({ packages: categoryPackages });
+  } catch (error) {
+    console.error(`Error fetching ${category} packages:`, error);
+    res.status(500).json({ error: `Failed to fetch ${category} packages` });
+  }
+});
+
+// ADD THIS NEW ROUTE - Active packages only
+app.get("/api/active-packages", async (req, res) => {
+  try {
+    const packages = await Package.find({ isActive: true })
+      .sort({ createdAt: -1 });
+    
+    res.json({ 
+      success: true,
+      packages: packages || [],
+      count: packages ? packages.length : 0
+    });
+  } catch (error) {
+    console.error("Error fetching active packages:", error);
+    res.status(500).json({ error: "Failed to fetch packages" });
+  }
+});
+// Debug endpoint to check all packages
+app.get("/api/debug-all-packages", async (req, res) => {
+  try {
+    const allPackages = await Package.find().sort({ createdAt: -1 });
+    
+    console.log(`=== DEBUG: Found ${allPackages.length} total packages ===`);
+    
+    allPackages.forEach(pkg => {
+      console.log(`Package: ${pkg.name}`);
+      console.log(`  ID: ${pkg._id}`);
+      console.log(`  isActive: ${pkg.isActive}`);
+      console.log(`  Category: ${pkg.category}`);
+      console.log(`  Title: ${pkg.title}`);
+      console.log(`  Subcategory: ${pkg.subcategory}`);
+      console.log(`---`);
+    });
+    
+    res.json({
+      success: true,
+      total: allPackages.length,
+      packages: allPackages
+    });
+  } catch (error) {
+    console.error("Debug error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 app.listen(PORT, () => {
-  console.log(`=== Server running on http://localhost:${PORT} ===`);
-  console.log(`=== Cart items will now be saved with bookings ===`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });

@@ -88,63 +88,91 @@ function Salon1() {
       }
     }
   };
-
-  // Fetch packages
-  const fetchPackages = async () => {
+const fetchPackages = async () => {
+  try {
+    console.log("Fetching packages...");
+    
+    // Try multiple endpoints for fallback
+    let packages = [];
+    
+    // FIRST and BEST OPTION: Get only active packages sorted by latest first
     try {
-      console.log("Fetching packages...");
-      
-      // Try admin API first
-      let packagesData = [];
-      try {
-        const adminResponse = await fetch('http://localhost:5000/api/admin/packages');
-        if (adminResponse.ok) {
-          const adminData = await adminResponse.json();
-          if (adminData.success) {
-            packagesData = adminData.packages || [];
-            console.log(`Loaded ${packagesData.length} packages from admin API`);
-          }
-        }
-      } catch (adminError) {
-        console.error("Admin API error, trying public API:", adminError);
-      }
-      
-      // If no packages from admin API, try public API
-      if (packagesData.length === 0) {
-        console.log("Trying public API...");
-        try {
-          const publicResponse = await fetch('http://localhost:5000/api/packages');
-          if (publicResponse.ok) {
-            const publicData = await publicResponse.json();
-            packagesData = publicData.packages || [];
-            console.log(`Loaded ${packagesData.length} packages from public API`);
-          }
-        } catch (publicError) {
-          console.error("Public API error:", publicError);
-        }
-      }
-      
-      // Filter active packages only
-      const activePackages = packagesData.filter(pkg => pkg.isActive !== false);
-      console.log(`Active packages: ${activePackages.length}`);
-      
-      // Log package details for debugging
-      activePackages.forEach((pkg, index) => {
-        console.log(`Package ${index + 1}:`, {
-          name: pkg.name, // This is the PRODUCT NAME
-          title: pkg.title, // This should be subcategory name
-          subcategory: pkg.subcategory,
-          category: pkg.category
+      const response1 = await fetch('http://localhost:5000/api/active-packages');
+      if (response1.ok) {
+        const data1 = await response1.json();
+        packages = data1.packages || [];
+        
+        // Sort by createdAt in descending order (newest first)
+        packages.sort((a, b) => {
+          const dateA = new Date(a.createdAt || 0);
+          const dateB = new Date(b.createdAt || 0);
+          return dateB - dateA; // Newest first
         });
-      });
-      
-      setPackages(activePackages);
-      
+        
+        console.log(`Active packages (newest first): ${packages.length}`);
+      }
     } catch (error) {
-      console.error("Error fetching packages:", error);
-      setPackages([]);
+      console.error("Error with active-packages endpoint:", error);
     }
-  };
+    
+    // If no active packages, try all packages but filter for active ones
+    if (packages.length === 0) {
+      try {
+        const response2 = await fetch('http://localhost:5000/api/packages');
+        if (response2.ok) {
+          const data2 = await response2.json();
+          // Filter for active packages only
+          packages = (data2.packages || []).filter(pkg => pkg.isActive !== false);
+          
+          // Sort by createdAt in descending order (newest first)
+          packages.sort((a, b) => {
+            const dateA = new Date(a.createdAt || 0);
+            const dateB = new Date(b.createdAt || 0);
+            return dateB - dateA; // Newest first
+          });
+          
+          console.log(`Filtered active packages: ${packages.length}`);
+        }
+      } catch (error) {
+        console.error("Error with packages endpoint:", error);
+      }
+    }
+    
+    // If still no packages, try salonforwomen but filter for active
+    if (packages.length === 0) {
+      try {
+        const response3 = await fetch('http://localhost:5000/api/salonforwomen');
+        if (response3.ok) {
+          const data3 = await response3.json();
+          packages = data3.salonforwomen || [];
+          
+          // Filter for active packages if the field exists
+          if (packages[0] && packages[0].isActive !== undefined) {
+            packages = packages.filter(pkg => pkg.isActive !== false);
+          }
+          
+          console.log(`Salon packages: ${packages.length}`);
+        }
+      } catch (error) {
+        console.error("Error with salonforwomen endpoint:", error);
+      }
+    }
+    
+    // Log the packages for debugging
+    if (packages.length > 0) {
+      console.log("Packages found (newest first):");
+      packages.forEach((pkg, index) => {
+        console.log(`${index + 1}. ${pkg.name} - Active: ${pkg.isActive} - Created: ${pkg.createdAt || 'No date'}`);
+      });
+    }
+    
+    setPackages(packages);
+    
+  } catch (error) {
+    console.error("Error fetching packages:", error);
+    setPackages([]);
+  }
+};
 
   // Fetch super packages (for other sections)
   const fetchSuperPackages = async () => {
@@ -570,18 +598,9 @@ function Salon1() {
                                 }); 
                                 setShowDiscountModal(true); 
                               }}
-                              style={{
-                                width: '100%',
-                                height: '120px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                backgroundColor: '#f8f9fa',
-                                borderColor: '#dee2e6',
-                                color: '#6c757d'
-                              }}
+                              
                             >
-                              <h2 className="fw-semibold text-center" style={{ fontSize: "20px", margin: 0 }}>View Details</h2>
+                              <h2 className="fw-semibold text-center" style={{ fontSize: "20px", margin: 0 }}>25% off</h2>
                             </Button>
                           )}
 
@@ -589,26 +608,26 @@ function Salon1() {
                           <div className='position-absolute bottom-0 start-0 end-0 text-center'>
                             {!inCart ? (
                               <Button
-  ref={(el) => (addButtonRefs.current[pkg._id] = el)}
-  onClick={() => {
-    handleAddToCart({
-      ...pkg,
-      name: pkg.name, // Make sure name is explicitly passed
-      displayTitle: displayTitle,
-      serviceName: serviceName,
-      productId: pkg._id
-    }, []);
-  }}
-  style={{
-    color: "rgb(110, 66, 229)",
-    backgroundColor: "rgb(245, 241, 255)",
-    border: "1px solid rgb(110, 66, 229)",
-    padding: "5px 18px",
-    zIndex: "2"
-  }}
->
-  Add
-</Button>
+                              ref={(el) => (addButtonRefs.current[pkg._id] = el)}
+                              onClick={() => {
+                                handleAddToCart({
+                                  ...pkg,
+                                  name: pkg.name, // Make sure name is explicitly passed
+                                  displayTitle: displayTitle,
+                                  serviceName: serviceName,
+                                  productId: pkg._id
+                                }, []);
+                              }}
+                              style={{
+                                color: "rgb(110, 66, 229)",
+                                backgroundColor: "rgb(245, 241, 255)",
+                                border: "1px solid rgb(110, 66, 229)",
+                                padding: "5px 18px",
+                                zIndex: "2"
+                              }}
+                            >
+                              Add
+                            </Button>
                             ) : (
                               <div 
                                 className="d-flex align-items-center gap-1 bn w-50 justify-content-center" 
