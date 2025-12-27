@@ -622,16 +622,25 @@ const ViewProductModal = () => (
     centered
     size="md"
   >
+    {/* External close button positioned outside modal */}
+    <Button 
+      type="button" 
+      onClick={() => setShowViewModal(false)} 
+      className="position-absolute border-0 justify-content-center closebtn p-0"
+      title="Close"
+    >
+      X
+    </Button>
+    
     <Modal.Body 
-      className="p-3" 
+      className="p-4" 
       style={{ 
-        maxHeight: '400px', 
-        overflowY: 'auto', 
-        scrollbarWidth: 'none', 
-        msOverflowStyle: 'none' 
+        maxHeight: '500px', 
+        overflowY: 'auto',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none'
       }}
     >
-      {/* Hide scrollbar for Webkit browsers (Chrome, Safari) */}
       <style>
         {`
           .modal-body::-webkit-scrollbar {
@@ -639,11 +648,12 @@ const ViewProductModal = () => (
           }
         `}
       </style>
-
-       <Modal.Title className="fw-semibold" style={{ fontSize: '15px' }}>
-        Product Details
-      </Modal.Title>
-      <Button type="button"  onClick={() => setShowViewModal(false)} className="position-absolute border-0 justify-content-center closebtn p-0">X</Button>
+      
+      {/* Modal Title */}
+      <div className="mb-4">
+        <h5 className="fw-bold mb-1">Product Details</h5>
+        <p className="text-muted small mb-0">View complete product information</p>
+      </div>
       
       {selectedProduct && (
         <>
@@ -654,12 +664,30 @@ const ViewProductModal = () => (
                 <img 
                   src={`http://localhost:5000${selectedProduct.img}`} 
                   alt={selectedProduct.name}
-                  className="profile"
-                  
+                  style={{
+                    width: '150px',
+                    height: '150px',
+                    objectFit: 'cover',
+                    borderRadius: '12px',
+                    border: '3px solid #dee2e6'
+                  }}
                 />
               ) : (
-                <div className="profilepic"
-                 
+                <div 
+                  style={{
+                    width: '150px',
+                    height: '150px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    fontSize: '48px',
+                    margin: '0 auto',
+                    border: '3px solid #dee2e6'
+                  }}
                 >
                   {getInitials(selectedProduct.name)}
                 </div>
@@ -668,7 +696,7 @@ const ViewProductModal = () => (
             <h5 className="fw-bold mb-2">{selectedProduct.name}</h5>
           </div>
 
-          {/* Categories Left */}
+          {/* Categories */}
           <div className="mb-3">
             <div className="text-muted small mb-1">Category</div>
             <div className="d-flex flex-wrap gap-2">
@@ -679,17 +707,15 @@ const ViewProductModal = () => (
             </div>
           </div>
 
-          {/* Price & Discount Side by Side */}
+          {/* Price & Discount */}
           <div className="mb-3">
             <div className="text-muted small mb-1">Pricing</div>
             <div className="row g-3">
-              {/* Selling Price */}
               <div className="col-6">
                 <div className="fw-semibold">₹{selectedProduct.price || '0'}</div>
                 <div className="text-muted" style={{ fontSize: '12px' }}>Selling Price</div>
               </div>
               
-              {/* Discount Price */}
               {selectedProduct.discountPrice && (
                 <div className="col-6">
                   <div className="fw-semibold text-success">₹{selectedProduct.discountPrice}</div>
@@ -699,7 +725,7 @@ const ViewProductModal = () => (
             </div>
           </div>
 
-          {/* Duration & Rating in Grid */}
+          {/* Duration & Rating */}
           <div className="row g-3 mb-3">
             <div className="col-6">
               <div className="text-muted small">Duration</div>
@@ -772,29 +798,26 @@ const ViewProductModal = () => (
     </Modal.Body>
     
     <Modal.Footer className="border-0">
-      <div className="d-flex gap-2 w-100">
-        <Button 
-          variant="outline-secondary" 
-          onClick={() => setShowViewModal(false)}
-          className="flex-grow-1"
-        >
-          Close
-        </Button>
-        <Button 
-          variant="dark" 
-          onClick={() => {
-            setShowViewModal(false);
-            handleEditProduct(selectedProduct._id);
-          }}
-          className="flex-grow-1"
-        >
-          Edit
-        </Button>
-      </div>
+      <Button 
+        variant="secondary" 
+        onClick={() => setShowViewModal(false)}
+        style={{borderRadius:"50px"}}
+      >
+        Close
+      </Button>
+      <Button 
+        variant="dark" 
+        onClick={() => {
+          setShowViewModal(false);
+          handleEditProduct(selectedProduct._id);
+        }}
+        style={{borderRadius:"50px"}}
+      >
+        Edit
+      </Button>
     </Modal.Footer>
   </Modal>
 );
-
   // Show Form View
   if (showFormView) {
     const formTitle = isEditing ? 'Edit Product' : 'Add New Product';
@@ -906,6 +929,25 @@ const ViewProductModal = () => (
                   </Col>
                   <Col md={6}>
                     <Form.Group className="mb-4">
+                      <Form.Control
+                        type="text"
+                        className={`cate ${touchedFields.duration && formErrors.duration ? 'is-invalid' : ''}`}
+                        value={newProduct.duration}
+                        onChange={(e) => handleInputChange('duration', e.target.value)}
+                        isInvalid={touchedFields.duration && !!formErrors.duration}
+                        placeholder="Duration"
+                      />
+                      {formErrors.duration && (
+                        <Form.Control.Feedback type="invalid">
+                          {formErrors.duration}
+                        </Form.Control.Feedback>
+                      )}
+                    </Form.Group>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-4">
                       <InputGroup className={`cate ${touchedFields.price && formErrors.price ? 'is-invalid' : ''}`}>
                         <InputGroup.Text>₹</InputGroup.Text>
                         <Form.Control className='border-0'
@@ -925,8 +967,6 @@ const ViewProductModal = () => (
                       )}
                     </Form.Group>
                   </Col>
-                </Row>
-                <Row>
                   <Col md={6}>
                     <Form.Group className="mb-4">
                       <InputGroup className="cate">
@@ -943,23 +983,7 @@ const ViewProductModal = () => (
                       </InputGroup>
                     </Form.Group>
                   </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-4">
-                      <Form.Control
-                        type="text"
-                        className={`cate ${touchedFields.duration && formErrors.duration ? 'is-invalid' : ''}`}
-                        value={newProduct.duration}
-                        onChange={(e) => handleInputChange('duration', e.target.value)}
-                        isInvalid={touchedFields.duration && !!formErrors.duration}
-                        placeholder="Duration"
-                      />
-                      {formErrors.duration && (
-                        <Form.Control.Feedback type="invalid">
-                          {formErrors.duration}
-                        </Form.Control.Feedback>
-                      )}
-                    </Form.Group>
-                  </Col>
+                  
                   
                 </Row>
                 <Row>
@@ -1067,25 +1091,7 @@ const ViewProductModal = () => (
                 ))}
               </div>
               
-              {/* Status Toggle in Form */}
-              <div className="mb-4">
-                <Form.Check
-                  type="switch"
-                  id="product-status-switch"
-                  label={
-                    <span>
-                      <span className="fw-semibold">Active Product</span>
-                      <small className="text-muted d-block">
-                        {newProduct.isActive 
-                          ? 'This product will be visible to customers in the frontend' 
-                          : 'This product will be hidden from customers'}
-                      </small>
-                    </span>
-                  }
-                  checked={newProduct.isActive}
-                  onChange={(e) => handleInputChange('isActive', e.target.checked)}
-                />
-              </div>
+              
               
               {/* Submit Buttons */}
               <div className="d-flex justify-content-center gap-3 mt-4">
@@ -1110,7 +1116,7 @@ const ViewProductModal = () => (
                       {isEditing ? 'Updating...' : 'Submitting...'}
                     </>
                   ) : (
-                    isEditing ? 'Update' : 'Submit'
+                    'Submit'
                   )}
                 </Button>
               </div>
@@ -1219,11 +1225,7 @@ const ViewProductModal = () => (
                     <th>
                       <Form.Check
                         type="checkbox"
-                        style={{ 
-                          fontSize: "14px",
-                          '--bs-border-width': '2px',
-                          '--bs-border-color': '#000000',
-                        }}
+                         className='check'
                         checked={selectAllProducts}
                         onChange={handleSelectAllProducts}
                       />
@@ -1254,11 +1256,7 @@ const ViewProductModal = () => (
                         <td>
                           <Form.Check
                             type="checkbox" 
-                            style={{ 
-                              fontSize: "14px",
-                              '--bs-border-width': '2px',
-                              '--bs-border-color': '#000000',
-                            }}
+                             className='check'
                             checked={selectedProducts.includes(product._id)}
                             onChange={() => handleProductSelect(product._id)}
                           />
@@ -1283,11 +1281,7 @@ const ViewProductModal = () => (
                                 }}
                               />
                             ) : (
-                              <div className='d-flex fw-bold align-items-center justify-content-center w-100 h-100' style={{
-                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                color: 'white',
-                                fontSize: '16px'
-                              }}>
+                              <div className='gradient'>
                                 {getInitials(product.name)}
                               </div>
                             )}
@@ -1296,11 +1290,8 @@ const ViewProductModal = () => (
                         <td>
                           <div>
                             <strong className="d-block">{product.name || 'Unnamed'}</strong>
-                            {product.title && (
-                              <small className="text-muted d-block mt-1" style={{ fontSize: '11px' }}>
-                                {product.title}
-                              </small>
-                            )}
+                            
+                          
                           </div>
                         </td>
                         <td>
@@ -1318,7 +1309,7 @@ const ViewProductModal = () => (
                             <strong className="d-block">₹{product.price || '0'}</strong>
                             {product.discountPrice && (
                               <small className="text-success d-block">
-                                Discount: ₹{product.discountPrice}
+                                Discount avail above: ₹{product.discountPrice}
                               </small>
                             )}
                           </div>

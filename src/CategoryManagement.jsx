@@ -149,9 +149,28 @@ function CategoryManagement({ isAdding, isEditing }) {
     setSelectAllCategories(!selectAllCategories);
   };
 
-  // Update category status
+  // Update category status - FIXED: Don't refetch after update
   const updateCategoryStatus = async (categoryId, isActive) => {
     try {
+      console.log(`Updating category ${categoryId} status to: ${isActive}`);
+      
+      // Update local state immediately for better UX
+      setCategories(prevCategories => 
+        prevCategories.map(category => 
+          category._id === categoryId 
+            ? { ...category, isActive } 
+            : category
+        )
+      );
+      
+      // Update cache if exists
+      const cachedCategories = JSON.parse(localStorage.getItem('categoriesCache') || '[]');
+      const updatedCache = cachedCategories.map(cat => 
+        cat._id === categoryId ? { ...cat, isActive } : cat
+      );
+      localStorage.setItem('categoriesCache', JSON.stringify(updatedCache));
+      
+      // Make API call in background
       const response = await fetch(`http://localhost:5000/api/admin/categories/${categoryId}/toggle-status`, {
         method: 'PUT',
         headers: getAuthHeaders(),
@@ -159,13 +178,36 @@ function CategoryManagement({ isAdding, isEditing }) {
       });
       
       const data = await response.json();
-      if (data.success) {
-        fetchCategories(categoryPage, categorySearch, categoryPerPage);
-      } else {
+      
+      if (!data.success) {
         console.error("Failed to update category status:", data.error);
+        // Revert local state if API call fails
+        setCategories(prevCategories => 
+          prevCategories.map(category => 
+            category._id === categoryId 
+              ? { ...category, isActive: !isActive } 
+              : category
+          )
+        );
+        
+        // Show error toast or message (optional)
+        alert(`Failed to update status: ${data.error || 'Unknown error'}`);
+      } else {
+        console.log("Status updated successfully on server");
       }
     } catch (error) {
       console.error('Error updating category status:', error);
+      
+      // Revert local state if API call fails
+      setCategories(prevCategories => 
+        prevCategories.map(category => 
+          category._id === categoryId 
+            ? { ...category, isActive: !isActive } 
+            : category
+        )
+      );
+      
+      alert('Failed to update status due to network error');
     }
   };
 
@@ -181,7 +223,10 @@ function CategoryManagement({ isAdding, isEditing }) {
         const data = await response.json();
         if (data.success) {
           alert('Category deleted successfully');
-          fetchCategories(categoryPage, categorySearch, categoryPerPage);
+          // Remove from local state
+          setCategories(prev => prev.filter(cat => cat._id !== categoryId));
+          // Remove from selected if selected
+          setSelectedCategories(prev => prev.filter(id => id !== categoryId));
         } else {
           alert(data.error || 'Failed to delete category');
         }
@@ -207,9 +252,11 @@ function CategoryManagement({ isAdding, isEditing }) {
         const data = await response.json();
         if (data.success) {
           alert(`Successfully deleted ${data.deletedCount} category(ies)`);
+          // Remove from local state
+          setCategories(prev => prev.filter(cat => !selectedIds.includes(cat._id)));
+          // Clear selection
           setSelectedCategories([]);
           setSelectAllCategories(false);
-          fetchCategories(categoryPage, categorySearch, categoryPerPage);
         } else {
           alert(data.error || 'Failed to delete categories');
         }
@@ -248,13 +295,22 @@ function CategoryManagement({ isAdding, isEditing }) {
         body: formDataToSend
       });
       
+      const result = await response.json();
+      
+      if (result.success) {
+        alert(isEditing ? 'Category updated successfully!' : 'Category added successfully!');
+        // Navigate back to categories list
+        navigate('/admin/categories');
+      } else {
+        alert(result.error || `Failed to ${isEditing ? 'update' : 'add'} category`);
+      }
     } catch (error) {
       console.error(`Error ${isEditing ? 'updating' : 'adding'} category:`, error);
       alert(`Failed to ${isEditing ? 'update' : 'add'} category`);
     }
   };
 
-  // Handle edit click - SIMPLIFIED VERSION
+  // Handle edit click
   const handleEditCategory = (category) => {
     console.log("Edit clicked for:", category.name);
     
@@ -310,7 +366,6 @@ function CategoryManagement({ isAdding, isEditing }) {
       onSelectAll={handleSelectAllCategories}
       onEdit={handleEditCategory}
       onDelete={deleteCategory}
-      onBulkDelete={handleBulkDeleteCategories}
       onToggleStatus={updateCategoryStatus}
       
       // Pagination props

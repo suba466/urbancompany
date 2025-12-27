@@ -11,7 +11,6 @@ const TableControls = ({
   onItemsPerPageChange,
   currentPage,
   totalPages,
-  totalItems,
   onPageChange,
   
   // Search props
@@ -23,14 +22,13 @@ const TableControls = ({
   onDownloadPDF,
   onDownloadExcel,
   onDownloadCSV,
-  dataType = 'data',
   
-  // Additional actions
+  // Additional actions - will appear on LEFT side
   additionalActions,
   showPerPage = true,
   showDownload = true,
   showSearch = true,
-  showPagination = true, // NEW: control whether to show pagination
+  showPagination = true, 
   
   // Styling
   className = ''
@@ -54,68 +52,68 @@ const TableControls = ({
     <div className={`table-controls ${className}`}>
       {/* Main Controls Row */}
       <Row className="align-items-center mb-3">
-        {/* Left Side: Search */}
-        {showSearch && (
-          <Col md={9}>
-            <div className="d-flex align-items-center">
-              <Form.Control
-                type="search"
-                placeholder={searchPlaceholder}
-                value={searchValue}
-                onChange={onSearchChange}
-                style={{ 
-                  height: '40px', 
-                  width: "500px",
-                  borderRadius: '0px',
-                  border: "2px solid #000000"
-                }}
-              />
-            </div>
-          </Col>
-        )}
-        {/* Right Side: Controls */}
-        <Col>
-          <div>
-            {/* Download buttons */}
-            {showDownload && (
-              <div className="d-flex gap-2">
-                <Button 
-                  variant="outline-light" 
-                  style={{border:"1px solid #000000"}}
-                  size="sm"
-                  onClick={onDownloadPDF}
-                  title="Download as PDF"
-                >
-                  <FaFilePdf className="text-danger" />
-                </Button>
-                <Button 
-                  variant="outline-light" 
-                  style={{border:"1px solid #000000"}}
-                  size="sm"
-                  onClick={onDownloadExcel}
-                  title="Download as Excel"
-                >
-                  <FaFileExcel className="text-success" />
-                </Button>
-                <Button 
-                  variant="outline-light"
-                  style={{border:"1px solid #000000"}}
-                  size="sm"
-                  onClick={onDownloadCSV}
-                  title="Download as CSV"
-                >
-                  <FaFileCsv className="text-primary" />
-                </Button>
-              </div>
-            )}
-            
-            {/* Additional actions */}
+        {/* Left Side: Search and Additional Actions */}
+        <Col md={9}>
+          <div className="d-flex align-items-center gap-3">
+            {/* Additional Actions (on LEFT of search) */}
             {additionalActions && (
-              <div className="ms-2">
+              <div className="additional-actions">
                 {additionalActions}
               </div>
             )}
+            
+            {/* Search Bar */}
+            {showSearch && (
+              <div className="flex-grow-1">
+                <Form.Control
+                  type="search"
+                  placeholder={searchPlaceholder}
+                  value={searchValue}
+                  onChange={onSearchChange}
+                  style={{ 
+                    height: '40px', 
+                    borderRadius: '0px',
+                    border: "2px solid #000000"
+                  }}
+                />
+              </div>
+            )}
           </div>
+        </Col>
+        
+        {/* Right Side: Download buttons */}
+        <Col>
+          {showDownload && (
+            <div className="d-flex gap-2 justify-content-end">
+              <Button 
+                variant="outline-light" 
+                style={{border:"1px solid #000000"}}
+                size="sm"
+                onClick={onDownloadPDF}
+                title="Download as PDF"
+              >
+                <FaFilePdf className="text-danger" />
+              </Button>
+              <Button 
+                variant="outline-light" 
+                style={{border:"1px solid #000000"}}
+                size="sm"
+                onClick={onDownloadExcel}
+                title="Download as Excel"
+              >
+                <FaFileExcel className="text-success" />
+              </Button>
+              <Button 
+                variant="outline-light"
+                style={{border:"1px solid #000000"}}
+                size="sm"
+                onClick={onDownloadCSV}
+                title="Download as CSV"
+              >
+                <FaFileCsv className="text-primary" />
+              </Button>
+            </div>
+          )}
         </Col>
       </Row>
 
@@ -152,7 +150,7 @@ const TableControls = ({
                 disabled={currentPage <= 1}
                 onClick={handlePrev}
                 style={{ 
-                  border: "0px", // Changed from 0px to 1px solid
+                  border: "0px",
                   fontSize: "15px",
                   minWidth: '36px'
                 }}
@@ -166,7 +164,7 @@ const TableControls = ({
                 disabled={currentPage >= totalPages}
                 onClick={handleNext}
                 style={{ 
-                  border: "0px", // Changed from 0px to 1px solid
+                  border: "0px",
                   fontSize: "15px",
                   minWidth: '36px'
                 }}

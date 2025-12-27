@@ -175,9 +175,33 @@ function SubcategoryManagement({ isAdding, isEditing }) {
     setSelectAllSubcategories(!selectAllSubcategories);
   };
 
-  // Update subcategory status
+  // FIXED: Update subcategory status - Don't refetch after update
   const updateSubcategoryStatus = async (subcategoryId, isActive) => {
     try {
+      console.log(`Updating subcategory ${subcategoryId} status to: ${isActive}`);
+      
+      // Update local state immediately for instant UI feedback
+      setSubcategories(prevSubcategories => 
+        prevSubcategories.map(subcategory => 
+          subcategory._id === subcategoryId 
+            ? { ...subcategory, isActive } 
+            : subcategory
+        )
+      );
+      
+      // Also update viewing subcategory if modal is open
+      if (viewingSubcategory && viewingSubcategory._id === subcategoryId) {
+        setViewingSubcategory(prev => ({ ...prev, isActive }));
+      }
+      
+      // Update cache if exists
+      const cachedSubcategories = JSON.parse(localStorage.getItem('subcategoriesCache') || '[]');
+      const updatedCache = cachedSubcategories.map(sub => 
+        sub._id === subcategoryId ? { ...sub, isActive } : sub
+      );
+      localStorage.setItem('subcategoriesCache', JSON.stringify(updatedCache));
+      
+      // Make API call in background
       const response = await fetch(`http://localhost:5000/api/admin/subcategories/${subcategoryId}/toggle-status`, {
         method: 'PUT',
         headers: getAuthHeaders(),
@@ -185,17 +209,40 @@ function SubcategoryManagement({ isAdding, isEditing }) {
       });
       
       const data = await response.json();
-      if (data.success) {
-        fetchSubcategories(subcategoryPage, subcategorySearch, subcategoryPerPage);
-      } else {
+      
+      if (!data.success) {
         console.error("Failed to update subcategory status:", data.error);
+        // Revert local state if API call fails
+        setSubcategories(prevSubcategories => 
+          prevSubcategories.map(subcategory => 
+            subcategory._id === subcategoryId 
+              ? { ...subcategory, isActive: !isActive } 
+              : subcategory
+          )
+        );
+        
+        // Show error toast or message
+        alert(`Failed to update status: ${data.error || 'Unknown error'}`);
+      } else {
+        console.log("Status updated successfully on server");
       }
     } catch (error) {
       console.error('Error updating subcategory status:', error);
+      
+      // Revert local state if API call fails
+      setSubcategories(prevSubcategories => 
+        prevSubcategories.map(subcategory => 
+          subcategory._id === subcategoryId 
+            ? { ...subcategory, isActive: !isActive } 
+            : subcategory
+        )
+      );
+      
+      alert('Failed to update status due to network error');
     }
   };
 
-  // Delete subcategory
+  // FIXED: Delete subcategory - Update local state instead of refetching
   const deleteSubcategory = async (subcategoryId) => {
     if (window.confirm('Are you sure you want to delete this subcategory?')) {
       try {
@@ -207,7 +254,14 @@ function SubcategoryManagement({ isAdding, isEditing }) {
         const data = await response.json();
         if (data.success) {
           alert('Subcategory deleted successfully');
-          fetchSubcategories(subcategoryPage, subcategorySearch, subcategoryPerPage);
+          // Remove from local state
+          setSubcategories(prev => prev.filter(sub => sub._id !== subcategoryId));
+          // Remove from selected if selected
+          setSelectedSubcategories(prev => prev.filter(id => id !== subcategoryId));
+          // Update cache
+          const cachedSubcategories = JSON.parse(localStorage.getItem('subcategoriesCache') || '[]');
+          const updatedCache = cachedSubcategories.filter(sub => sub._id !== subcategoryId);
+          localStorage.setItem('subcategoriesCache', JSON.stringify(updatedCache));
         } else {
           alert(data.error || 'Failed to delete subcategory');
         }
@@ -218,7 +272,7 @@ function SubcategoryManagement({ isAdding, isEditing }) {
     }
   };
 
-  // Bulk delete subcategories
+  // FIXED: Bulk delete subcategories - Update local state instead of refetching
   const handleBulkDeleteSubcategories = async (selectedIds) => {
     if (selectedIds.length === 0) return;
     
@@ -233,9 +287,15 @@ function SubcategoryManagement({ isAdding, isEditing }) {
         const data = await response.json();
         if (data.success) {
           alert(`Successfully deleted ${data.deletedCount} subcategory(ies)`);
+          // Remove from local state
+          setSubcategories(prev => prev.filter(sub => !selectedIds.includes(sub._id)));
+          // Clear selection
           setSelectedSubcategories([]);
           setSelectAllSubcategories(false);
-          fetchSubcategories(subcategoryPage, subcategorySearch, subcategoryPerPage);
+          // Update cache
+          const cachedSubcategories = JSON.parse(localStorage.getItem('subcategoriesCache') || '[]');
+          const updatedCache = cachedSubcategories.filter(sub => !selectedIds.includes(sub._id));
+          localStorage.setItem('subcategoriesCache', JSON.stringify(updatedCache));
         } else {
           alert(data.error || 'Failed to delete subcategories');
         }
@@ -478,20 +538,7 @@ function SubcategoryManagement({ isAdding, isEditing }) {
                       }}
                     />
                   ) : (
-                    <div style={{ 
-                      width: '150px', 
-                      height: '150px', 
-                      borderRadius: '12px',
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontWeight: 'bold',
-                      fontSize: '48px',
-                      margin: '0 auto',
-                      border: '3px solid #dee2e6'
-                    }}>
+                    <div className='gradient'>
                       {getInitials(viewingSubcategory.name)}
                     </div>
                   )}
@@ -523,10 +570,6 @@ function SubcategoryManagement({ isAdding, isEditing }) {
                       checked={viewingSubcategory.isActive !== false}
                       onChange={(e) => {
                         updateSubcategoryStatus(viewingSubcategory._id, e.target.checked);
-                        setViewingSubcategory({
-                          ...viewingSubcategory,
-                          isActive: e.target.checked
-                        });
                       }}
                       label={viewingSubcategory.isActive !== false ? 'Enabled' : 'Disabled'}
                       inline

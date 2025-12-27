@@ -292,11 +292,7 @@ function Categories({
                           type="checkbox"
                           checked={selectAllCategories}
                           onChange={handleSelectAll}
-                          style={{ 
-                            fontSize: "14px",
-                            '--bs-border-width': '2px',
-                            '--bs-border-color': '#000000',
-                          }}
+                           className='check'
                         />
                       </th>
                       <th>Image</th>
@@ -332,11 +328,7 @@ function Categories({
                                 type="checkbox"
                                 checked={selectedCategories.includes(category._id)}
                                 onChange={() => handleSelect(category._id)}
-                                style={{ 
-                                  fontSize: "14px",
-                                  '--bs-border-width': '2px',
-                                  '--bs-border-color': '#000000',
-                                }}
+                                 className='check'
                               />
                             </td>
                             <td>

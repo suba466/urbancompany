@@ -31,6 +31,12 @@ const Subcategories = ({
 }) => {
   // Local state for search - initialize with prop value
   const [localSearch, setLocalSearch] = useState(searchQuery);
+  const [localSubcategories, setLocalSubcategories] = useState(subcategories);
+
+  // Update local subcategories when prop changes
+  useEffect(() => {
+    setLocalSubcategories(subcategories);
+  }, [subcategories]);
 
   // Update local search when prop changes
   useEffect(() => {
@@ -41,17 +47,17 @@ const Subcategories = ({
   const filteredSubcategories = useMemo(() => {
     // Fix: Check if localSearch is a string before calling trim()
     if (!localSearch || typeof localSearch !== 'string' || !localSearch.trim()) {
-      return subcategories;
+      return localSubcategories;
     }
     
     const searchTerm = localSearch.toLowerCase().trim();
-    return subcategories.filter(sub => {
+    return localSubcategories.filter(sub => {
       return (
         (sub.name && sub.name.toLowerCase().includes(searchTerm)) ||
         (sub.categoryName && sub.categoryName.toLowerCase().includes(searchTerm)) 
       );
     });
-  }, [subcategories, localSearch]);
+  }, [localSubcategories, localSearch]);
 
   const handleDelete = (subcategory) => {
     const confirmDelete = window.confirm(
@@ -59,6 +65,23 @@ const Subcategories = ({
     );
     if (confirmDelete) {
       onDelete(subcategory._id);
+    }
+  };
+
+  // Handle status toggle
+  const handleStatusToggle = (subcategoryId, isActive) => {
+    // Update local state immediately
+    setLocalSubcategories(prevSubcategories => 
+      prevSubcategories.map(subcategory => 
+        subcategory._id === subcategoryId 
+          ? { ...subcategory, isActive } 
+          : subcategory
+      )
+    );
+    
+    // Call the parent function to update on server
+    if (onToggleStatus) {
+      onToggleStatus(subcategoryId, isActive);
     }
   };
 
@@ -95,14 +118,6 @@ const Subcategories = ({
     setLocalSearch(value);
     if (onSearchChange) {
       onSearchChange(value);
-    }
-  };
-
-  // Clear search
-  const handleClearSearch = () => {
-    setLocalSearch('');
-    if (onSearchChange) {
-      onSearchChange('');
     }
   };
 
@@ -146,8 +161,8 @@ const Subcategories = ({
                 totalPages={totalPages}
                 totalItems={totalItems}
                 onPageChange={onPageChange}
-                searchValue={localSearch} // Use localSearch here
-                onSearchChange={handleSearchChange} // This now passes the event
+                searchValue={localSearch}
+                onSearchChange={handleSearchChange}
                 searchPlaceholder="Search subcategories..."
                 onDownloadCSV={() => handleExport('csv')}
                 selectedCount={selectedSubcategories.length}
@@ -160,7 +175,6 @@ const Subcategories = ({
         </Card.Header>
 
         <Card.Body>
-
           {selectedSubcategories.length > 0 && (
             <Alert variant="dark" className="d-flex justify-content-between">
               <span>{selectedSubcategories.length} selected</span>
@@ -181,7 +195,7 @@ const Subcategories = ({
                   <th>
                     <Form.Check
                       checked={selectAllSubcategories}
-                      onChange={onSelectAll}
+                      onChange={onSelectAll}  className='check'
                     />
                   </th>
                   <th>Image</th>
@@ -217,7 +231,7 @@ const Subcategories = ({
                       <td>
                         <Form.Check
                           checked={selectedSubcategories.includes(sub._id)}
-                          onChange={() => onSelect(sub._id)}
+                          onChange={() => onSelect(sub._id)} className='check'
                         />
                       </td>
 
@@ -242,9 +256,7 @@ const Subcategories = ({
                         <Form.Check
                           type="switch"
                           checked={sub.isActive}
-                          onChange={() =>
-                            onToggleStatus(sub._id, !sub.isActive)
-                          }
+                          onChange={(e) => handleStatusToggle(sub._id, e.target.checked)}
                           label={sub.isActive ? 'Enable' : 'Disable'}
                         />
                       </td>

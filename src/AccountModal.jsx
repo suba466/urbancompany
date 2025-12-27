@@ -703,7 +703,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
           <Form.Group className="mb-3">
             <Form.Label>Full Name *</Form.Label>
             <Form.Control
-              type="text"
+              type="text" className="cate p-3"
               placeholder="Enter your full name"
               value={registerData.name}
               onChange={(e) => handleRegisterChange('name', e.target.value)}
@@ -716,7 +716,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
           <Form.Group className="mb-3">
             <Form.Label>Email Address *</Form.Label>
             <Form.Control
-              type="email"
+              type="email"className="cate p-3"
               placeholder="Enter your email"
               value={registerData.email}
               onChange={(e) => handleRegisterChange('email', e.target.value)}
@@ -729,7 +729,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
           <Form.Group className="mb-3">
             <Form.Label>Phone Number *</Form.Label>
             <Form.Control
-              type="tel"
+              type="tel"className="cate p-3"
               placeholder="Enter 10-digit phone number"
               value={registerData.phone}
               onChange={(e) => handleRegisterChange('phone', e.target.value.replace(/\D/g, ""))}
@@ -743,7 +743,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
           <Form.Group className="mb-3">
             <Form.Label>City *</Form.Label>
             <Form.Control
-              type="text"
+              type="text"className="cate p-3"
               placeholder="Enter your city"
               value={registerData.city}
               onChange={(e) => handleRegisterChange('city', e.target.value)}
@@ -756,7 +756,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
           <Form.Group className="mb-3">
             <Form.Label>Password *</Form.Label>
             <Form.Control
-              type="password"
+              type="password"className="cate p-3"
               placeholder="Enter password (min 6 characters)"
               value={registerData.password}
               onChange={(e) => handleRegisterChange('password', e.target.value)}
@@ -769,7 +769,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
           <Form.Group className="mb-3">
             <Form.Label>Confirm Password *</Form.Label>
             <Form.Control
-              type="password"
+              type="password"className="cate p-3"
               placeholder="Confirm your password"
               value={registerData.confirmPassword}
               onChange={(e) => handleRegisterChange('confirmPassword', e.target.value)}
@@ -827,7 +827,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
           <Form.Group className="mb-3">
             <Form.Label>Email Address *</Form.Label>
             <Form.Control
-              type="email"
+              type="email"className="cate p-3"
               placeholder="Enter your email"
               value={loginData.email}
               onChange={(e) => handleLoginChange('email', e.target.value)}
@@ -840,7 +840,7 @@ function AccountModal({ show, totalPrice = () => {}, onHide, initialView = "main
           <Form.Group className="mb-3">
             <Form.Label>Password *</Form.Label>
             <Form.Control
-              type="password"
+              type="password"className="cate p-3"
               placeholder="Enter your password"
               value={loginData.password}
               onChange={(e) => handleLoginChange('password', e.target.value)}
