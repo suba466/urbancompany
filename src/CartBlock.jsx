@@ -23,17 +23,17 @@ function CartBlock({
         padding: "10px",
       }}>
       {carts.length === 0 ? (
-        <div className="text-center">
+        <div className="text-center py-4">
           <img
             src="http://localhost:5000/assets/cart.png"
-            alt="cart-placeholder" 
-            className="w-50"
-            style={{ padding: "10px" }}
+            alt="cart-empty"
+            className="w-50 mb-3"
+            style={{ maxWidth: "120px", objectFit: "contain" }}
             onError={(e) => {
-              e.target.src = "http://localhost:5000/assets/placeholder.png";
+              e.target.style.display = 'none';
             }}
           />
-          <p>No items in your cart</p>
+          <p className="text-muted fw-semibold">No items in your cart</p>
         </div>
       ) : (
         <>
@@ -41,10 +41,10 @@ function CartBlock({
 
           {carts.map((c) => {
             const price = safePrice(c.price) * (c.count || 1);
-            
+
             // Get the product name from cart item
             const productName = c.name || c.serviceName || c.title || "Service";
-            
+
             console.log("Cart item debug:", {
               id: c._id,
               name: c.name,
@@ -57,12 +57,14 @@ function CartBlock({
             return (
               <div key={c._id} className="mb-3">
                 <Row className="align-items-center">
-                  <Col>
-                    <p className="m-0" style={{ fontSize: "12px", fontWeight: "500" }}>
-                      {productName}
-                    </p>
+                  <Col className="pe-0">
+                    <div className="d-flex align-items-center gap-2">
+                      <p className="m-0" style={{ fontSize: "12px", fontWeight: "500", lineHeight: "1.2" }}>
+                        {productName}
+                      </p>
+                    </div>
                   </Col>
-                  <Col xs={8} className="d-flex align-items-center justify-content-between gap-2">
+                  <Col xs={7} className="d-flex align-items-center justify-content-end gap-2 ps-1">
                     <div
                       className="d-flex align-items-center justify-content-center"
                       style={{
@@ -70,8 +72,8 @@ function CartBlock({
                         backgroundColor: "rgb(245, 241, 255)",
                         borderRadius: "8px"
                       }}>
-                      <Button 
-                        onClick={() => handleDecrease(c)} 
+                      <Button
+                        onClick={() => handleDecrease(c)}
                         className="button border-0 d-flex align-items-center justify-content-center"
                         style={{
                           backgroundColor: "transparent",
@@ -83,11 +85,11 @@ function CartBlock({
                       >
                         −
                       </Button>
-                      <span className="count-box fw-bold" style={{ padding: "2px 10px", fontSize: "14px" }}>
+                      <span className="count-box fw-bold" style={{ padding: "2px 8px", fontSize: "14px" }}>
                         {c.count || 1}
                       </span>
-                      <Button 
-                        onClick={() => handleIncrease(c)} 
+                      <Button
+                        onClick={() => handleIncrease(c)}
                         className="button border-0 d-flex align-items-center justify-content-center"
                         style={{
                           backgroundColor: "transparent",
@@ -142,9 +144,9 @@ function CartBlock({
           {!hideViewButton && (
             <Button
               className="butn w-100 fw-bold"
-              style={{ 
-                height: "36px", 
-                fontSize: "12px", 
+              style={{
+                height: "36px",
+                fontSize: "12px",
                 marginTop: "10px",
               }}
               onClick={() => navigate("/cart")}

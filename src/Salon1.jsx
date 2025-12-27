@@ -630,7 +630,7 @@ const fetchPackages = async () => {
                             </Button>
                             ) : (
                               <div 
-                                className="d-flex align-items-center gap-1 bn w-50 justify-content-center" 
+                                className="d-flex align-items-center gap-0 bn w-50 justify-content-center" 
                                 style={{
                                   border: "1px solid rgb(110, 66, 229)", 
                                   borderRadius: "6px",

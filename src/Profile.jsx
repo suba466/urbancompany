@@ -17,28 +17,47 @@ function Profile() {
     };
   };
 
-  const fetchProfile = async () => {
-    try {
-      setLoading(true);
-      const userRole = localStorage.getItem('userRole');
-      const endpoint = userRole === 'admin' 
-        ? 'http://localhost:5000/api/admin/profile'
-        : 'http://localhost:5000/api/admin/user-profile';
-      
-      const response = await fetch(endpoint, {
-        headers: getAuthHeaders()
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        setProfile(data.profile);
-      }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    } finally {
-      setLoading(false);
+// In Profile.jsx, improve the fetchProfile function:
+const fetchProfile = async () => {
+  try {
+    setLoading(true);
+    
+    // Check if user is authenticated
+    const token = getAuthToken();
+    if (!token) {
+      // Redirect to login if no token
+      window.location.href = '/admin/login';
+      return;
     }
-  };
+    
+    const userRole = localStorage.getItem('userRole');
+    const endpoint = userRole === 'admin' 
+      ? 'http://localhost:5000/api/admin/profile'
+      : 'http://localhost:5000/api/admin/user-profile';
+    
+    const response = await fetch(endpoint, {
+      headers: getAuthHeaders()
+    });
+    
+    if (response.status === 401) {
+      // Token expired or invalid
+      localStorage.clear();
+      window.location.href = '/admin/login';
+      return;
+    }
+    
+    const data = await response.json();
+    if (data.success) {
+      setProfile(data.profile);
+    } else {
+      console.error('Failed to fetch profile:', data.error);
+    }
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchProfile();

@@ -117,7 +117,7 @@ function Book() {
               />
               <p
                 className="mt-2 fw-bold"
-                style={{ fontSize: "11px"}}
+                style={{ fontSize: "11px" }}
               >
                 {item.name}
               </p>
@@ -145,19 +145,19 @@ function Book() {
 
         {/* Arrows */}
         {showLeftArrow && (
-          <div 
-            className="carousel-arrow left" 
+          <div
+            className="carousel-arrow left"
             onClick={handlePrev}
-            
+
           >
             &#10094;
           </div>
         )}
         {showRightArrow && (
-          <div 
-            className="carousel-arrow right" 
+          <div
+            className="carousel-arrow right"
             onClick={handleNext}
-            
+
           >
             &#10095;
           </div>
@@ -247,7 +247,7 @@ function Book() {
           <div
             className="carousel-arrow left"
             onClick={() => setCurrentIndex((prev) => prev - 1)}
-           
+
           >
             &#10094;
           </div>
@@ -257,7 +257,7 @@ function Book() {
             <div
               className="carousel-arrow right"
               onClick={() => setCurrentIndex((prev) => prev + 1)}
-              
+
             >
               &#10095;
             </div>

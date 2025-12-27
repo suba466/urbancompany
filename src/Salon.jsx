@@ -14,83 +14,59 @@ function Salon() {
   const navigate = useNavigate();
   const [activeIndex, setActiveIndex] = useState(0);
 
-  // Fetch subcategories for "Salon for women" category
-  useEffect(() => {
+   useEffect(() => {
     const fetchSalonSubcategories = async () => {
       try {
         setLoading(true);
-        console.log("Fetching subcategories for 'Salon for women' category...");
+        console.log("Fetching ALL active subcategories from public API...");
         
         // Clear previous data
         setSalonSubcategories([]);
         setHasSubcategories(false);
         
-        // Try to get subcategories specifically for Salon for women category
-        const categoriesResponse = await fetch("http://localhost:5000/api/categories");
-        if (!categoriesResponse.ok) {
-          throw new Error('Failed to fetch categories');
+        // 1. Get ALL active subcategories from PUBLIC API
+        const response = await fetch("http://localhost:5000/api/subcategories");
+        
+        if (!response.ok) {
+          console.error("Failed to fetch subcategories");
+          setHasSubcategories(false);
+          return;
         }
         
-        const categoriesData = await categoriesResponse.json();
+        const data = await response.json();
+        console.log("All subcategories from public API:", data);
         
-        // Find "Salon for women" category
-        const salonCategory = categoriesData.categories?.find(cat => 
-          cat.name?.toLowerCase().includes('salon for women') || 
-          cat.name?.toLowerCase().includes('salon') || 
-          cat.key?.toLowerCase().includes('salon')
-        );
-        
-        if (salonCategory) {
-          console.log("Found Salon category:", salonCategory);
+        if (data.success && data.subcategories && Array.isArray(data.subcategories)) {
           
-          // Try to fetch subcategories for this category
-          try {
-            // Method 1: Try the admin API first
-            const token = localStorage.getItem('authToken');
-            const adminSubcatsResponse = await fetch("http://localhost:5000/api/admin/subcategories", {
-              headers: token ? {
-                'Authorization': `Bearer ${token}`
-              } : {}
-            });
+          // 2. Filter for "Salon for women" subcategories
+          // Find subcategories where categoryName contains "salon"
+          const salonSubcategories = data.subcategories.filter(sub => {
+            // Check if subcategory belongs to salon category
+            const hasSalonCategory = 
+              sub.categoryName?.toLowerCase().includes('salon') ||
+              (sub.categoryId && sub.categoryId.name?.toLowerCase().includes('salon'));
             
-            if (adminSubcatsResponse.ok) {
-              const adminSubcatsData = await adminSubcatsResponse.json();
-              console.log("Subcategories from admin API:", adminSubcatsData);
-              
-              if (adminSubcatsData.subcategories && adminSubcatsData.subcategories.length > 0) {
-                // Filter subcategories by:
-                // 1. Belongs to salon category
-                // 2. AND isActive === true
-                const filteredSubcategories = adminSubcatsData.subcategories.filter(sub => 
-                  (sub.categoryId === salonCategory._id || 
-                  (sub.categoryName && sub.categoryName.toLowerCase().includes('salon'))) &&
-                  (sub.isActive === true || sub.isActive === undefined) // Only active subcategories
-                );
-                
-                console.log("Active salon subcategories:", filteredSubcategories);
-                
-                if (filteredSubcategories.length > 0) {
-                  setSalonSubcategories(filteredSubcategories.slice(0, 6));
-                  setHasSubcategories(true);
-                } else {
-                  // No ACTIVE subcategories found for salon
-                  console.log("No active subcategories found for Salon category");
-                  setHasSubcategories(false);
-                }
-              } else {
-                console.log("No subcategories in admin API");
-                setHasSubcategories(false);
-              }
-            } else {
-              console.log("Admin API failed or no access");
-              setHasSubcategories(false);
-            }
-          } catch (error) {
-            console.error("Error from admin API:", error);
+            // Also check if subcategory name contains "salon" as backup
+            const hasSalonName = sub.name?.toLowerCase().includes('salon');
+            
+            // IMPORTANT: Only show ACTIVE subcategories
+            const isActive = sub.isActive === true || sub.isActive === undefined;
+            
+            return (hasSalonCategory || hasSalonName) && isActive;
+          });
+          
+          console.log("Filtered salon subcategories:", salonSubcategories);
+          
+          if (salonSubcategories.length > 0) {
+            // Limit to 6 items for display
+            setSalonSubcategories(salonSubcategories.slice(0, 6));
+            setHasSubcategories(true);
+          } else {
+            console.log("No active salon subcategories found");
             setHasSubcategories(false);
           }
         } else {
-          console.log("Salon category not found in database");
+          console.log("No subcategories data received");
           setHasSubcategories(false);
         }
         

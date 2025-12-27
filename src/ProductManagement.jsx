@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, Table, Form, Button, Alert, 
+import {
+  Card, Table, Form, Button, Alert,
   Badge, Row, Col, InputGroup, Modal, Spinner
 } from 'react-bootstrap';
 import { MdModeEdit, MdOutlineDelete } from "react-icons/md";
@@ -17,17 +17,17 @@ function ProductManagement({ isAdding }) {
   const [showFormView, setShowFormView] = useState(isAdding || false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingProductId, setEditingProductId] = useState(null);
-  
+
   // Modal state
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  
+
   // Pagination state
   const [productPage, setProductPage] = useState(1);
   const [productPerPage, setProductPerPage] = useState(10);
   const [productTotalPages, setProductTotalPages] = useState(1);
   const [productTotalItems, setProductTotalItems] = useState(0);
-  
+
   const [newProduct, setNewProduct] = useState({
     name: '',
     title: '',
@@ -41,7 +41,7 @@ function ProductManagement({ isAdding }) {
     items: [{ name: '', description: '' }],
     img: ''
   });
-  
+
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [filteredSubcategories, setFilteredSubcategories] = useState([]);
@@ -78,7 +78,7 @@ function ProductManagement({ isAdding }) {
         limit: perPage.toString(),
         ...(search && { search })
       }).toString();
-      
+
       const response = await fetch(`http://localhost:5000/api/admin/packages?${params}`, {
         headers: getAuthHeaders()
       });
@@ -145,7 +145,7 @@ function ProductManagement({ isAdding }) {
   useEffect(() => {
     fetchCategories();
     fetchSubcategories();
-    
+
     if (isAdding) {
       setShowFormView(true);
       setIsEditing(false);
@@ -170,7 +170,7 @@ function ProductManagement({ isAdding }) {
 
   useEffect(() => {
     if (newProduct.category && subcategories.length > 0) {
-      const filtered = subcategories.filter(sub => 
+      const filtered = subcategories.filter(sub =>
         sub.categoryName === newProduct.category
       );
       setFilteredSubcategories(filtered);
@@ -190,17 +190,17 @@ function ProductManagement({ isAdding }) {
 
   const handleImageUpload = async (productId) => {
     if (!imageFile) return null;
-    
+
     const formData = new FormData();
     formData.append('image', imageFile);
-    
+
     try {
       const response = await fetch(`http://localhost:5000/api/admin/packages/${productId}/upload-image`, {
         method: 'POST',
         headers: getAuthHeadersMultipart(),
         body: formData
       });
-      
+
       const data = await response.json();
       if (data.success) {
         return data.imageUrl;
@@ -214,22 +214,22 @@ function ProductManagement({ isAdding }) {
 
   const handleAddProduct = async (e) => {
     e.preventDefault();
-    
+
     const touched = {};
     Object.keys(newProduct).forEach(key => {
       touched[key] = true;
     });
     setTouchedFields(touched);
-    
+
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
     }
-    
+
     setFormErrors({});
     setLoading(true);
-    
+
     try {
       const productData = {
         ...newProduct,
@@ -240,7 +240,7 @@ function ProductManagement({ isAdding }) {
         rating: newProduct.rating || "4.5",
         isActive: true
       };
-      
+
       if (isEditing && editingProductId) {
         // Update existing product
         const response = await fetch(`http://localhost:5000/api/admin/packages/${editingProductId}`, {
@@ -248,7 +248,7 @@ function ProductManagement({ isAdding }) {
           headers: getAuthHeaders(),
           body: JSON.stringify(productData)
         });
-        
+
         const data = await response.json();
         if (data.success) {
           // Upload image if selected
@@ -263,7 +263,7 @@ function ProductManagement({ isAdding }) {
               });
             }
           }
-          
+
           setFormSuccess(true);
           setTimeout(() => {
             setFormSuccess(false);
@@ -283,7 +283,7 @@ function ProductManagement({ isAdding }) {
           headers: getAuthHeaders(),
           body: JSON.stringify(productData)
         });
-        
+
         const data = await response.json();
         if (data.success && data.package?._id) {
           // Upload image if selected
@@ -298,7 +298,7 @@ function ProductManagement({ isAdding }) {
               });
             }
           }
-          
+
           setFormSuccess(true);
           setTimeout(() => {
             setFormSuccess(false);
@@ -351,8 +351,8 @@ function ProductManagement({ isAdding }) {
 
   const handleCategoryChange = (e) => {
     const category = e.target.value;
-    setNewProduct({ 
-      ...newProduct, 
+    setNewProduct({
+      ...newProduct,
       category: category,
       subcategory: ''
     });
@@ -360,17 +360,17 @@ function ProductManagement({ isAdding }) {
 
   const handleSubcategoryChange = (e) => {
     const subcategory = e.target.value;
-    setNewProduct({ 
-      ...newProduct, 
+    setNewProduct({
+      ...newProduct,
       subcategory: subcategory,
       title: newProduct.title || subcategory
     });
   };
 
   const handleInputChange = (field, value) => {
-    setNewProduct({...newProduct, [field]: value});
+    setNewProduct({ ...newProduct, [field]: value });
     if (!touchedFields[field]) {
-      setTouchedFields({...touchedFields, [field]: true});
+      setTouchedFields({ ...touchedFields, [field]: true });
     }
   };
 
@@ -405,13 +405,13 @@ function ProductManagement({ isAdding }) {
   // Function to get initials from product name
   const getInitials = (name) => {
     if (!name || typeof name !== 'string' || name.trim() === '') return 'NA';
-    
+
     const nameParts = name.trim().split(' ').filter(part => part.length > 0);
-    
+
     if (nameParts.length === 1) {
       return nameParts[0].substring(0, 2).toUpperCase();
     }
-    
+
     return (nameParts[0][0] + nameParts[1][0]).toUpperCase();
   };
 
@@ -445,20 +445,20 @@ function ProductManagement({ isAdding }) {
           rating: product.rating || '',
           duration: product.duration || '',
           isActive: product.isActive !== undefined ? product.isActive : true,
-          items: product.items && product.items.length > 0 
+          items: product.items && product.items.length > 0
             ? product.items.map(item => ({
-                name: item.name || '',
-                description: item.description || ''
-              }))
+              name: item.name || '',
+              description: item.description || ''
+            }))
             : [{ name: '', description: '' }],
           img: product.img || ''
         };
-        
+
         setNewProduct(formattedProduct);
         setIsEditing(true);
         setEditingProductId(productId);
         setShowFormView(true);
-        
+
         window.scrollTo(0, 0);
       } else {
         alert('Failed to load product data');
@@ -472,39 +472,39 @@ function ProductManagement({ isAdding }) {
   // Toggle Product Status
   const toggleProductStatus = async (productId, currentStatus) => {
     const newStatus = !currentStatus;
-    
+
     try {
       const response = await fetch(`http://localhost:5000/api/admin/packages/${productId}/status`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ isActive: newStatus })
       });
-      
+
       const data = await response.json();
       if (data.success) {
-        setProducts(prevProducts => 
-          prevProducts.map(product => 
-            product._id === productId 
-              ? { ...product, isActive: newStatus } 
+        setProducts(prevProducts =>
+          prevProducts.map(product =>
+            product._id === productId
+              ? { ...product, isActive: newStatus }
               : product
           )
         );
       } else {
         console.error('Failed to toggle status:', data.error);
-        setProducts(prevProducts => 
-          prevProducts.map(product => 
-            product._id === productId 
-              ? { ...product, isActive: currentStatus } 
+        setProducts(prevProducts =>
+          prevProducts.map(product =>
+            product._id === productId
+              ? { ...product, isActive: currentStatus }
               : product
           )
         );
       }
     } catch (error) {
       console.error('Error toggling product status:', error);
-      setProducts(prevProducts => 
-        prevProducts.map(product => 
-          product._id === productId 
-            ? { ...product, isActive: currentStatus } 
+      setProducts(prevProducts =>
+        prevProducts.map(product =>
+          product._id === productId
+            ? { ...product, isActive: currentStatus }
             : product
         )
       );
@@ -518,7 +518,7 @@ function ProductManagement({ isAdding }) {
           method: 'DELETE',
           headers: getAuthHeaders()
         });
-        
+
         if (response.ok) {
           alert('Product deleted successfully');
           fetchProducts(productPage, productSearch, productPerPage);
@@ -534,18 +534,18 @@ function ProductManagement({ isAdding }) {
 
   const handleBulkDeleteClick = async () => {
     if (selectedProducts.length === 0) return;
-    
+
     if (window.confirm(`Are you sure you want to delete ${selectedProducts.length} product(s)?`)) {
       try {
         const response = await fetch('http://localhost:5000/api/admin/bulk-delete', {
           method: 'POST',
           headers: getAuthHeaders(),
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             entity: 'packages',
-            ids: selectedProducts 
+            ids: selectedProducts
           })
         });
-        
+
         const data = await response.json();
         if (data.success) {
           alert(`Successfully deleted ${selectedProducts.length} product(s)`);
@@ -615,213 +615,213 @@ function ProductManagement({ isAdding }) {
     alert('CSV export functionality to be implemented');
   };
 
-const ViewProductModal = () => (
-  <Modal 
-    show={showViewModal} 
-    onHide={() => setShowViewModal(false)} 
-    centered
-    size="md"
-  >
-    {/* External close button positioned outside modal */}
-    <Button 
-      type="button" 
-      onClick={() => setShowViewModal(false)} 
-      className="position-absolute border-0 justify-content-center closebtn p-0"
-      title="Close"
+  const ViewProductModal = () => (
+    <Modal
+      show={showViewModal}
+      onHide={() => setShowViewModal(false)}
+      centered
+      size="md"
     >
-      X
-    </Button>
-    
-    <Modal.Body 
-      className="p-4" 
-      style={{ 
-        maxHeight: '500px', 
-        overflowY: 'auto',
-        scrollbarWidth: 'none',
-        msOverflowStyle: 'none'
-      }}
-    >
-      <style>
-        {`
+      {/* External close button positioned outside modal */}
+      <Button
+        type="button"
+        onClick={() => setShowViewModal(false)}
+        className="position-absolute border-0 justify-content-center closebtn p-0"
+        title="Close"
+      >
+        X
+      </Button>
+
+      <Modal.Body
+        className="p-4"
+        style={{
+          maxHeight: '500px',
+          overflowY: 'auto',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none'
+        }}
+      >
+        <style>
+          {`
           .modal-body::-webkit-scrollbar {
             display: none;
           }
         `}
-      </style>
-      
-      {/* Modal Title */}
-      <div className="mb-4">
-        <h5 className="fw-bold mb-1">Product Details</h5>
-        <p className="text-muted small mb-0">View complete product information</p>
-      </div>
-      
-      {selectedProduct && (
-        <>
-          {/* Centered Image & Title */}
-          <div className="text-center mb-4">
-            <div className="mb-3">
-              {selectedProduct.img ? (
-                <img 
-                  src={`http://localhost:5000${selectedProduct.img}`} 
-                  alt={selectedProduct.name}
-                  style={{
-                    width: '150px',
-                    height: '150px',
-                    objectFit: 'cover',
-                    borderRadius: '12px',
-                    border: '3px solid #dee2e6'
-                  }}
-                />
-              ) : (
-                <div 
-                  style={{
-                    width: '150px',
-                    height: '150px',
-                    borderRadius: '12px',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    fontSize: '48px',
-                    margin: '0 auto',
-                    border: '3px solid #dee2e6'
-                  }}
-                >
-                  {getInitials(selectedProduct.name)}
-                </div>
-              )}
-            </div>
-            <h5 className="fw-bold mb-2">{selectedProduct.name}</h5>
-          </div>
+        </style>
 
-          {/* Categories */}
-          <div className="mb-3">
-            <div className="text-muted small mb-1">Category</div>
-            <div className="d-flex flex-wrap gap-2">
-              <Badge bg="dark">{selectedProduct.category}</Badge>
-              {selectedProduct.subcategory && (
-                <Badge bg="danger">{selectedProduct.subcategory}</Badge>
-              )}
-            </div>
-          </div>
+        {/* Modal Title */}
+        <div className="mb-4">
+          <h5 className="fw-bold mb-1">Product Details</h5>
+          <p className="text-muted small mb-0">View complete product information</p>
+        </div>
 
-          {/* Price & Discount */}
-          <div className="mb-3">
-            <div className="text-muted small mb-1">Pricing</div>
-            <div className="row g-3">
-              <div className="col-6">
-                <div className="fw-semibold">₹{selectedProduct.price || '0'}</div>
-                <div className="text-muted" style={{ fontSize: '12px' }}>Selling Price</div>
+        {selectedProduct && (
+          <>
+            {/* Centered Image & Title */}
+            <div className="text-center mb-4">
+              <div className="mb-3">
+                {selectedProduct.img ? (
+                  <img
+                    src={`http://localhost:5000${selectedProduct.img}`}
+                    alt={selectedProduct.name}
+                    style={{
+                      width: '150px',
+                      height: '150px',
+                      objectFit: 'cover',
+                      borderRadius: '12px',
+                      border: '3px solid #dee2e6'
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: '150px',
+                      height: '150px',
+                      borderRadius: '12px',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      fontSize: '48px',
+                      margin: '0 auto',
+                      border: '3px solid #dee2e6'
+                    }}
+                  >
+                    {getInitials(selectedProduct.name)}
+                  </div>
+                )}
               </div>
-              
-              {selectedProduct.discountPrice && (
+              <h5 className="fw-bold mb-2">{selectedProduct.name}</h5>
+            </div>
+
+            {/* Categories */}
+            <div className="mb-3">
+              <div className="text-muted small mb-1">Category</div>
+              <div className="d-flex flex-wrap gap-2">
+                <Badge bg="dark">{selectedProduct.category}</Badge>
+                {selectedProduct.subcategory && (
+                  <Badge bg="danger">{selectedProduct.subcategory}</Badge>
+                )}
+              </div>
+            </div>
+
+            {/* Price & Discount */}
+            <div className="mb-3">
+              <div className="text-muted small mb-1">Pricing</div>
+              <div className="row g-3">
                 <div className="col-6">
-                  <div className="fw-semibold text-success">₹{selectedProduct.discountPrice}</div>
-                  <div className="text-muted" style={{ fontSize: '12px' }}>Discount Price</div>
+                  <div className="fw-semibold">₹{selectedProduct.price || '0'}</div>
+                  <div className="text-muted" style={{ fontSize: '12px' }}>Selling Price</div>
+                </div>
+
+                {selectedProduct.discountPrice && (
+                  <div className="col-6">
+                    <div className="fw-semibold text-success">₹{selectedProduct.discountPrice}</div>
+                    <div className="text-muted" style={{ fontSize: '12px' }}>Discount Price</div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Duration & Rating */}
+            <div className="row g-3 mb-3">
+              <div className="col-6">
+                <div className="text-muted small">Duration</div>
+                <div className="fw-bold">{selectedProduct.duration || '—'}</div>
+              </div>
+              {selectedProduct.rating && (
+                <div className="col-6">
+                  <div className="text-muted small">Rating</div>
+                  <div className="fw-bold d-flex align-items-center">
+                    <i className="bi bi-star-fill text-warning me-1"></i>
+                    {selectedProduct.rating}
+                  </div>
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Duration & Rating */}
-          <div className="row g-3 mb-3">
-            <div className="col-6">
-              <div className="text-muted small">Duration</div>
-              <div className="fw-bold">{selectedProduct.duration || '—'}</div>
+            {/* Status */}
+            <div className="mb-3">
+              <div className="text-muted small mb-2">Status</div>
+              <div className="d-flex align-items-center">
+                <Badge bg={selectedProduct.isActive ? 'success' : 'danger'} className="me-2">
+                  {selectedProduct.isActive ? 'Active' : 'Inactive'}
+                </Badge>
+                <Form.Check
+                  type="switch"
+                  id="status-switch"
+                  checked={selectedProduct.isActive}
+                  onChange={(e) => {
+                    toggleProductStatus(selectedProduct._id, selectedProduct.isActive);
+                    setSelectedProduct({
+                      ...selectedProduct,
+                      isActive: e.target.checked
+                    });
+                  }}
+                  label={selectedProduct.isActive ? 'Enabled' : 'Disabled'}
+                />
+              </div>
             </div>
-            {selectedProduct.rating && (
-              <div className="col-6">
-                <div className="text-muted small">Rating</div>
-                <div className="fw-bold d-flex align-items-center">
-                  <i className="bi bi-star-fill text-warning me-1"></i>
-                  {selectedProduct.rating}
+
+            {/* Service Items */}
+            {selectedProduct.items && selectedProduct.items.length > 0 && (
+              <div className="mb-3">
+                <div className="text-muted small mb-2">Service Items ({selectedProduct.items.length})</div>
+                <div className="border rounded p-3">
+                  {selectedProduct.items.map((item, index) => (
+                    <div key={index} className={index < selectedProduct.items.length - 1 ? "mb-2" : ""}>
+                      <div className="fw-medium">• {item.name}</div>
+                      {item.description && (
+                        <div className="text-muted small ms-3 mt-1">{item.description}</div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
-          </div>
 
-          {/* Status */}
-          <div className="mb-3">
-            <div className="text-muted small mb-2">Status</div>
-            <div className="d-flex align-items-center">
-              <Badge bg={selectedProduct.isActive ? 'success' : 'danger'} className="me-2">
-                {selectedProduct.isActive ? 'Active' : 'Inactive'}
-              </Badge>
-              <Form.Check
-                type="switch"
-                id="status-switch"
-                checked={selectedProduct.isActive}
-                onChange={(e) => {
-                  toggleProductStatus(selectedProduct._id, selectedProduct.isActive);
-                  setSelectedProduct({
-                    ...selectedProduct,
-                    isActive: e.target.checked
-                  });
-                }}
-                label={selectedProduct.isActive ? 'Enabled' : 'Disabled'}
-              />
-            </div>
-          </div>
-
-          {/* Service Items */}
-          {selectedProduct.items && selectedProduct.items.length > 0 && (
-            <div className="mb-3">
-              <div className="text-muted small mb-2">Service Items ({selectedProduct.items.length})</div>
-              <div className="border rounded p-3">
-                {selectedProduct.items.map((item, index) => (
-                  <div key={index} className={index < selectedProduct.items.length - 1 ? "mb-2" : ""}>
-                    <div className="fw-medium">• {item.name}</div>
-                    {item.description && (
-                      <div className="text-muted small ms-3 mt-1">{item.description}</div>
-                    )}
-                  </div>
-                ))}
+            {/* Image URL */}
+            {selectedProduct.img && (
+              <div className="mt-3">
+                <div className="text-muted small mb-1">Image URL</div>
+                <div className="bg-light p-2 rounded">
+                  <small className="text-break d-block" style={{ fontSize: '11px' }}>
+                    {`http://localhost:5000${selectedProduct.img}`}
+                  </small>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </>
+        )}
+      </Modal.Body>
 
-          {/* Image URL */}
-          {selectedProduct.img && (
-            <div className="mt-3">
-              <div className="text-muted small mb-1">Image URL</div>
-              <div className="bg-light p-2 rounded">
-                <small className="text-break d-block" style={{ fontSize: '11px' }}>
-                  {`http://localhost:5000${selectedProduct.img}`}
-                </small>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-    </Modal.Body>
-    
-    <Modal.Footer className="border-0">
-      <Button 
-        variant="secondary" 
-        onClick={() => setShowViewModal(false)}
-        style={{borderRadius:"50px"}}
-      >
-        Close
-      </Button>
-      <Button 
-        variant="dark" 
-        onClick={() => {
-          setShowViewModal(false);
-          handleEditProduct(selectedProduct._id);
-        }}
-        style={{borderRadius:"50px"}}
-      >
-        Edit
-      </Button>
-    </Modal.Footer>
-  </Modal>
-);
+      <Modal.Footer className="border-0">
+        <Button
+          variant="secondary"
+          onClick={() => setShowViewModal(false)}
+          style={{ borderRadius: "50px" }}
+        >
+          Close
+        </Button>
+        <Button
+          variant="dark"
+          onClick={() => {
+            setShowViewModal(false);
+            handleEditProduct(selectedProduct._id);
+          }}
+          style={{ borderRadius: "50px" }}
+        >
+          Edit
+        </Button>
+      </Modal.Footer>
+    </Modal>
+  );
   // Show Form View
   if (showFormView) {
     const formTitle = isEditing ? 'Edit Product' : 'Add New Product';
-    
+
     return (
       <div className="p-3">
         {/* Card 1: Product Management Header */}
@@ -847,10 +847,10 @@ const ViewProductModal = () => (
                 </div>
               </Alert>
             )}
-            
+
             <div className='mb-4'>
               <h5>{formTitle}</h5>
-              <p className='text-muted' style={{fontSize:"12px"}}>
+              <p className='text-muted' style={{ fontSize: "12px" }}>
                 {isEditing ? 'Update the product details' : 'Use the below form to create a new product'}
               </p>
             </div>
@@ -906,7 +906,7 @@ const ViewProductModal = () => (
                   </Col>
                 </Row>
               </div>
-              
+
               {/* Product Details */}
               <div>
                 <Row>
@@ -983,11 +983,11 @@ const ViewProductModal = () => (
                       </InputGroup>
                     </Form.Group>
                   </Col>
-                  
-                  
+
+
                 </Row>
                 <Row>
-                 <Col md={6}>
+                  <Col md={6}>
                     <Form.Group className="mb-4">
                       <Form.Control
                         type="text"
@@ -999,54 +999,54 @@ const ViewProductModal = () => (
                     </Form.Group>
                   </Col>
                   <Col md={6}>
-                   {/* Image Upload - Simple File Name Display */}
-              <div className="mb-4">
-                <Form.Group>
-                  {/* File Input with custom styling */}
-                  <div className="position-relative">
-                    <Form.Control
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="cate"
-                      
-                    />
-                    
-                    {/* File Name Display */}
-                    <div 
-                    >
-                      {imageFile ? (
-                        <span className="text-truncate d-block" title={imageFile.name}>
-                          {imageFile.name}
-                        </span>
-                      ) : newProduct.img ? (
-                        <span className="text-truncate d-block" title={newProduct.img.split('/').pop()}>
-                          {newProduct.img.split('/').pop()}
-                        </span>
-                      ) : (
-                        ""
-                      )}
-                    </div>
-                  </div>
-                  
-                  <Form.Text className="text-muted small mt-1">
-                    {imageFile ? (
-                      <span>
-                        Selected: <strong>{imageFile.name}</strong> ({Math.round(imageFile.size / 1024)} KB)
-                      </span>
-                    ) : newProduct.img ? (
-                      <span>
-                        Current: <strong>{newProduct.img.split('/').pop()}</strong>
-                      </span>
-                    ) : (
-                      'Upload a product image (JPEG, PNG, etc.)'
-                    )}
-                  </Form.Text>
-                </Form.Group>
-              </div></Col>
+                    {/* Image Upload - Simple File Name Display */}
+                    <div className="mb-4">
+                      <Form.Group>
+                        {/* File Input with custom styling */}
+                        <div className="position-relative">
+                          <Form.Control
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            className="cate"
+
+                          />
+
+                          {/* File Name Display */}
+                          <div
+                          >
+                            {imageFile ? (
+                              <span className="text-truncate d-block" title={imageFile.name}>
+                                {imageFile.name}
+                              </span>
+                            ) : newProduct.img ? (
+                              <span className="text-truncate d-block" title={newProduct.img.split('/').pop()}>
+                                {newProduct.img.split('/').pop()}
+                              </span>
+                            ) : (
+                              ""
+                            )}
+                          </div>
+                        </div>
+
+                        <Form.Text className="text-muted small mt-1">
+                          {imageFile ? (
+                            <span>
+                              Selected: <strong>{imageFile.name}</strong> ({Math.round(imageFile.size / 1024)} KB)
+                            </span>
+                          ) : newProduct.img ? (
+                            <span>
+                              Current: <strong>{newProduct.img.split('/').pop()}</strong>
+                            </span>
+                          ) : (
+                            'Upload a product image (JPEG, PNG, etc.)'
+                          )}
+                        </Form.Text>
+                      </Form.Group>
+                    </div></Col>
                 </Row>
               </div>
-              
+
               {/* Service Items */}
               <div>
                 <div className="d-flex justify-content-between align-items-center mb-3">
@@ -1077,26 +1077,26 @@ const ViewProductModal = () => (
                     </Col>
                     <Col md={2}>
                       {newProduct.items.length > 1 && (
-                        <Button 
-                          variant="danger" 
+                        <Button
+                          variant="danger"
                           size="sm"
                           onClick={() => removeItem(index)}
                           title="Remove item"
                         >
-                          <MdOutlineDelete/>
+                          <MdOutlineDelete />
                         </Button>
                       )}
                     </Col>
                   </Row>
                 ))}
               </div>
-              
-              
-              
+
+
+
               {/* Submit Buttons */}
               <div className="d-flex justify-content-center gap-3 mt-4">
-                <Button 
-                  variant="outline-dark" 
+                <Button
+                  variant="outline-dark"
                   type="button"
                   onClick={handleCancel}
                   style={{ minWidth: '100px', borderRadius: "50px" }}
@@ -1104,8 +1104,8 @@ const ViewProductModal = () => (
                 >
                   Cancel
                 </Button>
-                <Button 
-                  variant="dark" 
+                <Button
+                  variant="dark"
                   type="submit"
                   style={{ minWidth: '100px', borderRadius: "50px" }}
                   disabled={loading}
@@ -1191,7 +1191,7 @@ const ViewProductModal = () => (
             </Col>
           </Row>
         </Card.Header>
-        
+
         <Card.Body style={{ marginLeft: "25px", marginRight: "25px" }}>
           {/* Bulk Selection Alert */}
           {selectedProducts.length > 0 && (
@@ -1225,7 +1225,7 @@ const ViewProductModal = () => (
                     <th>
                       <Form.Check
                         type="checkbox"
-                         className='check'
+                        className='check'
                         checked={selectAllProducts}
                         onChange={handleSelectAllProducts}
                       />
@@ -1255,8 +1255,8 @@ const ViewProductModal = () => (
                       <tr key={product._id}>
                         <td>
                           <Form.Check
-                            type="checkbox" 
-                             className='check'
+                            type="checkbox"
+                            className='check'
                             checked={selectedProducts.includes(product._id)}
                             onChange={() => handleProductSelect(product._id)}
                           />
@@ -1290,8 +1290,8 @@ const ViewProductModal = () => (
                         <td>
                           <div>
                             <strong className="d-block">{product.name || 'Unnamed'}</strong>
-                            
-                          
+
+
                           </div>
                         </td>
                         <td>
@@ -1337,7 +1337,7 @@ const ViewProductModal = () => (
                               title="Edit"
                               onClick={() => handleEditProduct(product._id)}
                             >
-                              <MdModeEdit/>
+                              <MdModeEdit />
                             </Button>
                             <Button
                               variant="dark"
@@ -1345,7 +1345,7 @@ const ViewProductModal = () => (
                               title="View Details"
                               onClick={() => handleViewProduct(product._id)}
                             >
-                              <IoEyeSharp/>
+                              <IoEyeSharp />
                             </Button>
                             <Button
                               variant="danger"
@@ -1353,7 +1353,7 @@ const ViewProductModal = () => (
                               title="Delete"
                               onClick={() => deleteProduct(product._id)}
                             >
-                              <MdOutlineDelete/>
+                              <MdOutlineDelete />
                             </Button>
                           </div>
                         </td>

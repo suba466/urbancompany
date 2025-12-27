@@ -29,7 +29,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
@@ -121,9 +121,9 @@ const Category = mongoose.models.Category || mongoose.model("Category", category
 const subcategorySchema = new mongoose.Schema({
   name: String,
   key: String,
-  categoryId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Category' 
+  categoryId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category'
   },
   categoryName: String,
   description: String,
@@ -149,25 +149,25 @@ const packageSchema = new mongoose.Schema({
   description: { type: String },
   category: { type: String, required: true },
   subcategory: { type: String },
-  subcategoryId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Subcategory' 
+  subcategoryId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Subcategory'
   },
-  items: [{ 
+  items: [{
     name: { type: String },
     description: { type: String }
   }],
-  content: [{ 
+  content: [{
     title: { type: String },
     description: { type: String }
   }],
-  ratingBreak: [{ 
+  ratingBreak: [{
     stars: { type: Number, default: 5 },
     value: { type: Number, default: 100 },
     count: { type: String, default: "100+" }
   }],
   stock: { type: Number, default: 0 },
-  isActive: { type: Boolean, default: true }, 
+  isActive: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -199,49 +199,49 @@ export const initializeAdmin = async () => {
 // JWT Authentication Middleware with better error handling
 const verifyToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
-  
+
   if (!authHeader) {
-    return res.status(401).json({ 
+    return res.status(401).json({
       success: false,
       error: "Access denied. No token provided.",
-      expired: false 
+      expired: false
     });
   }
-  
+
   const token = authHeader.split(' ')[1];
-  
+
   if (!token) {
-    return res.status(401).json({ 
+    return res.status(401).json({
       success: false,
       error: "Access denied. No token provided.",
-      expired: false 
+      expired: false
     });
   }
-  
+
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     next();
   } catch (error) {
     console.error("JWT verification error:", error.message);
-    
+
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
         error: "Session expired. Please login again.",
-        expired: true 
+        expired: true
       });
     } else if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
         error: "Invalid token.",
-        expired: false 
+        expired: false
       });
     } else {
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
         error: "Authentication failed.",
-        expired: false 
+        expired: false
       });
     }
   }
@@ -267,16 +267,15 @@ const checkPermission = (permission) => {
     return res.status(403).json({ error: "You don't have permission to access this resource" });
   };
 };
-
 // ==================== ADMIN LOGIN ====================
 
 // Admin Login with JWT
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     console.log("Admin login attempt:", { email });
-    
+
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required" });
     }
@@ -353,9 +352,9 @@ router.post("/login", async (req, res) => {
 router.post("/user-login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     console.log("User login attempt:", { email });
-    
+
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required" });
     }
@@ -444,9 +443,9 @@ router.post("/packages", checkPermission('Product'), async (req, res) => {
 
     // Validation
     if (!name || !category || !price || !duration) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        error: "Name, category, price, and duration are required" 
+        error: "Name, category, price, and duration are required"
       });
     }
 
@@ -459,11 +458,11 @@ router.post("/packages", checkPermission('Product'), async (req, res) => {
     }
 
     // Filter empty items
-    const filteredItems = items ? items.filter(item => 
+    const filteredItems = items ? items.filter(item =>
       item.name && item.name.trim() || item.description && item.description.trim()
     ) : [];
 
-    const filteredContent = content ? content.filter(cont => 
+    const filteredContent = content ? content.filter(cont =>
       cont.title && cont.title.trim() || cont.description && cont.description.trim()
     ) : [];
 
@@ -503,20 +502,20 @@ router.post("/packages", checkPermission('Product'), async (req, res) => {
   } catch (error) {
     console.error("Error creating package:", error);
     if (error.code === 11000) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        error: "Package with this name already exists" 
+        error: "Package with this name already exists"
       });
     }
     if (error.name === 'ValidationError') {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        error: error.message 
+        error: error.message
       });
     }
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: "Failed to create package" 
+      error: "Failed to create package"
     });
   }
 });
@@ -524,19 +523,19 @@ router.post("/packages", checkPermission('Product'), async (req, res) => {
 // Get all packages with filters
 router.get("/packages", checkPermission('Product'), async (req, res) => {
   try {
-    const { 
-      page = 1, 
-      limit = 20, 
-      search = "", 
+    const {
+      page = 1,
+      limit = 20,
+      search = "",
       category = "",
       subcategory = "",
-      isActive 
+      isActive
     } = req.query;
-    
+
     const skip = (page - 1) * limit;
 
     let query = {};
-    
+
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },
@@ -545,15 +544,15 @@ router.get("/packages", checkPermission('Product'), async (req, res) => {
         { category: { $regex: search, $options: "i" } }
       ];
     }
-    
+
     if (category) {
       query.category = category;
     }
-    
+
     if (subcategory) {
       query.subcategory = subcategory;
     }
-    
+
     if (isActive !== undefined) {
       query.isActive = isActive === 'true';
     }
@@ -579,9 +578,9 @@ router.get("/packages", checkPermission('Product'), async (req, res) => {
 
   } catch (error) {
     console.error("Error fetching packages:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: "Failed to fetch packages" 
+      error: "Failed to fetch packages"
     });
   }
 });
@@ -592,11 +591,11 @@ router.get("/packages/:id", checkPermission('Product'), async (req, res) => {
     const { id } = req.params;
     const packageData = await Package.findById(id)  // Changed from 'package' to 'packageData'
       .populate('subcategoryId', 'name key');
-    
+
     if (!packageData) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        error: "Package not found" 
+        error: "Package not found"
       });
     }
 
@@ -607,9 +606,9 @@ router.get("/packages/:id", checkPermission('Product'), async (req, res) => {
 
   } catch (error) {
     console.error("Error fetching package:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: "Failed to fetch package" 
+      error: "Failed to fetch package"
     });
   }
 });
@@ -623,9 +622,9 @@ router.put("/packages/:id", checkPermission('Product'), async (req, res) => {
     // Check if package exists
     const existingPackage = await Package.findById(id);
     if (!existingPackage) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        error: "Package not found" 
+        error: "Package not found"
       });
     }
 
@@ -633,7 +632,7 @@ router.put("/packages/:id", checkPermission('Product'), async (req, res) => {
     if (updateData.name || updateData.subcategory) {
       const newName = updateData.name || existingPackage.name;
       const newSubcategory = updateData.subcategory || existingPackage.subcategory;
-      
+
       if (!updateData.title && newSubcategory) {
         updateData.title = `${newSubcategory} - ${newName}`;
       } else if (!updateData.title) {
@@ -643,7 +642,7 @@ router.put("/packages/:id", checkPermission('Product'), async (req, res) => {
 
     // Filter empty items
     if (updateData.items) {
-      updateData.items = updateData.items.filter(item => 
+      updateData.items = updateData.items.filter(item =>
         item.name && item.name.trim() || item.description && item.description.trim()
       );
       if (updateData.items.length === 0) {
@@ -653,7 +652,7 @@ router.put("/packages/:id", checkPermission('Product'), async (req, res) => {
 
     // Filter empty content
     if (updateData.content) {
-      updateData.content = updateData.content.filter(cont => 
+      updateData.content = updateData.content.filter(cont =>
         cont.title && cont.title.trim() || cont.description && cont.description.trim()
       );
     }
@@ -665,9 +664,9 @@ router.put("/packages/:id", checkPermission('Product'), async (req, res) => {
     ).populate('subcategoryId', 'name key');
 
     if (!updatedPackage) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        error: "Package not found" 
+        error: "Package not found"
       });
     }
 
@@ -682,14 +681,14 @@ router.put("/packages/:id", checkPermission('Product'), async (req, res) => {
   } catch (error) {
     console.error("Error updating package:", error);
     if (error.name === 'ValidationError') {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        error: error.message 
+        error: error.message
       });
     }
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: "Failed to update package" 
+      error: "Failed to update package"
     });
   }
 });
@@ -699,32 +698,32 @@ router.put("/packages/:id/toggle-status", checkPermission('Product'), async (req
   try {
     const { id } = req.params;
     const { isActive } = req.body;
-    
+
     const packageData = await Package.findById(id);  // Changed from 'package' to 'packageData'
     if (!packageData) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        error: "Package not found" 
+        error: "Package not found"
       });
     }
-    
+
     packageData.isActive = isActive !== undefined ? isActive : !packageData.isActive;  // Updated reference
     packageData.updatedAt = new Date();  // Updated reference
     await packageData.save();  // Updated reference
-    
+
     console.log(`Package ${packageData.isActive ? 'activated' : 'deactivated'}: ${packageData.name}`);  // Updated reference
-    
+
     res.json({
       success: true,
       message: `Package ${packageData.isActive ? 'enabled' : 'disabled'} successfully`,  // Updated reference
       package: packageData  // Updated reference
     });
-    
+
   } catch (error) {
     console.error("Error toggling package status:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: "Failed to update package status" 
+      error: "Failed to update package status"
     });
   }
 });
@@ -736,9 +735,9 @@ router.delete("/packages/:id", checkPermission('Product'), async (req, res) => {
 
     const deletedPackage = await Package.findByIdAndDelete(id);
     if (!deletedPackage) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        error: "Package not found" 
+        error: "Package not found"
       });
     }
 
@@ -751,13 +750,12 @@ router.delete("/packages/:id", checkPermission('Product'), async (req, res) => {
 
   } catch (error) {
     console.error("Error deleting package:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: "Failed to delete package" 
+      error: "Failed to delete package"
     });
   }
 });
-
 // ==================== OTHER ROUTES (keeping existing routes) ====================
 
 // Get Admin Profile
@@ -826,7 +824,7 @@ router.get("/dashboard", checkPermission('Dashboard'), async (req, res) => {
     const totalBookings = await mongoose.model("Booking").countDocuments();
     const totalCategories = await Category.countDocuments();
     const totalPackages = await Package.countDocuments();
-    
+
     const totalRevenue = await mongoose.model("Booking").aggregate([
       {
         $group: {
@@ -841,15 +839,15 @@ router.get("/dashboard", checkPermission('Dashboard'), async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(10)
       .lean();
-    
+
     // Get customer emails from bookings
     const customerEmails = recentBookings.map(b => b.customerEmail);
-    
+
     // Get customers with profile images
     const customers = await Customer.find({ email: { $in: customerEmails } })
       .select('email name profileImage')
       .lean();
-    
+
     // Create a customer map for quick lookup
     const customerMap = {};
     customers.forEach(customer => {
@@ -858,7 +856,7 @@ router.get("/dashboard", checkPermission('Dashboard'), async (req, res) => {
         profileImage: customer.profileImage
       };
     });
-    
+
     // Add customer details to bookings
     const recentBookingsWithCustomerDetails = recentBookings.map(booking => {
       const customerDetails = customerMap[booking.customerEmail] || {};
@@ -868,7 +866,7 @@ router.get("/dashboard", checkPermission('Dashboard'), async (req, res) => {
         customerProfileImage: customerDetails.profileImage || ''
       };
     });
-    
+
     const recentCustomers = await Customer.find()
       .sort({ createdAt: -1 })
       .limit(10)
@@ -974,7 +972,7 @@ router.get("/users/:id", checkPermission('Users'), async (req, res) => {
   try {
     const { id } = req.params;
     const user = await User.findById(id).select('-password -__v');
-    
+
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -1037,7 +1035,7 @@ router.post("/users", checkPermission('Users'), upload.single('profileImage'), a
         Dashboard: false,
         Users: false,
         Customer: false,
-        Catalog: false, 
+        Catalog: false,
         Product: false,
         Bookings: false,
         Reports: false,
@@ -1100,9 +1098,9 @@ router.put("/users/:id", checkPermission('Users'), upload.single('profileImage')
 
     // Don't allow email update to existing email
     if (updateData.email && updateData.email !== existingUser.email) {
-      const emailExists = await User.findOne({ 
-        email: updateData.email, 
-        _id: { $ne: id } 
+      const emailExists = await User.findOne({
+        email: updateData.email,
+        _id: { $ne: id }
       });
       if (emailExists) {
         return res.status(400).json({ error: "Email already exists" });
@@ -1113,7 +1111,7 @@ router.put("/users/:id", checkPermission('Users'), upload.single('profileImage')
     if (req.file) {
       updateData.profileImage = `/assets/${req.file.filename}`;
       console.log("Profile image updated:", updateData.profileImage);
-      
+
       // Delete old image if not default
       if (existingUser.profileImage && existingUser.profileImage !== "/assets/default-avatar.png") {
         const oldImagePath = path.join(__dirname, '..', existingUser.profileImage);
@@ -1189,19 +1187,19 @@ router.delete("/users/:id", checkPermission('Users'), async (req, res) => {
 router.post("/customers-by-emails", checkPermission('Customer'), async (req, res) => {
   try {
     const { emails } = req.body;
-    
+
     if (!emails || !Array.isArray(emails)) {
       return res.status(400).json({ error: "Emails array is required" });
     }
-    
+
     const customers = await Customer.find({ email: { $in: emails } })
       .select('name email profileImage');
-    
+
     res.json({
       success: true,
       customers
     });
-    
+
   } catch (error) {
     console.error("Error fetching customers by emails:", error);
     res.status(500).json({ error: "Failed to fetch customers" });
@@ -1256,7 +1254,7 @@ router.get("/customers/:id", checkPermission('Customer'), async (req, res) => {
   try {
     const { id } = req.params;
     const customer = await Customer.findById(id).select('-password -__v');
-    
+
     if (!customer) {
       return res.status(404).json({ error: "Customer not found" });
     }
@@ -1285,9 +1283,9 @@ router.put("/customers/:id", checkPermission('Customer'), upload.single('profile
 
     // Don't allow email update to existing email
     if (updateData.email && updateData.email !== customer.email) {
-      const emailExists = await Customer.findOne({ 
-        email: updateData.email, 
-        _id: { $ne: id } 
+      const emailExists = await Customer.findOne({
+        email: updateData.email,
+        _id: { $ne: id }
       });
       if (emailExists) {
         return res.status(400).json({ error: "Email already exists" });
@@ -1298,7 +1296,7 @@ router.put("/customers/:id", checkPermission('Customer'), upload.single('profile
     if (req.file) {
       updateData.profileImage = `/assets/${req.file.filename}`;
       console.log("Profile image updated:", updateData.profileImage);
-      
+
       // Delete old image if exists
       if (customer.profileImage && customer.profileImage.startsWith('/assets/')) {
         const oldImagePath = path.join(__dirname, '..', customer.profileImage);
@@ -1363,7 +1361,6 @@ router.delete("/customers/:id", checkPermission('Customer'), async (req, res) =>
     res.status(500).json({ error: "Failed to delete customer" });
   }
 });
-
 // Categories routes
 router.get("/categories", checkPermission('Catalog'), async (req, res) => {
   try {
@@ -2070,7 +2067,7 @@ router.post("/subcategories", upload.single('image'), async (req, res) => {
     // Check if subcategory already exists
     const existingSubcategory = await Subcategory.findOne({ 
       $or: [
-        { key: key || name.toLowerCase().replace(/ /g, '-') },
+        { key: key || name.toLowerCase().replace(/ /g, '-'), },
         { name: name, categoryId: categoryId }
       ]
     });
