@@ -147,6 +147,7 @@ const packageSchema = new mongoose.Schema({
   discountPrice: { type: String },
   duration: { type: String, required: true },
   description: { type: String },
+  img: { type: String, default: "" },
   category: { type: String, required: true },
   subcategory: { type: String },
   subcategoryId: {
@@ -419,7 +420,7 @@ router.use(verifyToken);
 // ==================== PACKAGE ROUTES ====================
 
 // Create new package
-router.post("/packages", checkPermission('Product'), async (req, res) => {
+router.post("/packages", checkPermission('Product'), upload.single('image'), async (req, res) => {
   try {
     const {
       name,
@@ -485,6 +486,7 @@ router.post("/packages", checkPermission('Product'), async (req, res) => {
       items: filteredItems.length > 0 ? filteredItems : [{ name: 'Service included', description: '' }],
       content: filteredContent,
       ratingBreak: ratingBreak || [{ stars: 5, value: 100, count: "100+" }],
+      img: req.file ? `/assets/${req.file.filename}` : "",
       createdAt: new Date(),
       updatedAt: new Date()
     });
@@ -614,7 +616,7 @@ router.get("/packages/:id", checkPermission('Product'), async (req, res) => {
 });
 
 // Update package
-router.put("/packages/:id", checkPermission('Product'), async (req, res) => {
+router.put("/packages/:id", checkPermission('Product'), upload.single('image'), async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -655,6 +657,19 @@ router.put("/packages/:id", checkPermission('Product'), async (req, res) => {
       updateData.content = updateData.content.filter(cont =>
         cont.title && cont.title.trim() || cont.description && cont.description.trim()
       );
+    }
+
+    // Handle image update
+    if (req.file) {
+      updateData.img = `/assets/${req.file.filename}`;
+
+      // Optional: Delete old image
+      if (existingPackage.img && existingPackage.img.startsWith('/assets/')) {
+        const oldImagePath = path.join(__dirname, existingPackage.img);
+        if (fs.existsSync(oldImagePath)) {
+          // fs.unlinkSync(oldImagePath); // Careful with deleting in case of shared images
+        }
+      }
     }
 
     const updatedPackage = await Package.findByIdAndUpdate(
@@ -724,6 +739,50 @@ router.put("/packages/:id/toggle-status", checkPermission('Product'), async (req
     res.status(500).json({
       success: false,
       error: "Failed to update package status"
+    });
+  }
+});
+
+// Upload package image
+router.post("/packages/:id/upload-image", checkPermission('Product'), upload.single('image'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: "No image uploaded"
+      });
+    }
+
+    const imgPath = `/assets/${req.file.filename}`;
+
+    // Find package and update image
+    const packageData = await Package.findByIdAndUpdate(
+      id,
+      { img: imgPath, updatedAt: new Date() },
+      { new: true }
+    );
+
+    if (!packageData) {
+      return res.status(404).json({
+        success: false,
+        error: "Package not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Image uploaded successfully",
+      imageUrl: imgPath,
+      package: packageData
+    });
+
+  } catch (error) {
+    console.error("Error uploading package image:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to upload image"
     });
   }
 });
@@ -1374,7 +1433,7 @@ router.get("/categories", checkPermission('Catalog'), async (req, res) => {
         { description: { $regex: search, $options: "i" } }
       ];
     }
-    
+
     const categories = await Category.find(query)
       .sort(sort)
       .skip(skip)
@@ -1455,7 +1514,7 @@ router.put("/categories/:id", checkPermission('Category'), upload.single('image'
     if (req.file) {
       updateData.img = `/assets/${req.file.filename}`;
       console.log("Updated category image:", updateData.img);
-      
+
       // Optional: Delete old image if not default
       if (category.img && category.img !== "/assets/default-category.png") {
         const oldImagePath = path.join(__dirname, '..', category.img);
@@ -1491,21 +1550,21 @@ router.put("/categories/:id/toggle-status", checkPermission('Category'), async (
   try {
     const { id } = req.params;
     const { isActive } = req.body;
-    
+
     const category = await Category.findById(id);
     if (!category) {
       return res.status(404).json({ error: "Category not found" });
     }
-    
+
     category.isActive = isActive !== undefined ? isActive : !category.isActive;
     await category.save();
-    
+
     res.json({
       success: true,
       message: `Category ${category.isActive ? 'enabled' : 'disabled'} successfully`,
       category
     });
-    
+
   } catch (error) {
     console.error("Error toggling category status:", error);
     res.status(500).json({ error: "Failed to update category status" });
@@ -1530,9 +1589,9 @@ router.delete("/categories/:id", checkPermission('Category'), async (req, res) =
     }
 
     await Category.findByIdAndDelete(req.params.id);
-    res.json({ 
+    res.json({
       success: true,
-      message: "Category deleted successfully" 
+      message: "Category deleted successfully"
     });
 
   } catch (error) {
@@ -1545,20 +1604,20 @@ router.delete("/categories/:id", checkPermission('Category'), async (req, res) =
 router.get("/bookings", checkPermission('Bookings'), async (req, res) => {
   try {
     const Booking = mongoose.model("Booking");
-    const { 
-      page = 1, 
-      limit = 20, 
-      search = "", 
-      status = "", 
-      startDate = "", 
+    const {
+      page = 1,
+      limit = 20,
+      search = "",
+      status = "",
+      startDate = "",
       endDate = "",
-      sort = "-createdAt" 
+      sort = "-createdAt"
     } = req.query;
-    
+
     const skip = (page - 1) * limit;
 
     let query = {};
-    
+
     if (search) {
       query.$or = [
         { customerName: { $regex: search, $options: "i" } },
@@ -1681,10 +1740,10 @@ router.delete("/bookings/:id", checkPermission('Bookings'), async (req, res) => 
 router.post("/bulk-delete", async (req, res) => {
   try {
     const { entity, ids } = req.body;
-    
+
     if (!entity || !ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ 
-        error: "Entity type and IDs array are required" 
+      return res.status(400).json({
+        error: "Entity type and IDs array are required"
       });
     }
 
@@ -1713,7 +1772,7 @@ router.post("/bulk-delete", async (req, res) => {
     let deletedCount = 0;
     let message = "";
 
-    switch(entity) {
+    switch (entity) {
       case 'users':
         model = User;
         message = "user(s)";
@@ -1741,7 +1800,7 @@ router.post("/bulk-delete", async (req, res) => {
     // Get records to handle file deletion if needed
     if (entity === 'categories') {
       const categories = await model.find({ _id: { $in: ids } });
-      
+
       // Delete image files
       categories.forEach(category => {
         if (category.img && category.img !== "/assets/default-category.png") {
@@ -1753,7 +1812,7 @@ router.post("/bulk-delete", async (req, res) => {
       });
     } else if (entity === 'customers') {
       const customers = await model.find({ _id: { $in: ids } });
-      
+
       // Delete profile images
       customers.forEach(customer => {
         if (customer.profileImage && customer.profileImage.startsWith('/assets/')) {
@@ -1765,7 +1824,7 @@ router.post("/bulk-delete", async (req, res) => {
       });
     } else if (entity === 'users') {
       const users = await model.find({ _id: { $in: ids } });
-      
+
       // Delete profile images
       users.forEach(user => {
         if (user.profileImage && user.profileImage !== "/assets/default-avatar.png") {
@@ -1781,8 +1840,8 @@ router.post("/bulk-delete", async (req, res) => {
     deletedCount = result.deletedCount;
 
     if (deletedCount === 0) {
-      return res.status(404).json({ 
-        error: `No ${entity} found to delete` 
+      return res.status(404).json({
+        error: `No ${entity} found to delete`
       });
     }
 
@@ -1794,8 +1853,8 @@ router.post("/bulk-delete", async (req, res) => {
 
   } catch (error) {
     console.error(`Error bulk deleting ${entity}:`, error);
-    res.status(500).json({ 
-      error: `Failed to delete ${entity}` 
+    res.status(500).json({
+      error: `Failed to delete ${entity}`
     });
   }
 });
@@ -1806,7 +1865,7 @@ router.get("/categories/:categoryId/subcategories", checkPermission('Category'),
     const { categoryId } = req.params;
     const subcategories = await Subcategory.find({ categoryId })
       .sort({ order: 1, name: 1 });
-    
+
     res.json({
       success: true,
       subcategories
@@ -1821,24 +1880,24 @@ router.get("/categories/:categoryId/subcategories", checkPermission('Category'),
 router.post("/subcategories", checkPermission('Category'), upload.single('image'), async (req, res) => {
   try {
     const { name, categoryId, description, order, isActive } = req.body;
-    
+
     if (!name || !categoryId) {
       return res.status(400).json({ error: "Name and category are required" });
     }
-    
+
     const category = await Category.findById(categoryId);
     if (!category) {
       return res.status(404).json({ error: "Parent category not found" });
     }
-    
+
     // Handle image upload
     let img = "/assets/default-subcategory.png";
     if (req.file) {
       img = `/assets/${req.file.filename}`;
     }
-    
+
     const key = req.body.key || name.toLowerCase().replace(/ /g, '-');
-    
+
     const subcategory = new Subcategory({
       name,
       key,
@@ -1849,21 +1908,21 @@ router.post("/subcategories", checkPermission('Category'), upload.single('image'
       order: order || 0,
       isActive: isActive !== undefined ? isActive : true
     });
-    
+
     await subcategory.save();
-    
+
     // Update category to mark it has subcategories
     await Category.findByIdAndUpdate(categoryId, {
       hasSubcategories: true,
       $push: { subcategories: subcategory._id }
     });
-    
+
     res.status(201).json({
       success: true,
       message: "Subcategory created successfully",
       subcategory
     });
-    
+
   } catch (error) {
     console.error("Error creating subcategory:", error);
     res.status(500).json({ error: "Failed to create subcategory" });
@@ -1875,27 +1934,27 @@ router.put("/subcategories/:id", checkPermission('Category'), upload.single('ima
   try {
     const { id } = req.params;
     const updateData = req.body;
-    
+
     if (req.file) {
       updateData.img = `/assets/${req.file.filename}`;
     }
-    
+
     const subcategory = await Subcategory.findByIdAndUpdate(
       id,
       { ...updateData, updatedAt: new Date() },
       { new: true }
     );
-    
+
     if (!subcategory) {
       return res.status(404).json({ error: "Subcategory not found" });
     }
-    
+
     res.json({
       success: true,
       message: "Subcategory updated successfully",
       subcategory
     });
-    
+
   } catch (error) {
     console.error("Error updating subcategory:", error);
     res.status(500).json({ error: "Failed to update subcategory" });
@@ -1909,17 +1968,17 @@ router.delete("/subcategories/:id", checkPermission('Category'), async (req, res
     if (!subcategory) {
       return res.status(404).json({ error: "Subcategory not found" });
     }
-    
+
     // Remove from parent category
     await Category.findByIdAndUpdate(subcategory.categoryId, {
       $pull: { subcategories: subcategory._id }
     });
-    
+
     res.json({
       success: true,
       message: "Subcategory deleted successfully"
     });
-    
+
   } catch (error) {
     console.error("Error deleting subcategory:", error);
     res.status(500).json({ error: "Failed to delete subcategory" });
@@ -1928,12 +1987,12 @@ router.delete("/subcategories/:id", checkPermission('Category'), async (req, res
 
 router.get("/subcategories", checkPermission('Catalog'), async (req, res) => {
   try {
-    const { 
-      page = 1, 
-      limit = 20, 
-      search = "", 
+    const {
+      page = 1,
+      limit = 20,
+      search = "",
       categoryId = "",
-      sort = "-createdAt" 
+      sort = "-createdAt"
     } = req.query;
     const skip = (page - 1) * limit;
 
@@ -1945,7 +2004,7 @@ router.get("/subcategories", checkPermission('Catalog'), async (req, res) => {
         { categoryName: { $regex: search, $options: "i" } }
       ];
     }
-    
+
     if (categoryId) {
       query.categoryId = categoryId;
     }
@@ -1981,13 +2040,13 @@ router.get("/subcategories", checkPermission('Catalog'), async (req, res) => {
 router.get("/subcategories-by-category/:categoryName", checkPermission('Catalog'), async (req, res) => {
   try {
     const { categoryName } = req.params;
-    
-    const subcategories = await Subcategory.find({ 
+
+    const subcategories = await Subcategory.find({
       categoryName: categoryName,
-      isActive: true 
+      isActive: true
     })
-    .sort({ order: 1, name: 1 });
-    
+      .sort({ order: 1, name: 1 });
+
     res.json({
       success: true,
       subcategories: subcategories || [],
@@ -2002,13 +2061,13 @@ router.get("/subcategories-by-category/:categoryName", checkPermission('Catalog'
 router.get("/categories/:categoryId/subcategories", async (req, res) => {
   try {
     const { categoryId } = req.params;
-    
+
     const subcategories = await Subcategory.find({ categoryId })
       .populate('categoryId', 'name key')
       .sort({ order: 1, name: 1 });
-    
+
     const category = await Category.findById(categoryId);
-    
+
     res.json({
       success: true,
       subcategories,
@@ -2026,7 +2085,7 @@ router.get("/subcategories/:id", async (req, res) => {
     const { id } = req.params;
     const subcategory = await Subcategory.findById(id)
       .populate('categoryId', 'name key');
-    
+
     if (!subcategory) {
       return res.status(404).json({ error: "Subcategory not found" });
     }
@@ -2045,13 +2104,13 @@ router.get("/subcategories/:id", async (req, res) => {
 // Create subcategory WITH image upload
 router.post("/subcategories", upload.single('image'), async (req, res) => {
   try {
-    const { 
-      name, 
-      categoryId, 
-      description, 
-      key, 
-      order = 0, 
-      isActive = true 
+    const {
+      name,
+      categoryId,
+      description,
+      key,
+      order = 0,
+      isActive = true
     } = req.body;
 
     if (!name || !categoryId) {
@@ -2065,16 +2124,16 @@ router.post("/subcategories", upload.single('image'), async (req, res) => {
     }
 
     // Check if subcategory already exists
-    const existingSubcategory = await Subcategory.findOne({ 
+    const existingSubcategory = await Subcategory.findOne({
       $or: [
         { key: key || name.toLowerCase().replace(/ /g, '-'), },
         { name: name, categoryId: categoryId }
       ]
     });
-    
+
     if (existingSubcategory) {
-      return res.status(400).json({ 
-        error: "Subcategory with this name or key already exists in this category" 
+      return res.status(400).json({
+        error: "Subcategory with this name or key already exists in this category"
       });
     }
 
@@ -2134,7 +2193,7 @@ router.put("/subcategories/:id", upload.single('image'), async (req, res) => {
     if (req.file) {
       updateData.img = `/assets/${req.file.filename}`;
       console.log("Updated subcategory image:", updateData.img);
-      
+
       // Delete old image if not default
       if (subcategory.img && subcategory.img !== "/assets/default-subcategory.png") {
         const oldImagePath = path.join(__dirname, '..', subcategory.img);
@@ -2150,12 +2209,12 @@ router.put("/subcategories/:id", upload.single('image'), async (req, res) => {
       const newCategory = await Category.findById(updateData.categoryId);
       if (newCategory) {
         updateData.categoryName = newCategory.name;
-        
+
         // Remove from old category and add to new category
         await Category.findByIdAndUpdate(subcategory.categoryId, {
           $pull: { subcategories: subcategory._id }
         });
-        
+
         await Category.findByIdAndUpdate(updateData.categoryId, {
           hasSubcategories: true,
           $push: { subcategories: subcategory._id }
@@ -2186,21 +2245,21 @@ router.put("/subcategories/:id/toggle-status", async (req, res) => {
   try {
     const { id } = req.params;
     const { isActive } = req.body;
-    
+
     const subcategory = await Subcategory.findById(id);
     if (!subcategory) {
       return res.status(404).json({ error: "Subcategory not found" });
     }
-    
+
     subcategory.isActive = isActive !== undefined ? isActive : !subcategory.isActive;
     await subcategory.save();
-    
+
     res.json({
       success: true,
       message: `Subcategory ${subcategory.isActive ? 'enabled' : 'disabled'} successfully`,
       subcategory
     });
-    
+
   } catch (error) {
     console.error("Error toggling subcategory status:", error);
     res.status(500).json({ error: "Failed to update subcategory status" });
@@ -2232,17 +2291,17 @@ router.delete("/subcategories/:id", async (req, res) => {
     // Update any packages using this subcategory
     await Package.updateMany(
       { subcategoryId: subcategory._id },
-      { 
+      {
         $unset: { subcategoryId: "", subcategory: "" },
         category: subcategory.categoryName
       }
     );
 
     await Subcategory.findByIdAndDelete(req.params.id);
-    
-    res.json({ 
+
+    res.json({
       success: true,
-      message: "Subcategory deleted successfully" 
+      message: "Subcategory deleted successfully"
     });
 
   } catch (error) {
@@ -2255,16 +2314,16 @@ router.delete("/subcategories/:id", async (req, res) => {
 router.post("/subcategories/bulk-delete", async (req, res) => {
   try {
     const { ids } = req.body;
-    
+
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ 
-        error: "Subcategory IDs array is required" 
+      return res.status(400).json({
+        error: "Subcategory IDs array is required"
       });
     }
 
     // Get subcategories to be deleted
     const subcategories = await Subcategory.find({ _id: { $in: ids } });
-    
+
     // Delete image files
     subcategories.forEach(subcategory => {
       if (subcategory.img && subcategory.img !== "/assets/default-subcategory.png") {
@@ -2273,7 +2332,7 @@ router.post("/subcategories/bulk-delete", async (req, res) => {
           fs.unlinkSync(imagePath);
         }
       }
-      
+
       // Remove from parent categories
       Category.findByIdAndUpdate(subcategory.categoryId, {
         $pull: { subcategories: subcategory._id }
@@ -2283,7 +2342,7 @@ router.post("/subcategories/bulk-delete", async (req, res) => {
     // Update packages
     await Package.updateMany(
       { subcategoryId: { $in: ids } },
-      { 
+      {
         $unset: { subcategoryId: "", subcategory: "" }
       }
     );
@@ -2292,8 +2351,8 @@ router.post("/subcategories/bulk-delete", async (req, res) => {
     const deletedCount = result.deletedCount;
 
     if (deletedCount === 0) {
-      return res.status(404).json({ 
-        error: "No subcategories found to delete" 
+      return res.status(404).json({
+        error: "No subcategories found to delete"
       });
     }
 
@@ -2305,8 +2364,8 @@ router.post("/subcategories/bulk-delete", async (req, res) => {
 
   } catch (error) {
     console.error("Error bulk deleting subcategories:", error);
-    res.status(500).json({ 
-      error: "Failed to delete subcategories" 
+    res.status(500).json({
+      error: "Failed to delete subcategories"
     });
   }
 });
@@ -2316,32 +2375,32 @@ router.put("/packages/:id/status", checkPermission('Product'), async (req, res) 
   try {
     const { id } = req.params;
     const { isActive } = req.body;
-    
+
     const packageData = await Package.findById(id);
     if (!packageData) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        error: "Package not found" 
+        error: "Package not found"
       });
     }
-    
+
     packageData.isActive = isActive !== undefined ? isActive : !packageData.isActive;
     packageData.updatedAt = new Date();
     await packageData.save();
-    
+
     console.log(`Package ${packageData.isActive ? 'activated' : 'deactivated'}: ${packageData.name}`);
-    
+
     res.json({
       success: true,
       message: `Package ${packageData.isActive ? 'enabled' : 'disabled'} successfully`,
       package: packageData
     });
-    
+
   } catch (error) {
     console.error("Error toggling package status:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: "Failed to update package status" 
+      error: "Failed to update package status"
     });
   }
 });

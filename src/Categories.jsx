@@ -6,13 +6,13 @@ import {
 import { MdModeEdit, MdOutlineDelete } from "react-icons/md";
 import TableControls from './TableControls';
 import { IoEyeSharp } from "react-icons/io5";
-import { 
-  getTableElement, 
-  exportAsPDF, 
-  exportAsExcel, 
+import {
+  getTableElement,
+  exportAsPDF,
+  exportAsExcel,
   exportAsCSV,
   getCSVHeadersFromData
-} from './downloadUtils'; 
+} from './downloadUtils';
 
 function Categories({
   categories,
@@ -45,7 +45,7 @@ function Categories({
     if (!localSearch.trim()) {
       return categories;
     }
-    
+
     const searchTerm = localSearch.toLowerCase().trim();
     return categories.filter(category => {
       return (
@@ -84,7 +84,7 @@ function Categories({
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setLocalSearch(value);
-    
+
     if (onSearchChange) {
       onSearchChange(value);
     }
@@ -113,7 +113,7 @@ function Categories({
       'Image URL': cat.img ? `http://localhost:5000${cat.img}` : 'No Image',
       'Key': cat.key || ''
     }));
-    
+
     exportAsExcel(dataForExport, 'categories');
   };
 
@@ -125,7 +125,7 @@ function Categories({
       'Image URL': cat.img ? `http://localhost:5000${cat.img}` : 'No Image',
       'Key': cat.key || ''
     }));
-    
+
     const headers = getCSVHeadersFromData(dataForExport);
     exportAsCSV(dataForExport, headers, 'categories');
   };
@@ -143,13 +143,13 @@ function Categories({
   // Function to get initials from category name
   const getInitials = (name) => {
     if (!name || typeof name !== 'string' || name.trim() === '') return 'NA';
-    
+
     const nameParts = name.trim().split(' ').filter(part => part.length > 0);
-    
+
     if (nameParts.length === 1) {
       return nameParts[0].substring(0, 2).toUpperCase();
     }
-    
+
     return (nameParts[0][0] + nameParts[1][0]).toUpperCase();
   };
 
@@ -211,10 +211,10 @@ function Categories({
       <br />
 
       <Card className="border-0 shadow-sm">
-        <Card.Header className="border-0" style={{backgroundColor:"white"}}>
+        <Card.Header className="border-0" style={{ backgroundColor: "white" }}>
           <Row style={{ marginLeft: "25px", marginRight: "25px" }}>
             <Col>
-              <h5 className="mb-1 fw-semibold" style={{marginTop:"10px"}}>Manage Categories</h5>
+              <h5 className="mb-1 fw-semibold" style={{ marginTop: "10px" }}>Manage Categories</h5>
               <p className='text-muted' style={{ fontSize: "10.5px" }}>Use this form to update category details</p>
             </Col>
             <Col>
@@ -227,24 +227,24 @@ function Categories({
                 totalPages={totalPages}
                 totalItems={totalItems}
                 onPageChange={onPageChange}
-                
+
                 // Search props
                 searchValue={localSearch}
                 onSearchChange={handleSearchChange}
                 searchPlaceholder="Search categories..."
-                
+
                 // Download props
                 onDownloadPDF={handleDownloadPDF}
                 onDownloadExcel={handleDownloadExcel}
                 onDownloadCSV={handleDownloadCSV}
                 dataType="categories"
-                
+
                 // Bulk actions
                 selectedCount={selectedCategories.length}
                 onBulkDelete={handleBulkDeleteClick}
                 showBulkActions={selectedCategories.length > 0}
                 bulkEntityName="categories"
-                
+
                 // Additional options
                 showPerPage={true}
                 showDownload={true}
@@ -272,7 +272,7 @@ function Categories({
               </Button>
             </Alert>
           )}
-          
+
           {/* Categories Table */}
           {loading ? (
             <div className="text-center py-5">
@@ -284,7 +284,7 @@ function Categories({
           ) : (
             <>
               <div className="table-responsive">
-                <Table striped bordered hover style={{border:"2px solid"}}>
+                <Table striped bordered hover style={{ border: "2px solid" }}>
                   <thead>
                     <tr>
                       <th>
@@ -292,7 +292,7 @@ function Categories({
                           type="checkbox"
                           checked={selectAllCategories}
                           onChange={handleSelectAll}
-                           className='check'
+                          className='check'
                         />
                       </th>
                       <th>Image</th>
@@ -328,7 +328,7 @@ function Categories({
                                 type="checkbox"
                                 checked={selectedCategories.includes(category._id)}
                                 onChange={() => handleSelect(category._id)}
-                                 className='check'
+                                className='check'
                               />
                             </td>
                             <td>
@@ -387,7 +387,7 @@ function Categories({
                                 </span>
                               </div>
                             </td>
-                          
+
                             <td>
                               <Form.Check
                                 type="switch"
@@ -471,7 +471,22 @@ function Categories({
 
       {/* Category Details Modal */}
       <Modal show={showCategoryModal} onHide={() => setShowCategoryModal(false)} centered >
-        <Modal.Body>
+        <Modal.Body
+          className="p-4"
+          style={{
+            maxHeight: '400px',
+            overflowY: 'auto',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
+          }}
+        >
+          <style>
+            {`
+            .modal-body::-webkit-scrollbar {
+              display: none;
+            }
+          `}
+          </style>
           <Button type="button" onClick={() => setShowCategoryModal(false)} className="position-absolute border-0 justify-content-center closebtn p-0">X</Button>
           <Modal.Title> <h5>Category Details</h5></Modal.Title>
           {selectedCategory && (
@@ -479,21 +494,21 @@ function Categories({
               <div className="text-center mb-4">
                 <div className="mb-3">
                   {selectedCategory.img ? (
-                    <img 
-                      src={`http://localhost:5000${selectedCategory.img}`} 
+                    <img
+                      src={`http://localhost:5000${selectedCategory.img}`}
                       alt={selectedCategory.name}
-                      style={{ 
-                        width: '100px', 
-                        height: '100px', 
+                      style={{
+                        width: '100px',
+                        height: '100px',
                         objectFit: 'cover',
                         borderRadius: '12px',
                         border: '3px solid #dee2e6'
                       }}
                     />
                   ) : (
-                    <div style={{ 
-                      width: '150px', 
-                      height: '150px', 
+                    <div style={{
+                      width: '150px',
+                      height: '150px',
                       borderRadius: '12px',
                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                       display: 'flex',
@@ -517,19 +532,19 @@ function Categories({
                   <small className="text-muted d-block">Category Name</small>
                   <span className="fw-semibold">{selectedCategory.name}</span>
                 </div>
-                
+
                 <div className="list-group-item px-0">
                   <small className="text-muted d-block">Description</small>
                   <span>{selectedCategory.description || 'No description available'}</span>
                 </div>
-                
+
                 {selectedCategory.key && (
                   <div className="list-group-item px-0">
                     <small className="text-muted d-block">Key</small>
                     <span className="font-monospace">{selectedCategory.key}</span>
                   </div>
                 )}
-                
+
                 <div className="list-group-item px-0">
                   <small className="text-muted d-block">Status</small>
                   <div>
@@ -564,12 +579,12 @@ function Categories({
           )}
         </Modal.Body>
         <Modal.Footer className="border-0">
-          <Button variant="secondary" onClick={() => setShowCategoryModal(false)} style={{borderRadius:"50px"}}>
+          <Button variant="secondary" onClick={() => setShowCategoryModal(false)} style={{ borderRadius: "50px" }}>
             Close
           </Button>
-          <Button 
-            variant="dark"  
-            style={{borderRadius:"50px"}}
+          <Button
+            variant="dark"
+            style={{ borderRadius: "50px" }}
             onClick={() => {
               setShowCategoryModal(false);
               if (onEdit) {

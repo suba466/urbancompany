@@ -14,49 +14,49 @@ function Salon() {
   const navigate = useNavigate();
   const [activeIndex, setActiveIndex] = useState(0);
 
-   useEffect(() => {
+  useEffect(() => {
     const fetchSalonSubcategories = async () => {
       try {
         setLoading(true);
         console.log("Fetching ALL active subcategories from public API...");
-        
+
         // Clear previous data
         setSalonSubcategories([]);
         setHasSubcategories(false);
-        
+
         // 1. Get ALL active subcategories from PUBLIC API
         const response = await fetch("http://localhost:5000/api/subcategories");
-        
+
         if (!response.ok) {
           console.error("Failed to fetch subcategories");
           setHasSubcategories(false);
           return;
         }
-        
+
         const data = await response.json();
         console.log("All subcategories from public API:", data);
-        
+
         if (data.success && data.subcategories && Array.isArray(data.subcategories)) {
-          
+
           // 2. Filter for "Salon for women" subcategories
           // Find subcategories where categoryName contains "salon"
           const salonSubcategories = data.subcategories.filter(sub => {
             // Check if subcategory belongs to salon category
-            const hasSalonCategory = 
+            const hasSalonCategory =
               sub.categoryName?.toLowerCase().includes('salon') ||
               (sub.categoryId && sub.categoryId.name?.toLowerCase().includes('salon'));
-            
+
             // Also check if subcategory name contains "salon" as backup
             const hasSalonName = sub.name?.toLowerCase().includes('salon');
-            
+
             // IMPORTANT: Only show ACTIVE subcategories
             const isActive = sub.isActive === true || sub.isActive === undefined;
-            
+
             return (hasSalonCategory || hasSalonName) && isActive;
           });
-          
+
           console.log("Filtered salon subcategories:", salonSubcategories);
-          
+
           if (salonSubcategories.length > 0) {
             // Limit to 6 items for display
             setSalonSubcategories(salonSubcategories.slice(0, 6));
@@ -69,7 +69,7 @@ function Salon() {
           console.log("No subcategories data received");
           setHasSubcategories(false);
         }
-        
+
       } catch (error) {
         console.error("Error fetching salon subcategories: ", error);
         setHasSubcategories(false);
@@ -86,21 +86,21 @@ function Salon() {
     const fetchFromPublicAPI = async () => {
       try {
         const publicSubcatsResponse = await fetch("http://localhost:5000/api/subcategories");
-        
+
         if (publicSubcatsResponse.ok) {
           const publicSubcatsData = await publicSubcatsResponse.json();
           console.log("Subcategories from public API:", publicSubcatsData);
-          
+
           if (publicSubcatsData.subcategories && publicSubcatsData.subcategories.length > 0) {
             // Filter for salon-related AND active subcategories
-            const salonActiveSubcategories = publicSubcatsData.subcategories.filter(sub => 
+            const salonActiveSubcategories = publicSubcatsData.subcategories.filter(sub =>
               (sub.categoryName?.toLowerCase().includes('salon') ||
-               sub.name?.toLowerCase().includes('salon')) &&
+                sub.name?.toLowerCase().includes('salon')) &&
               (sub.isActive === true || sub.isActive === undefined)
             );
-            
+
             console.log("Active salon subcategories from public API:", salonActiveSubcategories);
-            
+
             if (salonActiveSubcategories.length > 0) {
               setSalonSubcategories(salonActiveSubcategories.slice(0, 6));
               setHasSubcategories(true);
@@ -111,7 +111,7 @@ function Salon() {
         console.error("Error from public API:", error);
       }
     };
-    
+
     // Uncomment if you want to try public API as fallback
     // fetchFromPublicAPI();
   }, []);
@@ -175,11 +175,11 @@ function Salon() {
       <Row className="g-4">
         {/* Carousel section */}
         <Col xs={12} lg={8} className="order-1 order-lg-2">
-          <Carousel 
-            activeIndex={activeIndex} 
+          <Carousel
+            activeIndex={activeIndex}
             onSelect={handleSelect}
-            controls={true} 
-            indicators={true} 
+            controls={true}
+            indicators={true}
             wrap={false}
           >
             {advanced?.map((a, index) => (
@@ -199,7 +199,7 @@ function Salon() {
                     e.target.src = "http://localhost:5000/assets/placeholder.png";
                   }}
                 />
-                <Carousel.Caption 
+                <Carousel.Caption
                   className="position-absolute d-flex align-items-center text-start justify-content-start"
                   style={{
                     inset: 0,
@@ -265,18 +265,18 @@ function Salon() {
 
           <div className="mt-4 super position-sticky">
             <div className="d-flex align-items-center left" style={{ marginBottom: "15px" }}>
-                <span className="fw-semibold" style={{ fontSize: "14px", color: "rgba(116,116,117,1)" }}>
-                 Select a service
-                </span>
-                <div style={{ flex: 1, height: "1px", backgroundColor: "rgba(227,227,227,1)" }}></div>
-              </div>
-            {!loading && (!hasSubcategories || salonSubcategories.length === 0) && (
-            <div >
-              <Alert variant="info" className="text-center">
-                No services available. Please check back later.
-              </Alert>
+              <span className="fw-semibold" style={{ fontSize: "14px", color: "rgba(116,116,117,1)" }}>
+                Select a service
+              </span>
+              <div style={{ flex: 1, height: "1px", backgroundColor: "rgba(227,227,227,1)" }}></div>
             </div>
-          )}
+            {!loading && (!hasSubcategories || salonSubcategories.length === 0) && (
+              <div >
+                <Alert variant="info" className="text-center">
+                  No services available. Please check back later.
+                </Alert>
+              </div>
+            )}
 
             {/* Show loading only if actively fetching */}
             {loading ? (
@@ -287,37 +287,35 @@ function Salon() {
                 <p className="mt-2" style={{ fontSize: "12px" }}>Checking services...</p>
               </div>
             ) : hasSubcategories && salonSubcategories.length > 0 ? (
-              <div className="d-flex flex-wrap left">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "15px", padding: "5px" }}>
                 {salonSubcategories.map((subcategory, index) => {
                   if (subcategory.isActive === false) {
-                    return null; 
+                    return null;
                   }
-                  
+
                   return (
                     <div
                       key={subcategory._id || index}
                       className="second-row-item"
                       onClick={() => handleSubcategoryClick(subcategory)}
-                      style={{ 
+                      style={{
                         cursor: "pointer",
-                        transition: "transform 0.2s",
-                        padding: "10px",
-                        borderRadius: "8px",
-                        flex: "0 0 calc(31.333% - 10px)",
-                        margin: "0 5px 10px 5px",
-                        textAlign: "center"
+                        textAlign: "center",
+                        transition: "transform 0.2s"
                       }}
                       onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.05)"}
                       onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
                     >
-                      <div 
-                        className="img-box d-flex align-items-center justify-content-center" 
-                        style={{ 
+                      <div
+                        className="img-box d-flex align-items-center justify-content-center shadow-sm"
+                        style={{
                           backgroundColor: "white",
-                          width: "60px",
-                          height: "60px",
+                          width: "70px",
+                          height: "70px",
+                          borderRadius: "12px",
                           overflow: "hidden",
-                          margin: "0 auto 5px"
+                          margin: "0 auto 8px",
+                          border: "1px solid #f0f0f0"
                         }}
                       >
                         <img
@@ -329,13 +327,17 @@ function Salon() {
                               : "http://localhost:5000/assets/placeholder.png"
                           }
                           alt={subcategory.name}
-                          className="object-fit-cover"
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover"
+                          }}
                           onError={(e) => {
                             e.target.src = "http://localhost:5000/assets/placeholder.png";
                           }}
                         />
                       </div>
-                      <p style={{fontSize:"12px"}}>
+                      <p style={{ fontSize: "12px", lineHeight: "1.3", margin: 0, fontWeight: "500" }}>
                         {subcategory.name}
                       </p>
                     </div>

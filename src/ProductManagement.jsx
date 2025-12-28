@@ -635,7 +635,7 @@ function ProductManagement({ isAdding }) {
       <Modal.Body
         className="p-4"
         style={{
-          maxHeight: '500px',
+          maxHeight: '400px',
           overflowY: 'auto',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none'

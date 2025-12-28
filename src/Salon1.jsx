@@ -32,21 +32,21 @@ function Salon1() {
   // Group packages by subcategory (title)
   const groupPackagesBySubcategory = () => {
     const groups = {};
-    
+
     packages.forEach(pkg => {
       // Use title (which is subcategory name from admin) for grouping
       const subcategory = pkg.title || pkg.subcategory || pkg.name || "Uncategorized";
-      
+
       if (!groups[subcategory]) {
         groups[subcategory] = {
           title: subcategory,
           packages: []
         };
       }
-      
+
       groups[subcategory].packages.push(pkg);
     });
-    
+
     return Object.values(groups);
   };
 
@@ -79,7 +79,7 @@ function Salon1() {
       // Get the first package's subcategory or title
       const firstPackage = packages[0];
       const subcategoryName = firstPackage.title || firstPackage.subcategory;
-      
+
       if (subcategoryName) {
         setPageTitle(subcategoryName);
       } else {
@@ -88,91 +88,91 @@ function Salon1() {
       }
     }
   };
-const fetchPackages = async () => {
-  try {
-    console.log("Fetching packages...");
-    
-    // Try multiple endpoints for fallback
-    let packages = [];
-    
-    // FIRST and BEST OPTION: Get only active packages sorted by latest first
+  const fetchPackages = async () => {
     try {
-      const response1 = await fetch('http://localhost:5000/api/active-packages');
-      if (response1.ok) {
-        const data1 = await response1.json();
-        packages = data1.packages || [];
-        
-        // Sort by createdAt in descending order (newest first)
-        packages.sort((a, b) => {
-          const dateA = new Date(a.createdAt || 0);
-          const dateB = new Date(b.createdAt || 0);
-          return dateB - dateA; // Newest first
-        });
-        
-        console.log(`Active packages (newest first): ${packages.length}`);
-      }
-    } catch (error) {
-      console.error("Error with active-packages endpoint:", error);
-    }
-    
-    // If no active packages, try all packages but filter for active ones
-    if (packages.length === 0) {
+      console.log("Fetching packages...");
+
+      // Try multiple endpoints for fallback
+      let packages = [];
+
+      // FIRST and BEST OPTION: Get only active packages sorted by latest first
       try {
-        const response2 = await fetch('http://localhost:5000/api/packages');
-        if (response2.ok) {
-          const data2 = await response2.json();
-          // Filter for active packages only
-          packages = (data2.packages || []).filter(pkg => pkg.isActive !== false);
-          
+        const response1 = await fetch('http://localhost:5000/api/active-packages');
+        if (response1.ok) {
+          const data1 = await response1.json();
+          packages = data1.packages || [];
+
           // Sort by createdAt in descending order (newest first)
           packages.sort((a, b) => {
             const dateA = new Date(a.createdAt || 0);
             const dateB = new Date(b.createdAt || 0);
             return dateB - dateA; // Newest first
           });
-          
-          console.log(`Filtered active packages: ${packages.length}`);
+
+          console.log(`Active packages (newest first): ${packages.length}`);
         }
       } catch (error) {
-        console.error("Error with packages endpoint:", error);
+        console.error("Error with active-packages endpoint:", error);
       }
-    }
-    
-    // If still no packages, try salonforwomen but filter for active
-    if (packages.length === 0) {
-      try {
-        const response3 = await fetch('http://localhost:5000/api/salonforwomen');
-        if (response3.ok) {
-          const data3 = await response3.json();
-          packages = data3.salonforwomen || [];
-          
-          // Filter for active packages if the field exists
-          if (packages[0] && packages[0].isActive !== undefined) {
-            packages = packages.filter(pkg => pkg.isActive !== false);
+
+      // If no active packages, try all packages but filter for active ones
+      if (packages.length === 0) {
+        try {
+          const response2 = await fetch('http://localhost:5000/api/packages');
+          if (response2.ok) {
+            const data2 = await response2.json();
+            // Filter for active packages only
+            packages = (data2.packages || []).filter(pkg => pkg.isActive !== false);
+
+            // Sort by createdAt in descending order (newest first)
+            packages.sort((a, b) => {
+              const dateA = new Date(a.createdAt || 0);
+              const dateB = new Date(b.createdAt || 0);
+              return dateB - dateA; // Newest first
+            });
+
+            console.log(`Filtered active packages: ${packages.length}`);
           }
-          
-          console.log(`Salon packages: ${packages.length}`);
+        } catch (error) {
+          console.error("Error with packages endpoint:", error);
         }
-      } catch (error) {
-        console.error("Error with salonforwomen endpoint:", error);
       }
+
+      // If still no packages, try salonforwomen but filter for active
+      if (packages.length === 0) {
+        try {
+          const response3 = await fetch('http://localhost:5000/api/salonforwomen');
+          if (response3.ok) {
+            const data3 = await response3.json();
+            packages = data3.salonforwomen || [];
+
+            // Filter for active packages if the field exists
+            if (packages[0] && packages[0].isActive !== undefined) {
+              packages = packages.filter(pkg => pkg.isActive !== false);
+            }
+
+            console.log(`Salon packages: ${packages.length}`);
+          }
+        } catch (error) {
+          console.error("Error with salonforwomen endpoint:", error);
+        }
+      }
+
+      // Log the packages for debugging
+      if (packages.length > 0) {
+        console.log("Packages found (newest first):");
+        packages.forEach((pkg, index) => {
+          console.log(`${index + 1}. ${pkg.name} - Active: ${pkg.isActive} - Created: ${pkg.createdAt || 'No date'}`);
+        });
+      }
+
+      setPackages(packages);
+
+    } catch (error) {
+      console.error("Error fetching packages:", error);
+      setPackages([]);
     }
-    
-    // Log the packages for debugging
-    if (packages.length > 0) {
-      console.log("Packages found (newest first):");
-      packages.forEach((pkg, index) => {
-        console.log(`${index + 1}. ${pkg.name} - Active: ${pkg.isActive} - Created: ${pkg.createdAt || 'No date'}`);
-      });
-    }
-    
-    setPackages(packages);
-    
-  } catch (error) {
-    console.error("Error fetching packages:", error);
-    setPackages([]);
-  }
-};
+  };
 
   // Fetch super packages (for other sections)
   const fetchSuperPackages = async () => {
@@ -239,16 +239,16 @@ const fetchPackages = async () => {
   const handleShowModal = async (item) => {
     try {
       console.log("Opening modal for item:", item);
-      
+
       let matched = item;
-      
+
       // Get cart data
       let existingCartItem = null;
       try {
         const cartsRes = await fetch("http://localhost:5000/api/carts");
         const cartsData = await cartsRes.json();
-        existingCartItem = cartsData.carts?.find(c => 
-          c.productId === item._id || 
+        existingCartItem = cartsData.carts?.find(c =>
+          c.productId === item._id ||
           c.title === item.title ||
           (item._id && c.productId === item._id.toString())
         );
@@ -307,9 +307,9 @@ const fetchPackages = async () => {
     { title: "Eyebrow", price: 49, content: "Threading" },
     { title: "Upper lip", price: 49, content: "Threading" },
   ];
-  
+
   const basePrice = 2195;
-  
+
   const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null, isExtraOnly = false) => {
     try {
       const productId = pkg.productId || pkg._id || Date.now().toString();
@@ -317,10 +317,10 @@ const fetchPackages = async () => {
 
       // Use title (subcategory name) for grouping
       const displayTitle = pkg.title || pkg.subcategory || "Package";
-      
+
       // CRITICAL: Get the product name - use pkg.name from the admin panel
       const productName = pkg.name || "Make Your Package";
-      
+
       console.log("DEBUG - Product being added to cart:", {
         pkgObject: pkg,
         pkgName: pkg.name, // This should be "Premium Hair Care" etc.
@@ -331,19 +331,19 @@ const fetchPackages = async () => {
       // Prepare content
       const content = isExtraOnly
         ? selectedServices.map(s => ({
+          details: s.content && s.content !== s.title ? `${s.title} (${s.content})` : s.title,
+          price: s.price || 0,
+        }))
+        : [
+          ...(pkg.baseServices || baseServices).map(s => ({
             details: s.content && s.content !== s.title ? `${s.title} (${s.content})` : s.title,
             price: s.price || 0,
-          }))
-        : [
-            ...(pkg.baseServices || baseServices).map(s => ({
-              details: s.content && s.content !== s.title ? `${s.title} (${s.content})` : s.title,
-              price: s.price || 0,
-            })),
-            ...selectedServices.map(s => ({
-              details: s.content && s.content !== s.title ? `${s.title} (${s.content})` : s.title,
-              price: s.price || 0,
-            })),
-          ];
+          })),
+          ...selectedServices.map(s => ({
+            details: s.content && s.content !== s.title ? `${s.title} (${s.content})` : s.title,
+            price: s.price || 0,
+          })),
+        ];
 
       const totalPrice = overridePrice || (pkg.price ? Number(pkg.price) : content.reduce((sum, s) => sum + s.price, 0));
 
@@ -462,7 +462,7 @@ const fetchPackages = async () => {
           <h4 className="fw-semibold mt-4">
             {pageTitle}
           </h4>
-          
+
           {/* GROUPED PACKAGES BY SUBCATEGORY */}
           {groupedPackages.length === 0 ? (
             <div className="text-center py-5">
@@ -472,30 +472,30 @@ const fetchPackages = async () => {
           ) : (
             groupedPackages.map((group, groupIndex) => (
               <div key={groupIndex} className="subcategory-group">
-                
+
                 {/* PACKAGES UNDER THIS SUBCATEGORY */}
                 {group.packages.map((pkg) => {
                   const displayTitle = pkg.title || pkg.subcategory || "Unnamed Package";
                   const serviceName = pkg.name || "Service"; // This is the product name
                   const displayItems = Array.isArray(pkg.items) ? pkg.items : [];
-                  const inCart = carts.find(c => 
-                    c.productId === pkg._id || 
+                  const inCart = carts.find(c =>
+                    c.productId === pkg._id ||
                     (c.title === displayTitle && c.serviceName === serviceName)
                   );
-                  
+
                   const pkgPrice = safePrice(pkg.price);
                   const displayPrice = roundPrice(pkgPrice);
                   const displayRating = pkg.rating || "0";
                   const displayDuration = pkg.duration || "N/A";
 
                   // Check if this is a Super Saver Package
-                  const isSuperSaver = group.title === "Super Saver Package" || 
-                                      displayTitle === "Super Saver Package" || 
-                                      pkg.subcategory === "Super Saver Package";
+                  const isSuperSaver = group.title === "Super Saver Package" ||
+                    displayTitle === "Super Saver Package" ||
+                    pkg.subcategory === "Super Saver Package";
 
                   return (
-                    <div 
-                      key={pkg._id} 
+                    <div
+                      key={pkg._id}
                       className='position-relative package-item'
                       style={{ marginBottom: "40px" }}
                     >
@@ -506,13 +506,14 @@ const fetchPackages = async () => {
                             <span className='fw-bold' style={{ fontSize: "13px" }}>PACKAGE</span>
                           </p>
                           {/* SERVICE NAME (not the subcategory) */}
-                          <h6 
-                            className="fw-semibold" 
+                          <h6
+                            className="fw-semibold"
                             style={{ cursor: "pointer", fontSize: "16px" }}
                             onClick={() => handleShowModal(pkg)}
                           >
                             {serviceName}
                           </h6>
+
                           <p style={{ color: "#5a5959ff" }}>
                             <MdStars style={{ fontSize: "13px", color: "#6800faff" }} />{" "}
                             <span style={{ textDecoration: "underline dashed", textUnderlineOffset: "7px", fontSize: "12px" }}>
@@ -525,142 +526,198 @@ const fetchPackages = async () => {
                           </p>
                         </Col>
 
-                        {/* Button Column */}
-                        <Col xs={4} className='position-relative' style={{ minHeight: "120px" }}> 
-                          {/* Conditional rendering based on Super Saver Package */}
-                          {isSuperSaver ? (
-                            // DISCOUNT IMAGE FOR SUPER SAVER PACKAGE
-                            <div 
-                              className='position-absolute'
-                              onClick={() => { 
-                                setSelectedItem({
-                                  ...pkg,
-                                  displayTitle: displayTitle,
-                                  serviceName: serviceName
-                                }); 
-                                setShowDiscountModal(true); 
-                              }}
-                              style={{
-                                cursor: 'pointer',
-                                width: '100%',
-                                height: '120px',
-                                border: 'none',
-                                padding: 0,
-                                background: 'transparent',
-                                overflow: 'hidden',
-                                top: 0,
-                                left: 0
-                              }}
-                            >
-                              <img 
-                                src="http://localhost:5000/assets/discount-25.png" 
-                                alt="25% OFF"
-                                style={{
-                                  width: '100%',
-                                  height: '100%',
-                                  objectFit: 'cover',
-                                  borderRadius: '8px',
-                                  border: '1px solid #ddd'
-                                }}
-                                onError={(e) => {
-                                  // Fallback if image doesn't load
-                                  e.target.style.display = 'none';
-                                  const fallbackDiv = document.createElement('div');
-                                  fallbackDiv.style.cssText = `
-                                    width: 100%;
-                                    height: 100%;
-                                    background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
-                                    border-radius: 8px;
-                                    display: flex;
-                                    flex-direction: column;
-                                    align-items: center;
-                                    justify-content: center;
-                                    color: white;
-                                    font-weight: bold;
-                                    font-size: 24px;
-                                  `;
-                                  fallbackDiv.innerHTML = '<div>25% OFF</div>';
-                                  e.target.parentElement.appendChild(fallbackDiv);
-                                }}
-                              />
+                        {/* Button Column - Flex layout for Image case, Absolute for Badge case */}
+                        <Col xs={4} className='position-relative' style={{ minHeight: "120px" }}>
+                          {pkg.img ? (
+                            /* IMAGE CASE: Stacked Layout */
+                            <div className="d-flex flex-column h-100 justify-content-between">
+                              <div onClick={() => handleShowModal(pkg)} style={{ cursor: 'pointer', flex: '1', display: 'flex' }}>
+                                <img
+                                  src={pkg.img.startsWith("http") ? pkg.img : `http://localhost:5000${pkg.img}`}
+                                  alt={pkg.name || "Product"}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
+                                  onError={(e) => { e.target.onerror = null; e.target.src = "http://localhost:5000/assets/placeholder.png"; }}
+                                />
+                              </div>
+                              <div className="text-center mt-2 w-100">
+                                {/* ADD BUTTON COMPONENT (Relative) */}
+                                {!inCart ? (
+                                  <Button
+                                    ref={(el) => (addButtonRefs.current[pkg._id] = el)}
+                                    onClick={() => {
+                                      handleAddToCart({
+                                        ...pkg,
+                                        name: pkg.name,
+                                        displayTitle: displayTitle,
+                                        serviceName: serviceName,
+                                        productId: pkg._id
+                                      }, []);
+                                    }}
+                                    style={{
+                                      color: "rgb(110, 66, 229)",
+                                      backgroundColor: "rgb(245, 241, 255)",
+                                      border: "1px solid rgb(110, 66, 229)",
+                                      padding: "5px 12px",
+                                      zIndex: "2",
+                                      width: "100%",
+                                      fontSize: "14px",
+                                      fontWeight: "600"
+                                    }}
+                                  >
+                                    Add
+                                  </Button>
+                                ) : (
+                                  /* Count Logic */
+                                  <div
+                                    className="d-flex align-items-center justify-content-between w-100"
+                                    style={{
+                                      border: "1px solid rgb(110, 66, 229)",
+                                      borderRadius: "6px",
+                                      backgroundColor: "rgb(245, 241, 255)",
+                                      padding: "4px"
+                                    }}
+                                  >
+                                    <Button onClick={() => handleDecrease(inCart)} className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center' style={{ width: "20px" }}>−</Button>
+                                    <span className="fw-bold" style={{ fontSize: "14px" }}>{inCart.count || 1}</span>
+                                    <Button onClick={() => handleIncrease(inCart)} className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center' style={{ width: "20px", opacity: totalItems >= 3 ? "0.6" : "1" }}>+</Button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           ) : (
-                            // REGULAR BUTTON FOR OTHER PACKAGES
-                            <Button
-                              variant="outline-success"
-                              size="sm"
-                              className='button2 position-absolute'
-                              onClick={() => { 
-                                setSelectedItem({
-                                  ...pkg,
-                                  displayTitle: displayTitle,
-                                  serviceName: serviceName
-                                }); 
-                                setShowDiscountModal(true); 
-                              }}
-                              
-                            >
-                              <h2 className="fw-semibold text-center" style={{ fontSize: "20px", margin: 0 }}>25% off</h2>
-                            </Button>
-                          )}
+                            /* BADGE CASE: Absolute Layout (Preserved) */
+                            <>
+                              {isSuperSaver ? (
+                                <div
+                                  className='position-absolute'
+                                  onClick={() => {
+                                    setSelectedItem({
+                                      ...pkg,
+                                      displayTitle: displayTitle,
+                                      serviceName: serviceName
+                                    });
+                                    setShowDiscountModal(true);
+                                  }}
+                                  style={{
+                                    cursor: 'pointer',
+                                    width: '100%',
+                                    height: '80px',
+                                    border: 'none',
+                                    padding: 0,
+                                    background: 'transparent',
+                                    overflow: 'hidden',
+                                    top: 0,
+                                    left: 0
+                                  }}
+                                >
+                                  <img
+                                    src="http://localhost:5000/assets/discount-25.png"
+                                    alt="25% OFF"
+                                    style={{
+                                      width: '100%',
+                                      height: '100%',
+                                      objectFit: 'cover',
+                                      borderRadius: '8px',
+                                      border: '1px solid #ddd'
+                                    }}
+                                    onError={(e) => {
+                                      e.target.style.display = 'none';
+                                      const fallbackDiv = document.createElement('div');
+                                      fallbackDiv.style.cssText = `
+                                          width: 100%;
+                                          height: 100%;
+                                          background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+                                          border-radius: 8px;
+                                          display: flex;
+                                          flex-direction: column;
+                                          align-items: center;
+                                          justify-content: center;
+                                          color: white;
+                                          font-weight: bold;
+                                          font-size: 24px;
+                                        `;
+                                      fallbackDiv.innerHTML = '<div>25% OFF</div>';
+                                      e.target.parentElement.appendChild(fallbackDiv);
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <Button
+                                  variant="outline-success"
+                                  size="sm"
+                                  className='button2 position-absolute'
+                                  onClick={() => {
+                                    setSelectedItem({
+                                      ...pkg,
+                                      displayTitle: displayTitle,
+                                      serviceName: serviceName
+                                    });
+                                    setShowDiscountModal(true);
+                                  }}
 
-                          {/* ABSOLUTE BUTTON AT BOTTOM */}
-                          <div className='position-absolute bottom-0 start-0 end-0 text-center'>
-                            {!inCart ? (
-                              <Button
-                              ref={(el) => (addButtonRefs.current[pkg._id] = el)}
-                              onClick={() => {
-                                handleAddToCart({
-                                  ...pkg,
-                                  name: pkg.name, // Make sure name is explicitly passed
-                                  displayTitle: displayTitle,
-                                  serviceName: serviceName,
-                                  productId: pkg._id
-                                }, []);
-                              }}
-                              style={{
-                                color: "rgb(110, 66, 229)",
-                                backgroundColor: "rgb(245, 241, 255)",
-                                border: "1px solid rgb(110, 66, 229)",
-                                padding: "5px 18px",
-                                zIndex: "2"
-                              }}
-                            >
-                              Add
-                            </Button>
-                            ) : (
-                              <div 
-                                className="d-flex align-items-center gap-0 bn w-50 justify-content-center" 
-                                style={{
-                                  border: "1px solid rgb(110, 66, 229)", 
-                                  borderRadius: "6px",
-                                  backgroundColor: "rgb(245, 241, 255)",
-                                  marginLeft: "36px"
-                                }}
-                              >
-                                <Button 
-                                  onClick={() => handleDecrease(inCart)} 
-                                  className='button border-0 d-flex align-items-center justify-content-center'
                                 >
-                                  −
+                                  <h2 className="fw-semibold text-center" style={{ fontSize: "20px", margin: 0 }}>25% off</h2>
                                 </Button>
-                                <span className="count-box fw-bold">{inCart.count || 1}</span>
-                                <Button 
-                                  onClick={() => handleIncrease(inCart)} 
-                                  className='button border-0 d-flex align-items-center justify-content-center'  
-                                  style={{ opacity: totalItems >= 3 ? "0.6" : "1" }}
-                                >
-                                  +
-                                </Button>
+                              )}
+
+                              <div className='position-absolute bottom-0 start-0 end-0 text-center'>
+                                {!inCart ? (
+                                  <Button
+                                    ref={(el) => (addButtonRefs.current[pkg._id] = el)}
+                                    onClick={() => {
+                                      handleAddToCart({
+                                        ...pkg,
+                                        name: pkg.name,
+                                        displayTitle: displayTitle,
+                                        serviceName: serviceName,
+                                        productId: pkg._id
+                                      }, []);
+                                    }}
+                                    style={{
+                                      color: "rgb(110, 66, 229)",
+                                      backgroundColor: "rgb(245, 241, 255)",
+                                      border: "1px solid rgb(110, 66, 229)",
+                                      padding: "5px 18px",
+                                      zIndex: "2"
+                                    }}
+                                  >
+                                    Add
+                                  </Button>
+                                ) : (
+                                  <div
+                                    className="d-flex align-items-center gap-0 bn w-50 justify-content-center"
+                                    style={{
+                                      border: "1px solid rgb(110, 66, 229)",
+                                      borderRadius: "6px",
+                                      backgroundColor: "rgb(245, 241, 255)",
+                                      marginLeft: "36px"
+                                    }}
+                                  >
+                                    <Button
+                                      onClick={() => handleDecrease(inCart)}
+                                      className='button border-0 d-flex align-items-center justify-content-center'
+                                    >
+                                      −
+                                    </Button>
+                                    <span className="count-box fw-bold">{inCart.count || 1}</span>
+                                    <Button
+                                      onClick={() => handleIncrease(inCart)}
+                                      className='button border-0 d-flex align-items-center justify-content-center'
+                                      style={{ opacity: totalItems >= 3 ? "0.6" : "1" }}
+                                    >
+                                      +
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
+                            </>
+                          )}
                         </Col>
                       </Row>
-                      
+
                       <div style={{ borderBottom: "1px dashed #bbb6b6ff" }}></div>
                       <br />
-                      
+
                       {/* Service Items */}
                       <div style={{ fontSize: "12px" }}>
                         {displayItems.length > 0 ? (
@@ -681,10 +738,10 @@ const fetchPackages = async () => {
                           <p className="text-muted">No service details available</p>
                         )}
                       </div>
-                      
+
                       <br />
-                      <Button 
-                        className='edit' 
+                      <Button
+                        className='edit'
                         onClick={() => handleShowModal(pkg)}
                         style={{
                           backgroundColor: "transparent",
@@ -693,7 +750,7 @@ const fetchPackages = async () => {
                           padding: "5px 15px",
                           fontSize: "14px"
                         }}
-                      > 
+                      >
                         Edit your package
                       </Button>
                     </div>
@@ -706,9 +763,9 @@ const fetchPackages = async () => {
 
         {/* Right Column - Desktop Sticky Cart */}
         <Col xs={12} md={5} className="mt-4 mt-md-0 sticky-cart d-none d-md-block">
-          <div style={{ flex: 1, height: "1px", backgroundColor: "rgba(192,192,195,1)" }}></div>     
+          <div style={{ flex: 1, height: "1px", backgroundColor: "rgba(192,192,195,1)" }}></div>
           <br />
-          <CartBlock 
+          <CartBlock
             carts={carts}
             formatPrice={formatPrice}
             safePrice={safePrice}
@@ -716,62 +773,11 @@ const fetchPackages = async () => {
             handleDecrease={handleDecrease}
             navigate={navigate}
             onEdit={handleShowModal}
-          />       
+          />
         </Col>
       </Row>
 
-      {/* Mobile Menu */}
-      <Button 
-        className='menu-float position-fixed border-0 d-md-none' 
-        style={{ 
-          bottom: carts.length > 0 ? "120px" : "20px",
-          right: "20px",
-          backgroundColor: "#6e42e5",
-          color: "white",
-          borderRadius: "50%",
-          width: "50px",
-          height: "50px",
-          zIndex: 1000
-        }} 
-        onClick={() => setShowMenu(!showMenu)}
-      >
-        {showMenu ? "X" : "≡"}
-      </Button>
 
-      <Modal show={showMenu} onHide={() => setShowMenu(false)} centered size='sm'>
-        <ModalBody>
-          <Container>
-            <Row className="g-2 justify-content-center">
-              {(Array.isArray(salon) ? salon.slice(0, 6) : []).map((item, index) => (
-                <Col xs={4} key={index} className="text-center">
-                  <div style={{ cursor: "pointer" }}>
-                    <img 
-                      src={
-                        item.img && typeof item.img === "string"
-                          ? item.img.startsWith("http")
-                            ? item.img
-                            : `http://localhost:5000${item.img}`
-                          : "http://localhost:5000/assets/placeholder.png"
-                      }
-                      alt={item.name || "Menu item"}
-                      style={{
-                        width: "60%", 
-                        borderRadius: "10px", 
-                        aspectRatio: "1/1", 
-                        objectFit: "cover"
-                      }}
-                      onError={(e) => {
-                        e.target.src = "http://localhost:5000/assets/placeholder.png";
-                      }}
-                    />
-                    <p style={{ fontSize: "12px", marginTop: "5px" }}>{item.name || ""}</p>
-                  </div>
-                </Col>
-              ))}
-            </Row>
-          </Container>
-        </ModalBody>
-      </Modal>
 
       {/* Mobile Cart Footer */}
       {carts.length > 0 && (
@@ -786,8 +792,8 @@ const fetchPackages = async () => {
             zIndex: 999
           }}
         >
-          <Button 
-            className="mobile-cart-footer-button mobile-cart-footer-total w-100 border-0" 
+          <Button
+            className="mobile-cart-footer-button mobile-cart-footer-total w-100 border-0"
             onClick={() => navigate("/cart")}
             style={{
               backgroundColor: "#6e42e5",
@@ -802,15 +808,15 @@ const fetchPackages = async () => {
 
       {/* Salon Modal */}
       <Salon1modal
-        showFrequentlyAdded={showFrequentlyAdded} 
+        showFrequentlyAdded={showFrequentlyAdded}
         setShowFrequentlyAdded={setShowFrequentlyAdded}
-        show={showModal} 
+        show={showModal}
         totalItems={totalItems}
         onHide={handleCloseModal}
         selectedItem={selectedItem}
-        handleAddToCart={handleAddToCart} 
-        fetchCarts={fetchCarts}  
-        carts={carts} 
+        handleAddToCart={handleAddToCart}
+        fetchCarts={fetchCarts}
+        carts={carts}
         setCarts={setCarts}
         addButtonRefs={addButtonRefs}
         basePrice={basePrice}
@@ -818,7 +824,7 @@ const fetchPackages = async () => {
         roundPrice={roundPrice}
         showDiscountModal={showDiscountModal}
         setShowDiscountModal={setShowDiscountModal}
-        handleDecrease={handleDecrease} 
+        handleDecrease={handleDecrease}
         handleIncrease={handleIncrease}
       />
     </Container>

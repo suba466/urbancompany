@@ -11,17 +11,17 @@ function Salon1modal({
   show,
   totalItems = 0,
   showFrequentlyAdded = false,
-  setShowFrequentlyAdded = () => {},
+  setShowFrequentlyAdded = () => { },
   carts = [],
-  setCarts = () => {},
-  onHide = () => {},
+  setCarts = () => { },
+  onHide = () => { },
   selectedItem = null,
-  handleAddToCart = async () => {},
+  handleAddToCart = async () => { },
   basePrice = 0,
   baseServices = [],
   roundPrice = v => Math.round(v),
   showDiscountModal = false,
-  setShowDiscountModal = () => {}
+  setShowDiscountModal = () => { }
 }) {
   // ---------- state ----------
   const [loadingDropdownKey, setLoadingDropdownKey] = useState(null);
@@ -32,7 +32,7 @@ function Salon1modal({
   const visibleCount = 3.5;
 
   const [dropdownModal, setDropdownModal] = useState({ show: false, label: "", options: [], selected: "", type: "" });
-  
+
   // ---------- static data ----------
   const initialServices = {
     "waxingOptions:Full arms (including underarms)": { title: "Full arms (including underarms)", price: 599, count: 1, content: "Chocolate Roll on" },
@@ -43,7 +43,7 @@ function Salon1modal({
   };
 
   const [selectedServices, setSelectedServices] = useState(initialServices);
-  const [addedImgs, setAddedImgs] = useState([]);     
+  const [addedImgs, setAddedImgs] = useState([]);
 
   // Filter out items that are already in cart
   const visibleCarouselItems = addedImgs.filter(img => {
@@ -52,30 +52,30 @@ function Salon1modal({
   });
 
   const waxingOptions = [
-    { label: "Full arms (including underarms)", options: [ { name: "RICA White Chocolate Wax", price: 499 }, { name: "Chocolate Roll on", price: 599 }, { name: "Honey Wax", price: 319 }, { name: "RICA Roll on", price: 679 } ] },
-    { label: "Full legs", options: [ { name: "Honey Wax", price: 319 }, { name: "RICA White Chocolate Wax", price: 549 }, { name: "Chocolate Roll on", price: 499 }, { name: "RICA Roll on", price: 629 } ] },
-    { label: "Underarms", options: [ { name: "Honey Wax", price: 49 }, { name: "RICA peel-off", price: 149 } ] },
-    { label: "Bikini line", options: [ { name: "Honey Premium Wax", price: 249 }, { name: "RICA peel-off", price: 249 } ] },
-    { label: "Half arms", options: [ { name: "Honey Wax", price: 219 }, { name: "RICA White Chocolate Wax", price: 319 } ] },
-    { label: "Half legs", options: [ { name: "RICA White Chocolate Wax", price: 369 }, { name: "Honey Wax", price: 219 } ] },
-    { label: "Stomach", options: [ { name: "Chocolate Roll on", price: 569 }, { name: "Honey Wax", price: 319 }, { name: "RICA White Chocolate Wax", price: 469 }, { name: "RICA Roll on", price: 619 } ] },
-    { label: "Back", options: [ { name: "RICA Roll on", price: 669 }, { name: "RICA White Chocolate Wax", price: 519 }, { name: "Chocolate Roll on", price: 619 }, { name: "Honey Wax", price: 469 } ] },
-    { label: "Bikini", options: [ { name: "RICA peel-off", price: 1299 }, { name: "Honey Premium Wax", price: 949 } ] },
-    { label: "Full body", options: [ { name: "Honey Wax", price: 1369 }, { name: "RICA White Chocolate Wax", price: 1919 }, { name: "RICA Roll on", price: 2019 }, { name: "Chocolate Roll on", price: 1619 } ] },
+    { label: "Full arms (including underarms)", options: [{ name: "RICA White Chocolate Wax", price: 499 }, { name: "Chocolate Roll on", price: 599 }, { name: "Honey Wax", price: 319 }, { name: "RICA Roll on", price: 679 }] },
+    { label: "Full legs", options: [{ name: "Honey Wax", price: 319 }, { name: "RICA White Chocolate Wax", price: 549 }, { name: "Chocolate Roll on", price: 499 }, { name: "RICA Roll on", price: 629 }] },
+    { label: "Underarms", options: [{ name: "Honey Wax", price: 49 }, { name: "RICA peel-off", price: 149 }] },
+    { label: "Bikini line", options: [{ name: "Honey Premium Wax", price: 249 }, { name: "RICA peel-off", price: 249 }] },
+    { label: "Half arms", options: [{ name: "Honey Wax", price: 219 }, { name: "RICA White Chocolate Wax", price: 319 }] },
+    { label: "Half legs", options: [{ name: "RICA White Chocolate Wax", price: 369 }, { name: "Honey Wax", price: 219 }] },
+    { label: "Stomach", options: [{ name: "Chocolate Roll on", price: 569 }, { name: "Honey Wax", price: 319 }, { name: "RICA White Chocolate Wax", price: 469 }, { name: "RICA Roll on", price: 619 }] },
+    { label: "Back", options: [{ name: "RICA Roll on", price: 669 }, { name: "RICA White Chocolate Wax", price: 519 }, { name: "Chocolate Roll on", price: 619 }, { name: "Honey Wax", price: 469 }] },
+    { label: "Bikini", options: [{ name: "RICA peel-off", price: 1299 }, { name: "Honey Premium Wax", price: 949 }] },
+    { label: "Full body", options: [{ name: "Honey Wax", price: 1369 }, { name: "RICA White Chocolate Wax", price: 1919 }, { name: "RICA Roll on", price: 2019 }, { name: "Chocolate Roll on", price: 1619 }] },
     { label: "I don't need anything", options: [] },
   ];
-  
-  const facial = [ { label: "Sara Lightening glow facial", price: 949 }, { label: "Elysian firming wine glow facial", price: 1049 }, { label: "O3+ shine & glow facial", price: 1699 }, { label: "O3+ power brightening facial", price: 1999 }, { label: "Sara fruit cleanup", price: 699 }, { label: "O3+ tan clear cleanup", price: 849 }, { label: "I don't need anything" } ];
-  const pedicure = [ { label: "Elysian Chocolate & Vanilla pedicure", price: 849 }, { label: "Elysian Candle Spa pedicure", price: 999 }, { label: "Elysian British Rose pedicure", price: 759 }, { label: "I don't need anything" } ];
-  const manicure = [ { label: "Cut,file & polish - Hands", price: 149 }, { label: "Elysian British Rose manicure", price: 649 }, { label: "Elysian Chocolate & Vanilla manicure", price: 699 }, { label: "Elysian Candle Spa manicure", price: 899 }, { label: "I don't need anything" } ];
-  const bleach = [ { label: "Face & neck", options: [ { name: "Bleach", price: 299 }, { name: "Detan", price: 349 } ] }, { label: "Full legs", options: [ { name: "Detan", price: 499 }, { name: "Bleach", price: 499 } ] }, { label: "Full body", options: [ { name: "Detan", price: 1499 }, { name: "Bleach", price: 1499 } ] }, { label: "Full arms", options: [ { name: "Detan", price: 349 }, { name: "Bleach", price: 349 } ] }, { label: "Chest", options: [ { name: "Detan", price: 399 }, { name: "Bleach", price: 399 } ] }, { label: "Back", options: [ { name: "Detan", price: 399 }, { name: "Bleach", price: 399 } ] }, { label: "I don't need anything", options: [] } ];
-  const facialHair = [ { label: "Eyebrow", options: [ { name: "Threading", price: 49 } ] }, { label: "Forehead", options: [ { name: "Threading", price: 59 }, { name: "Face waxing", price: 99 } ] }, { label: "Face", options: [ { name: "Face waxing", price: 399 }, { name: "Threading", price: 149 } ] }, { label: "Sidelocks", options: [ { name: "Threading", price: 49 }, { name: "Face waxing", price: 99 } ] }, { label: "Upper lip", options: [ { name: "Face waxing", price: 69 }, { name: "Threading", price: 49 } ] }, { label: "Neck", options: [ { name: "Threading", price: 149 }, { name: "Face waxing", price: 199 } ] }, { label: "Jawline", options: [ { name: "Face waxing", price: 99 }, { name: "Threading", price: 99 } ] }, { label: "Chin", options: [ { name: "Threading", price: 29 }, { name: "Face waxing", price: 99 } ] }, { label: "I don't need anything", options: [] } ];
-  const hair = [ { label: "Hair color application", price: 249 }, { label: "Henna mehendi application", price: 399 }, { label: "Head massage (10 mins)", price: 199 }, { label: "Head massage (20 mins)", price: 349 }, { label: "I don't need anything" } ];
+
+  const facial = [{ label: "Sara Lightening glow facial", price: 949 }, { label: "Elysian firming wine glow facial", price: 1049 }, { label: "O3+ shine & glow facial", price: 1699 }, { label: "O3+ power brightening facial", price: 1999 }, { label: "Sara fruit cleanup", price: 699 }, { label: "O3+ tan clear cleanup", price: 849 }, { label: "I don't need anything" }];
+  const pedicure = [{ label: "Elysian Chocolate & Vanilla pedicure", price: 849 }, { label: "Elysian Candle Spa pedicure", price: 999 }, { label: "Elysian British Rose pedicure", price: 759 }, { label: "I don't need anything" }];
+  const manicure = [{ label: "Cut,file & polish - Hands", price: 149 }, { label: "Elysian British Rose manicure", price: 649 }, { label: "Elysian Chocolate & Vanilla manicure", price: 699 }, { label: "Elysian Candle Spa manicure", price: 899 }, { label: "I don't need anything" }];
+  const bleach = [{ label: "Face & neck", options: [{ name: "Bleach", price: 299 }, { name: "Detan", price: 349 }] }, { label: "Full legs", options: [{ name: "Detan", price: 499 }, { name: "Bleach", price: 499 }] }, { label: "Full body", options: [{ name: "Detan", price: 1499 }, { name: "Bleach", price: 1499 }] }, { label: "Full arms", options: [{ name: "Detan", price: 349 }, { name: "Bleach", price: 349 }] }, { label: "Chest", options: [{ name: "Detan", price: 399 }, { name: "Bleach", price: 399 }] }, { label: "Back", options: [{ name: "Detan", price: 399 }, { name: "Bleach", price: 399 }] }, { label: "I don't need anything", options: [] }];
+  const facialHair = [{ label: "Eyebrow", options: [{ name: "Threading", price: 49 }] }, { label: "Forehead", options: [{ name: "Threading", price: 59 }, { name: "Face waxing", price: 99 }] }, { label: "Face", options: [{ name: "Face waxing", price: 399 }, { name: "Threading", price: 149 }] }, { label: "Sidelocks", options: [{ name: "Threading", price: 49 }, { name: "Face waxing", price: 99 }] }, { label: "Upper lip", options: [{ name: "Face waxing", price: 69 }, { name: "Threading", price: 49 }] }, { label: "Neck", options: [{ name: "Threading", price: 149 }, { name: "Face waxing", price: 199 }] }, { label: "Jawline", options: [{ name: "Face waxing", price: 99 }, { name: "Threading", price: 99 }] }, { label: "Chin", options: [{ name: "Threading", price: 29 }, { name: "Face waxing", price: 99 }] }, { label: "I don't need anything", options: [] }];
+  const hair = [{ label: "Hair color application", price: 249 }, { label: "Henna mehendi application", price: 399 }, { label: "Head massage (10 mins)", price: 199 }, { label: "Head massage (20 mins)", price: 349 }, { label: "I don't need anything" }];
 
   // ---------- ADD THE MISSING FUNCTION HERE ----------
   const handleCheckboxChange = (sectionName, label, item, isChecked) => {
     const key = `${sectionName}:${label}`;
-    
+
     if (isChecked) {
       // Add service to selectedServices
       setSelectedServices(prev => ({
@@ -252,7 +252,7 @@ function Salon1modal({
   const handleNext = () => {
     if (index < Math.max(0, addedImgs.length - visibleCount)) setIndex(i => i + 1);
   };
-  
+
   const handlePrev = () => { if (index > 0) setIndex(i => i - 1); };
 
   // ---------- render ----------
@@ -296,7 +296,7 @@ function Salon1modal({
                 {discountedPrice ? (
                   <>
                     <span className="fw-semibold" style={{ fontSize: "18px" }}>{formatPrice(roundPrice(discountedPrice))}</span>
-                    <span className="text-muted ms-2 text-decoration-line-through" style={{fontSize: "14px" }}>{formatPrice(roundPrice(totalPrice))}</span>
+                    <span className="text-muted ms-2 text-decoration-line-through" style={{ fontSize: "14px" }}>{formatPrice(roundPrice(totalPrice))}</span>
                   </>
                 ) : (
                   <span className="fw-semibold" style={{ fontSize: "18px" }}>{formatPrice(roundPrice(totalPrice))}</span>
@@ -380,8 +380,22 @@ function Salon1modal({
       {/* DISCOUNT / CART CHANGE MODAL */}
       <Modal show={showDiscountModal} onHide={() => { setShowDiscountModal(false); setShowFrequentlyAdded(false); }} centered contentClassName="custom-modal">
         <Button type="button" onClick={() => setShowDiscountModal(false)} className="position-absolute border-0 justify-content-center closebtn p-0" >X</Button>
-        <ModalBody>
-          <div className="p-3 scroll position-relative">
+        <ModalBody
+          style={{
+            maxHeight: '400px',
+            overflowY: 'auto',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
+          }}
+        >
+          <style>
+            {`
+            .modal-body::-webkit-scrollbar {
+              display: none;
+            }
+          `}
+          </style>
+          <div className="p-3 position-relative">
             <Row>
               {selectedItem && (
                 <Col xs={9}>
@@ -390,7 +404,7 @@ function Salon1modal({
 
                   <p style={{ fontSize: "13px", marginBottom: "4px" }}>
                     <span className="fw-semibold">{formatPrice(discountedPrice || totalPrice)}</span>
-                    {discountedPrice && <span className="text-decoration-line-through" style={{color: "#888", fontSize: "14px", marginLeft: "8px" }}>{formatPrice(totalPrice)}</span>}
+                    {discountedPrice && <span className="text-decoration-line-through" style={{ color: "#888", fontSize: "14px", marginLeft: "8px" }}>{formatPrice(totalPrice)}</span>}
                     <span style={{ fontSize: "13px", color: "#676767ff" }}><GoDotFill style={{ fontSize: "10px" }} />{selectedItem.duration}</span>
                   </p>
 
@@ -409,35 +423,35 @@ function Salon1modal({
                     disabled={totalItems >= 3}
                     style={{ color: "rgb(110, 66, 229)", backgroundColor: "rgb(245, 241, 255)", border: "1px solid rgb(110, 66, 229)", padding: "5px 18px", zIndex: "2" }}
                     onClick={() => {
-                      if (totalItems >= 3) { 
-                        alert("You can only add up to 3 products."); 
-                        return; 
+                      if (totalItems >= 3) {
+                        alert("You can only add up to 3 products.");
+                        return;
                       }
                       setCartCount(1);
                       setHasChange(true);
                     }}
                   >Add</Button>
                 ) : (
-                  <div className='d-flex align-items-center gap-1 bn' style={{ border: "1px solid rgb(110, 66, 229)", backgroundColor: "rgb(245, 241, 255)", borderRadius: "6px"}}>
-                    <Button 
-                      type="button" 
+                  <div className='d-flex align-items-center gap-1 bn' style={{ border: "1px solid rgb(110, 66, 229)", backgroundColor: "rgb(245, 241, 255)", borderRadius: "6px" }}>
+                    <Button
+                      type="button"
                       onClick={() => {
                         setCartCount(prev => Math.max(0, prev - 1));
                         setHasChange(true);
                       }}
                       className='button border-0 d-flex align-items-center justify-content-center'>−</Button>
                     <span className="count-box fw-bold">{cartCount}</span>
-                    <Button 
-                      type="button" 
+                    <Button
+                      type="button"
                       onClick={() => {
-                        if (cartCount >= 3) { 
-                          alert("You can't add more than 3 products."); 
-                          return; 
+                        if (cartCount >= 3) {
+                          alert("You can't add more than 3 products.");
+                          return;
                         }
                         setCartCount(prev => prev + 1);
                         setHasChange(true);
                       }}
-                      className='button border-0 d-flex align-items-center justify-content-center' 
+                      className='button border-0 d-flex align-items-center justify-content-center'
                       style={{ opacity: cartCount >= 3 ? "0.6" : "1" }}
                     >+</Button>
                   </div>
@@ -449,7 +463,7 @@ function Salon1modal({
               <div className="mt-4">
                 <hr style={{ border: "3px solid #676767ff" }} />
                 <h4 className="fw-bold mb-3">Frequently added together</h4>
-                
+
                 {/* Use your FrequentlyAddedCarousel component */}
                 <FrequentlyAddedCarousel
                   items={visibleCarouselItems}
@@ -476,7 +490,7 @@ function Salon1modal({
                       ...prev,
                       [item.key]: (prev[item.key] || 0) + 1
                     }));
-                    
+
                     if (typeof window.updateCartInstantly === "function") {
                       window.updateCartInstantly(item.name);
                     }
@@ -492,11 +506,11 @@ function Salon1modal({
                           body: JSON.stringify({ count: cartItem.count - 1 })
                         });
                       } else {
-                        await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, { 
-                          method: "DELETE" 
+                        await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
+                          method: "DELETE"
                         });
                       }
-                      
+
                       // Refresh carts
                       const refreshed = await fetchCarts();
                       setCarts(refreshed);
@@ -506,14 +520,14 @@ function Salon1modal({
                 />
               </div>
             )}
-            
+
             <hr style={{ border: "3px solid #676767ff" }} />
-            
+
             {/* Rating section remains the same */}
             {Array.isArray(selectedItem?.ratingBreak) && selectedItem.ratingBreak.length > 0 && (
               <div className="mt-5">
-                <h3><FaStar style={{marginBottom:"10px"}}/> <span className="fw-semibold" style={{fontSize:"37px"}}>4.85</span></h3>
-                <p style={{color:"#4c4c4cff",marginTop:"-5px"}}>  7.3M reviews</p>
+                <h3><FaStar style={{ marginBottom: "10px" }} /> <span className="fw-semibold" style={{ fontSize: "37px" }}>4.85</span></h3>
+                <p style={{ color: "#4c4c4cff", marginTop: "-5px" }}>  7.3M reviews</p>
                 {selectedItem.ratingBreak.map((rb, i) => (
                   <div className="d-flex align-items-center"
                     key={i}
@@ -521,7 +535,7 @@ function Salon1modal({
                       fontSize: "13px",
                       marginBottom: "6px",
                     }}>
-                    <div className="d-flex align-items-center" style={{  width: "45px" }}>
+                    <div className="d-flex align-items-center" style={{ width: "45px" }}>
                       <FaStar style={{ fontSize: "12px", marginRight: "3px" }} />
                       <span className="fw-semibold" style={{ fontSize: "16px" }}>{rb.stars}</span>
                     </div>
@@ -554,13 +568,13 @@ function Salon1modal({
           {/* DONE BUTTON - Only show when there are changes */}
           {hasChange && (
             <div className="p-3 pt-0">
-              <Button 
-                variant="success" 
-                className="butn w-100 fw-bold" 
+              <Button
+                variant="success"
+                className="butn w-100 fw-bold"
                 onClick={async () => {
                   // Handle main product count changes
                   const cartItem = carts.find(c => c.title === selectedItem.title);
-                  
+
                   if (cartCount > 0) {
                     if (cartItem) {
                       // Update existing item
@@ -575,8 +589,8 @@ function Salon1modal({
                     }
                   } else if (cartCount === 0 && cartItem) {
                     // Remove item if count is 0
-                    await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, { 
-                      method: "DELETE" 
+                    await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
+                      method: "DELETE"
                     });
                   }
 
@@ -595,7 +609,7 @@ function Salon1modal({
                       };
 
                       const existingCarouselItem = carts.find(c => c.title === img.name);
-                      
+
                       if (existingCarouselItem) {
                         await fetch(`http://localhost:5000/api/carts/${existingCarouselItem._id}`, {
                           method: "PUT",
@@ -613,8 +627,8 @@ function Salon1modal({
                       // Remove carousel item if count is 0
                       const existingCarouselItem = carts.find(c => c.title === img.name);
                       if (existingCarouselItem) {
-                        await fetch(`http://localhost:5000/api/carts/${existingCarouselItem._id}`, { 
-                          method: "DELETE" 
+                        await fetch(`http://localhost:5000/api/carts/${existingCarouselItem._id}`, {
+                          method: "DELETE"
                         });
                       }
                     }
@@ -625,7 +639,7 @@ function Salon1modal({
                   if (typeof window.updateCartInstantly === "function") {
                     window.updateCartInstantly(selectedItem.title);
                   }
-                  
+
                   setShowDiscountModal(false);
                   setHasChange(false);
                   setShowFrequentlyAdded(true);

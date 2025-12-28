@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, Row, Col, Form, Button, Alert, 
-  Table, Badge, Modal 
+import {
+  Card, Row, Col, Form, Button, Alert,
+  Table, Badge, Modal
 } from 'react-bootstrap';
 import { MdModeEdit, MdOutlineDelete } from "react-icons/md";
 import { IoEyeSharp } from "react-icons/io5";
 import TableControls from './TableControls';
-import { 
-  prepareUserDataForExport, 
+import {
+  prepareUserDataForExport,
   getCSVHeadersFromData,
   exportAsPDF,
   exportAsExcel,
@@ -52,6 +52,16 @@ function UserManagement({ isAdding, isEditing, userId }) {
   const [formErrors, setFormErrors] = useState({});
   const [touchedFields, setTouchedFields] = useState({});
 
+  // Auth User Data for Permission Filtering
+  const [currentUserRole, setCurrentUserRole] = useState(localStorage.getItem('userRole') || 'admin');
+  const [currentUserPermissions, setCurrentUserPermissions] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('userPermissions') || '{}');
+    } catch {
+      return {};
+    }
+  });
+
   const getAuthToken = () => {
     return localStorage.getItem('authToken');
   };
@@ -67,12 +77,12 @@ function UserManagement({ isAdding, isEditing, userId }) {
   const fetchUsers = async (page = 1, search = '', perPage = userPerPage) => {
     try {
       let url = `http://localhost:5000/api/admin/users?page=${page}&limit=${perPage}&search=${search}`;
-      
+
       const response = await fetch(url, {
         headers: getAuthHeaders()
       });
       const data = await response.json();
-      
+
       if (data.success) {
         setUsers(data.users || []);
         setUserTotalPages(data.pagination?.pages || 1);
@@ -113,7 +123,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
   // Field-by-field validation
   const validateField = (name, value) => {
     const errors = { ...formErrors };
-    
+
     switch (name) {
       case 'name':
         if (!value.trim()) {
@@ -122,7 +132,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
           delete errors.name;
         }
         break;
-        
+
       case 'email':
         if (!value.trim()) {
           errors.email = 'Email is required';
@@ -132,7 +142,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
           delete errors.email;
         }
         break;
-        
+
       case 'phone':
         if (!value.trim()) {
           errors.phone = 'Phone is required';
@@ -142,7 +152,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
           delete errors.phone;
         }
         break;
-        
+
       case 'designation':
         if (!value) {
           errors.designation = 'Designation is required';
@@ -150,11 +160,11 @@ function UserManagement({ isAdding, isEditing, userId }) {
           delete errors.designation;
         }
         break;
-        
+
       case 'password':
         const isPasswordPlaceholder = value === '********';
         const isPasswordEmpty = value.trim() === '';
-        
+
         if (!isEditingUser) {
           if (!value || value.trim() === '') {
             errors.password = 'Password is required';
@@ -175,11 +185,11 @@ function UserManagement({ isAdding, isEditing, userId }) {
           }
         }
         break;
-        
+
       case 'confirmPassword':
         const isPasswordPlaceholderCP = newUser.password === '********';
         const isPasswordEmptyCP = newUser.password.trim() === '';
-        
+
         if (!isEditingUser) {
           if (!value) {
             errors.confirmPassword = 'Please confirm password';
@@ -204,11 +214,11 @@ function UserManagement({ isAdding, isEditing, userId }) {
           }
         }
         break;
-        
+
       default:
         break;
     }
-    
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -221,7 +231,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
     } else {
       setNewUser({ ...newUser, [field]: value });
     }
-    
+
     // Auto-validate if field was touched before
     if (touchedFields[field]) {
       validateField(field, value);
@@ -230,7 +240,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
 
   const handleFieldBlur = (field) => {
     setTouchedFields({ ...touchedFields, [field]: true });
-    
+
     let value;
     if (field === 'password') {
       value = newUser.password;
@@ -239,7 +249,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
     } else {
       value = newUser[field];
     }
-    
+
     validateField(field, value);
   };
 
@@ -249,50 +259,50 @@ function UserManagement({ isAdding, isEditing, userId }) {
     Object.keys(newUser).forEach(key => {
       if (key !== 'permissions') allTouched[key] = true;
     });
-    
+
     const isPasswordPlaceholder = newUser.password === '********';
     const isPasswordEmpty = newUser.password.trim() === '';
-    
+
     if (!isEditingUser || (!isPasswordPlaceholder && !isPasswordEmpty)) {
       allTouched.password = true;
       allTouched.confirmPassword = true;
     }
-    
+
     setTouchedFields(allTouched);
-    
+
     // Validate all fields
     const errors = {};
-    
+
     if (!newUser.name.trim()) {
       errors.name = 'Name is required';
     }
-    
+
     if (!newUser.email.trim()) {
       errors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(newUser.email)) {
       errors.email = 'Email is invalid';
     }
-    
+
     if (!newUser.phone.trim()) {
       errors.phone = 'Phone is required';
     } else if (!/^\d{10}$/.test(newUser.phone.replace(/\D/g, ''))) {
       errors.phone = 'Phone must be 10 digits';
     }
-    
+
     if (!newUser.designation) {
       errors.designation = 'Designation is required';
     }
-    
+
     const isPasswordPlaceholderVal = newUser.password === '********';
     const isPasswordEmptyVal = newUser.password.trim() === '';
-    
+
     if (!isEditingUser) {
       if (!newUser.password || newUser.password.trim() === '') {
         errors.password = 'Password is required';
       } else if (newUser.password.length < 6) {
         errors.password = 'Password must be at least 6 characters';
       }
-      
+
       if (!confirmPassword) {
         errors.confirmPassword = 'Please confirm password';
       } else if (newUser.password !== confirmPassword) {
@@ -303,7 +313,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
         if (newUser.password.length < 6) {
           errors.password = 'Password must be at least 6 characters';
         }
-        
+
         if (!confirmPassword) {
           errors.confirmPassword = 'Please confirm password';
         } else if (newUser.password !== confirmPassword) {
@@ -313,7 +323,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
         errors.confirmPassword = 'Please leave confirm password empty if not changing password';
       }
     }
-    
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -322,39 +332,39 @@ function UserManagement({ isAdding, isEditing, userId }) {
     e.preventDefault();
     setFormError('');
     setFormSuccess(false);
-    
+
     if (!validateUserForm()) {
       setFormError("Please fix the errors in the form");
       return;
     }
-    
+
     try {
       const formData = new FormData();
       formData.append('name', newUser.name);
       formData.append('email', newUser.email);
       formData.append('phone', newUser.phone);
       formData.append('designation', newUser.designation);
-      
+
       const isPasswordPlaceholder = newUser.password === '********';
       const isPasswordEmpty = newUser.password.trim() === '';
-      
+
       if (!isPasswordPlaceholder && !isPasswordEmpty) {
         formData.append('password', newUser.password);
       }
-      
+
       formData.append('permissions', JSON.stringify(newUser.permissions));
       formData.append('isActive', newUser.isActive !== undefined ? newUser.isActive : true);
-      
+
       if (profileImage) {
         formData.append('profileImage', profileImage);
       }
-      
-      const url = isEditingUser 
+
+      const url = isEditingUser
         ? `http://localhost:5000/api/admin/users/${editUserId}`
         : 'http://localhost:5000/api/admin/users';
-      
+
       const method = isEditingUser ? 'PUT' : 'POST';
-      
+
       const response = await fetch(url, {
         method: method,
         headers: {
@@ -362,9 +372,9 @@ function UserManagement({ isAdding, isEditing, userId }) {
         },
         body: formData
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         setFormSuccess(true);
         if (!isEditingUser) {
@@ -427,19 +437,19 @@ function UserManagement({ isAdding, isEditing, userId }) {
         Settings: false
       }
     });
-    
+
     if (userMember.profileImage) {
       setProfileImagePreview(`http://localhost:5000${userMember.profileImage}`);
     } else {
       setProfileImagePreview("");
     }
-    
+
     setEditUserId(userMember._id);
     setIsEditingUser(true);
     setProfileImage(null);
-    setConfirmPassword(''); 
-    setFormSuccess(false); 
-    setFormError(''); 
+    setConfirmPassword('');
+    setFormSuccess(false);
+    setFormError('');
     setFormErrors({});
     setTouchedFields({});
   };
@@ -467,18 +477,18 @@ function UserManagement({ isAdding, isEditing, userId }) {
 
   const handleBulkDelete = async (selectedIds) => {
     if (selectedIds.length === 0) return;
-    
+
     if (window.confirm(`Are you sure you want to delete ${selectedIds.length} user(s)?`)) {
       try {
         const response = await fetch('http://localhost:5000/api/admin/bulk-delete', {
           method: 'POST',
           headers: getAuthHeaders(),
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             entity: 'users',
-            ids: selectedIds 
+            ids: selectedIds
           })
         });
-        
+
         const data = await response.json();
         if (data.success) {
           alert(`Successfully deleted ${selectedIds.length} user(s)`);
@@ -521,13 +531,13 @@ function UserManagement({ isAdding, isEditing, userId }) {
 
   const formatPermissions = (permissions) => {
     if (!permissions) return <Badge bg="dark" className="me-1 px-3 py-2">None</Badge>;
-    
+
     const activePermissions = Object.entries(permissions)
       .filter(([key, value]) => value)
       .map(([key]) => key);
-    
+
     if (activePermissions.length === 0) return <Badge bg="dark" className="me-1 px-3 py-2">None</Badge>;
-    
+
     const permissionGradients = {
       'Dashboard': 'linear-gradient(135deg, #141E30 0%, #243B55 100%)',
       'Users': 'linear-gradient(135deg, #0F2027 0%, #203A43 100%)',
@@ -544,7 +554,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
         {activePermissions.map((permission) => {
           const gradient = permissionGradients[permission] || 'linear-gradient(135deg, #2C3E50 0%, #4CA1AF 100%)';
           const textColor = '#ffffff';
-          
+
           return (
             <span
               key={permission}
@@ -586,29 +596,29 @@ function UserManagement({ isAdding, isEditing, userId }) {
     return (
       <div className="p-3">
         <Card className="shadow-lg">
-          <Card.Body style={{marginLeft:"25px",marginRight:"25px"}}>
+          <Card.Body style={{ marginLeft: "25px", marginRight: "25px" }}>
             <h5 className="mb-0 fw-semibold">
               {isEditingUser ? 'Edit User' : (
                 <>
                   User Management
-                  <span className="text-muted mx-2" style={{fontSize:"14px",fontWeight:"normal"}}>•</span>
-                  <span className="text-muted " style={{fontSize:"14px",fontWeight:"normal"}}>New User</span>
+                  <span className="text-muted mx-2" style={{ fontSize: "14px", fontWeight: "normal" }}>•</span>
+                  <span className="text-muted " style={{ fontSize: "14px", fontWeight: "normal" }}>New User</span>
                 </>
               )}
             </h5>
           </Card.Body>
         </Card>
-        
+
         <br />
-        
+
         <Card className="shadow-lg">
-          <Card.Body className="p-6" style={{marginLeft:"25px",marginRight:"25px"}}>
+          <Card.Body className="p-6" style={{ marginLeft: "25px", marginRight: "25px" }}>
             {formSuccess && (
-              <Alert variant="success" style={{height:"50px"}} onClose={() => setFormSuccess(false)} dismissible>
+              <Alert variant="success" style={{ height: "50px" }} onClose={() => setFormSuccess(false)} dismissible>
                 <p>{isEditingUser ? 'User updated successfully' : 'User has been added successfully'}</p>
               </Alert>
             )}
-            
+
             {formError && (
               <Alert variant="danger" onClose={() => setFormError('')} dismissible>
                 <Alert.Heading>Error!</Alert.Heading>
@@ -620,23 +630,23 @@ function UserManagement({ isAdding, isEditing, userId }) {
               {isEditingUser ? (
                 <>
                   <h5 className="fw-semibold mb-1">Edit user</h5>
-                  <p className='text-muted' style={{fontSize:"12px"}}>Update the user profile</p>
+                  <p className='text-muted' style={{ fontSize: "12px" }}>Update the user profile</p>
                 </>
               ) : (
                 <>
                   <h5 className="fw-semibold mb-1">New user </h5>
-                  <p className='text-muted' style={{fontSize:"12px"}}>Use the below form to create a new profile</p>
+                  <p className='text-muted' style={{ fontSize: "12px" }}>Use the below form to create a new profile</p>
                 </>
               )}
             </div>
-            
+
             <Form onSubmit={handleAddUser} className="pt-2" noValidate>
               {/* First Row with Name and Email */}
               <Row className="mb-4 gx-5">
                 <Col md={6}>
                   <Form.Group>
                     <Form.Control
-                      type="text" 
+                      type="text"
                       className={`cate py-3 ${touchedFields.name && formErrors.name ? 'is-invalid' : ''}`}
                       value={newUser.name}
                       onChange={(e) => handleFieldChange('name', e.target.value)}
@@ -653,7 +663,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
                 <Col md={6}>
                   <Form.Group>
                     <Form.Control
-                      type="email" 
+                      type="email"
                       className={`cate py-3 ${touchedFields.email && formErrors.email ? 'is-invalid' : ''}`}
                       value={newUser.email}
                       onChange={(e) => handleFieldChange('email', e.target.value)}
@@ -674,7 +684,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
                 <Col md={6}>
                   <Form.Group>
                     <Form.Control
-                      type="tel" 
+                      type="tel"
                       className={`py-3 ${touchedFields.phone && formErrors.phone ? 'is-invalid' : ''}`}
                       style={{
                         borderRadius: "5px",
@@ -782,15 +792,15 @@ function UserManagement({ isAdding, isEditing, userId }) {
                         height: "45px"
                       }}
                     />
-                    
+
                     {profileImagePreview && (
                       <div className="mt-2 text-center">
-                        <img 
-                          src={profileImagePreview} 
-                          alt="Preview" 
-                          style={{ 
-                            width: '100px', 
-                            height: '60px', 
+                        <img
+                          src={profileImagePreview}
+                          alt="Preview"
+                          style={{
+                            width: '100px',
+                            height: '60px',
                             objectFit: 'cover',
                             borderRadius: '5px'
                           }}
@@ -803,24 +813,28 @@ function UserManagement({ isAdding, isEditing, userId }) {
 
               {/* Permissions Section */}
               <Form.Group className="my-4">
-                <Form.Label className='fw-semibold mb-43' style={{fontSize:"14px"}}>Permissions</Form.Label>
+                <Form.Label className='fw-semibold mb-43' style={{ fontSize: "14px" }}>Permissions</Form.Label>
                 <div className="px-1">
                   <Row className="gy-2 gx-5">
                     {[
                       'Dashboard',
                       'Users',
                       'Customer',
-                      'Catalog', 
+                      'Catalog',
                       'Product',
                       'Bookings',
                       'Reports',
                       'Settings'
-                    ].map((permission) => (
+                    ].filter(permission => {
+                      // If admin, show all. If user, show only what they have.
+                      if (currentUserRole === 'admin') return true;
+                      return currentUserPermissions && currentUserPermissions[permission];
+                    }).map((permission) => (
                       <Col xs={6} sm={4} md={3} lg={2} key={permission}>
-                        <div 
+                        <div
                           className="d-flex align-items-center p-2 rounded"
                           style={{
-                            cursor: 'pointer', 
+                            cursor: 'pointer',
                             transition: 'all 0.2s',
                             backgroundColor: newUser.permissions[permission] ? '#e9ecef' : 'transparent'
                           }}
@@ -845,7 +859,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
                               }
                             })}
                             className="mb-0"
-                            style={{ 
+                            style={{
                               fontSize: "13px",
                               '--bs-border-width': '2px',
                               '--bs-border-color': '#000000',
@@ -857,11 +871,11 @@ function UserManagement({ isAdding, isEditing, userId }) {
                   </Row>
                 </div>
               </Form.Group>
-              
+
               {/* Action Buttons */}
               <div className="d-flex justify-content-center gap-3 mt-4">
-                <Button 
-                  variant="outline-dark" 
+                <Button
+                  variant="outline-dark"
                   onClick={() => {
                     resetForm();
                     window.history.back();
@@ -871,8 +885,8 @@ function UserManagement({ isAdding, isEditing, userId }) {
                 >
                   Cancel
                 </Button>
-                <Button 
-                  variant="dark" 
+                <Button
+                  variant="dark"
                   type="submit"
                   style={{ minWidth: '100px', borderRadius: "50px" }}
                 >Submit
@@ -939,14 +953,14 @@ function UserManagement({ isAdding, isEditing, userId }) {
                 }}
                 selectedCount={selectedUsers.length}
                 onBulkDelete={() => handleBulkDelete(selectedUsers)}
-                showBulkActions={false} 
+                showBulkActions={false}
                 bulkEntityName="users"
               />
             </Col>
           </Row>
         </Card.Header>
         <Card.Body style={{ marginLeft: "20px", marginRight: "20px" }}>
-          
+
           {selectedUsers.length > 0 && (
             <Alert variant="dark" className="d-flex justify-content-between align-items-center mb-3">
               <span>
@@ -962,7 +976,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
               </Button>
             </Alert>
           )}
-          
+
           <div className="table-responsive">
             <Table striped bordered hover style={{ border: "2px solid" }} >
               <thead>
@@ -972,11 +986,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
                       type="checkbox"
                       checked={selectAllUsers}
                       onChange={handleSelectAllUsers}
-                      style={{
-                        fontSize: "14px",
-                        '--bs-border-width': '2px',
-                        '--bs-border-color': '#000000',
-                      }}
+                     className='check'
                     />
                   </th>
                   <th>Photo</th>
@@ -996,14 +1006,10 @@ function UserManagement({ isAdding, isEditing, userId }) {
                         type="checkbox"
                         checked={selectedUsers.includes(user._id)}
                         onChange={() => handleUserSelect(user._id)}
-                        style={{
-                          fontSize: "14px",
-                          '--bs-border-width': '2px',
-                          '--bs-border-color': '#000000',
-                        }}
+                        className='check'
                       />
                     </td>
-                    
+
                     <td>
                       <div style={{
                         width: '40px',
@@ -1021,24 +1027,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
                               height: '100%',
                               objectFit: 'cover'
                             }}
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.parentElement.innerHTML = `
-                                <div style="
-                                  width: 100%;
-                                  height: 100%;
-                                  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                  display: flex;
-                                  align-items: center;
-                                  justify-content: center;
-                                  color: white;
-                                  font-weight: bold;
-                                  font-size: 16px;
-                                ">
-                                  ${getInitials(user.name)}
-                                </div>
-                              `;
-                            }}
+                           
                           />
                         ) : (
                           <div style={{
@@ -1057,7 +1046,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
                         )}
                       </div>
                     </td>
-                    
+
                     <td>
                       {user.name}
                     </td>
@@ -1113,29 +1102,44 @@ function UserManagement({ isAdding, isEditing, userId }) {
 
       {/* User Details Modal */}
       <Modal show={showUserDetails} onHide={() => setShowUserDetails(false)} centered>
-         <Button type="button" onClick={() => setShowUserDetails(false)} className="position-absolute border-0 justify-content-center closebtn p-0">X</Button>
-        <Modal.Body>
+        <Button type="button" onClick={() => setShowUserDetails(false)} className="position-absolute border-0 justify-content-center closebtn p-0">X</Button>
+        <Modal.Body
+          className="p-4"
+          style={{
+            maxHeight: '400px',
+            overflowY: 'auto',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
+          }}
+        >
+          <style>
+            {`
+            .modal-body::-webkit-scrollbar {
+              display: none;
+            }
+          `}
+          </style>
           {selectedUserDetails && (
             <div>
               <div className="text-center mb-4">
                 <div className="mb-3">
                   {selectedUserDetails.profileImage ? (
-                    <img 
-                      src={`http://localhost:5000${selectedUserDetails.profileImage}`} 
+                    <img
+                      src={`http://localhost:5000${selectedUserDetails.profileImage}`}
                       alt={selectedUserDetails.name}
-                      style={{ 
-                        width: '100px', 
-                        height: '100px', 
+                      style={{
+                        width: '100px',
+                        height: '100px',
                         borderRadius: '50%',
                         objectFit: 'cover',
                         border: '3px solid #dee2e6'
                       }}
-                      
+
                     />
                   ) : (
-                    <div style={{ 
-                      width: '100px', 
-                      height: '100px', 
+                    <div style={{
+                      width: '100px',
+                      height: '100px',
                       borderRadius: '50%',
                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                       display: 'flex',
@@ -1190,11 +1194,11 @@ function UserManagement({ isAdding, isEditing, userId }) {
           )}
         </Modal.Body>
         <Modal.Footer className="border-0">
-          <Button variant="secondary" onClick={() => setShowUserDetails(false)} style={{borderRadius:"50px"}}>
+          <Button variant="secondary" onClick={() => setShowUserDetails(false)} style={{ borderRadius: "50px" }}>
             Close
           </Button>
-          <Button 
-            variant="dark"  style={{borderRadius:"50px"}}
+          <Button
+            variant="dark" style={{ borderRadius: "50px" }}
             onClick={() => {
               setShowUserDetails(false);
               handleEditUser(selectedUserDetails);

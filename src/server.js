@@ -6,12 +6,12 @@ import mongoose from "mongoose";
 import multer from "multer";
 import fs from "fs";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken"; 
+import jwt from "jsonwebtoken";
 import adminRoutes from "./adminRoutes.js";
 
 const app = express();
 const PORT = 5000;
-const JWT_SECRET = "your-jwt-secret-key-change-this"; 
+const JWT_SECRET = "your-jwt-secret-key-change-this";
 
 // Middleware
 app.use(cors());
@@ -38,7 +38,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
@@ -70,18 +70,19 @@ const packageSchema = new mongoose.Schema({
   discountPrice: String,  // Optional discount price
   duration: String,       // "90 mins"
   description: String,    // Detailed description
+  img: String,            // Package image
   category: String,       // Main category (e.g., "Salon for women")
   subcategory: String,    // Subcategory name (e.g., "Hair Care")
   subcategoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Subcategory' },
-  items: [{ 
+  items: [{
     name: String,         // Service item name (e.g., "Hair Wash")
     description: String   // Item description
   }],
-  content: [{ 
+  content: [{
     title: String,        // Content title
     description: String   // Content details
   }],
-  ratingBreak: [{ 
+  ratingBreak: [{
     stars: Number,        // 5
     value: Number,        // 100
     count: String         // "1.5M"
@@ -102,9 +103,9 @@ const cartSchema = new mongoose.Schema({
   category: String,
   count: { type: Number, default: 1 },
   content: [{ value: String, details: String }],
-  items: [{ 
+  items: [{
     name: String,
-    description: String 
+    description: String
   }],
   name: String, // Add this field for service name
   customerEmail: String, // Add this to link cart to customer
@@ -135,9 +136,9 @@ const Category = mongoose.models.Category || mongoose.model("Category", category
 const subcategorySchema = new mongoose.Schema({
   name: String,
   key: String,
-  categoryId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Category' 
+  categoryId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category'
   },
   categoryName: String,
   description: String,
@@ -285,7 +286,7 @@ app.post("/api/bookings", async (req, res) => {
 
     if (cartItems && cartItems.length > 0) {
       console.log("Processing cart items for booking:", cartItems);
-      
+
       // Save cart items for reference
       bookingCartItems = cartItems.map(item => ({
         productId: item.productId || item._id,
@@ -400,15 +401,15 @@ app.post("/api/bookings", async (req, res) => {
 app.get("/api/bookings/:email", async (req, res) => {
   try {
     const { email } = req.params;
-    
+
     console.log(`📋 Fetching bookings for email: ${email}`);
-    
+
     const bookings = await Booking.find({ customerEmail: email })
       .sort({ createdAt: -1 })
       .limit(50);
 
     console.log(`✅ Found ${bookings.length} bookings for email: ${email}`);
-    
+
     // Log details of first booking for debugging
     if (bookings.length > 0) {
       console.log("First booking details:", {
@@ -419,7 +420,7 @@ app.get("/api/bookings/:email", async (req, res) => {
         hasCartItems: !!bookings[0].cartItems
       });
     }
-    
+
     res.json({
       success: true,
       bookings: bookings,
@@ -436,14 +437,14 @@ app.get("/api/bookings/:email", async (req, res) => {
 app.get("/api/cart/:email", async (req, res) => {
   try {
     const { email } = req.params;
-    
+
     console.log(`🛒 Fetching cart for email: ${email}`);
-    
+
     const cartItems = await Cart.find({ customerEmail: email })
       .sort({ createdAt: -1 });
 
     console.log(`✅ Found ${cartItems.length} cart items for email: ${email}`);
-    
+
     res.json({
       success: true,
       cartItems: cartItems,
@@ -460,7 +461,7 @@ app.get("/api/cart/:email", async (req, res) => {
 app.post("/api/addcarts", async (req, res) => {
   try {
     const { productId, title, price, originalPrice, content, category, name, customerEmail } = req.body;
-    
+
     console.log("📦 Adding to cart:", {
       productId,
       title,
@@ -468,12 +469,12 @@ app.post("/api/addcarts", async (req, res) => {
       customerEmail,
       price
     });
-    
+
     let existing = null;
     if (productId) {
       existing = await Cart.findOne({ productId, customerEmail });
     }
-    
+
     if (existing) {
       existing.content = content;
       existing.price = price;
@@ -482,15 +483,15 @@ app.post("/api/addcarts", async (req, res) => {
       existing.name = name || title;
       existing.count = existing.count || 1;
       await existing.save();
-      
+
       console.log(`✅ Cart updated: ${existing.name}`);
-      
-      return res.json({ 
-        message: "Cart updated", 
-        cart: existing 
+
+      return res.json({
+        message: "Cart updated",
+        cart: existing
       });
     }
-    
+
     const newCart = new Cart({
       productId: productId || new mongoose.Types.ObjectId().toString(),
       title: title || name,
@@ -502,16 +503,16 @@ app.post("/api/addcarts", async (req, res) => {
       count: 1,
       customerEmail: customerEmail || "guest"
     });
-    
+
     await newCart.save();
-    
+
     console.log(`🆕 Cart added: ${newCart.name} for ${customerEmail}`);
-    
-    res.status(201).json({ 
-      message: "Cart added", 
-      cart: newCart 
+
+    res.status(201).json({
+      message: "Cart added",
+      cart: newCart
     });
-    
+
   } catch (err) {
     console.error("❌ Error in /api/addcarts:", err);
     res.status(500).json({ error: "Failed to add/update cart" });
@@ -522,19 +523,19 @@ app.post("/api/addcarts", async (req, res) => {
 app.delete("/api/cart/clear/:email", async (req, res) => {
   try {
     const { email } = req.params;
-    
+
     console.log(`🗑️ Clearing cart for: ${email}`);
-    
+
     const result = await Cart.deleteMany({ customerEmail: email });
-    
+
     console.log(`✅ Cleared ${result.deletedCount} items from cart`);
-    
+
     res.json({
       success: true,
       message: `Cleared ${result.deletedCount} items from cart`,
       deletedCount: result.deletedCount
     });
-    
+
   } catch (error) {
     console.error("❌ Error clearing cart:", error);
     res.status(500).json({ error: "Failed to clear cart" });
@@ -546,10 +547,10 @@ app.delete("/api/cart/clear/:email", async (req, res) => {
 app.get("/api/debug-categories", async (req, res) => {
   try {
     console.log("=== DEBUG: Checking MongoDB categories ===");
-    
+
     const allCategories = await Category.find({});
     console.log(`Found ${allCategories.length} total categories in DB:`);
-    
+
     if (allCategories.length === 0) {
       console.log("Database has NO categories at all!");
     } else {
@@ -564,10 +565,10 @@ app.get("/api/debug-categories", async (req, res) => {
         console.log(`---`);
       });
     }
-    
+
     const activeCategories = await Category.find({ isActive: true });
     console.log(`Found ${activeCategories.length} active categories`);
-    
+
     res.json({
       success: true,
       allCategories,
@@ -586,9 +587,9 @@ app.get("/api/debug-categories", async (req, res) => {
 app.post("/api/user-login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     console.log(" User login attempt:", { email });
-    
+
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required" });
     }
@@ -649,9 +650,9 @@ app.post("/api/user-login", async (req, res) => {
 app.post("/api/register", upload.single('profileImage'), async (req, res) => {
   try {
     const { name, email, phone, city, password } = req.body;
-    
+
     console.log(" Customer registration attempt:", { email, name, phone, city });
-    
+
     // Validation
     if (!name || !email || !phone || !city || !password) {
       return res.status(400).json({ error: "All fields are required" });
@@ -728,9 +729,9 @@ app.post("/api/register", upload.single('profileImage'), async (req, res) => {
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     console.log(" Customer login attempt:", { email });
-    
+
     // Validation
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required" });
@@ -802,15 +803,15 @@ app.post("/api/update-profile", upload.single("profileImage"), async (req, res) 
     // Check if customerId is valid
     if (!customerId || customerId === "undefined") {
       console.error("Invalid customerId:", customerId);
-      return res.status(400).json({ 
-        error: "Invalid customer ID. Please log out and log in again." 
+      return res.status(400).json({
+        error: "Invalid customer ID. Please log out and log in again."
       });
     }
 
     if (!mongoose.Types.ObjectId.isValid(customerId)) {
       console.error(" Invalid MongoDB ObjectId:", customerId);
-      return res.status(400).json({ 
-        error: "Invalid customer ID format. Please log out and log in again." 
+      return res.status(400).json({
+        error: "Invalid customer ID format. Please log out and log in again."
       });
     }
 
@@ -866,8 +867,8 @@ app.post("/api/update-profile", upload.single("profileImage"), async (req, res) 
     const updatedCustomer = await Customer.findByIdAndUpdate(
       customerId,
       updateData,
-      { 
-        new: true, 
+      {
+        new: true,
         runValidators: true,
         select: '-password'
       }
@@ -887,17 +888,17 @@ app.post("/api/update-profile", upload.single("profileImage"), async (req, res) 
 
   } catch (err) {
     console.error(" Update error:", err);
-    
+
     // Handle specific MongoDB errors
     if (err.name === 'ValidationError') {
       const messages = Object.values(err.errors).map(val => val.message);
       return res.status(400).json({ error: messages.join(', ') });
     }
-    
+
     if (err.code === 11000) {
       return res.status(400).json({ error: "Email already exists" });
     }
-    
+
     return res.status(500).json({ error: "Failed to update profile. Please try again." });
   }
 });
@@ -919,12 +920,12 @@ app.delete("/api/bookings/:id", async (req, res) => {
       success: true,
       message: "Booking deleted successfully"
     });
-    
+
   } catch (error) {
     console.error("Error deleting booking:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: "Failed to delete booking: " + error.message 
+      error: "Failed to delete booking: " + error.message
     });
   }
 });
@@ -934,7 +935,7 @@ app.get('/api/all-bookings', async (req, res) => {
   try {
     const bookings = await Booking.find({}).sort({ createdAt: -1 });
     console.log(`Total bookings in database: ${bookings.length}`);
-    
+
     // Log details of each booking
     bookings.forEach((booking, index) => {
       console.log(`Booking ${index + 1}:`, {
@@ -945,7 +946,7 @@ app.get('/api/all-bookings', async (req, res) => {
         items: booking.items?.length || 0
       });
     });
-    
+
     res.json(bookings);
   } catch (error) {
     console.error("Error fetching all bookings:", error);
@@ -1009,7 +1010,7 @@ app.get('/api/user/:id', async (req, res) => {
 app.get("/api/plans/:customerEmail", async (req, res) => {
   try {
     const { customerEmail } = req.params;
-    
+
     // For now, return empty array or mock data
     res.json({
       success: true,
@@ -1047,39 +1048,39 @@ const initializeStaticData = () => {
         { name: "Deep clean with foam-jet AC service", descriptions: "AC service & repair", key: "deepclean", img: "/assets/deepclean.png" }
       ],
       book: [
-        { name: "Intense cleaning (2 bathrooms)", title: "4.79 (3.1M)", value:"₹1,016", option:"₹1,098", key: "intenseclean", img: "/assets/intenseclean.png" },
-        { name: "Classic cleaning (2 bathrooms)", title: "4.82 (1.5M)", value:"₹868", option:"₹938", key: "classic", img: "/assets/classic.png" },
-        { name: "Switch/socket replacement", title: "4.85 (72M)", value:"₹49", key: "socket", img: "/assets/socket.png" },
-        { name: "Drill & hang (wall decor)", title: "4.86 (99K)", value:"₹49", key: "wall", img: "/assets/wall.png" },
-        { name: "Switchboard/switchbox repair", title: "4.85 (69K)", value:"₹79", key: "switch", img: "/assets/switch.png" },
-        { name: "Automatic top load machine checkup", title: "4.78 (328K)", value:"₹299", key: "automatic", img: "/assets/automatic.png" },
-        { name: "Tap repair", title: "4.81 (122K)", value:"₹49", key: "tap", img: "/assets/tap.png" },
-        { name: "Intense cleaning (3 bathrooms)", title: "4.79 (3.1M)", value:"₹1,483", option:"₹1,647", key: "intence", img: "/assets/intense.png" },
-        { name: "Fan repair (ceiling/exhaust/wall)", title: "4.81 (95K)", value:"₹109", key: "fan", img: "/assets/fan.png" },
-        { name: "Bulb/tubelight holder installation", title: "4.86 (3.3K)", value:"₹69", key: "bulb", img: "/assets/bulb.png" }
+        { name: "Intense cleaning (2 bathrooms)", title: "4.79 (3.1M)", value: "₹1,016", option: "₹1,098", key: "intenseclean", img: "/assets/intenseclean.png" },
+        { name: "Classic cleaning (2 bathrooms)", title: "4.82 (1.5M)", value: "₹868", option: "₹938", key: "classic", img: "/assets/classic.png" },
+        { name: "Switch/socket replacement", title: "4.85 (72M)", value: "₹49", key: "socket", img: "/assets/socket.png" },
+        { name: "Drill & hang (wall decor)", title: "4.86 (99K)", value: "₹49", key: "wall", img: "/assets/wall.png" },
+        { name: "Switchboard/switchbox repair", title: "4.85 (69K)", value: "₹79", key: "switch", img: "/assets/switch.png" },
+        { name: "Automatic top load machine checkup", title: "4.78 (328K)", value: "₹299", key: "automatic", img: "/assets/automatic.png" },
+        { name: "Tap repair", title: "4.81 (122K)", value: "₹49", key: "tap", img: "/assets/tap.png" },
+        { name: "Intense cleaning (3 bathrooms)", title: "4.79 (3.1M)", value: "₹1,483", option: "₹1,647", key: "intence", img: "/assets/intense.png" },
+        { name: "Fan repair (ceiling/exhaust/wall)", title: "4.81 (95K)", value: "₹109", key: "fan", img: "/assets/fan.png" },
+        { name: "Bulb/tubelight holder installation", title: "4.86 (3.3K)", value: "₹69", key: "bulb", img: "/assets/bulb.png" }
       ],
       salon: [
-        { key:"waxing", img:"/assets/waxing.png" },
-        { key:"cleanup", img:"/assets/cleanup.png" },
-        { key:"haircare", img:"/assets/haircare.png" }
+        { key: "waxing", img: "/assets/waxing.png" },
+        { key: "cleanup", img: "/assets/cleanup.png" },
+        { key: "haircare", img: "/assets/haircare.png" }
       ],
       advanced: [
-        { price:"₹799", value:"₹1,098", title:"Roll-on waxing", tit:"Full arms, legs & underarms", text:"Extra 25% off for new users*", key:"facial", img:"/assets/facial.jpg" },
-        { pri:"Just launched", title:"Advanced tools", tit:"& ingredients", text:"Facial & clean", key:"advanced", img:"/assets/advanced.jpg" }
+        { price: "₹799", value: "₹1,098", title: "Roll-on waxing", tit: "Full arms, legs & underarms", text: "Extra 25% off for new users*", key: "facial", img: "/assets/facial.jpg" },
+        { pri: "Just launched", title: "Advanced tools", tit: "& ingredients", text: "Facial & clean", key: "advanced", img: "/assets/advanced.jpg" }
       ],
       super: [
-        { key:"super", img:"/assets/super.jpg", title:"Festive ready package", price:"25% off", text:"Pick from mani-pedi,", tex:"facials & more", content:"Extra 25% off for", con:"new users with NEW25*" }
+        { key: "super", img: "/assets/super.jpg", title: "Festive ready package", price: "25% off", text: "Pick from mani-pedi,", tex: "facials & more", content: "Extra 25% off for", con: "new users with NEW25*" }
       ],
-      smartlock: { key:"smartlocks", img:"/assets/smartlocks.png" },
-      images: { key:"images", img:"/assets/images.png" },
-      cart: [{ key:"cart", img:"/assets/cart.png" }],
-      added:[
-        {name:"Foot massage",key:"foot",img:"/assets/foot.webp",price:"199"},
-        {name:"Sara fruit cleanup",key:"sara",img:"/assets/sara.webp",price:"699"},
-        {name:"Hair color/mehandi (only application)",key:"hair",img:"/assets/hair.webp",price:"399"},
-        {name:"O3+tan clear cleanup",key:"o3",img:"/assets/o3.webp",price:"849"},
-        {name:"O3+shine & glow facial ",key:"o3 shine",img:"/assets/o3 shine.webp",price:"1,699"},
-        {name:"Elysian British rose manicure",key:"british",img:"/assets/british.webp",price:"649"},
+      smartlock: { key: "smartlocks", img: "/assets/smartlocks.png" },
+      images: { key: "images", img: "/assets/images.png" },
+      cart: [{ key: "cart", img: "/assets/cart.png" }],
+      added: [
+        { name: "Foot massage", key: "foot", img: "/assets/foot.webp", price: "199" },
+        { name: "Sara fruit cleanup", key: "sara", img: "/assets/sara.webp", price: "699" },
+        { name: "Hair color/mehandi (only application)", key: "hair", img: "/assets/hair.webp", price: "399" },
+        { name: "O3+tan clear cleanup", key: "o3", img: "/assets/o3.webp", price: "849" },
+        { name: "O3+shine & glow facial ", key: "o3 shine", img: "/assets/o3 shine.webp", price: "1,699" },
+        { name: "Elysian British rose manicure", key: "british", img: "/assets/british.webp", price: "649" },
       ],
       upi: "/assets/upi.webp",
       card: "/assets/card.webp",
@@ -1117,16 +1118,16 @@ initializeStaticData();
 app.get("/api/categories", async (req, res) => {
   try {
     console.log("Fetching categories...");
-    
+
     // FIRST: Try to get from MongoDB (your dynamic database)
     let categories = await Category.find({ isActive: true })
       .sort({ order: 1, name: 1 });
-    
+
     // SECOND: If MongoDB has no categories, use static JSON file
     if (categories.length === 0) {
       console.log("No categories in MongoDB, using static data");
       const staticData = readStaticData();
-      
+
       if (staticData && staticData.categories) {
         categories = staticData.categories.map((cat, index) => ({
           _id: `static_${cat.key || index}`,
@@ -1139,22 +1140,22 @@ app.get("/api/categories", async (req, res) => {
         }));
       }
     }
-    
+
     // THIRD: If still no categories, return empty array
-    res.json({ 
+    res.json({
       success: true,
       categories: categories || [],
       count: categories ? categories.length : 0,
       source: categories.length > 0 ? "database" : "static"
     });
-    
+
   } catch (error) {
     console.error("Error fetching categories:", error);
-    res.json({ 
+    res.json({
       success: false,
       categories: [],
       count: 0,
-      error: "Failed to fetch categories" 
+      error: "Failed to fetch categories"
     });
   }
 });
@@ -1164,9 +1165,9 @@ app.get("/api/all-categories", async (req, res) => {
   try {
     const categories = await Category.find()
       .sort({ order: 1, name: 1 });
-    res.json({ 
+    res.json({
       categories,
-      count: categories.length 
+      count: categories.length
     });
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch categories" });
@@ -1177,33 +1178,33 @@ app.get("/api/all-categories", async (req, res) => {
 app.post("/api/categories", upload.single('image'), async (req, res) => {
   try {
     const { name, key, description, order, isActive = true } = req.body;
-    
+
     if (!name) {
       return res.status(400).json({ error: "Category name is required" });
     }
-    
+
     // Use uploaded image or default
     let img = "/assets/default-category.png";
     if (req.file) {
       img = `/assets/${req.file.filename}`;
     }
-    
+
     const categoryKey = key || name.toLowerCase().replace(/ /g, '-');
-    
+
     // Check if category already exists
-    const existingCategory = await Category.findOne({ 
+    const existingCategory = await Category.findOne({
       $or: [
         { key: categoryKey },
         { name: name }
       ]
     });
-    
+
     if (existingCategory) {
-      return res.status(400).json({ 
-        error: `Category with name '${name}' or key '${categoryKey}' already exists` 
+      return res.status(400).json({
+        error: `Category with name '${name}' or key '${categoryKey}' already exists`
       });
     }
-    
+
     const category = new Category({
       name,
       key: categoryKey,
@@ -1212,17 +1213,17 @@ app.post("/api/categories", upload.single('image'), async (req, res) => {
       order: order || 0,
       isActive: isActive !== undefined ? isActive : true
     });
-    
+
     await category.save();
-    
+
     console.log(`Created new category: ${name} (${categoryKey})`);
-    
-    res.status(201).json({ 
+
+    res.status(201).json({
       success: true,
-      message: "Category created successfully", 
-      category 
+      message: "Category created successfully",
+      category
     });
-    
+
   } catch (error) {
     console.error("Error creating category:", error);
     res.status(500).json({ error: "Failed to create category" });
@@ -1234,19 +1235,19 @@ app.put("/api/categories/:id", upload.single('image'), async (req, res) => {
   try {
     const { id } = req.params;
     const { name, key, description, order, isActive } = req.body;
-    
-    const updateData = { 
-      name, 
-      key, 
-      description, 
-      order, 
+
+    const updateData = {
+      name,
+      key,
+      description,
+      order,
       isActive,
-      updatedAt: new Date() 
+      updatedAt: new Date()
     };
-    
+
     if (req.file) {
       updateData.img = `/assets/${req.file.filename}`;
-      
+
       // Optional: Delete old image if not default
       const oldCategory = await Category.findById(id);
       if (oldCategory && oldCategory.img !== "/assets/default-category.png") {
@@ -1256,19 +1257,19 @@ app.put("/api/categories/:id", upload.single('image'), async (req, res) => {
         }
       }
     }
-    
+
     const category = await Category.findByIdAndUpdate(id, updateData, { new: true });
-    
+
     if (!category) {
       return res.status(404).json({ error: "Category not found" });
     }
-    
-    res.json({ 
+
+    res.json({
       success: true,
-      message: "Category updated successfully", 
-      category 
+      message: "Category updated successfully",
+      category
     });
-    
+
   } catch (error) {
     console.error("Error updating category:", error);
     res.status(500).json({ error: "Failed to update category" });
@@ -1282,9 +1283,9 @@ app.delete("/api/categories/:id", async (req, res) => {
     if (!category) {
       return res.status(404).json({ error: "Category not found" });
     }
-    res.json({ 
+    res.json({
       success: true,
-      message: "Category deleted successfully" 
+      message: "Category deleted successfully"
     });
   } catch (error) {
     console.error("Error deleting category:", error);
@@ -1305,8 +1306,8 @@ app.get("/api/static-data", (req, res) => {
 
 // Updated static routes with categories
 const staticRoutes = [
-  'logo','logo1', 'categories', 'banner', 'carousel', 'book', 'salon', 
-   'advanced', 'super', 'smartlock', 'images', 
+  'logo', 'logo1', 'categories', 'banner', 'carousel', 'book', 'salon',
+  'advanced', 'super', 'smartlock', 'images',
   'cart', 'added', 'upi', 'card', 'net'
 ];
 
@@ -1327,8 +1328,8 @@ app.post("/api/upload-static-image", upload.single('image'), (req, res) => {
       return res.status(400).json({ error: "No file uploaded" });
     }
     const imagePath = `/assets/${req.file.filename}`;
-    res.json({ 
-      message: "Image uploaded successfully", 
+    res.json({
+      message: "Image uploaded successfully",
       imageUrl: imagePath,
       filename: req.file.filename
     });
@@ -1357,9 +1358,9 @@ app.put("/api/update-section/:section/:key", upload.single('image'), (req, res) 
           img: imageUrl || data[section][itemIndex].img
         };
         if (writeStaticData(data)) {
-          res.json({ 
-            message: "Item updated successfully", 
-            item: data[section][itemIndex] 
+          res.json({
+            message: "Item updated successfully",
+            item: data[section][itemIndex]
           });
         } else {
           res.status(500).json({ error: "Failed to update item" });
@@ -1374,9 +1375,9 @@ app.put("/api/update-section/:section/:key", upload.single('image'), (req, res) 
         img: imageUrl || data[section].img
       };
       if (writeStaticData(data)) {
-        res.json({ 
-          message: "Section updated successfully", 
-          section: data[section] 
+        res.json({
+          message: "Section updated successfully",
+          section: data[section]
         });
       } else {
         res.status(500).json({ error: "Failed to update section" });
@@ -1402,9 +1403,9 @@ app.post("/api/add-to-section/:section", upload.single('image'), (req, res) => {
     const newItem = { ...req.body, img: imageUrl };
     data[section].push(newItem);
     if (writeStaticData(data)) {
-      res.status(201).json({ 
-        message: "Item added successfully", 
-        item: newItem 
+      res.status(201).json({
+        message: "Item added successfully",
+        item: newItem
       });
     } else {
       res.status(500).json({ error: "Failed to add item" });
@@ -1423,9 +1424,9 @@ app.put("/api/update-logo", upload.single('logo'), (req, res) => {
       data.logo = `/assets/${req.file.filename}`;
     }
     if (writeStaticData(data)) {
-      res.json({ 
-        message: "Logo updated successfully", 
-        logo: data.logo 
+      res.json({
+        message: "Logo updated successfully",
+        logo: data.logo
       });
     } else {
       res.status(500).json({ error: "Failed to update logo" });
@@ -1442,9 +1443,9 @@ app.put("/api/update-logo1", upload.single('logo'), (req, res) => {
       data.logo1 = `/assets/${req.file.filename}`;
     }
     if (writeStaticData(data)) {
-      res.json({ 
-        message: "Logo1 updated successfully", 
-        logo1: data.logo1 
+      res.json({
+        message: "Logo1 updated successfully",
+        logo1: data.logo1
       });
     } else {
       res.status(500).json({ error: "Failed to update logo1" });
@@ -1572,7 +1573,7 @@ app.get("/api/packages/:category", async (req, res) => {
     }
     // Fallback to static data
     const staticData = readStaticData();
-    const categoryPackages = staticData?.book?.filter(b => 
+    const categoryPackages = staticData?.book?.filter(b =>
       b.name.toLowerCase().includes(category.toLowerCase())
     ) || [];
     res.json({ packages: categoryPackages });
@@ -1587,8 +1588,8 @@ app.get("/api/subcategories", async (req, res) => {
     const subcategories = await Subcategory.find({ isActive: true })
       .sort({ order: 1, name: 1 })
       .populate('categoryId', 'name key');
-    
-    res.json({ 
+
+    res.json({
       success: true,
       subcategories: subcategories || [],
       count: subcategories ? subcategories.length : 0
@@ -1602,19 +1603,19 @@ app.get("/api/subcategories", async (req, res) => {
 app.get("/api/subcategories/:categoryKey", async (req, res) => {
   try {
     const { categoryKey } = req.params;
-    
+
     // Find category by key
     const category = await Category.findOne({ key: categoryKey });
     if (!category) {
       return res.status(404).json({ error: "Category not found" });
     }
-    
-    const subcategories = await Subcategory.find({ 
+
+    const subcategories = await Subcategory.find({
       categoryId: category._id,
-      isActive: true 
+      isActive: true
     }).sort({ order: 1, name: 1 });
-    
-    res.json({ 
+
+    res.json({
       success: true,
       subcategories: subcategories || [],
       categoryName: category.name,
@@ -1630,18 +1631,18 @@ app.get("/api/subcategories/:categoryKey", async (req, res) => {
 app.get("/api/packages/subcategory/:subcategoryKey", async (req, res) => {
   try {
     const { subcategoryKey } = req.params;
-    
+
     const subcategory = await Subcategory.findOne({ key: subcategoryKey });
     if (!subcategory) {
       return res.status(404).json({ error: "Subcategory not found" });
     }
-    
-    const packages = await Package.find({ 
+
+    const packages = await Package.find({
       subcategoryId: subcategory._id,
-      category: subcategory.categoryName 
+      category: subcategory.categoryName
     });
-    
-    res.json({ 
+
+    res.json({
       success: true,
       packages: packages || [],
       subcategoryName: subcategory.name,
@@ -1655,8 +1656,8 @@ app.get("/api/packages/subcategory/:subcategoryKey", async (req, res) => {
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
-  res.json({ 
-    status: "OK", 
+  res.json({
+    status: "OK",
     message: "Server is running",
     timestamp: new Date().toISOString(),
     version: "1.0.0",
@@ -1675,17 +1676,13 @@ app.use((error, req, res, next) => {
   res.status(500).json({ error: error.message });
 });
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ error: "Route not found" });
-});
 // Get active packages only (for frontend)
 app.get("/api/active-packages", async (req, res) => {
   try {
     const packages = await Package.find({ isActive: true })
       .sort({ createdAt: -1 });
-    
-    res.json({ 
+
+    res.json({
       success: true,
       packages: packages || [],
       count: packages ? packages.length : 0
@@ -1695,15 +1692,16 @@ app.get("/api/active-packages", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch packages" });
   }
 });
+
 // Debug endpoint to see all packages
 app.get("/api/debug-packages", async (req, res) => {
   try {
     const allPackages = await Package.find().sort({ createdAt: -1 });
     const activePackages = await Package.find({ isActive: true }).sort({ createdAt: -1 });
-    
+
     console.log(`=== DEBUG: Found ${allPackages.length} total packages ===`);
     console.log(`=== DEBUG: Found ${activePackages.length} active packages ===`);
-    
+
     allPackages.forEach(pkg => {
       console.log(`Package: ${pkg.name}`);
       console.log(`  ID: ${pkg._id}`);
@@ -1712,7 +1710,7 @@ app.get("/api/debug-packages", async (req, res) => {
       console.log(`  Price: ${pkg.price}`);
       console.log(`---`);
     });
-    
+
     res.json({
       success: true,
       total: allPackages.length,
@@ -1725,49 +1723,14 @@ app.get("/api/debug-packages", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-// Get packages for specific category
-app.get("/api/packages/:category", async (req, res) => {
-  try {
-    const { category } = req.params;
-    const packages = await Package.find({ category: category });
-    if (packages.length > 0) {
-      return res.json({ packages });
-    }
-    // Fallback to static data
-    const staticData = readStaticData();
-    const categoryPackages = staticData?.book?.filter(b => 
-      b.name.toLowerCase().includes(category.toLowerCase())
-    ) || [];
-    res.json({ packages: categoryPackages });
-  } catch (error) {
-    console.error(`Error fetching ${category} packages:`, error);
-    res.status(500).json({ error: `Failed to fetch ${category} packages` });
-  }
-});
 
-// ADD THIS NEW ROUTE - Active packages only
-app.get("/api/active-packages", async (req, res) => {
-  try {
-    const packages = await Package.find({ isActive: true })
-      .sort({ createdAt: -1 });
-    
-    res.json({ 
-      success: true,
-      packages: packages || [],
-      count: packages ? packages.length : 0
-    });
-  } catch (error) {
-    console.error("Error fetching active packages:", error);
-    res.status(500).json({ error: "Failed to fetch packages" });
-  }
-});
 // Debug endpoint to check all packages
 app.get("/api/debug-all-packages", async (req, res) => {
   try {
     const allPackages = await Package.find().sort({ createdAt: -1 });
-    
+
     console.log(`=== DEBUG: Found ${allPackages.length} total packages ===`);
-    
+
     allPackages.forEach(pkg => {
       console.log(`Package: ${pkg.name}`);
       console.log(`  ID: ${pkg._id}`);
@@ -1777,7 +1740,7 @@ app.get("/api/debug-all-packages", async (req, res) => {
       console.log(`  Subcategory: ${pkg.subcategory}`);
       console.log(`---`);
     });
-    
+
     res.json({
       success: true,
       total: allPackages.length,
@@ -1789,6 +1752,10 @@ app.get("/api/debug-all-packages", async (req, res) => {
   }
 });
 
+// 404 handler - MUST BE LAST
+app.use((req, res) => {
+  res.status(404).json({ error: "Route not found" });
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

@@ -156,7 +156,7 @@ function CartPage() {
       localStorage.removeItem('selectedAddress');
       
       // Show success message
-      alert(`✅ Order placed successfully!\n\nBooking ID: ${result.booking._id}\nAmount: ₹${totalPrice.toLocaleString('en-IN')}`);
+      alert(`✅ Order placed successfully!`);
       
       // Refresh any booking lists
       window.dispatchEvent(new Event('bookingCreated'));

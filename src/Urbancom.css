@@ -550,6 +550,12 @@
   margin: 0 auto;
   border: 3px solid #dee2e6;
 }
+
+.check{
+  font-size: 14px;
+  --bs-border-width:2px;
+  --bs-border-color: #000000; 
+}
 /*.btn:active{
   background-color: transparent !important;
 }

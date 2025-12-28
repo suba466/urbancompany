@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Nav, Dropdown, Button } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -6,7 +6,19 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole }) {
   const location = useLocation();
   const [catOpen, setCatOpen] = useState(false);
   const [subCatOpen, setSubCatOpen] = useState(false);
+  const [permissions, setPermissions] = useState({});
   const logoUrl = 'http://localhost:5000/assets/Uc.png';
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('userPermissions');
+      if (stored) {
+        setPermissions(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
 
   // Helper function to check if a route is active
   const isActive = (path) => {
@@ -126,7 +138,7 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole }) {
         </Nav.Link>
 
         {/* User Management */}
-        {(userRole === 'admin' || (userRole === 'user' && localStorage.getItem('userPermissions')?.includes('Users'))) && (
+        {(userRole === 'admin' || (userRole === 'user' && permissions['Users'])) && (
           <Dropdown className="mb-2" drop={sidebarOpen ? 'down' : 'end'}>
             <Dropdown.Toggle
               as={Nav.Link}
@@ -160,7 +172,7 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole }) {
         )}
 
         {/* Catalog Management */}
-        {(userRole === 'admin' || (userRole === 'user' && localStorage.getItem('userPermissions')?.includes('Catalog'))) && (
+        {(userRole === 'admin' || (userRole === 'user' && permissions['Catalog'])) && (
           <Dropdown className="mb-2" drop={sidebarOpen ? 'down' : 'end'}>
             <Dropdown.Toggle
               as={Nav.Link}
@@ -252,7 +264,7 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole }) {
         )}
 
         {/* Product Management */}
-        {(userRole === 'admin' || (userRole === 'user' && localStorage.getItem('userPermissions')?.includes('Product'))) && (
+        {(userRole === 'admin' || (userRole === 'user' && permissions['Product'])) && (
           <Dropdown className="mb-2" drop={sidebarOpen ? 'down' : 'end'}>
             <Dropdown.Toggle
               as={Nav.Link}
@@ -284,7 +296,7 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole }) {
         )}
 
         {/* Bookings */}
-        {(userRole === 'admin' || (userRole === 'user' && localStorage.getItem('userPermissions')?.includes('Bookings'))) && (
+        {(userRole === 'admin' || (userRole === 'user' && permissions['Bookings'])) && (
           <Nav.Link
             as={Link}
             to="/admin/bookings"
@@ -297,7 +309,7 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole }) {
         )}
 
         {/* Customer Management */}
-        {(userRole === 'admin' || (userRole === 'user' && localStorage.getItem('userPermissions')?.includes('Customer'))) && (
+        {(userRole === 'admin' || (userRole === 'user' && permissions['Customer'])) && (
           <Nav.Link
             as={Link}
             to="/admin/customers"
@@ -310,7 +322,7 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole }) {
         )}
 
         {/* Reports */}
-        {(userRole === 'admin' || (userRole === 'user' && localStorage.getItem('userPermissions')?.includes('Reports'))) && (
+        {(userRole === 'admin' || (userRole === 'user' && permissions['Reports'])) && (
           <Nav.Link
             as={Link}
             to="/admin/reports"
@@ -323,7 +335,7 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole }) {
         )}
 
         {/* Settings */}
-        {(userRole === 'admin' || (userRole === 'user' && localStorage.getItem('userPermissions')?.includes('Settings'))) && (
+        {(userRole === 'admin' || (userRole === 'user' && permissions['Settings'])) && (
           <Nav.Link
             as={Link}
             to="/admin/settings"

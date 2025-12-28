@@ -106,8 +106,7 @@ function AdminLogin({ onLogin }) {
                           value={loginData.email}
                           onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
                           required
-                          className="py-2"
-                          style={{ borderRadius: "8px", border: "1px solid #ced4da" }}
+                          className="cate py-2"
                           autoComplete="username"
                         />
                       </Form.Group>
@@ -119,8 +118,7 @@ function AdminLogin({ onLogin }) {
                           value={loginData.password}
                           onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                           required
-                          className="py-2"
-                          style={{ borderRadius: "8px", border: "1px solid #ced4da" }}
+                          className="cate py-2"
                           autoComplete="current-password"
                         />
                       </Form.Group>
