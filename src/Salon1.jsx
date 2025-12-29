@@ -471,7 +471,7 @@ function Salon1() {
             </div>
           ) : (
             groupedPackages.map((group, groupIndex) => (
-              <div key={groupIndex} className="subcategory-group">
+              <div key={groupIndex} className="subcategory-group" id={`section-${normalizeKey(group.title)}`}>
 
                 {/* PACKAGES UNDER THIS SUBCATEGORY */}
                 {group.packages.map((pkg) => {

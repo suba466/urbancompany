@@ -473,20 +473,13 @@ function Categories({
       <Modal show={showCategoryModal} onHide={() => setShowCategoryModal(false)} centered >
         <Modal.Body
           className="p-4"
+          tabIndex={0}
           style={{
             maxHeight: '400px',
-            overflowY: 'auto',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
+            overflowY: 'auto'
           }}
         >
-          <style>
-            {`
-            .modal-body::-webkit-scrollbar {
-              display: none;
-            }
-          `}
-          </style>
+
           <Button type="button" onClick={() => setShowCategoryModal(false)} className="position-absolute border-0 justify-content-center closebtn p-0">X</Button>
           <Modal.Title> <h5>Category Details</h5></Modal.Title>
           {selectedCategory && (

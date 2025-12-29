@@ -98,6 +98,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
   };
 
   useEffect(() => {
+    setIsEditingUser(!!isEditing);
     if (!isAdding && !isEditing) {
       fetchUsers();
     }
@@ -527,6 +528,59 @@ function UserManagement({ isAdding, isEditing, userId }) {
   const handleViewUser = (userMember) => {
     setSelectedUserDetails(userMember);
     setShowUserDetails(true);
+  };
+
+  const updateUserStatus = async (userId, isActive) => {
+    try {
+      // Update local state immediately
+      setUsers(prevUsers =>
+        prevUsers.map(user =>
+          user._id === userId
+            ? { ...user, isActive }
+            : user
+        )
+      );
+
+      if (selectedUserDetails && selectedUserDetails._id === userId) {
+        setSelectedUserDetails(prev => ({ ...prev, isActive }));
+      }
+
+      const response = await fetch(`http://localhost:5000/api/admin/users/${userId}/toggle-status`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ isActive })
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        // Revert
+        setUsers(prevUsers =>
+          prevUsers.map(user =>
+            user._id === userId
+              ? { ...user, isActive: !isActive }
+              : user
+          )
+        );
+        if (selectedUserDetails && selectedUserDetails._id === userId) {
+          setSelectedUserDetails(prev => ({ ...prev, isActive: !isActive }));
+        }
+        alert(`Failed to update status: ${data.error}`);
+      }
+    } catch (error) {
+      // Revert
+      setUsers(prevUsers =>
+        prevUsers.map(user =>
+          user._id === userId
+            ? { ...user, isActive: !isActive }
+            : user
+        )
+      );
+      if (selectedUserDetails && selectedUserDetails._id === userId) {
+        setSelectedUserDetails(prev => ({ ...prev, isActive: !isActive }));
+      }
+      console.error('Error updating status:', error);
+    }
   };
 
   const formatPermissions = (permissions) => {
@@ -977,8 +1031,8 @@ function UserManagement({ isAdding, isEditing, userId }) {
             </Alert>
           )}
 
-          <div className="table-responsive">
-            <Table striped bordered hover style={{ border: "2px solid" }} >
+          <div>
+            <Table striped bordered hover size="sm" style={{ border: "2px solid", fontSize: "14px" }}>
               <thead>
                 <tr>
                   <th>
@@ -986,7 +1040,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
                       type="checkbox"
                       checked={selectAllUsers}
                       onChange={handleSelectAllUsers}
-                     className='check'
+                      className='check'
                     />
                   </th>
                   <th>Photo</th>
@@ -1027,7 +1081,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
                               height: '100%',
                               objectFit: 'cover'
                             }}
-                           
+
                           />
                         ) : (
                           <div style={{
@@ -1102,23 +1156,16 @@ function UserManagement({ isAdding, isEditing, userId }) {
 
       {/* User Details Modal */}
       <Modal show={showUserDetails} onHide={() => setShowUserDetails(false)} centered>
-        <Button type="button" onClick={() => setShowUserDetails(false)} className="position-absolute border-0 justify-content-center closebtn p-0">X</Button>
+
         <Modal.Body
           className="p-4"
           style={{
-            maxHeight: '400px',
-            overflowY: 'auto',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
+            maxHeight: '300px',
+            overflowY: 'auto'
           }}
+          tabIndex={0}
         >
-          <style>
-            {`
-            .modal-body::-webkit-scrollbar {
-              display: none;
-            }
-          `}
-          </style>
+
           {selectedUserDetails && (
             <div>
               <div className="text-center mb-4">
@@ -1179,9 +1226,13 @@ function UserManagement({ isAdding, isEditing, userId }) {
                 </div>
                 <div className="list-group-item px-0">
                   <small className="text-muted d-block">Status</small>
-                  <Badge bg={selectedUserDetails.isActive ? 'success' : 'secondary'}>
-                    {selectedUserDetails.isActive ? 'Active' : 'Inactive'}
-                  </Badge>
+                  <Form.Check
+                    type="switch"
+                    id="user-status-switch"
+                    checked={selectedUserDetails.isActive}
+                    onChange={(e) => updateUserStatus(selectedUserDetails._id, e.target.checked)}
+                    label={selectedUserDetails.isActive ? 'Active' : 'Inactive'}
+                  />
                 </div>
                 <div className="list-group-item px-0 border-bottom-0">
                   <small className="text-muted d-block">Member Since</small>

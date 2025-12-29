@@ -45,14 +45,14 @@ function CartPage() {
       if (response.ok) {
         const data = await response.json();
         const cartItems = data.carts || [];
-        
+
         // Delete all cart items
         for (const item of cartItems) {
           await fetch(`http://localhost:5000/api/carts/${item._id}`, {
             method: "DELETE"
           });
         }
-        
+
         // Refresh cart context
         refreshCart();
       }
@@ -68,12 +68,12 @@ function CartPage() {
       alert("Please select an address first");
       return;
     }
-    
+
     if (!selectedSlot) {
       alert("Please select a time slot");
       return;
     }
-    
+
     // Check if user is logged in
     if (!isLoggedIn) {
       alert("Please login to place an order");
@@ -151,19 +151,19 @@ function CartPage() {
 
       // Clear cart after successful booking
       await clearCartFromDatabase();
-      
+
       // Clear local storage
       localStorage.removeItem('selectedAddress');
-      
+
       // Show success message
       alert(`✅ Order placed successfully!`);
-      
+
       // Refresh any booking lists
       window.dispatchEvent(new Event('bookingCreated'));
-      
+
       // Redirect to home page
       window.location.href = "/";
-      
+
     } catch (error) {
       console.error("❌ Error processing order:", error);
       alert(`❌ Order failed: ${error.message}\n\nPlease try again or contact support.`);
@@ -173,7 +173,7 @@ function CartPage() {
   // Test function for debugging
   const testBookingCreation = async () => {
     console.log("🔍 Testing booking creation...");
-    
+
     // Create test booking data
     const testData = {
       customerId: "test_customer_123",
@@ -203,10 +203,10 @@ function CartPage() {
       paymentMethod: "UPI",
       status: "Confirmed"
     };
-    
+
     try {
       console.log("📤 Sending test data:", testData);
-      
+
       const response = await fetch("http://localhost:5000/api/bookings", {
         method: "POST",
         headers: {
@@ -214,10 +214,10 @@ function CartPage() {
         },
         body: JSON.stringify(testData),
       });
-      
+
       const result = await response.json();
       console.log("📥 Test response:", result);
-      
+
       if (response.ok) {
         console.log("✅ Test booking created successfully!");
         return true;
@@ -272,7 +272,7 @@ function CartPage() {
   useEffect(() => {
     fetchAddedItems();
     refreshCart();
-    
+
     const savedAddress = localStorage.getItem('selectedAddress');
     if (savedAddress) {
       try {
@@ -298,7 +298,7 @@ function CartPage() {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    
+
     const interval = setInterval(() => {
       const savedAddress = localStorage.getItem('selectedAddress');
       if (savedAddress && !selectedAddress) {
@@ -399,23 +399,23 @@ function CartPage() {
           title: item.name,
           price: item.price,
           count: 1,
-          content: [{ 
-            details: item.name, 
-            price: item.price 
+          content: [{
+            details: item.name,
+            price: item.price
           }],
           savedSelections: extraSelected,
           isFrequentlyAdded: true
         };
 
         const existingItem = cartItems.find(cart => cart.title === item.name);
-        
+
         if (existingItem) {
           await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-              ...cartPayload, 
-              count: existingItem.count + 1 
+            body: JSON.stringify({
+              ...cartPayload,
+              count: existingItem.count + 1
             })
           });
         } else {
@@ -544,42 +544,42 @@ function CartPage() {
   // Function to format full address for display
   const formatFullAddress = (address) => {
     if (!address) return "";
-    
+
     const parts = [];
-    
+
     if (address.doorNo && address.doorNo.trim() !== "") {
       parts.push(address.doorNo.trim());
     }
-    
+
     if (address.mainText && address.mainText.trim() !== "") {
       parts.push(address.mainText.trim());
     }
-    
+
     if (address.subText && address.subText.trim() !== "") {
       parts.push(address.subText.trim());
     }
-    
+
     return parts.join(", ");
   };
 
   // Function to format address for mobile footer (with truncation if needed)
   const formatMobileAddress = (address) => {
     if (!address) return "";
-    
+
     const fullAddress = formatFullAddress(address);
-    
+
     // For mobile, show full address but truncate if too long
     if (fullAddress.length > 50) {
       return fullAddress.substring(0, 47) + "...";
     }
-    
+
     return fullAddress;
   };
 
   // Function to format date for mobile footer
   const formatDateForMobile = (date) => {
     if (!date) return "";
-    
+
     // Format: "Wed, Dec 4"
     const options = { weekday: 'short', month: 'short', day: 'numeric' };
     return date.toLocaleDateString('en-US', options);
@@ -608,7 +608,7 @@ function CartPage() {
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
-    
+
     if (date.toDateString() === today.toDateString()) {
       return 'Today';
     } else if (date.toDateString() === tomorrow.toDateString()) {
@@ -636,13 +636,13 @@ function CartPage() {
       console.log("Cannot place order: Cart is empty");
       return false;
     }
-    
+
     // Check if user has required info
     if (!userInfo?.email) {
       console.log("Cannot place order: Missing user email");
       return false;
     }
-    
+
     return true;
   };
 
@@ -659,8 +659,8 @@ function CartPage() {
           <div>
             <img
               src="http://localhost:5000/assets/cart.png"
-              alt="cart-placeholder" 
-              style={{padding: "10px",width:"33%" }}
+              alt="cart-placeholder"
+              style={{ padding: "10px", width: "33%" }}
             />
           </div>
           <h3 className="fw-bold text-muted mb-3">Hey, it feels so empty here</h3>
@@ -675,8 +675,8 @@ function CartPage() {
             Explore Services
           </Button>
           {/* Test button for debugging */}
-          <Button 
-            variant="outline-warning" 
+          <Button
+            variant="outline-warning"
             className="mt-3"
             onClick={testBookingCreation}
           >
@@ -706,25 +706,25 @@ function CartPage() {
           {isLoggedIn ? (
             <div>
               <div className="mb-3">
-                <p className="fw-semibold" style={{fontSize:"15px"}}>
-                  <ImLocation style={{fontSize:"18px", marginRight: "8px"}}/>
+                <p className="fw-semibold" style={{ fontSize: "15px" }}>
+                  <ImLocation style={{ fontSize: "18px", marginRight: "8px" }} />
                   Send booking details to
                 </p>
-                <p style={{marginTop:"-12px", marginLeft: "28px", fontSize: "14px" }}>
-                 {userInfo?.phone || "9787081119"}
+                <p style={{ marginTop: "-12px", marginLeft: "28px", fontSize: "14px" }}>
+                  {userInfo?.phone || "9787081119"}
                 </p>
               </div>
-              
+
               <hr />
-              
+
               <div className="mb-3">
                 <div className="d-flex justify-content-between align-items-center mb-2">
-                  <p className="fw-semibold mb-0" style={{fontSize:"15px"}}>
-                    <ImLocation style={{fontSize:"18px", marginRight: "8px"}}/>
+                  <p className="fw-semibold mb-0" style={{ fontSize: "15px" }}>
+                    <ImLocation style={{ fontSize: "18px", marginRight: "8px" }} />
                     Address
                   </p>
                   {selectedAddress && (
-                    <Button 
+                    <Button
                       size="sm"
                       onClick={handleOpenLocationModal}
                       className="d-flex align-items-center fw-semibold gap-1 edit"
@@ -733,7 +733,7 @@ function CartPage() {
                     </Button>
                   )}
                 </div><p></p>
-                <div style={{ marginLeft: "28px",marginTop:"-12px" }}>
+                <div style={{ marginLeft: "28px", marginTop: "-12px" }}>
                   {selectedAddress ? (
                     <div>
                       <div className="d-flex justify-content-between align-items-start">
@@ -746,9 +746,9 @@ function CartPage() {
                       </div>
                     </div>
                   ) : (
-                    <Button 
-                      className="butn w-100" 
-                      style={{height:"40px"}}
+                    <Button
+                      className="butn w-100"
+                      style={{ height: "40px" }}
                       onClick={handleAddress}
                     >
                       Select an address
@@ -756,18 +756,18 @@ function CartPage() {
                   )}
                 </div>
               </div>
-              
+
               <hr />
-              
+
               <div className="mb-3">
                 <div className="d-flex justify-content-between align-items-center mb-2">
-                  <p className="fw-semibold mb-0" style={{fontSize:"15px"}}>
-                    <FaClock style={{fontSize:"16px", marginRight: "8px"}}/>
+                  <p className="fw-semibold mb-0" style={{ fontSize: "15px" }}>
+                    <FaClock style={{ fontSize: "16px", marginRight: "8px" }} />
                     Slot
                   </p>
                   {selectedSlot && (
-                    <Button 
-                      className="edit fw-semibold" 
+                    <Button
+                      className="edit fw-semibold"
                       size="sm"
                       onClick={() => setShowSlotModal(true)}
                     >
@@ -776,8 +776,8 @@ function CartPage() {
                   )}
                 </div>
                 {selectedSlot ? (
-                  <div style={{ marginLeft: "28px",marginTop:"-12px" }}>
-                    <p className="text-muted mb-2" style={{fontSize:"13px"}}>
+                  <div style={{ marginLeft: "28px", marginTop: "-12px" }}>
+                    <p className="text-muted mb-2" style={{ fontSize: "13px" }}>
                       {selectedDate && formatDateDisplay(selectedDate)} - {selectedSlot.time}
                       {selectedSlot.extraCharge > 0 && (
                         <span className="text-warning ms-2">+{formatPrice(selectedSlot.extraCharge)} extra</span>
@@ -786,8 +786,8 @@ function CartPage() {
                   </div>
                 ) : (
                   <div style={{ marginLeft: "28px" }}>
-                    <Button 
-                      className="butn w-100" style={{height:"40px"}} 
+                    <Button
+                      className="butn w-100" style={{ height: "40px" }}
                       onClick={() => setShowSlotModal(true)}
                       disabled={!selectedAddress}
                     >
@@ -799,30 +799,30 @@ function CartPage() {
                   </div>
                 )}
               </div>
-              
+
               <hr />
-              
+
               <div>
-                <p className="fw-semibold" style={{fontSize:"15px"}}>
-                  <MdPayments style={{fontSize:"20px", marginRight: "8px"}}/>
+                <p className="fw-semibold" style={{ fontSize: "15px" }}>
+                  <MdPayments style={{ fontSize: "20px", marginRight: "8px" }} />
                   Payment Method
                 </p>
                 {selectedSlot && selectedAddress && (
-                  <div style={{ marginLeft: "28px" }}>               
-                  <Button
-                    className="butn fw-bold w-100 p-3"
-                    disabled={!canPlaceOrder()}
-                    onClick={processPayment}
-                  >
-                    {!isLoggedIn ? "Login to Continue" : 
-                    !selectedAddress ? "Select Address" : 
-                    !selectedSlot ? "Select Time Slot" : 
-                    "Place an order"}
-                  </Button>
+                  <div style={{ marginLeft: "28px" }}>
+                    <Button
+                      className="butn fw-bold w-100 p-3"
+                      disabled={!canPlaceOrder()}
+                      onClick={processPayment}
+                    >
+                      {!isLoggedIn ? "Login to Continue" :
+                        !selectedAddress ? "Select Address" :
+                          !selectedSlot ? "Select Time Slot" :
+                            "Place an order"}
+                    </Button>
                   </div>
                 )}
-                <div  className="border rounded proceed  text-center">
-                  <p className="text-muted " style={{fontSize:"12px"}}>By proceeding, you agree to our <a  style={{color:"black"}} href="">T&C</a>,<a  style={{color:"black"}}  href="">Privacy</a> and <a  style={{color:"black"}} href="">Cancellation Policy</a> </p>
+                <div className="border rounded proceed  text-center">
+                  <p className="text-muted " style={{ fontSize: "12px" }}>By proceeding, you agree to our <a style={{ color: "black" }} href="">T&C</a>,<a style={{ color: "black" }} href="">Privacy</a> and <a style={{ color: "black" }} href="">Cancellation Policy</a> </p>
                 </div>
               </div>
             </div>
@@ -832,9 +832,9 @@ function CartPage() {
               <p style={{ fontSize: "13px", color: "#555" }}>
                 To book the service, please login or sign up
               </p>
-              <Button 
-                className="butn w-100 fw-bold" 
-                style={{ height: "40px" }} 
+              <Button
+                className="butn w-100 fw-bold"
+                style={{ height: "40px" }}
                 onClick={handleLogin}
               >
                 Login
@@ -865,7 +865,7 @@ function CartPage() {
                 onRemove={(item) => handleAddToCart(item, [], item.price, 0, "remove")}
               />
               <div className="mt-4 pt-3 border-top">
-                <Form.Check 
+                <Form.Check
                   type="checkbox"
                   id="frequently-added-checkbox"
                   label="Avoid calling before reaching the location"
@@ -878,21 +878,21 @@ function CartPage() {
           )}
 
           {/* Coupons Box */}
-          <div style={{border:"1px solid #d9d9d9", borderRadius:"8px", marginTop:"15px"}}>
-            <div style={{padding:"12px"}}>
+          <div style={{ border: "1px solid #d9d9d9", borderRadius: "8px", marginTop: "15px" }}>
+            <div style={{ padding: "12px" }}>
               <Row className="align-items-center">
                 <Col xs={8}>
                   <h5 className="fw-semibold mb-1" style={{ fontSize: "14px" }}>
-                    <TbCirclePercentageFilled style={{color:"rgb(22, 108, 52)",fontSize:"20px"}}/> 
+                    <TbCirclePercentageFilled style={{ color: "rgb(22, 108, 52)", fontSize: "20px" }} />
                     Coupons and offers
                   </h5>
                 </Col>
                 <Col xs={4} className="text-end">
-                  <Button 
+                  <Button
                     className="border-0 fw-semibold"
-                    style={{backgroundColor:"transparent", color:"#6e42e5", fontSize:"13px", padding:"4px 8px"}}
+                    style={{ backgroundColor: "transparent", color: "#6e42e5", fontSize: "13px", padding: "4px 8px" }}
                   >
-                    5 offers <MdKeyboardArrowRight style={{fontSize:"18px"}} />
+                    5 offers <MdKeyboardArrowRight style={{ fontSize: "18px" }} />
                   </Button>
                 </Col>
               </Row>
@@ -900,97 +900,97 @@ function CartPage() {
           </div>
 
           {/* Payment Summary */}
-          <div style={{border:"1px solid #d9d9d9",borderRadius:"8px", marginTop:"15px"}}>
-            <div style={{padding:"12px"}}>
+          <div style={{ border: "1px solid #d9d9d9", borderRadius: "8px", marginTop: "15px" }}>
+            <div style={{ padding: "12px" }}>
               <h5 className="fw-semibold mb-2">Payment summary</h5>
               <Row className="mb-1">
-                <Col><p style={{fontSize:"14px"}}>Item total</p></Col>
-                <Col className="text-end"><p style={{fontSize:"14px"}}>{formatPrice(itemTotal)}</p></Col>
+                <Col><p style={{ fontSize: "14px" }}>Item total</p></Col>
+                <Col className="text-end"><p style={{ fontSize: "14px" }}>{formatPrice(itemTotal)}</p></Col>
               </Row>
               <Row className="mb-1">
-                <Col><p style={{textDecoration:"underline dotted", cursor: "pointer", fontSize:"14px"}} title="18% GST">Taxes and fee</p></Col>
-                <Col className="text-end"><p style={{fontSize:"14px"}}>{formatPrice(tax)}</p></Col>
+                <Col><p style={{ textDecoration: "underline dotted", cursor: "pointer", fontSize: "14px" }} title="18% GST">Taxes and fee</p></Col>
+                <Col className="text-end"><p style={{ fontSize: "14px" }}>{formatPrice(tax)}</p></Col>
               </Row>
-              
+
               {slotExtraCharge > 0 && (
                 <Row className="mb-1">
-                  <Col><p style={{fontSize:"14px"}}>Evening slot charge</p></Col>
-                  <Col className="text-end"><p style={{fontSize:"14px"}}>{formatPrice(slotExtraCharge)}</p></Col>
+                  <Col><p style={{ fontSize: "14px" }}>Evening slot charge</p></Col>
+                  <Col className="text-end"><p style={{ fontSize: "14px" }}>{formatPrice(slotExtraCharge)}</p></Col>
                 </Row>
               )}
-              
+
               {tip > 0 && (
                 <Row className="mb-1">
-                  <Col><p style={{fontSize:"14px"}}>Tip</p></Col>
-                  <Col className="text-end"><p style={{fontSize:"14px"}}>{formatPrice(tip)}</p></Col>
-              </Row>
+                  <Col><p style={{ fontSize: "14px" }}>Tip</p></Col>
+                  <Col className="text-end"><p style={{ fontSize: "14px" }}>{formatPrice(tip)}</p></Col>
+                </Row>
               )}
               <hr />
               <Row className="mb-1">
-                <Col><p className="fw-semibold" style={{fontSize:"14px"}}>Total price</p></Col>
-                <Col className="text-end"><p className="fw-semibold" style={{fontSize:"14px"}}>{formatPrice(totalPrice)}</p></Col>
+                <Col><p className="fw-semibold" style={{ fontSize: "14px" }}>Total price</p></Col>
+                <Col className="text-end"><p className="fw-semibold" style={{ fontSize: "14px" }}>{formatPrice(totalPrice)}</p></Col>
               </Row>
               <hr />
               <Row className="mb-1">
-                <Col><p className="fw-semibold" style={{fontSize:"14px"}}>Amount to pay</p></Col>
-                <Col className="text-end"><p className="fw-semibold" style={{fontSize:"14px"}}>{formatPrice(totalPrice)}</p></Col>
+                <Col><p className="fw-semibold" style={{ fontSize: "14px" }}>Amount to pay</p></Col>
+                <Col className="text-end"><p className="fw-semibold" style={{ fontSize: "14px" }}>{formatPrice(totalPrice)}</p></Col>
               </Row>
               <hr />
 
               {/* Tip Section */}
               <div className="mt-2">
-                <p className="fw-semibold mb-1" style={{fontSize:"14px"}}>Add a tip to thank the professional</p>
+                <p className="fw-semibold mb-1" style={{ fontSize: "14px" }}>Add a tip to thank the professional</p>
                 <div className="d-flex gap-2 mb-2 align-items-center flex-wrap">
-                  {[50,75,100].map(amount => (
-                    <Button 
+                  {[50, 75, 100].map(amount => (
+                    <Button
                       key={amount}
                       onClick={() => handleTipSelect(amount)}
                       className="edit fw-semibold"
-                      style={{ color: selectedTip === amount ? "black" : "", borderRadius: "6px", padding: "6px 12px", fontSize:"13px" }}
+                      style={{ color: selectedTip === amount ? "black" : "", borderRadius: "6px", padding: "6px 12px", fontSize: "13px" }}
                     >
                       ₹{amount}
                     </Button>
                   ))}
                   {showCustomTip ? (
                     <div className="d-flex gap-2 align-items-center">
-                      <span className="fw-semibold" style={{fontSize:"14px"}}>₹</span>
+                      <span className="fw-semibold" style={{ fontSize: "14px" }}>₹</span>
                       <input
                         type="number"
                         placeholder="Enter amount"
                         value={customTip}
                         onChange={handleCustomTipChange}
-                        style={{ width: "80px", padding: "6px 8px", border: "1px solid #6e42e5", borderRadius: "6px", fontSize:"13px" }}
+                        style={{ width: "80px", padding: "6px 8px", border: "1px solid #6e42e5", borderRadius: "6px", fontSize: "13px" }}
                         autoFocus
                         min="25"
                       />
-                      <Button 
+                      <Button
                         variant="primary"
                         onClick={handleCustomTipSubmit}
-                        style={{ borderRadius: "6px", padding: "6px 12px", fontSize:"13px" }}
+                        style={{ borderRadius: "6px", padding: "6px 12px", fontSize: "13px" }}
                       >
                         Add
                       </Button>
                     </div>
                   ) : (
-                    <Button 
+                    <Button
                       onClick={handleCustomTipClick}
                       className="edit fw-semibold"
-                      style={{ color: customTip ? "white" : "black", borderRadius: "6px", padding: "6px 12px", fontSize:"13px" }}
+                      style={{ color: customTip ? "white" : "black", borderRadius: "6px", padding: "6px 12px", fontSize: "13px" }}
                     >
                       Custom
                     </Button>
                   )}
                 </div>
-                <p className="text-muted small mb-2" style={{fontSize:"12px"}}>100% of your tip goes to the professional.</p>
+                <p className="text-muted small mb-2" style={{ fontSize: "12px" }}>100% of your tip goes to the professional.</p>
                 {tip > 0 && (
-                  <Button variant="link" className="p-0 text-danger" style={{fontSize:"12px"}} onClick={handleRemoveTip}>Remove tip</Button>
+                  <Button variant="link" className="p-0 text-danger" style={{ fontSize: "12px" }} onClick={handleRemoveTip}>Remove tip</Button>
                 )}
               </div>
             </div>
           </div>
 
           {/* Amount to Pay Section - Only in 2nd column for desktop */}
-          <div className="d-none position-sticky bottom-0 d-md-block mt-4 p-3" style={{backgroundColor:"white"}}>
+          <div className="d-none position-sticky bottom-0 d-md-block mt-4 p-3" style={{ backgroundColor: "white" }}>
             <Row className="align-items-center">
               <Col>
                 <h5 className="fw-bold mb-0">Amount to Pay</h5>
@@ -1005,7 +1005,7 @@ function CartPage() {
 
       {/* Fixed Bottom Footer for Mobile Only */}
       <div className="d-md-none position-fixed bottom-0 start-0 end-0 bg-white border-top shadow-lg py-3"
-           style={{ zIndex: 1050 }}>
+        style={{ zIndex: 1050 }}>
         <Container>
           <Row className="align-items-center">
             {isLoggedIn ? (
@@ -1013,9 +1013,9 @@ function CartPage() {
                 {/* Step 1: No Address Selected - Show Address Button */}
                 {!selectedAddress && (
                   <Col xs={12}>
-                    <Button 
-                      className="butn w-100 fw-bold" 
-                      style={{ height: "48px", fontSize: "16px", borderRadius: "8px" }} 
+                    <Button
+                      className="butn w-100 fw-bold"
+                      style={{ height: "48px", fontSize: "16px", borderRadius: "8px" }}
                       onClick={handleAddress}
                     >
                       Add address
@@ -1031,24 +1031,24 @@ function CartPage() {
                         <div className="d-flex align-items-center mb-1">
                           {getAddressIcon(selectedAddress.addressType)}
                           <span style={{ fontSize: "14px" }}>
-                            {getAddressTypeText(selectedAddress.addressType)} - 
+                            {getAddressTypeText(selectedAddress.addressType)} -
                           </span>
                           <p className="mb-0" style={{ fontSize: "11px", lineHeight: "1.3" }}>
                             {formatMobileAddress(selectedAddress)}
                           </p>
                         </div>
                       </div>
-                      <Button 
-                        className="p-1 border-0" 
+                      <Button
+                        className="p-1 border-0"
                         style={{ backgroundColor: "transparent", minWidth: "36px" }}
                         onClick={() => handleAddress(true)}
                       >
                         <MdEdit style={{ color: "#000000ff", fontSize: "18px" }} />
                       </Button>
                     </div>
-                    <Button 
-                      className="butn w-100 fw-bold" 
-                      style={{ height: "48px", fontSize: "16px", borderRadius: "8px" }} 
+                    <Button
+                      className="butn w-100 fw-bold"
+                      style={{ height: "48px", fontSize: "16px", borderRadius: "8px" }}
                       onClick={() => setShowSlotModal(true)}
                     >
                       Select Time Slot
@@ -1060,38 +1060,38 @@ function CartPage() {
                 {selectedAddress && selectedSlot && (
                   <Col xs={12}>
                     {/* Address Section */}
-                    <div className="d-flex justify-content-between align-items-center mb-2 p-2" style={{borderBottom:"1px dashed"}}>
+                    <div className="d-flex justify-content-between align-items-center mb-2 p-2" style={{ borderBottom: "1px dashed" }}>
                       <div style={{ flex: 1 }}>
                         <div className="d-flex align-items-center mb-1">
                           {getAddressIcon(selectedAddress.addressType)}
                           <span style={{ fontSize: "14px" }}>
-                            {getAddressTypeText(selectedAddress.addressType)} - 
+                            {getAddressTypeText(selectedAddress.addressType)} -
                           </span>
                           <p className="mb-0" style={{ fontSize: "11px", lineHeight: "1.3" }}>
                             {formatMobileAddress(selectedAddress)}
                           </p>
                         </div>
                       </div>
-                      <Button 
-                        className="p-1 border-0" 
+                      <Button
+                        className="p-1 border-0"
                         style={{ backgroundColor: "transparent", minWidth: "36px" }}
                         onClick={() => handleAddress(true)}
                       >
                         <MdEdit style={{ color: "#000000ff", fontSize: "18px" }} />
                       </Button>
-                    </div> 
+                    </div>
 
                     {/* Slot Section */}
-                    <div className="d-flex justify-content-between align-items-center  p-2" style={{borderBottom:"3px solid #d4d1d1ff"}}>
+                    <div className="d-flex justify-content-between align-items-center  p-2" style={{ borderBottom: "3px solid #d4d1d1ff" }}>
                       <div style={{ flex: 1 }}>
                         <div >
-                            <p style={{ fontSize: "12px" }}>  <LuClock3 className="fw-bold" style={{ marginRight: "4px", fontSize: "16px" }} />
-                              {selectedDate && formatDateForMobile(selectedDate)} - {selectedSlot.time} 
-                            </p>
+                          <p style={{ fontSize: "12px" }}>  <LuClock3 className="fw-bold" style={{ marginRight: "4px", fontSize: "16px" }} />
+                            {selectedDate && formatDateForMobile(selectedDate)} - {selectedSlot.time}
+                          </p>
                         </div>
                       </div>
-                      <Button 
-                        className="p-1 border-0" 
+                      <Button
+                        className="p-1 border-0"
                         style={{ backgroundColor: "transparent", minWidth: "36px" }}
                         onClick={() => setShowSlotModal(true)}
                       >
@@ -1101,26 +1101,26 @@ function CartPage() {
 
                     {/* Amount and Pay Button */}
                     <div className=" mb-2 p-2">
-                    <Button
-                      className="butn fw-bold w-100 p-3"
-                      disabled={!canPlaceOrder()}
-                      onClick={processPayment}
-                    >
-                      {!isLoggedIn ? "Login to Continue" : 
-                      !selectedAddress ? "Select Address" : 
-                      !selectedSlot ? "Select Time Slot" : 
-                      "Place an order"}
-                    </Button>
-                    </div> 
+                      <Button
+                        className="butn fw-bold w-100 p-3"
+                        disabled={!canPlaceOrder()}
+                        onClick={processPayment}
+                      >
+                        {!isLoggedIn ? "Login to Continue" :
+                          !selectedAddress ? "Select Address" :
+                            !selectedSlot ? "Select Time Slot" :
+                              "Place an order"}
+                      </Button>
+                    </div>
                   </Col>
                 )}
               </>
             ) : (
               /* Not Logged In - Show Login Button */
               <Col xs={12}>
-                <Button 
-                  className="butn w-100 fw-bold" 
-                  style={{ height: "48px", fontSize: "16px", borderRadius: "8px" }} 
+                <Button
+                  className="butn w-100 fw-bold"
+                  style={{ height: "48px", fontSize: "16px", borderRadius: "8px" }}
                   onClick={handleLogin}
                 >
                   Login to Continue
@@ -1149,17 +1149,17 @@ function CartPage() {
         show={showAccountModal || showBookingsModal}
         totalPrice={totalPrice}
         onHide={() => {
-        setShowAccountModal(false);
-        setShowBookingsModal(false);
+          setShowAccountModal(false);
+          setShowBookingsModal(false);
         }}
         initialView={showLoginView ? "login" : "main"}
       />
 
       {/* Time Slot Selection Modal */}
-      <Modal 
-        show={showSlotModal} 
-        onHide={() => setShowSlotModal(false)} 
-        centered 
+      <Modal
+        show={showSlotModal}
+        onHide={() => setShowSlotModal(false)}
+        centered
         size="lg"
         backdrop="static"
       >
@@ -1178,27 +1178,27 @@ function CartPage() {
             </div>
           </div>
         </Modal.Header>
-        
-        <Modal.Body style={{ 
-          padding: '16px 20px',
-          maxHeight: '50vh',
-          overflowY: 'auto',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none'
-        }}>
-          
+
+        <Modal.Body
+          tabIndex={0}
+          style={{
+            padding: '16px 20px',
+            maxHeight: '50vh',
+            overflowY: 'auto'
+          }}>
+
 
           {/* Date Selection Row */}
           <div className="mb-4">
-            <div className="d-flex gap-2 overflow-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              <div className="d-flex gap-2 overflow-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <div className="d-flex gap-2 overflow-auto pb-2" tabIndex={0}>
+              <div className="d-flex gap-2 overflow-auto" tabIndex={0}>
                 {dates.map((date, index) => (
                   <Button
                     key={index}
                     variant={selectedDate?.toDateString() === date.toDateString() ? "primary" : "outline-secondary"}
                     className="flex-shrink-0"
-                    style={{ 
-                      minWidth: "80px", 
+                    style={{
+                      minWidth: "80px",
                       fontSize: "13px",
                       borderRadius: "8px",
                       borderWidth: "2px"
@@ -1221,14 +1221,13 @@ function CartPage() {
               <Row className="g-4">
                 {getSlotsForSelectedDate().map(slot => (
                   <Col xs={3} key={slot.id} className="mb-2">
-                    <div 
-                      className={`p-2  border rounded text-center position-relative ${
-                        selectedSlot?.id === slot.id ? 'border-primary' : 'border-secondary'
-                      } ${!slot.available ? 'bg-light text-muted' : ''}`}
-                      style={{ 
+                    <div
+                      className={`p-2  border rounded text-center position-relative ${selectedSlot?.id === slot.id ? 'border-primary' : 'border-secondary'
+                        } ${!slot.available ? 'bg-light text-muted' : ''}`}
+                      style={{
                         cursor: slot.available ? 'pointer' : 'not-allowed',
-                        backgroundColor: !slot.available ? '#f8f9fa' : 
-                                        selectedSlot?.id === slot.id ? '#f0ebff' : '#ffffff',
+                        backgroundColor: !slot.available ? '#f8f9fa' :
+                          selectedSlot?.id === slot.id ? '#f0ebff' : '#ffffff',
                         minHeight: '20px',
                         fontSize: "12px",
                         borderRadius: "8px",
@@ -1238,11 +1237,11 @@ function CartPage() {
                       onClick={() => slot.available && handleSlotSelect(slot)}
                     >
                       {slot.extraCharge > 0 && (
-                        <Badge 
+                        <Badge
                           bg={selectedSlot?.id === slot.id ? "primary" : "warning"}
                           text={selectedSlot?.id === slot.id ? "white" : "dark"}
                           className="position-absolute top-0 start-100 translate-middle"
-                          style={{ 
+                          style={{
                             fontSize: '0.6rem',
                             fontWeight: '600',
                             padding: '3px 5px'
@@ -1251,11 +1250,11 @@ function CartPage() {
                           +₹{slot.extraCharge}
                         </Badge>
                       )}
-                      
-                      <p className="mb-0 fw-semibold" style={{ 
+
+                      <p className="mb-0 fw-semibold" style={{
                         fontSize: "11px",
-                        color: selectedSlot?.id === slot.id ? '#8b5cf6' : 
-                              !slot.available ? '#6c757d' : '#374151'
+                        color: selectedSlot?.id === slot.id ? '#8b5cf6' :
+                          !slot.available ? '#6c757d' : '#374151'
                       }}>
                         {slot.time}
                       </p>
@@ -1272,19 +1271,19 @@ function CartPage() {
             )}
           </div>
         </Modal.Body>
-        
-        <Modal.Footer className="border-top-0" style={{ 
+
+        <Modal.Footer className="border-top-0" style={{
           padding: '12px 20px 16px 20px',
           backgroundColor: '#f8f9fa',
           borderBottomLeftRadius: '12px',
           borderBottomRightRadius: '12px'
         }}>
           <div className="w-100">
-            <Button 
-              className="butn w-100" 
+            <Button
+              className="butn w-100"
               onClick={() => setShowSlotModal(false)}
               disabled={!selectedSlot}
-              style={{ 
+              style={{
                 fontSize: "13px",
                 height: "40px",
                 padding: "6px 20px",

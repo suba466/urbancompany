@@ -10,7 +10,7 @@ function CartBlock({
   navigate,
   hideViewButton = false,
   onEdit,
-  customerEmail = "" // Add this parameter
+  customerEmail = "" 
 }) {
   const totalPrice = carts.reduce((acc, c) => safePrice(c.price) * (c.count || 1), 0);
 
@@ -25,7 +25,7 @@ function CartBlock({
       {carts.length === 0 ? (
         <div className="text-center py-4">
           <img
-            src="http://localhost:5000/assets/cart.png"
+            src="http://localhost:5000/assets/cart.jpg"
             alt="cart-empty"
             className="w-50 mb-3"
             style={{ maxWidth: "120px", objectFit: "contain" }}

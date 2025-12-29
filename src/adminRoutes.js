@@ -93,6 +93,7 @@ const customerSchema = new mongoose.Schema({
   profileImage: { type: String, default: "" },
   title: { type: String, default: "Ms" },
   isVerified: { type: Boolean, default: true },
+  isActive: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -1210,6 +1211,39 @@ router.put("/users/:id", checkPermission('Users'), upload.single('profileImage')
   }
 });
 
+// Toggle user status
+router.put("/users/:id/toggle-status", checkPermission('Users'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Default to true if undefined
+    const currentStatus = user.isActive !== undefined ? user.isActive : true;
+    user.isActive = isActive !== undefined ? isActive : !currentStatus;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: `User ${user.isActive ? 'enabled' : 'disabled'} successfully`,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        isActive: user.isActive
+      }
+    });
+
+  } catch (error) {
+    console.error("Error toggling user status:", error);
+    res.status(500).json({ error: "Failed to update user status" });
+  }
+});
+
 // Delete user
 router.delete("/users/:id", checkPermission('Users'), async (req, res) => {
   try {
@@ -1386,6 +1420,53 @@ router.put("/customers/:id", checkPermission('Customer'), upload.single('profile
   } catch (error) {
     console.error("Error updating customer:", error);
     res.status(500).json({ error: "Failed to update customer" });
+  }
+});
+
+// Toggle customer status
+router.put("/customers/:id/toggle-status", checkPermission('Customer'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+
+    const customer = await Customer.findById(id);
+    if (!customer) {
+      return res.status(404).json({ error: "Customer not found" });
+    }
+
+    // Customer schema doesn't have isActive by default, verify schema
+    // Assuming we added it or using isVerified?
+    // Step 489 showed customerSchema: isVerified: boolean, default: true. 
+    // It did NOT show isActive. But UserManagement implies isActive.
+    // If schema lacks isActive, it won't save.
+    // I should check schema again. Step 489 Lines 87-98.
+    // 95: isVerified.
+    // No isActive.
+    // But Admin panel expects Active/Inactive.
+    // I should add isActive to Customer schema first!
+
+    // Wait, let's assume I should update Schema first if needed.
+    // Or map isActive to isVerified?
+    // Usually 'Active' means 'Allowed to login'. 'Verified' means 'Email checked'.
+    // If I map to isVerified, toggling it handles that.
+    // But better to add isActive.
+
+    // I'll update schema AND add route.
+
+    // Default to true if undefined
+    const currentStatus = customer.isActive !== undefined ? customer.isActive : true;
+    customer.isActive = isActive !== undefined ? isActive : !currentStatus;
+    await customer.save();
+
+    res.json({
+      success: true,
+      message: `Customer ${customer.isActive ? 'unblocked' : 'blocked'} successfully`,
+      customer
+    });
+
+  } catch (error) {
+    console.error("Error toggling customer status:", error);
+    res.status(500).json({ error: "Failed to update customer status" });
   }
 });
 

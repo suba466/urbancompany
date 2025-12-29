@@ -960,8 +960,8 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
                         key={title}
                         type="button"
                         className={`btn border-0 rounded-0 flex-fill ${(profileData.title || userInfo.title || "Ms") === title
-                            ? 'btn-dark'
-                            : 'btn-outline-secondary'
+                          ? 'btn-dark'
+                          : 'btn-outline-secondary'
                           }`}
                         onClick={() => handleProfileChange('title', title)}
                         style={{
@@ -1150,8 +1150,8 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
                         </p>
                       </div>
                       <span className={`badge ${booking.status === 'Confirmed' ? 'bg-success' :
-                          booking.status === 'Completed' ? 'bg-primary' :
-                            booking.status === 'Cancelled' ? 'bg-danger' : 'bg-warning'
+                        booking.status === 'Completed' ? 'bg-primary' :
+                          booking.status === 'Cancelled' ? 'bg-danger' : 'bg-warning'
                         }`}>
                         {booking.status || 'Confirmed'}
                       </span>
@@ -1618,20 +1618,13 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
         </Modal.Header>
 
         <Modal.Body
+          tabIndex={0}
           style={{
             maxHeight: '400px',
-            overflowY: 'auto',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
+            overflowY: 'auto'
           }}
         >
-          <style>
-            {`
-            .modal-body::-webkit-scrollbar {
-              display: none;
-            }
-          `}
-          </style>
+
           <Container fluid>
             {renderMainContent()}
           </Container>

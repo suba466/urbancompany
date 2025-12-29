@@ -510,20 +510,13 @@ function SubcategoryManagement({ isAdding, isEditing }) {
       <Modal show={showViewModal} onHide={() => setShowViewModal(false)} centered>
         <Modal.Body
           className="p-4"
+          tabIndex={0}
           style={{
             maxHeight: '400px',
-            overflowY: 'auto',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
+            overflowY: 'auto'
           }}
         >
-          <style>
-            {`
-            .modal-body::-webkit-scrollbar {
-              display: none;
-            }
-          `}
-          </style>
+
           {/* Close button */}
           <Button
             type="button"

@@ -268,7 +268,7 @@ function Salon1modal({
               <p><IoTime /> Service time: {selectedItem.duration ?? "3 hrs 50 mins"}</p>
             </div>
 
-            <div className="p-3 scroll position-relative">
+            <div className="p-3 scroll position-relative" tabIndex={0}>
               {renderSection("waxingOptions", waxingOptions, "Waxing")}
               {renderSection("facialOptions", facial, "Facial & cleanup")}
               {renderSection("pedicureOptions", pedicure, "Pedicure")}
@@ -381,20 +381,13 @@ function Salon1modal({
       <Modal show={showDiscountModal} onHide={() => { setShowDiscountModal(false); setShowFrequentlyAdded(false); }} centered contentClassName="custom-modal">
         <Button type="button" onClick={() => setShowDiscountModal(false)} className="position-absolute border-0 justify-content-center closebtn p-0" >X</Button>
         <ModalBody
+          tabIndex={0}
           style={{
             maxHeight: '400px',
-            overflowY: 'auto',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
+            overflowY: 'auto'
           }}
         >
-          <style>
-            {`
-            .modal-body::-webkit-scrollbar {
-              display: none;
-            }
-          `}
-          </style>
+
           <div className="p-3 position-relative">
             <Row>
               {selectedItem && (

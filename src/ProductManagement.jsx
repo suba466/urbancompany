@@ -474,7 +474,7 @@ function ProductManagement({ isAdding }) {
     const newStatus = !currentStatus;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/packages/${productId}/status`, {
+      const response = await fetch(`http://localhost:5000/api/admin/packages/${productId}/toggle-status`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ isActive: newStatus })
@@ -634,20 +634,13 @@ function ProductManagement({ isAdding }) {
 
       <Modal.Body
         className="p-4"
+        tabIndex={0}
         style={{
           maxHeight: '400px',
-          overflowY: 'auto',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none'
+          overflowY: 'auto'
         }}
       >
-        <style>
-          {`
-          .modal-body::-webkit-scrollbar {
-            display: none;
-          }
-        `}
-        </style>
+
 
         {/* Modal Title */}
         <div className="mb-4">
@@ -1218,11 +1211,11 @@ function ProductManagement({ isAdding }) {
               <p className="mt-3 text-muted">Loading products...</p>
             </div>
           ) : (
-            <div className="table-responsive">
+            <div >
               <Table striped bordered hover style={{ border: "2px solid #000000" }}>
                 <thead>
                   <tr>
-                    <th>
+                    <th >
                       <Form.Check
                         type="checkbox"
                         className='check'

@@ -192,28 +192,43 @@ function CustomerManagement() {
   };
   // Block/Unblock single customer
   const toggleCustomerStatus = async (customerId, isActive) => {
-    const action = isActive ? 'unblock' : 'block';
-    const confirmMessage = `Are you sure you want to ${action} this customer?`;
+    try {
+      // Optimistic update
+      setCustomers(prev => prev.map(c =>
+        c._id === customerId ? { ...c, isActive } : c
+      ));
 
-    if (window.confirm(confirmMessage)) {
-      try {
-        const response = await fetch(`http://localhost:5000/api/admin/customers/${customerId}/block`, {
-          method: 'PUT',
-          headers: getAuthHeaders(),
-          body: JSON.stringify({ isActive: !isActive })
-        });
-
-        const data = await response.json();
-        if (data.success) {
-          alert(`Customer ${action}ed successfully`);
-          fetchCustomers(customerPage, customerSearch, customerPerPage);
-        } else {
-          alert(data.error || `Failed to ${action} customer`);
-        }
-      } catch (error) {
-        console.error(`Error ${action}ing customer:`, error);
-        alert(`Failed to ${action} customer`);
+      if (selectedCustomer && selectedCustomer._id === customerId) {
+        setSelectedCustomer(prev => ({ ...prev, isActive }));
       }
+
+      const response = await fetch(`http://localhost:5000/api/admin/customers/${customerId}/toggle-status`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ isActive })
+      });
+
+      const data = await response.json();
+      if (!data.success) {
+        // Revert
+        setCustomers(prev => prev.map(c =>
+          c._id === customerId ? { ...c, isActive: !isActive } : c
+        ));
+        if (selectedCustomer && selectedCustomer._id === customerId) {
+          setSelectedCustomer(prev => ({ ...prev, isActive: !isActive }));
+        }
+        alert(data.error || "Failed to update status");
+      }
+    } catch (error) {
+      console.error("Error updating customer status:", error);
+      // Revert
+      setCustomers(prev => prev.map(c =>
+        c._id === customerId ? { ...c, isActive: !isActive } : c
+      ));
+      if (selectedCustomer && selectedCustomer._id === customerId) {
+        setSelectedCustomer(prev => ({ ...prev, isActive: !isActive }));
+      }
+      alert("Failed to update status");
     }
   };
 
@@ -457,20 +472,13 @@ function CustomerManagement() {
           X
         </Button>
         <Modal.Body className="p-4"
+          tabIndex={0}
           style={{
             maxHeight: '400px',
-            overflowY: 'auto',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
+            overflowY: 'auto'
           }}
         >
-          <style>
-            {`
-              .modal-body::-webkit-scrollbar {
-                display: none;
-              }
-            `}
-          </style>
+
 
           <Modal.Title><h5>Customer Details</h5></Modal.Title>
 
@@ -525,9 +533,13 @@ function CustomerManagement() {
 
                 <div className="list-group-item px-0">
                   <small className="text-muted d-block">Account Status</small>
-                  <Badge bg={selectedCustomer.isActive !== false ? 'success' : 'danger'}>
-                    {selectedCustomer.isActive !== false ? 'Active' : 'Inactive'}
-                  </Badge>
+                  <Form.Check
+                    type="switch"
+                    id="customer-status-switch"
+                    checked={selectedCustomer.isActive !== false}
+                    onChange={(e) => toggleCustomerStatus(selectedCustomer._id, e.target.checked)}
+                    label={selectedCustomer.isActive !== false ? 'Active' : 'Blocked'}
+                  />
                 </div>
 
                 <div className="list-group-item px-0">

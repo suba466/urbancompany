@@ -165,9 +165,15 @@ function Salon() {
   };
 
   // Handle subcategory click
+  // Handle subcategory click
   const handleSubcategoryClick = (subcategory) => {
-    console.log("Subcategory clicked:", subcategory);
-    navigate(`/packages?subcategory=${subcategory.key}&category=salon&subcategoryId=${subcategory._id}`);
+    const normalizeKey = (str) => str?.toLowerCase()?.trim()?.replace(/\s+/g, "-") || "";
+    const sectionId = `section-${normalizeKey(subcategory.name)}`;
+    const element = document.getElementById(sectionId);
+
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   };
 
   return (
