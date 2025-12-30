@@ -317,7 +317,7 @@ router.post("/login", async (req, res) => {
         }
       },
       JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: '2h' }
     );
 
     console.log(`Admin logged in: ${email}`);
@@ -2485,5 +2485,95 @@ router.put("/packages/:id/status", checkPermission('Product'), async (req, res) 
     });
   }
 });
+// Bulk block/unblock customers
+router.post("/customers/bulk-block", checkPermission('Customer'), async (req, res) => {
+  try {
+    const { ids, isActive } = req.body;
 
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Customer IDs array is required"
+      });
+    }
+
+    if (isActive === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: "isActive status is required"
+      });
+    }
+
+    const action = isActive ? 'unblocked' : 'blocked';
+
+    // Update all customers
+    const result = await Customer.updateMany(
+      { _id: { $in: ids } },
+      { $set: { isActive: isActive, updatedAt: new Date() } }
+    );
+
+    console.log(`Bulk ${action} ${result.modifiedCount} customers`);
+
+    res.json({
+      success: true,
+      message: `${result.modifiedCount} customer(s) ${action} successfully`,
+      modifiedCount: result.modifiedCount
+    });
+
+  } catch (error) {
+    console.error(`Error bulk ${isActive ? 'unblocking' : 'blocking'} customers:`, error);
+    res.status(500).json({
+      success: false,
+      error: `Failed to ${isActive ? 'unblock' : 'block'} customers`
+    });
+  }
+});
+
+// Toggle customer status - UPDATED
+router.put("/customers/:id/toggle-status", checkPermission('Customer'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+
+    if (isActive === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: "isActive status is required"
+      });
+    }
+
+    const customer = await Customer.findById(id);
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        error: "Customer not found"
+      });
+    }
+
+    customer.isActive = isActive;
+    customer.updatedAt = new Date();
+    await customer.save();
+
+    const action = isActive ? 'unblocked' : 'blocked';
+    console.log(`Customer ${action}: ${customer.email}`);
+
+    res.json({
+      success: true,
+      message: `Customer ${action} successfully`,
+      customer: {
+        id: customer._id,
+        name: customer.name,
+        email: customer.email,
+        isActive: customer.isActive
+      }
+    });
+
+  } catch (error) {
+    console.error("Error toggling customer status:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to update customer status"
+    });
+  }
+});
 export default router;

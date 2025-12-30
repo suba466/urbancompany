@@ -22,6 +22,15 @@ function CustomerManagement() {
   const [selectAllCustomers, setSelectAllCustomers] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
+  
+  // New state for status confirmation modal
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [statusChangeData, setStatusChangeData] = useState({
+    customerId: null,
+    customerName: '',
+    newStatus: true,
+    currentStatus: true
+  });
 
   const getAuthToken = () => {
     return localStorage.getItem('authToken');
@@ -190,45 +199,64 @@ function CustomerManagement() {
       minute: '2-digit'
     });
   };
-  // Block/Unblock single customer
-  const toggleCustomerStatus = async (customerId, isActive) => {
+
+  // Handle toggle click - show confirmation modal
+  const handleToggleClick = (customerId, newStatus, customerName, currentStatus) => {
+    setStatusChangeData({
+      customerId,
+      customerName,
+      newStatus,
+      currentStatus
+    });
+    setShowStatusModal(true);
+  };
+
+  // Confirm status change
+  const confirmStatusChange = async () => {
+    const { customerId, newStatus, customerName } = statusChangeData;
+    
     try {
       // Optimistic update
       setCustomers(prev => prev.map(c =>
-        c._id === customerId ? { ...c, isActive } : c
+        c._id === customerId ? { ...c, isActive: newStatus } : c
       ));
 
       if (selectedCustomer && selectedCustomer._id === customerId) {
-        setSelectedCustomer(prev => ({ ...prev, isActive }));
+        setSelectedCustomer(prev => ({ ...prev, isActive: newStatus }));
       }
 
       const response = await fetch(`http://localhost:5000/api/admin/customers/${customerId}/toggle-status`, {
         method: 'PUT',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ isActive })
+        body: JSON.stringify({ isActive: newStatus })
       });
 
       const data = await response.json();
       if (!data.success) {
-        // Revert
+        // Revert on error
         setCustomers(prev => prev.map(c =>
-          c._id === customerId ? { ...c, isActive: !isActive } : c
+          c._id === customerId ? { ...c, isActive: !newStatus } : c
         ));
         if (selectedCustomer && selectedCustomer._id === customerId) {
-          setSelectedCustomer(prev => ({ ...prev, isActive: !isActive }));
+          setSelectedCustomer(prev => ({ ...prev, isActive: !newStatus }));
         }
         alert(data.error || "Failed to update status");
+      } else {
+        // Show success message
+        alert(`Customer "${customerName}" ${newStatus ? 'unblocked' : 'blocked'} successfully`);
       }
     } catch (error) {
       console.error("Error updating customer status:", error);
-      // Revert
+      // Revert on error
       setCustomers(prev => prev.map(c =>
-        c._id === customerId ? { ...c, isActive: !isActive } : c
+        c._id === customerId ? { ...c, isActive: !newStatus } : c
       ));
       if (selectedCustomer && selectedCustomer._id === customerId) {
-        setSelectedCustomer(prev => ({ ...prev, isActive: !isActive }));
+        setSelectedCustomer(prev => ({ ...prev, isActive: !newStatus }));
       }
-      alert("Failed to update status");
+      alert("Failed to update status. Please try again.");
+    } finally {
+      setShowStatusModal(false);
     }
   };
 
@@ -342,28 +370,29 @@ function CustomerManagement() {
             <Table striped bordered hover style={{ border: "2px solid" }}>
               <thead>
                 <tr>
-                  <th >
+                  <th>
                     <Form.Check
-                      type="checkbox" className='check'
+                      type="checkbox"
+                      className='check'
                       checked={selectAllCustomers}
                       onChange={handleSelectAllCustomers}
                     />
                   </th>
-                  <th >Profile</th>
+                  <th>Profile</th>
                   <th>Name</th>
                   <th>Email</th>
                   <th>Phone</th>
                   <th>City</th>
-                  <th >Password</th>
-                  <th>Status</th> {/* Add this */}
+                  <th>Password</th>
+                  <th>Status</th>
                   <th>Joined Date</th>
-                  <th >Actions</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {customers.length === 0 ? (
                   <tr>
-                    <td colSpan="10" className="text-center py-5"> {/* Update colspan */}
+                    <td colSpan="10" className="text-center py-5">
                       <div className="text-muted">
                         <i className="bi bi-people display-4 mb-3"></i>
                         <p className="mb-0">No customers found</p>
@@ -427,9 +456,21 @@ function CustomerManagement() {
                         </small>
                       </td>
                       <td>
-                        <Badge bg={customer.isActive !== false ? 'success' : 'danger'}>
-                          {customer.isActive !== false ? 'Active' : 'Blocked'}
-                        </Badge>
+                        <div className="d-flex align-items-center justify-content-center gap-2">
+                          <Form.Check
+                            type="switch"
+                            id={`status-switch-${customer._id}`}
+                            checked={customer.isActive !== false}
+                            onChange={(e) => handleToggleClick(
+                              customer._id, 
+                              e.target.checked, 
+                              customer.name,
+                              customer.isActive
+                            )}
+                            className="mb-0"
+                            label={customer.isActive !==false ?"Enabled":"disabled"}
+                          />
+                        </div>
                       </td>
                       <td>{new Date(customer.createdAt).toLocaleDateString()}</td>
                       <td>
@@ -463,23 +504,14 @@ function CustomerManagement() {
 
       {/* Customer Details Modal */}
       <Modal show={showViewModal} onHide={() => setShowViewModal(false)} centered>
-        <Button
-          type="button"
-          onClick={() => setShowViewModal(false)}
-          className="position-absolute border-0 justify-content-center closebtn p-0"
-          title="Close"
-        >
-          X
-        </Button>
+        
         <Modal.Body className="p-4"
           tabIndex={0}
           style={{
-            maxHeight: '400px',
+            maxHeight: '500px',
             overflowY: 'auto'
           }}
         >
-
-
           <Modal.Title><h5>Customer Details</h5></Modal.Title>
 
           {selectedCustomer && (
@@ -533,13 +565,30 @@ function CustomerManagement() {
 
                 <div className="list-group-item px-0">
                   <small className="text-muted d-block">Account Status</small>
-                  <Form.Check
-                    type="switch"
-                    id="customer-status-switch"
-                    checked={selectedCustomer.isActive !== false}
-                    onChange={(e) => toggleCustomerStatus(selectedCustomer._id, e.target.checked)}
-                    label={selectedCustomer.isActive !== false ? 'Active' : 'Blocked'}
-                  />
+                  <div className="d-flex align-items-center justify-content-between">
+                    <div className="d-flex align-items-center">
+                      <Form.Check
+                        type="switch"
+                        id="customer-status-switch"
+                        checked={selectedCustomer.isActive !== false}
+                        onChange={(e) => handleToggleClick(
+                          selectedCustomer._id, 
+                          e.target.checked, 
+                          selectedCustomer.name,
+                          selectedCustomer.isActive
+                        )}
+                        label={selectedCustomer.isActive !== false ? 'Active' : 'Blocked'}
+                        className="me-3"
+                      />
+                     
+                    </div>
+                  </div>
+                  <small className="text-muted d-block mt-2">
+                    <i className="bi bi-info-circle me-1"></i>
+                    {selectedCustomer.isActive !== false 
+                      ? 'Customer can access their account and make bookings'
+                      : 'Customer cannot login or use any services'}
+                  </small>
                 </div>
 
                 <div className="list-group-item px-0">
@@ -567,7 +616,40 @@ function CustomerManagement() {
           >
             Close
           </Button>
+        </Modal.Footer>
+      </Modal>
 
+      {/* Status Change Confirmation Modal */}
+      <Modal show={showStatusModal} onHide={() => setShowStatusModal(false)} centered>
+        
+        <Modal.Body>
+          <div className="text-center mb-3">
+            <div className="mb-3">
+              <i className={`bi bi-${statusChangeData.newStatus ? 'unlock' : 'lock'} display-4 ${statusChangeData.newStatus ? 'text-success' : 'text-danger'}`}></i>
+            </div>
+            <h5 className="mb-2">Change Account Status</h5>
+            <p className="text-muted mb-0">
+              Are you sure, You need to <strong>{statusChangeData.newStatus ? 'unblock' : 'block'}</strong> customer:
+            </p>
+            <h6 className="text-danger my-2">"{statusChangeData.customerName}"</h6>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button 
+            variant="secondary" 
+            onClick={() => setShowStatusModal(false)}
+            style={{ borderRadius: "50px" }}
+          >
+            <i className="bi bi-x-circle me-1"></i> Cancel
+          </Button>
+          <Button 
+            variant={statusChangeData.newStatus ? "success" : "danger"}
+            onClick={confirmStatusChange}
+            style={{ borderRadius: "50px" }}
+          >
+            <i className={`bi bi-${statusChangeData.newStatus ? 'check-circle' : 'x-circle'} me-1`}></i>
+            {statusChangeData.newStatus ? 'Unblock Customer' : 'Block Customer'}
+          </Button>
         </Modal.Footer>
       </Modal>
     </div>

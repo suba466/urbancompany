@@ -145,7 +145,7 @@ const fetchProfile = async () => {
     <div>
       <Card className="shadow-lg">
         <Card.Body style={{marginLeft:"25px",marginRight:"25px"}}>
-          <h5 className="fw-semibold mb-0">Profile</h5>
+          <h5 className="fw-semibold mb-0">Profile Management</h5>
         </Card.Body>
       </Card>
       <br />
@@ -189,7 +189,7 @@ const fetchProfile = async () => {
             <div className="d-flex justify-content-center gap-2">
               
               <h6 bg={isAdmin ? 'warning' : 'info'}>
-                {isAdmin ? 'Admin' : 'User'}
+                {isAdmin ? 'Admin' :profile.designation}
               </h6>
             </div>
           </div>
@@ -199,43 +199,42 @@ const fetchProfile = async () => {
             
             {/* Email */}
             <div className="mb-4">
-              <h6 className="text-muted mb-2">Email</h6>
-              <p className="mb-0 fs-5">{profile.email}</p>
+              <h6 >Email</h6>
+              <p >{profile.email}</p>
             </div>
-            
-            {/* Designation */}
-            {profile.designation && (
-              <div className="mb-4">
-                <h6 className="text-muted mb-2">Designation</h6>
-                <p className="mb-0 fs-5">{profile.designation}</p>
-              </div>
-            )}
-            
-            {/* Permissions Section */}
+              {/* Permissions Section */}
             <div className="mb-4">
-              <h6 className="text-muted mb-2">Permissions</h6>
-              
+              <h6 >Permissions</h6>
               {isAdmin ? (
                 <div>
-                  <Badge bg="warning" className="px-3 py-2 mb-2 fs-6">
-                    Full Administrative Access
-                  </Badge>
-                  <p className="text-muted small mb-0">
-                    You have access to all system modules and features
-                  </p>
+                  <div className="d-flex flex-wrap gap-2 mb-2">
+                    {[
+                      'Dashboard',
+                      'Users', 
+                      'Customer',
+                      'Catalog',
+                      'Product',
+                      'Bookings',
+                      'Reports',
+                      'Settings'
+                    ].map((module, index) => (
+                      <Badge key={index} bg="success" className="px-3 py-2">
+                        {module}
+                      </Badge>
+                    ))}
+                  </div>
+                  
                 </div>
               ) : activePermissions.length > 0 ? (
                 <div>
                   <div className="d-flex flex-wrap gap-2 mb-2">
                     {activePermissions.map((permission, index) => (
-                      <Badge key={index} bg="primary" className="px-3 py-2">
+                      <Badge key={index} bg="success" className="px-3 py-2">
                         {permission}
                       </Badge>
                     ))}
                   </div>
-                  <p className="text-muted small mb-0">
-                    You have access to {activePermissions.length} module(s)
-                  </p>
+                 
                 </div>
               ) : (
                 <div>
@@ -248,62 +247,19 @@ const fetchProfile = async () => {
                 </div>
               )}
             </div>
-            
-            {/* All Permissions List (for reference) */}
-            <div className="mb-4">
-              <h6 className="text-muted mb-2">Available System Modules</h6>
-              <div className="row">
-                {[
-                  'Dashboard',
-                  'Users', 
-                  'Customer',
-                  'Catalog',
-                  'Product',
-                  'Bookings',
-                  'Reports',
-                  'Settings'
-                ].map((module, index) => {
-                  const hasAccess = isAdmin || (profile.permissions && profile.permissions[module] === true);
-                  
-                  return (
-                    <div key={index} className="col-6 col-md-4 mb-2">
-                      <div className="d-flex align-items-center">
-                        <div 
-                          className={`rounded-circle me-2 ${hasAccess ? 'bg-success' : 'bg-secondary'}`}
-                          style={{ width: '8px', height: '8px' }}
-                        />
-                        <span className={hasAccess ? 'text-dark' : 'text-muted'}>
-                          {module}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              
             </div>
+            
+            
             
             {/* Joined Date */}
             {profile.createdAt && (
               <div className="mb-4">
-                <h6 className="text-muted mb-2">Joined Date</h6>
-                <p className="mb-0 fs-5">{formatDate(profile.createdAt)}</p>
+                <h6 >Joined Date</h6>
+                <p >{formatDate(profile.createdAt)}</p>
               </div>
             )}
-            
-            {/* Account Status */}
-            <div className="mb-4">
-              <h6 className="text-muted mb-2">Account Status</h6>
-              <div className="d-flex align-items-center gap-2">
-                <Badge bg={profile.isActive ? 'success' : 'danger'} className="px-3 py-2">
-                  {profile.isActive ? 'Active' : 'Inactive'}
-                </Badge>
-                <span className={profile.isActive ? 'text-success' : 'text-danger'}>
-                  {profile.isActive ? 'Your account is active' : 'Your account is inactive'}
-                </span>
-              </div>
-            </div>
-            
-          </div>
+         
         </Card.Body>
       </Card>
     </div>

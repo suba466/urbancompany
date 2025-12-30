@@ -186,8 +186,8 @@ const TableControls = ({
         {/* Main Controls Row */}
         <Row className="align-items-center mb-3">
           {/* Left Side: Search and Additional Actions */}
-          <Col md={12} lg={8} className="mb-md-2 mb-lg-0">
-            <div className="d-flex align-items-center gap-3">
+          <Col md={12} lg={9} className="mb-md-2 mb-lg-0">
+            <div className="d-flex align-items-center gap-5">
               {/* Additional Actions (on LEFT of search) */}
               {additionalActions && (
                 <div className="additional-actions">
@@ -217,7 +217,7 @@ const TableControls = ({
           </Col>
 
           {/* Right Side: Download buttons */}
-          <Col md={12} lg={4}>
+          <Col md={12} lg={3}>
             {showDownload && (
               <div className="d-flex gap-2 justify-content-lg-end justify-content-md-start">
                 <Button

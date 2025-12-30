@@ -400,7 +400,7 @@ function Categories({
                                 }}
                                 label={
                                   <span>
-                                    {category.isActive !== false ? 'Enable' : 'Disable'}
+                                    {category.isActive !== false ? 'Enabled' : 'Disabled'}
                                   </span>
                                 }
                               />
@@ -474,14 +474,7 @@ function Categories({
         <Modal.Body
           className="p-4"
           tabIndex={0}
-          style={{
-            maxHeight: '400px',
-            overflowY: 'auto'
-          }}
-        >
-
-          <Button type="button" onClick={() => setShowCategoryModal(false)} className="position-absolute border-0 justify-content-center closebtn p-0">X</Button>
-          <Modal.Title> <h5>Category Details</h5></Modal.Title>
+       > <Modal.Title> <h5>Category Details</h5></Modal.Title>
           {selectedCategory && (
             <div>
               <div className="text-center mb-4">

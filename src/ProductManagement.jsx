@@ -622,31 +622,18 @@ function ProductManagement({ isAdding }) {
       centered
       size="md"
     >
-      {/* External close button positioned outside modal */}
-      <Button
-        type="button"
-        onClick={() => setShowViewModal(false)}
-        className="position-absolute border-0 justify-content-center closebtn p-0"
-        title="Close"
-      >
-        X
-      </Button>
-
       <Modal.Body
         className="p-4"
         tabIndex={0}
         style={{
-          maxHeight: '400px',
+          maxHeight: '500px',
           overflowY: 'auto'
         }}
       >
-
-
         {/* Modal Title */}
         <div className="mb-4">
           <h5 className="fw-bold mb-1">Product Details</h5>
-          <p className="text-muted small mb-0">View complete product information</p>
-        </div>
+         </div>
 
         {selectedProduct && (
           <>
@@ -666,27 +653,9 @@ function ProductManagement({ isAdding }) {
                     }}
                   />
                 ) : (
-                  <div
-                    style={{
-                      width: '150px',
-                      height: '150px',
-                      borderRadius: '12px',
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontWeight: 'bold',
-                      fontSize: '48px',
-                      margin: '0 auto',
-                      border: '3px solid #dee2e6'
-                    }}
-                  >
-                    {getInitials(selectedProduct.name)}
-                  </div>
+                  " "
                 )}
-              </div>
-              <h5 className="fw-bold mb-2">{selectedProduct.name}</h5>
+              </div> <h5 className="fw-bold mb-2">{selectedProduct.name}</h5>
             </div>
 
             {/* Categories */}
@@ -1274,9 +1243,7 @@ function ProductManagement({ isAdding }) {
                                 }}
                               />
                             ) : (
-                              <div className='gradient'>
-                                {getInitials(product.name)}
-                              </div>
+                              " "
                             )}
                           </div>
                         </td>
@@ -1316,7 +1283,7 @@ function ProductManagement({ isAdding }) {
                               onChange={() => toggleProductStatus(product._id, product.isActive)}
                               label={
                                 <span>
-                                  {product.isActive !== false ? 'Enable' : 'Disable'}
+                                  {product.isActive !== false ? 'Enabled' : 'Disabled'}
                                 </span>
                               }
                             />

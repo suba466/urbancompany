@@ -257,7 +257,7 @@ const Subcategories = ({
                           type="switch"
                           checked={sub.isActive}
                           onChange={(e) => handleStatusToggle(sub._id, e.target.checked)}
-                          label={sub.isActive ? 'Enable' : 'Disable'}
+                          label={sub.isActive ? 'Enabled' : 'Disabled'}
                         />
                       </td>
 

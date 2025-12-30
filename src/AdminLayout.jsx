@@ -39,7 +39,7 @@ function AdminLayout({ userRole, userProfile, onLogout }) {
             <Button variant="light" onClick={() => setSidebarOpen(!sidebarOpen)} className="me-3">
               <i className={`bi bi-${sidebarOpen ? 'chevron-left' : 'list'}`}></i>
             </Button>
-            <Navbar.Brand className="fw-bold text-truncate" style={{ maxWidth: "200px" }}>
+            <Navbar.Brand className="fw-bold" style={{ maxWidth: "200px" }}>
               Urban Company {userRole === 'admin' ? 'Admin' : 'User'}
             </Navbar.Brand>
 

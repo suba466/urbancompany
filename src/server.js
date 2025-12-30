@@ -151,7 +151,7 @@ const subcategorySchema = new mongoose.Schema({
 
 const Subcategory = mongoose.models.Subcategory || mongoose.model("Subcategory", subcategorySchema);
 
-// Customer Schema
+// Update your customerSchema in server.js around line 200
 const customerSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
@@ -161,6 +161,7 @@ const customerSchema = new mongoose.Schema({
   profileImage: { type: String, default: "" },
   title: { type: String, default: "Ms" },
   isVerified: { type: Boolean, default: true },
+  isActive: { type: Boolean, default: true }, 
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -619,7 +620,7 @@ app.post("/api/user-login", async (req, res) => {
         permissions: user.permissions
       },
       JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: '2h' }
     );
 
     console.log(`User logged in: ${email}`);
@@ -725,7 +726,7 @@ app.post("/api/register", upload.single('profileImage'), async (req, res) => {
   }
 });
 
-// Customer Login with JWT
+// Customer Login with JWT - UPDATED
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -743,6 +744,13 @@ app.post("/api/login", async (req, res) => {
       return res.status(400).json({ error: "Invalid email or password" });
     }
 
+    // Check if customer is blocked
+    if (customer.isActive === false) {
+      return res.status(403).json({ 
+        error: "Your account has been blocked. Please contact support." 
+      });
+    }
+
     // Check password
     const isPasswordValid = await bcrypt.compare(password, customer.password);
     if (!isPasswordValid) {
@@ -754,7 +762,8 @@ app.post("/api/login", async (req, res) => {
       {
         id: customer._id,
         email: customer.email,
-        role: 'customer'
+        role: 'customer',
+        isActive: customer.isActive // Include status in token
       },
       JWT_SECRET,
       { expiresIn: '24h' }
@@ -774,6 +783,7 @@ app.post("/api/login", async (req, res) => {
         city: customer.city,
         profileImage: customer.profileImage,
         title: customer.title,
+        isActive: customer.isActive, 
         role: 'customer'
       }
     });
@@ -1751,6 +1761,42 @@ app.get("/api/debug-all-packages", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Customer status check middleware
+const checkCustomerStatus = async (req, res, next) => {
+  try {
+    // Only check for customer routes that require active status
+    const customerId = req.user?.id;
+    const customerEmail = req.body?.email || req.params?.email;
+    
+    if (customerId) {
+      const customer = await Customer.findById(customerId);
+      if (customer && customer.isActive === false) {
+        return res.status(403).json({ 
+          success: false,
+          error: "Account is blocked. Please contact support." 
+        });
+      }
+    } else if (customerEmail) {
+      const customer = await Customer.findOne({ email: customerEmail });
+      if (customer && customer.isActive === false) {
+        return res.status(403).json({ 
+          success: false,
+          error: "Account is blocked. Please contact support." 
+        });
+      }
+    }
+    next();
+  } catch (error) {
+    console.error("Error checking customer status:", error);
+    next();
+  }
+};
+
+// Apply to customer-related routes (add this after login route)
+app.use("/api/bookings", checkCustomerStatus);
+app.use("/api/cart", checkCustomerStatus);
+app.use("/api/update-profile", checkCustomerStatus);
 
 // 404 handler - MUST BE LAST
 app.use((req, res) => {

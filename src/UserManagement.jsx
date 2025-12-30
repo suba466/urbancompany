@@ -1159,10 +1159,6 @@ function UserManagement({ isAdding, isEditing, userId }) {
 
         <Modal.Body
           className="p-4"
-          style={{
-            maxHeight: '300px',
-            overflowY: 'auto'
-          }}
           tabIndex={0}
         >
 

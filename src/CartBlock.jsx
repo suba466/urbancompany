@@ -25,7 +25,7 @@ function CartBlock({
       {carts.length === 0 ? (
         <div className="text-center py-4">
           <img
-            src="http://localhost:5000/assets/cart.jpg"
+            src="http://localhost:5000/assets/cart.png"
             alt="cart-empty"
             className="w-50 mb-3"
             style={{ maxWidth: "120px", objectFit: "contain" }}

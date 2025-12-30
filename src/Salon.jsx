@@ -313,7 +313,7 @@ function Salon() {
                       onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
                     >
                       <div
-                        className="img-box d-flex align-items-center justify-content-center shadow-sm"
+                        className=" d-flex align-items-center justify-content-center shadow-sm"
                         style={{
                           backgroundColor: "white",
                           width: "70px",

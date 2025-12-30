@@ -35,69 +35,41 @@ function Settings() {
   };
 
   return (
-    <Card className="border-0 shadow-lg">
-      <Card.Header className="border-0">
-        <h5 className="mb-0">Settings</h5>
-        <p className="text-muted mb-0">Manage system settings</p>
-      </Card.Header>
-      <Card.Body>
-        <Form onSubmit={handleSaveSettings}>
-          <h6 className="mb-3">General Settings</h6>
-          <Row>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>Site Title</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={settings.siteTitle}
-                  onChange={(e) => setSettings({...settings, siteTitle: e.target.value})}
-                />
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>Contact Email</Form.Label>
-                <Form.Control
-                  type="email"
-                  value={settings.contactEmail}
-                  onChange={(e) => setSettings({...settings, contactEmail: e.target.value})}
-                  autoComplete="email"
-                />
-              </Form.Group>
-            </Col>
-          </Row>
-          <Row>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>Contact Phone</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={settings.contactPhone}
-                  onChange={(e) => setSettings({...settings, contactPhone: e.target.value})}
-                  autoComplete="tel"
-                />
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>Address</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={settings.address}
-                  onChange={(e) => setSettings({...settings, address: e.target.value})}
-                  autoComplete="street-address"
-                />
-              </Form.Group>
-            </Col>
-          </Row>
-          <div className="d-flex justify-content-end">
-            <Button variant="primary" type="submit">
-              Save Settings
-            </Button>
-          </div>
-        </Form>
+    <div>
+      <Card>
+        <Card.Body style={{ marginLeft: "25px", marginRight: "25px" }}>
+        <h5 className="fw-semibold mb-0">Settings Management</h5>
       </Card.Body>
-    </Card>
+      </Card><br />
+
+    <Card className="border-0 shadow-lg">
+      
+      <Card.Body style={{ marginLeft: "25px", marginRight: "25px" }}>
+        <div >
+          <h5 className="mb-3">Settings</h5>
+          <Row>
+            <Col md={6}>
+              <h6>Site Title</h6>
+              <p>Urban company</p>
+            </Col>
+            <Col md={6}>
+              <h6>Contact e-mail</h6>
+              <p>support@urbancompany.com</p>
+            </Col>
+          </Row>
+          <Row>
+            <Col md={6}>
+              <h6>Contact Number</h6>
+              <p>1800-234-890</p>
+            </Col>
+            <Col md={6}>
+              <h6>Address</h6>
+              <p>18, Rs puram, Coimbatore, India</p>
+            </Col>
+          </Row>
+        </div>
+      </Card.Body>
+    </Card></div>
   );
 }
 

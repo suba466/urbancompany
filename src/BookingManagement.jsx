@@ -252,12 +252,12 @@ function BookingManagement() {
                 className="mb-3"
                 additionalActions={
                   <Form.Select
-                    value={bookingStatus}
+                    value={bookingStatus} className='text-muted'
                     onChange={handleStatusChange}
                     style={{
                       height: "40px",
-                      width: "150px",
-                      marginRight: "10px"
+                      width: "150px",borderRadius:"0px",
+                      marginRight: "10px",border:"2px solid black"
                     }}
                   >
                     <option value="">All Status</option>

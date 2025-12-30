@@ -30,7 +30,7 @@
   padding-right: 35px;
   height: 33px;
   border-radius: 5px;
-  border: 1px solid #ccc;
+  border: 2px solid #000000 !important;
 }
 
 .location-icon-inside {
@@ -631,6 +631,9 @@
   min-width: 100px;
   border-radius: 50px;
   height: 45px;
+}
+.login{
+  padding: 150px;
 }
 
 /* Responsive adjustments */

@@ -434,7 +434,7 @@ function Urbanav() {
                 <div
                   className="location-input-container position-relative desktop-only"
                   onClick={() => setShowLocationPopup(true)}
-                  style={{ cursor: "pointer" }}
+                  style={{ cursor: "pointer"  }}
                 >
                   <CiLocationOn className="location-icon-inside position-absolute top-50 left1" />
                   <FormControl
@@ -448,7 +448,7 @@ function Urbanav() {
 
                 {/* Search bar */}
                 <div className="position-relative desktop-only" ref={dropdownRef}>
-                  <CiSearch className="location-icon-inside position-absolute top-50 left" />
+                  <CiSearch className="location-icon-inside position-absolute top-50 " />
                   <FormControl
                     type="text"
                     placeholder={placeholder}
@@ -468,9 +468,11 @@ function Urbanav() {
                   )}
                 </div>
 
+              
                 {/* Icons - Desktop */}
                 {!location.pathname.startsWith("/salon") && (
-                  <div className="icons display desktop-only d-flex align-items-center gap-3">
+                  <div className="icons display desktop-only d-flex align-items-center gap-3" 
+                      style={{ marginLeft: 'auto' }}>
                     {/* Cart Icon with Badge - Navigates to CartSummary page */}
                     <div 
                       className="position-relative"
@@ -512,15 +514,15 @@ function Urbanav() {
 
                 {/* Mobile Cart Icon with Badge - Navigates to CartSummary page */}
                 {!location.pathname.startsWith("/salon") && (
-                  <div 
-                    className="position-relative"
-                    onClick={handleCartClick}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <CiShoppingCart className="cart-icon" />
-                    <CartBadge count={cartCount} size="lg" />
-                  </div>
-                )}
+                <div 
+                  className="position-relative cart-icon-container"
+                  onClick={handleCartClick}
+                  style={{ cursor: "pointer" }}
+                >
+                  <CiShoppingCart className="cart-icon" />
+                  <CartBadge count={cartCount} size="lg" />
+                </div>
+              )}
               </div>
 
               <div className="search-line ">
