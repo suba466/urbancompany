@@ -154,7 +154,7 @@ function AdminLogin({ onLogin }) {
                         )}
                       </div>
                       <Form onSubmit={handleLogin} noValidate>
-                        <Form.Group className="mb-4">
+                        <Form.Group >
                           <Form.Label className="small fw-bold mb-2">Username</Form.Label>
                           <Form.Control
                             type="email"
@@ -179,7 +179,7 @@ function AdminLogin({ onLogin }) {
                           )}
                         </Form.Group>
 
-                        <Form.Group className="mb-5">
+                        <Form.Group className="mb-2">
                           <Form.Label className="small fw-bold mb-2">Password</Form.Label>
                           <Form.Control
                             type="password"

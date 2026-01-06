@@ -388,7 +388,7 @@ router.post("/user-login", async (req, res) => {
         permissions: user.permissions
       },
       JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: '2h' }
     );
 
     console.log(`User logged in: ${email}`);

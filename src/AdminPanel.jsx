@@ -19,39 +19,9 @@ function AdminPanel() {
   const [userProfile, setUserProfile] = useState(null);
   const navigate = useNavigate();
 
-  // Detect page refresh
+  // Check authentication status on mount
   useEffect(() => {
-    // Check if page was refreshed
-    const navigationEntries = window.performance.getEntriesByType('navigation');
-    const isPageRefresh = navigationEntries.length > 0 && 
-                         navigationEntries[0].type === 'reload';
-
-    // Check if coming from a refresh
-    const wasRefreshed = sessionStorage.getItem('wasRefreshed') === 'true';
-    
-    if (isPageRefresh || wasRefreshed) {
-      console.log('Page was refreshed, logging out...');
-      handleLogout();
-      // Clear the flag
-      sessionStorage.removeItem('wasRefreshed');
-    }
-
-    // Set flag for next refresh
-    sessionStorage.setItem('wasRefreshed', 'true');
-
-    // Check authentication status
     checkAuthStatus();
-
-    // Handle browser refresh
-    const handleBeforeUnload = () => {
-      sessionStorage.setItem('wasRefreshed', 'true');
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
   }, []);
 
   // Check authentication status from localStorage
@@ -59,7 +29,7 @@ function AdminPanel() {
     const checkAuth = () => {
       const token = localStorage.getItem('authToken');
       const role = localStorage.getItem('userRole');
-      
+
       if (token && role) {
         setIsLoggedIn(true);
         setUserRole(role);
@@ -78,7 +48,7 @@ function AdminPanel() {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    
+
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
@@ -87,7 +57,7 @@ function AdminPanel() {
   const checkAuthStatus = () => {
     const token = localStorage.getItem('authToken');
     const role = localStorage.getItem('userRole');
-    
+
     if (token && role) {
       setIsLoggedIn(true);
       setUserRole(role);
@@ -108,23 +78,23 @@ function AdminPanel() {
         return;
       }
 
-      const endpoint = role === 'admin' 
+      const endpoint = role === 'admin'
         ? 'http://localhost:5000/api/admin/profile'
         : 'http://localhost:5000/api/admin/user-profile';
-      
+
       const response = await fetch(endpoint, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (response.status === 401) {
         // Token expired or invalid
         handleLogout();
         return;
       }
-      
+
       const data = await response.json();
       if (data.success) {
         setUserProfile(data.profile);
@@ -143,8 +113,7 @@ function AdminPanel() {
     setIsLoggedIn(true);
     setUserRole(role);
     fetchUserProfile(role);
-    // Clear refresh flag
-    sessionStorage.removeItem('wasRefreshed');
+
   };
 
   const handleLogout = () => {
@@ -152,15 +121,14 @@ function AdminPanel() {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userRole');
     localStorage.removeItem('userPermissions');
-    
+
     // Clear state
     setIsLoggedIn(false);
     setUserRole(null);
     setUserProfile(null);
-    
-    // Clear refresh flag
-    sessionStorage.removeItem('wasRefreshed');
-    
+
+
+
     // Redirect to admin login
     navigate('/admin');
   };
@@ -171,8 +139,8 @@ function AdminPanel() {
 
   return (
     <Routes>
-      <Route 
-        path="/" 
+      <Route
+        path="/"
         element={
           <AdminLayout
             userRole={userRole}
@@ -183,33 +151,33 @@ function AdminPanel() {
       >
         <Route index element={<Navigate to="dashboard" />} />
         <Route path="dashboard" element={<AdminDashboard />} />
-        
+
         {/* User Management */}
         <Route path="users" element={<UserManagement />} />
         <Route path="users/add" element={<UserManagement isAdding={true} />} />
         <Route path="users/edit/:id" element={<UserManagement isEditing={true} />} />
-        
+
         {/* Customer Management */}
         <Route path="customers" element={<CustomerManagement />} />
-        
+
         {/* Catalog Management */}
         <Route path="categories" element={<CategoryManagement />} />
         <Route path="categories/add" element={<CategoryManagement isAdding={true} />} />
         <Route path="categories/edit/:id" element={<CategoryManagement isEditing={true} />} />
-        
+
         <Route path="subcategories" element={<SubcategoryManagement />} />
         <Route path="subcategories/add" element={<SubcategoryManagement isAdding={true} />} />
         <Route path="subcategories/edit/:id" element={<SubcategoryManagement isEditing={true} />} />
-        
+
         {/* Product Management */}
         <Route path="products" element={<ProductManagement />} />
         <Route path="products/add" element={<ProductManagement isAdding={true} />} />
-        
+
         {/* Other Management */}
         <Route path="bookings" element={<BookingManagement />} />
         <Route path="reports" element={<Reports />} />
         <Route path="settings" element={<Settings />} />
-        
+
         {/* Profile */}
         <Route path="profile" element={<Profile />} />
       </Route>
