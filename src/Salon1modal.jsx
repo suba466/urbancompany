@@ -248,13 +248,6 @@ function Salon1modal({
     </>
   );
 
-  // carousel controls
-  const handleNext = () => {
-    if (index < Math.max(0, addedImgs.length - visibleCount)) setIndex(i => i + 1);
-  };
-
-  const handlePrev = () => { if (index > 0) setIndex(i => i - 1); };
-
   // ---------- render ----------
   return (
     <>

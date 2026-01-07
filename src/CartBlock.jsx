@@ -78,7 +78,6 @@ function CartBlock({
                         style={{
                           backgroundColor: "transparent",
                           color: "#000",
-                          minWidth: "36px",
                           fontSize: "18px",
                           fontWeight: "bold"
                         }}
@@ -94,7 +93,6 @@ function CartBlock({
                         style={{
                           backgroundColor: "transparent",
                           color: "#000",
-                          minWidth: "36px",
                           fontSize: "18px",
                           fontWeight: "bold"
                         }}

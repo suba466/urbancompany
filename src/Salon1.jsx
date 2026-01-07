@@ -342,7 +342,7 @@ function Salon1() {
               <div key={groupIndex} className="subcategory-group" id={`section-${normalizeKey(group.title)}`}>
 
                 {groupedPackages.length > 1 && (
-                  <h5 className="fw-bold mb-3 mt-4 text-dark border-bottom pb-2">
+                  <h5 className="fw-bold mb-3 mt-4 text-dark pb-2">
                     {group.title}
                   </h5>
                 )}
@@ -357,12 +357,16 @@ function Salon1() {
                   const displayRating = pkg.rating || "0";
                   const displayDuration = pkg.duration || "N/A";
                   const isSuperSaver = group.title === "Super Saver Package" || displayTitle === "Super Saver Package" || pkg.subcategory === "Super Saver Package";
+                  
+                  // Check if package has an image
+                  const hasImage = pkg.img && pkg.img.trim() !== "";
+                  const shouldShowDiscountBanner = !hasImage && isSuperSaver;
 
                   return (
-                    <div key={pkg._id} className='position-relative package-item' style={{ marginBottom: "40px" }}>
+                    <div key={pkg._id} className=' position-relative package-item' style={{ marginBottom: "40px" }}>
 
-                      {/* --- BANNER IMAGE SECTION (New Requirement) --- */}
-                      {(pkg.img || isSuperSaver) && (
+                      {/* --- BANNER IMAGE SECTION - Only show if has image --- */}
+                      {hasImage && (
                         <div
                           className="mb-3 position-relative shadow-sm"
                           onClick={() => handleShowModal(pkg)}
@@ -370,15 +374,13 @@ function Salon1() {
                             cursor: "pointer",
                             borderRadius: "16px",
                             overflow: "hidden",
-                            height: "180px",
+                            height: "250px",
                             marginTop: "10px"
                           }}
                         >
                           <img
                             src={
-                              pkg.img
-                                ? (pkg.img.startsWith("http") ? pkg.img : `http://localhost:5000${pkg.img}`)
-                                : "http://localhost:5000/assets/discount-25.png"
+                              pkg.img.startsWith("http") ? pkg.img : `http://localhost:5000${pkg.img}`
                             }
                             alt={pkg.name || "Service"}
                             style={{
@@ -395,7 +397,7 @@ function Salon1() {
                         </div>
                       )}
 
-                      {/* --- DETAILS SECTION (Old Code Requirement) --- */}
+                      {/* --- DETAILS SECTION --- */}
                       <Row className="align-items-center mt-3">
                         <Col xs={8}>
                           <p style={{ color: "#095819ff", marginBottom: "5px" }}>
@@ -413,64 +415,69 @@ function Salon1() {
                         </Col>
 
                         {/* --- ACTION COLUMN --- */}
-                        <Col xs={4} className='position-relative' style={{ minHeight: "80px", display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                          {/* Logic: If Image/Banner was shown above, we just need the button here. 
-                               If Image was NOT shown (no pkg.img and not superSaver?), we show badge + button. 
-                               But the Banner block above covers (pkg.img || isSuperSaver).
-                               So effectively, if we have a banner, we just show button. 
-                               If we DON'T have a banner, we show badge? 
-                               Actually, isSuperSaver logic in User code puts a badge if NO image. 
-                               My banner logic puts a banner if NO image but is super saver.
-                               So: Banner covers almost everything. 
-                               If Banner is NOT shown (no image, not super saver), then we probably just need the button.
-                               Let's keep it clean: Just Button here since visuals are handled.
-                           */}
+                        <Col xs={4} className='position-relative' style={{ minHeight: "100px" }}>
+                          <div className="d-flex flex-column align-items-end h-100">
+                            {/* --- ADD BUTTON AT TOP --- */}
+                            <div className="mt-auto" style={{ width: "100%" }}>
+                              {!inCart ? (
+                                <Button
+                                  ref={(el) => (addButtonRefs.current[pkg._id] = el)}
+                                  onClick={() => {
+                                    handleAddToCart({
+                                      ...pkg,
+                                      name: pkg.name,
+                                      displayTitle: displayTitle,
+                                      serviceName: serviceName,
+                                      productId: pkg._id
+                                    }, []);
+                                  }}
+                                  style={{
+                                    color: "rgb(110, 66, 229)",
+                                    backgroundColor: "rgba(255, 255, 255, 1)",
+                                    border: "1px solid rgb(110, 66, 229)",
+                                    padding: "5px 18px",
+                                    fontWeight: "600",
+                                    width: "100%",
+                                    maxWidth: "100px",
+                                    marginLeft: "auto",
+                                    marginBottom: shouldShowDiscountBanner ? "5px" : "0"
+                                  }}
+                                >
+                                  Add
+                                </Button>
+                              ) : (
+                                <div
+                                  className="d-flex align-items-center justify-content-between ms-auto"
+                                  style={{
+                                    border: "1px solid rgb(110, 66, 229)",
+                                    borderRadius: "6px",
+                                    backgroundColor: "rgba(255, 255, 255, 1)",
+                                    width: "70px",
+                                    marginBottom: "5px"
+                                  }}
+                                >
+                                  <Button onClick={() => handleDecrease(inCart)} className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent' style={{ width: "24px" }}>−</Button>
+                                  <span className="fw-bold" style={{ fontSize: "14px" }}>{inCart.count || 1}</span>
+                                  <Button onClick={() => handleIncrease(inCart)} className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent' style={{ width: "24px", opacity: totalItems >= 3 ? "0.6" : "1" }}>+</Button>
+                                </div>
+                              )}
+                            </div>
 
-                          <div className="w-100 text-end">
-                            {!inCart ? (
-                              <Button
-                                ref={(el) => (addButtonRefs.current[pkg._id] = el)}
-                                onClick={() => {
-                                  handleAddToCart({
-                                    ...pkg,
-                                    name: pkg.name,
-                                    displayTitle: displayTitle,
-                                    serviceName: serviceName,
-                                    productId: pkg._id
-                                  }, []);
-                                }}
-                                style={{
-                                  color: "rgb(110, 66, 229)",
-                                  backgroundColor: "rgb(245, 241, 255)",
-                                  border: "1px solid rgb(110, 66, 229)",
-                                  padding: "5px 18px",
-                                  zIndex: "2",
-                                  fontWeight: "600"
-                                }}
-                              >
-                                Add
-                              </Button>
-                            ) : (
-                              <div
-                                className="d-flex align-items-center justify-content-between ms-auto"
-                                style={{
-                                  border: "1px solid rgb(110, 66, 229)",
-                                  borderRadius: "6px",
-                                  backgroundColor: "rgb(245, 241, 255)",
-                                  padding: "4px",
-                                  width: "90px"
-                                }}
-                              >
-                                <Button onClick={() => handleDecrease(inCart)} className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent' style={{ width: "24px" }}>−</Button>
-                                <span className="fw-bold" style={{ fontSize: "14px" }}>{inCart.count || 1}</span>
-                                <Button onClick={() => handleIncrease(inCart)} className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent' style={{ width: "24px", opacity: totalItems >= 3 ? "0.6" : "1" }}>+</Button>
+                            {/* --- 25% OFF BADGE BELOW THE ADD BUTTON --- */}
+                            {shouldShowDiscountBanner && !inCart && (
+                              <div style={{ width: "100%" }}>
+                                <div
+                                  className="button2 d-flex justify-content-center align-items-center"
+                                >
+                                  25% OFF
+                                </div>
                               </div>
                             )}
                           </div>
                         </Col>
                       </Row>
 
-                      {/* --- FOOTER DETAILS (Old Code) --- */}
+                      {/* --- FOOTER DETAILS --- */}
                       <div style={{ borderBottom: "1px dashed #bbb6b6ff" }}></div>
                       <br />
                       <div style={{ fontSize: "12px" }}>
@@ -492,9 +499,9 @@ function Salon1() {
                           <p className="text-muted">No service details available</p>
                         )}
                       </div>
-                      <br />
+                      <br /><div>
                       <Button
-                        className='edit'
+                        className='edit '
                         onClick={() => handleShowModal(pkg)}
                         style={{
                           backgroundColor: "transparent",
@@ -505,8 +512,11 @@ function Salon1() {
                         }}
                       >
                         Edit your package
-                      </Button>
+                      </Button> 
+                      </div> <br />
+                      <div className='border-bottom'></div>
                     </div>
+                   
                   );
                 })}
               </div>
@@ -524,7 +534,26 @@ function Salon1() {
           <Button className="mobile-cart-footer-button mobile-cart-footer-total w-100 border-0" onClick={() => navigate("/cart")} style={{ backgroundColor: "#6e42e5", color: "white", padding: "12px" }}>View cart ({carts.length} items)</Button>
         </div>
       )}
-      <Salon1modal showFrequentlyAdded={showFrequentlyAdded} setShowFrequentlyAdded={setShowFrequentlyAdded} show={showModal} totalItems={totalItems} onHide={handleCloseModal} selectedItem={selectedItem} handleAddToCart={handleAddToCart} fetchCarts={fetchCarts} carts={carts} setCarts={setCarts} addButtonRefs={addButtonRefs} basePrice={basePrice} baseServices={baseServices} roundPrice={roundPrice} showDiscountModal={showDiscountModal} setShowDiscountModal={setShowDiscountModal} handleDecrease={handleDecrease} handleIncrease={handleIncrease} />
+      <Salon1modal 
+        showFrequentlyAdded={showFrequentlyAdded} 
+        setShowFrequentlyAdded={setShowFrequentlyAdded} 
+        show={showModal} 
+        totalItems={totalItems} 
+        onHide={handleCloseModal} 
+        selectedItem={selectedItem} 
+        handleAddToCart={handleAddToCart} 
+        fetchCarts={fetchCarts} 
+        carts={carts} 
+        setCarts={setCarts} 
+        addButtonRefs={addButtonRefs} 
+        basePrice={basePrice} 
+        baseServices={baseServices} 
+        roundPrice={roundPrice} 
+        showDiscountModal={showDiscountModal} 
+        setShowDiscountModal={setShowDiscountModal} 
+        handleDecrease={handleDecrease} 
+        handleIncrease={handleIncrease} 
+      />
     </Container>
   );
 }

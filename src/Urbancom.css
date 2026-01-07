@@ -30,7 +30,6 @@
   padding-right: 35px;
   height: 33px;
   border-radius: 5px;
-  border: 2px solid #000000 !important;
 }
 
 .location-icon-inside {
@@ -893,7 +892,7 @@
     padding: 0;
     margin: 10px 0;
   }
-
+ 
   .search-container input {
     width: 100%;
     height: 35px;
@@ -903,6 +902,8 @@
     border-radius: 5px;
     border: 1px solid #ccc;
   }
+
+  
 
 }
 
@@ -1016,10 +1017,7 @@
     word-wrap: break-word;
   }
 
-  .cart-icon {
-    font-size: 20px;
-    flex-shrink: 0;
-  }
+ 
 
   .search-line {
     width: 100%;

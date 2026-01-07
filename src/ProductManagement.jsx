@@ -7,6 +7,17 @@ import { MdModeEdit, MdOutlineDelete } from "react-icons/md";
 import { IoEyeSharp } from "react-icons/io5";
 import { useNavigate } from 'react-router-dom';
 import TableControls from './TableControls';
+import {
+  getTableElement,
+  prepareUserDataForExport,
+  prepareCustomerDataForExport,
+  prepareBookingDataForExport,
+  getCSVHeadersFromData,
+  exportAsPDF,
+  exportAsExcel,
+  exportAsCSV
+} from './downloadUtils';
+import * as XLSX from 'xlsx';
 
 function ProductManagement({ isAdding }) {
   const navigate = useNavigate();
@@ -581,7 +592,8 @@ function ProductManagement({ isAdding }) {
     setSelectAllProducts(!selectAllProducts);
   };
 
-  const prepareProductDataForExport = (products) => {
+  // Prepare product data for export
+  const prepareProductDataForExport = () => {
     return products.map(product => ({
       'Product Name': product.name || '',
       'Title': product.title || '',
@@ -592,27 +604,66 @@ function ProductManagement({ isAdding }) {
       'Duration': product.duration || '',
       'Status': product.isActive ? 'Active' : 'Inactive',
       'Rating': product.rating || '',
+      'Image URL': product.img ? `http://localhost:5000${product.img}` : '',
+      'Items Count': product.items?.length || 0
     }));
   };
 
-  const getCSVHeadersFromData = (data) => {
-    if (data.length === 0) return [];
-    return Object.keys(data[0]);
+  // Export functions using downloadUtils
+  const handleExportPDF = () => {
+    const tableElement = getTableElement();
+    if (tableElement) {
+      exportAsPDF(tableElement, 'products');
+    } else {
+      // Fallback: Create a temporary element
+      const exportData = prepareProductDataForExport();
+      if (exportData.length > 0) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = `
+          <h2>Products Report</h2>
+          <p>Generated: ${new Date().toLocaleDateString()}</p>
+          <p>Total: ${productTotalItems} products</p>
+          <table border="1">
+            <thead>
+              <tr>
+                ${Object.keys(exportData[0]).map(header => `<th>${header}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${exportData.map(row => `
+                <tr>
+                  ${Object.values(row).map(value => `<td>${value}</td>`).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+        document.body.appendChild(tempDiv);
+        exportAsPDF(tempDiv, 'products');
+        document.body.removeChild(tempDiv);
+      } else {
+        alert('No data available to export');
+      }
+    }
   };
 
-  const exportAsPDF = (tableElement, filename) => {
-    console.log('Exporting as PDF:', filename);
-    alert('PDF export functionality to be implemented');
+  const handleExportExcel = () => {
+    const exportData = prepareProductDataForExport();
+    if (exportData.length > 0) {
+      exportAsExcel(exportData, 'products');
+    } else {
+      alert('No data available to export');
+    }
   };
 
-  const exportAsExcel = (data, filename) => {
-    console.log('Exporting as Excel:', filename);
-    alert('Excel export functionality to be implemented');
-  };
-
-  const exportAsCSV = (data, headers, filename) => {
-    console.log('Exporting as CSV:', filename);
-    alert('CSV export functionality to be implemented');
+  const handleExportCSV = () => {
+    const exportData = prepareProductDataForExport();
+    if (exportData.length > 0) {
+      const headers = getCSVHeadersFromData(exportData);
+      exportAsCSV(exportData, headers, 'products');
+    } else {
+      alert('No data available to export');
+    }
   };
 
   const ViewProductModal = () => (
@@ -633,7 +684,7 @@ function ProductManagement({ isAdding }) {
         {/* Modal Title */}
         <div className="mb-4">
           <h5 className="fw-bold mb-1">Product Details</h5>
-         </div>
+        </div>
 
         {selectedProduct && (
           <>
@@ -780,6 +831,7 @@ function ProductManagement({ isAdding }) {
       </Modal.Footer>
     </Modal>
   );
+
   // Show Form View
   if (showFormView) {
     const formTitle = isEditing ? 'Edit Product' : 'Add New Product';
@@ -945,8 +997,6 @@ function ProductManagement({ isAdding }) {
                       </InputGroup>
                     </Form.Group>
                   </Col>
-
-
                 </Row>
                 <Row>
                   <Col md={6}>
@@ -961,22 +1011,16 @@ function ProductManagement({ isAdding }) {
                     </Form.Group>
                   </Col>
                   <Col md={6}>
-                    {/* Image Upload - Simple File Name Display */}
                     <div className="mb-4">
                       <Form.Group>
-                        {/* File Input with custom styling */}
                         <div className="position-relative">
                           <Form.Control
                             type="file"
                             accept="image/*"
                             onChange={handleImageChange}
                             className="cate"
-
                           />
-
-                          {/* File Name Display */}
-                          <div
-                          >
+                          <div>
                             {imageFile ? (
                               <span className="text-truncate d-block" title={imageFile.name}>
                                 {imageFile.name}
@@ -990,7 +1034,6 @@ function ProductManagement({ isAdding }) {
                             )}
                           </div>
                         </div>
-
                         <Form.Text className="text-muted small mt-1">
                           {imageFile ? (
                             <span>
@@ -1005,7 +1048,8 @@ function ProductManagement({ isAdding }) {
                           )}
                         </Form.Text>
                       </Form.Group>
-                    </div></Col>
+                    </div>
+                  </Col>
                 </Row>
               </div>
 
@@ -1052,8 +1096,6 @@ function ProductManagement({ isAdding }) {
                   </Row>
                 ))}
               </div>
-
-
 
               {/* Submit Buttons */}
               <div className="d-flex justify-content-center gap-3 mt-4">
@@ -1132,19 +1174,9 @@ function ProductManagement({ isAdding }) {
                   fetchProducts(1, e.target.value, productPerPage);
                 }}
                 searchPlaceholder="Search products..."
-                onDownloadPDF={() => {
-                  const tableElement = document.querySelector('.table-responsive');
-                  exportAsPDF(tableElement, 'products');
-                }}
-                onDownloadExcel={() => {
-                  const productData = prepareProductDataForExport(products);
-                  exportAsExcel(productData, 'products');
-                }}
-                onDownloadCSV={() => {
-                  const productData = prepareProductDataForExport(products);
-                  const headers = getCSVHeadersFromData(productData);
-                  exportAsCSV(productData, headers, 'products');
-                }}
+                onDownloadPDF={handleExportPDF}
+                onDownloadExcel={handleExportExcel}
+                onDownloadCSV={handleExportCSV}
                 selectedCount={selectedProducts.length}
                 onBulkDelete={handleBulkDeleteClick}
                 showBulkActions={false}
@@ -1180,11 +1212,11 @@ function ProductManagement({ isAdding }) {
               <p className="mt-3 text-muted">Loading products...</p>
             </div>
           ) : (
-            <div >
+            <div className="table-responsive">
               <Table striped bordered hover style={{ border: "2px solid #000000" }}>
                 <thead>
                   <tr>
-                    <th >
+                    <th>
                       <Form.Check
                         type="checkbox"
                         className='check'
@@ -1225,8 +1257,8 @@ function ProductManagement({ isAdding }) {
                         </td>
                         <td>
                           <div style={{
-                            width: '60px',
-                            height: '60px',
+                            width: '150px',
+                            height: '90px',
                             overflow: 'hidden',
                             border: '1px solid #dee2e6',
                             borderRadius: '8px',
@@ -1243,15 +1275,15 @@ function ProductManagement({ isAdding }) {
                                 }}
                               />
                             ) : (
-                              " "
+                              <div className="d-flex align-items-center justify-content-center h-100 bg-light">
+                                <span className="text-muted">No Image</span>
+                              </div>
                             )}
                           </div>
                         </td>
                         <td>
                           <div>
                             <strong className="d-block">{product.name || 'Unnamed'}</strong>
-
-
                           </div>
                         </td>
                         <td>

@@ -198,7 +198,7 @@ const Subcategories = ({
                       onChange={onSelectAll}  className='check'
                     />
                   </th>
-                  <th>Image</th>
+                  <th style={{width:"80px"}}>Image</th>
                   <th>Name</th>
                   <th>Category</th>
                   <th>Status</th>

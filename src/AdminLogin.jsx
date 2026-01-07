@@ -155,7 +155,7 @@ function AdminLogin({ onLogin }) {
                       </div>
                       <Form onSubmit={handleLogin} noValidate>
                         <Form.Group >
-                          <Form.Label className="small fw-bold mb-2">Username</Form.Label>
+                          <Form.Label className=" fw-bold mb-0">Username</Form.Label>
                           <Form.Control
                             type="email"
                             placeholder="Enter your email"
@@ -168,7 +168,7 @@ function AdminLogin({ onLogin }) {
                             }}
                             onBlur={handleBlur('email')}
                             required
-                            className={`cate py-3 ${emailError ? 'is-invalid' : ''}`}
+                            className={`cate py-3 mb-2 ${emailError ? 'is-invalid' : ''}`}
                             autoComplete="username"
                             style={{ fontSize: "1rem" }}
                           />
@@ -178,9 +178,9 @@ function AdminLogin({ onLogin }) {
                             </div>
                           )}
                         </Form.Group>
-
+                          
                         <Form.Group className="mb-2">
-                          <Form.Label className="small fw-bold mb-2">Password</Form.Label>
+                          <Form.Label className=" fw-bold mb-0">Password</Form.Label>
                           <Form.Control
                             type="password"
                             placeholder="Enter your password"
@@ -206,7 +206,7 @@ function AdminLogin({ onLogin }) {
 
                         <Button
                           type="submit"
-                          className="w-100 py-3 mb-4"
+                          className="w-100 py-2 mb-4"
                           disabled={loading}
                           style={{
                             background: "#000000",
