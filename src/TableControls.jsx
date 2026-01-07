@@ -126,9 +126,11 @@ const TableControls = ({
               >
                 <IoIosArrowBack />
               </Button>
-              <span className="mx-2 d-none d-sm-inline">
-                Page {currentPage} of {totalPages}
-              </span>
+              {totalPages > 1 && (
+                <span className="mx-2 d-none d-sm-inline">
+                  Page {currentPage} of {totalPages}
+                </span>
+              )}
               <Button
                 variant="outline-dark"
                 size="sm"
@@ -184,10 +186,11 @@ const TableControls = ({
       {/* Desktop View - Grid layout */}
       <div className="d-none d-md-block">
         {/* Main Controls Row */}
-        <Row className="align-items-center mb-3">
+        {/* Main Controls Row */}
+        <Row className="align-items-center mb-3 gy-3">
           {/* Left Side: Search and Additional Actions */}
-          <Col md={12} lg={9} className="mb-md-2 mb-lg-0">
-            <div className="d-flex align-items-center gap-5">
+          <Col xs={12} lg={7} xl={8} className="mb-md-2 mb-lg-0">
+            <div className="d-flex align-items-center gap-3 flex-wrap">
               {/* Additional Actions (on LEFT of search) */}
               {additionalActions && (
                 <div className="additional-actions">
@@ -197,7 +200,7 @@ const TableControls = ({
 
               {/* Search Bar */}
               {showSearch && (
-                <div className="flex-grow-1">
+                <div className="flex-grow-1" style={{ minWidth: "200px" }}>
                   <div className="position-relative">
                     <Form.Control
                       type="search"
@@ -217,9 +220,9 @@ const TableControls = ({
           </Col>
 
           {/* Right Side: Download buttons */}
-          <Col md={12} lg={3}>
+          <Col xs={12} lg={5} xl={4}>
             {showDownload && (
-              <div className="d-flex gap-2 justify-content-lg-end justify-content-md-start">
+              <div className="d-flex gap-2 justify-content-lg-end justify-content-md-start flex-nowrap">
                 <Button
                   variant="outline-light"
                   style={{ border: "1px solid #000000" }}

@@ -214,6 +214,39 @@ function Salon1() {
     }
   };
 
+  const handleShowCarouselModal = async (item) => {
+    try {
+      let matched = item;
+      let existingCartItem = null;
+      try {
+        const cartsRes = await fetch("http://localhost:5000/api/carts");
+        const cartsData = await cartsRes.json();
+        existingCartItem = cartsData.carts?.find(c =>
+          c.productId === item._id || c.title === item.title || (item._id && c.productId === item._id.toString())
+        );
+      } catch (cartError) { }
+
+      const mergedItem = {
+        ...matched,
+        savedSelections: existingCartItem?.savedSelections || [],
+        productId: existingCartItem?.productId || matched?._id || item._id || Date.now().toString(),
+        displayTitle: matched?.title || matched?.subcategory || matched?.name || item.title || "Package",
+        serviceName: matched?.name || item.name || "Service",
+        items: matched?.items || item.items || [],
+        price: matched?.price || item.price || "0",
+        rating: matched?.rating || item.rating || "0",
+        duration: matched?.duration || item.duration || "N/A"
+      };
+      setSelectedItem(mergedItem);
+      setShowDiscountModal(true);
+      setShowFrequentlyAdded(true);
+    } catch (err) {
+      setSelectedItem(item);
+      setShowDiscountModal(true);
+      setShowFrequentlyAdded(true);
+    }
+  };
+
   const handleCloseModal = () => {
     setShowModal(false);
     setSelectedItem(null);
@@ -356,8 +389,8 @@ function Salon1() {
                   const displayPrice = roundPrice(pkgPrice);
                   const displayRating = pkg.rating || "0";
                   const displayDuration = pkg.duration || "N/A";
-                  const isSuperSaver = group.title === "Super Saver Package" || displayTitle === "Super Saver Package" || pkg.subcategory === "Super Saver Package";
-                  
+                  const isSuperSaver = [group.title, displayTitle, pkg.subcategory].some(t => t && t.toLowerCase().includes("super saver"));
+
                   // Check if package has an image
                   const hasImage = pkg.img && pkg.img.trim() !== "";
                   const shouldShowDiscountBanner = !hasImage && isSuperSaver;
@@ -417,62 +450,145 @@ function Salon1() {
                         {/* --- ACTION COLUMN --- */}
                         <Col xs={4} className='position-relative' style={{ minHeight: "100px" }}>
                           <div className="d-flex flex-column align-items-end h-100">
-                            {/* --- ADD BUTTON AT TOP --- */}
-                            <div className="mt-auto" style={{ width: "100%" }}>
-                              {!inCart ? (
-                                <Button
-                                  ref={(el) => (addButtonRefs.current[pkg._id] = el)}
-                                  onClick={() => {
-                                    handleAddToCart({
-                                      ...pkg,
-                                      name: pkg.name,
-                                      displayTitle: displayTitle,
-                                      serviceName: serviceName,
-                                      productId: pkg._id
-                                    }, []);
-                                  }}
-                                  style={{
-                                    color: "rgb(110, 66, 229)",
-                                    backgroundColor: "rgba(255, 255, 255, 1)",
-                                    border: "1px solid rgb(110, 66, 229)",
-                                    padding: "5px 18px",
-                                    fontWeight: "600",
-                                    width: "100%",
-                                    maxWidth: "100px",
-                                    marginLeft: "auto",
-                                    marginBottom: shouldShowDiscountBanner ? "5px" : "0"
-                                  }}
-                                >
-                                  Add
-                                </Button>
-                              ) : (
-                                <div
-                                  className="d-flex align-items-center justify-content-between ms-auto"
-                                  style={{
-                                    border: "1px solid rgb(110, 66, 229)",
-                                    borderRadius: "6px",
-                                    backgroundColor: "rgba(255, 255, 255, 1)",
-                                    width: "70px",
-                                    marginBottom: "5px"
-                                  }}
-                                >
-                                  <Button onClick={() => handleDecrease(inCart)} className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent' style={{ width: "24px" }}>−</Button>
-                                  <span className="fw-bold" style={{ fontSize: "14px" }}>{inCart.count || 1}</span>
-                                  <Button onClick={() => handleIncrease(inCart)} className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent' style={{ width: "24px", opacity: totalItems >= 3 ? "0.6" : "1" }}>+</Button>
-                                </div>
-                              )}
-                            </div>
 
-                            {/* --- 25% OFF BADGE BELOW THE ADD BUTTON --- */}
-                            {shouldShowDiscountBanner && !inCart && (
-                              <div style={{ width: "100%" }}>
-                                <div
-                                  className="button2 d-flex justify-content-center align-items-center"
-                                >
-                                  25% OFF
+                            {shouldShowDiscountBanner ? (
+                              /* --- SUPER SAVER DISCOUNT BOX LAYOUT --- */
+                              <div
+                                onClick={() => handleShowCarouselModal(pkg)}
+                                className="button2 shadow-sm mt-auto"
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  position: "relative",
+                                  marginBottom: "20px",
+                                  cursor: "pointer"
+                                }}
+                              >
+
+                                <div className=" text-center">
+                                  <h2 className="fw-bold m-0" style={{ color: "#0d5924", fontSize: "26px", lineHeight: "0.9" }}>25%</h2>
+                                  <h6 className="fw-bold m-0" style={{ color: "#0d5924", fontSize: "14px", marginTop: "2px" }}>OFF</h6>
                                 </div>
+
+                                {!inCart ? (
+                                  <Button
+                                    ref={(el) => (addButtonRefs.current[pkg._id] = el)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAddToCart({
+                                        ...pkg,
+                                        name: pkg.name,
+                                        displayTitle: displayTitle,
+                                        serviceName: serviceName,
+                                        productId: pkg._id
+                                      }, []);
+                                    }}
+                                    className="shadow-sm"
+                                    style={{
+                                      position: "absolute",
+                                      bottom: "-16px",
+                                      left: "50%",
+                                      transform: "translateX(-50%)",
+                                      width: "80%",
+                                      color: "rgb(110, 66, 229)",
+                                      backgroundColor: "rgba(255, 255, 255, 1)",
+                                      border: "1px solid rgb(110, 66, 229)",
+                                      padding: "4px 0",
+                                      fontWeight: "600",
+                                      fontSize: "14px",
+                                      borderRadius: "6px",
+                                      height: "30px",
+                                      lineHeight: "1"
+                                    }}
+                                  >
+                                    Add
+                                  </Button>
+                                ) : (
+                                  <div
+                                    className="d-flex align-items-center justify-content-between"
+                                    onClick={(e) => e.stopPropagation()}
+                                    style={{
+                                      position: "absolute",
+                                      bottom: "-16px",
+                                      left: "50%",
+                                      transform: "translateX(-50%)",
+                                      width: "80%",
+                                      backgroundColor: "rgba(255, 255, 255, 1)",
+                                      border: "1px solid rgb(110, 66, 229)",
+                                      borderRadius: "6px",
+                                      height: "30px",
+                                      zIndex: 2,
+                                      padding: "2px",
+                                      boxShadow: "0 .125rem .25rem rgba(0,0,0,.075)"
+                                    }}>
+                                      
+                                    <Button
+                                      onClick={() => handleDecrease(inCart)}
+                                      className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent'
+                                      style={{ width: "24px", height: "26px", fontSize: "18px" }}
+                                    >
+                                      −
+                                    </Button>
+                                    <span className="fw-bold" style={{ fontSize: "14px", color: "rgb(110, 66, 229)" }}>{inCart.count || 1}</span>
+                                    <Button
+                                      onClick={() => handleIncrease(inCart)}
+                                      className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent'
+                                      style={{ width: "24px", height: "26px", fontSize: "18px", opacity: totalItems >= 3 ? "0.6" : "1" }}
+                                    >
+                                      +
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              /* --- STANDARD LAYOUT --- */
+                              <div className="mt-auto" style={{ width: "100%" }}>
+                                {!inCart ? (
+                                  <Button
+                                    ref={(el) => (addButtonRefs.current[pkg._id] = el)}
+                                    onClick={() => {
+                                      handleAddToCart({
+                                        ...pkg,
+                                        name: pkg.name,
+                                        displayTitle: displayTitle,
+                                        serviceName: serviceName,
+                                        productId: pkg._id
+                                      }, []);
+                                    }}
+                                    style={{
+                                      color: "rgb(110, 66, 229)",
+                                      backgroundColor: "rgba(255, 255, 255, 1)",
+                                      border: "1px solid rgb(110, 66, 229)",
+                                      padding: "5px 18px",
+                                      fontWeight: "600",
+                                      width: "100%",
+                                      maxWidth: "100px",
+                                      marginLeft: "auto"
+                                    }}
+                                  >
+                                    Add
+                                  </Button>
+                                ) : (
+                                  <div
+                                    className="d-flex align-items-center justify-content-between ms-auto"
+                                    style={{
+                                      border: "1px solid rgb(110, 66, 229)",
+                                      borderRadius: "6px",
+                                      backgroundColor: "rgba(255, 255, 255, 1)",
+                                      width: "70px",
+                                      marginBottom: "5px"
+                                    }}
+                                  >
+                                    <Button onClick={() => handleDecrease(inCart)} className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent' style={{ width: "24px" }}>−</Button>
+                                    <span className="fw-bold" style={{ fontSize: "14px" }}>{inCart.count || 1}</span>
+                                    <Button onClick={() => handleIncrease(inCart)} className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent' style={{ width: "24px", opacity: totalItems >= 3 ? "0.6" : "1" }}>+</Button>
+                                  </div>
+                                )}
                               </div>
                             )}
+
                           </div>
                         </Col>
                       </Row>
@@ -500,23 +616,23 @@ function Salon1() {
                         )}
                       </div>
                       <br /><div>
-                      <Button
-                        className='edit '
-                        onClick={() => handleShowModal(pkg)}
-                        style={{
-                          backgroundColor: "transparent",
-                          border: "1px solid #ccc",
-                          color: "#333",
-                          padding: "5px 15px",
-                          fontSize: "14px"
-                        }}
-                      >
-                        Edit your package
-                      </Button> 
+                        <Button
+                          className='edit '
+                          onClick={() => handleShowModal(pkg)}
+                          style={{
+                            backgroundColor: "transparent",
+                            border: "1px solid #ccc",
+                            color: "#333",
+                            padding: "5px 15px",
+                            fontSize: "14px"
+                          }}
+                        >
+                          Edit your package
+                        </Button>
                       </div> <br />
                       <div className='border-bottom'></div>
                     </div>
-                   
+
                   );
                 })}
               </div>
@@ -534,25 +650,25 @@ function Salon1() {
           <Button className="mobile-cart-footer-button mobile-cart-footer-total w-100 border-0" onClick={() => navigate("/cart")} style={{ backgroundColor: "#6e42e5", color: "white", padding: "12px" }}>View cart ({carts.length} items)</Button>
         </div>
       )}
-      <Salon1modal 
-        showFrequentlyAdded={showFrequentlyAdded} 
-        setShowFrequentlyAdded={setShowFrequentlyAdded} 
-        show={showModal} 
-        totalItems={totalItems} 
-        onHide={handleCloseModal} 
-        selectedItem={selectedItem} 
-        handleAddToCart={handleAddToCart} 
-        fetchCarts={fetchCarts} 
-        carts={carts} 
-        setCarts={setCarts} 
-        addButtonRefs={addButtonRefs} 
-        basePrice={basePrice} 
-        baseServices={baseServices} 
-        roundPrice={roundPrice} 
-        showDiscountModal={showDiscountModal} 
-        setShowDiscountModal={setShowDiscountModal} 
-        handleDecrease={handleDecrease} 
-        handleIncrease={handleIncrease} 
+      <Salon1modal
+        showFrequentlyAdded={showFrequentlyAdded}
+        setShowFrequentlyAdded={setShowFrequentlyAdded}
+        show={showModal}
+        totalItems={totalItems}
+        onHide={handleCloseModal}
+        selectedItem={selectedItem}
+        handleAddToCart={handleAddToCart}
+        fetchCarts={fetchCarts}
+        carts={carts}
+        setCarts={setCarts}
+        addButtonRefs={addButtonRefs}
+        basePrice={basePrice}
+        baseServices={baseServices}
+        roundPrice={roundPrice}
+        showDiscountModal={showDiscountModal}
+        setShowDiscountModal={setShowDiscountModal}
+        handleDecrease={handleDecrease}
+        handleIncrease={handleIncrease}
       />
     </Container>
   );

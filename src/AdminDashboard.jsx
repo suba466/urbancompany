@@ -19,7 +19,7 @@ function AdminDashboard() {
       const data = await response.json();
       if (data && data.success) {
         setStats(data.stats);
-        
+
         const transformedBookings = data.recentBookings?.map(booking => {
           const customer = data.recentCustomers?.find(u => u.email === booking.customerEmail);
           return {
@@ -28,7 +28,7 @@ function AdminDashboard() {
             customerName: customer?.name || booking.customerName
           };
         }) || [];
-        
+
         setRecentBookings(transformedBookings);
         setRecentCustomers(data.recentCustomers || []);
       }
@@ -86,7 +86,7 @@ function AdminDashboard() {
             <Card.Body className="py-4">
               <div className="d-flex align-items-center justify-content-center mb-3">
                 <div >
-                  <span style={{ fontSize: "30px" }}><FcBullish/></span>
+                  <span style={{ fontSize: "30px" }}><FcBullish /></span>
                 </div>
               </div>
               <h6 className="text-muted mb-2">Total Revenue</h6>
@@ -116,8 +116,8 @@ function AdminDashboard() {
               <h5>Recent Bookings</h5>
             </Card.Header>
             <Card.Body>
-              <div className="table-responsive">
-                <Table striped bordered hover style={{border:"2px solid"}}>
+              <div>
+                <Table striped bordered hover style={{ border: "2px solid" }}>
                   <thead>
                     <tr>
                       <th style={{ width: '80px' }}>Profile</th>
@@ -132,27 +132,27 @@ function AdminDashboard() {
                     {recentBookings.slice(0, 5).map((booking) => (
                       <tr key={booking._id}>
                         <td>
-                          <div style={{ 
-                            width: '50px', 
-                            height: '50px', 
-                            borderRadius: '50%', 
+                          <div style={{
+                            width: '50px',
+                            height: '50px',
+                            borderRadius: '50%',
                             overflow: 'hidden',
                             border: '2px solid #dee2e6'
                           }}>
                             {booking.customerProfileImage ? (
-                              <img 
-                                src={`http://localhost:5000${booking.customerProfileImage}`} 
+                              <img
+                                src={`http://localhost:5000${booking.customerProfileImage}`}
                                 alt={booking.customerName}
-                                style={{ 
-                                  width: '100%', 
-                                  height: '100%', 
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
                                   objectFit: 'cover'
                                 }}
                               />
                             ) : (
-                              <div style={{ 
-                                width: '100%', 
-                                height: '100%', 
+                              <div style={{
+                                width: '100%',
+                                height: '100%',
                                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -168,7 +168,7 @@ function AdminDashboard() {
                         </td>
                         <td>
                           <div>
-                            <strong>{booking.customerName}</strong><br/>
+                            <strong>{booking.customerName}</strong><br />
                             <small className="text-muted">{booking.customerEmail}</small>
                           </div>
                         </td>
@@ -177,8 +177,8 @@ function AdminDashboard() {
                         <td>
                           <Badge bg={
                             booking.status === 'Completed' ? 'success' :
-                            booking.status === 'Confirmed' ? 'primary' :
-                            booking.status === 'Pending' ? 'warning' : 'danger'
+                              booking.status === 'Confirmed' ? 'primary' :
+                                booking.status === 'Pending' ? 'warning' : 'danger'
                           }>
                             {booking.status}
                           </Badge>
@@ -200,22 +200,22 @@ function AdminDashboard() {
             <Card.Body>
               {recentCustomers.slice(0, 5).map((customer) => (
                 <div key={customer._id} className="d-flex align-items-center mb-3">
-                  <div style={{ 
-                    width: '50px', 
-                    height: '50px', 
-                    borderRadius: '50%', 
+                  <div style={{
+                    width: '50px',
+                    height: '50px',
+                    borderRadius: '50%',
                     overflow: 'hidden',
                     border: '2px solid #dee2e6',
                     flexShrink: 0,
                     marginRight: '12px'
                   }}>
                     {customer.profileImage ? (
-                      <img 
-                        src={`http://localhost:5000${customer.profileImage}`} 
+                      <img
+                        src={`http://localhost:5000${customer.profileImage}`}
                         alt={customer.name}
-                        style={{ 
-                          width: '100%', 
-                          height: '100%', 
+                        style={{
+                          width: '100%',
+                          height: '100%',
                           objectFit: 'cover'
                         }}
                         onError={(e) => {
@@ -238,9 +238,9 @@ function AdminDashboard() {
                         }}
                       />
                     ) : (
-                      <div style={{ 
-                        width: '100%', 
-                        height: '100%', 
+                      <div style={{
+                        width: '100%',
+                        height: '100%',
                         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                         display: 'flex',
                         alignItems: 'center',
@@ -254,7 +254,7 @@ function AdminDashboard() {
                     )}
                   </div>
                   <div style={{ flexGrow: 1 }}>
-                    <strong>{customer.name || 'Unknown Customer'}</strong><br/>
+                    <strong>{customer.name || 'Unknown Customer'}</strong><br />
                     <small className="text-muted">{customer.email || 'No email'}</small>
                     <small className="d-block text-muted">
                       Joined: {new Date(customer.createdAt).toLocaleDateString()}

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Nav, Dropdown, Button } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
 
-function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole }) {
+function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole, isMobile }) {
   const location = useLocation();
   const [catOpen, setCatOpen] = useState(false);
   const [subCatOpen, setSubCatOpen] = useState(false);
@@ -35,6 +35,9 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole }) {
 
   // Helper function to get menu item style
   const getMenuItemStyle = (path) => {
+    // On mobile, items are always left-aligned since width is fixed 250px when open
+    const alignCondition = isMobile ? true : sidebarOpen;
+
     return {
       color: isActive(path) ? '#000' : 'white',
       background: isActive(path) ? 'white' : 'transparent',
@@ -46,13 +49,15 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole }) {
       marginBottom: '8px',
       transition: 'all 0.2s',
       border: isActive(path) ? '1px solid #dee2e6' : 'none',
-      justifyContent: sidebarOpen ? 'flex-start' : 'center'
+      justifyContent: alignCondition ? 'flex-start' : 'center'
     };
   };
 
   // Helper function to get dropdown toggle style
   const getDropdownToggleStyle = (paths) => {
     const active = isAnyActive(paths);
+    const alignCondition = isMobile ? true : sidebarOpen;
+
     return {
       color: active ? '#000' : 'white',
       background: active ? 'white' : 'transparent',
@@ -60,7 +65,7 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole }) {
       padding: '10px 15px',
       textDecoration: 'none',
       display: 'flex',
-      justifyContent: sidebarOpen ? 'space-between' : 'center',
+      justifyContent: alignCondition ? 'space-between' : 'center',
       alignItems: 'center',
       marginBottom: '8px',
       transition: 'all 0.2s',
@@ -71,25 +76,30 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole }) {
   };
 
   const handleSidebarClick = () => {
-    if (!sidebarOpen && setSidebarOpen) {
+    if (!sidebarOpen && setSidebarOpen && !isMobile) {
       setSidebarOpen(true);
     }
   };
+
+  const sidebarWidth = isMobile ? '250px' : (sidebarOpen ? '250px' : '70px');
+  const sidebarTransform = isMobile ? (sidebarOpen ? 'translateX(0)' : 'translateX(-100%)') : 'none';
 
   return (
     <div
       onClick={handleSidebarClick}
       style={{
-        width: sidebarOpen ? '250px' : '70px',
+        width: sidebarWidth,
+        transform: sidebarTransform,
         background: '#000000',
         color: 'white',
         padding: '20px 0',
         position: 'fixed',
+        left: 0,
         height: '100vh',
-        zIndex: 1000,
-        overflowY: sidebarOpen ? 'auto' : 'visible',
+        zIndex: 1045,
+        overflowY: (isMobile || sidebarOpen) ? 'auto' : 'visible',
         overflowX: 'hidden',
-        transition: 'all 0.3s'
+        transition: 'width 0.3s ease, transform 0.3s ease'
       }}
     >
       <div className="text-center mb-4 px-2">

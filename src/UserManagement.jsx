@@ -993,7 +993,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
                 }}
                 searchPlaceholder="Search users..."
                 onDownloadPDF={() => {
-                  const tableElement = document.querySelector('.table-responsive');
+                  const tableElement = document.querySelector('.table');
                   exportAsPDF(tableElement, 'users');
                 }}
                 onDownloadExcel={() => {

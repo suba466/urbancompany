@@ -233,7 +233,7 @@ function BookingManagement() {
                 onSearchChange={handleSearchChange}
                 searchPlaceholder="Search bookings..."
                 onDownloadPDF={() => {
-                  const tableElement = document.querySelector('.table-responsive');
+                  const tableElement = document.querySelector('.table');
                   exportAsPDF(tableElement, 'bookings');
                 }}
                 onDownloadExcel={() => {
@@ -256,8 +256,8 @@ function BookingManagement() {
                     onChange={handleStatusChange}
                     style={{
                       height: "40px",
-                      width: "150px",borderRadius:"0px",
-                      marginRight: "10px",border:"2px solid black"
+                      width: "150px", borderRadius: "0px",
+                      marginRight: "10px", border: "2px solid black"
                     }}
                   >
                     <option value="">All Status</option>
