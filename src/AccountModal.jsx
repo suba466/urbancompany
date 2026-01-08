@@ -6,19 +6,14 @@ import { MdAccountCircle, MdOutlineArrowForwardIos, MdLocationOn, MdEdit, MdCame
 import { BiLeftArrowAlt } from "react-icons/bi";
 import { PiNotepadLight } from "react-icons/pi";
 import { IoSettingsOutline } from "react-icons/io5";
-import { useAuth } from "./AuthContext";
+import { useAuth, useCart, useBookings } from "./hooks"; // Import from hooks
 
 function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "main" }) {
   const [logo1, setLogo1] = useState("");
   const [currentView, setCurrentView] = useState(initialView);
   const [isLoading, setIsLoading] = useState(false);
-  const [bookings, setBookings] = useState([]);
-  const [plans, setPlans] = useState([]);
-  const [loadingBookings, setLoadingBookings] = useState(false);
-  const fileInputRef = useRef(null);
-  const profileFileInputRef = useRef(null);
   const [profilePreview, setProfilePreview] = useState(null);
-
+  
   // Registration states
   const [registerData, setRegisterData] = useState({
     name: "",
@@ -47,65 +42,69 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
     profileFile: null
   });
 
-  const { isLoggedIn, userInfo, login, logout } = useAuth();
+  const fileInputRef = useRef(null);
+  const profileFileInputRef = useRef(null);
 
-  // Create safe reference for backward compatibility
-  const customerInfo = userInfo || {
-    id: '',
-    name: '',
-    email: '',
-    phone: '',
-    city: '',
-    profileImage: '',
-    title: 'Ms'
-  };
+  // Use Redux hooks
+  const { 
+    user, 
+    isAuthenticated, 
+    login, 
+    logout, 
+    register, 
+    updateProfile: updateProfileAction,
+    loading: authLoading,
+    error: authError 
+  } = useAuth();
+  
+  const { clear: clearCart } = useCart();
+  const { bookings, plans, setBookings, setPlans, loading: bookingsLoading } = useBookings();
 
   // Update the useEffect that loads profile data
   useEffect(() => {
-    if (isLoggedIn && show && userInfo.email) {
+    if (isAuthenticated && show && user?.email) {
       loadCustomerData();
-
-      // Initialize profile data with customer info
+      
+      // Initialize profile data with user info
       setProfileData({
-        title: userInfo.title || "Ms",
-        name: userInfo.name || "",
-        email: userInfo.email || "",
-        phone: userInfo.phone || "",
-        city: userInfo.city || "",
+        title: user.title || "Ms",
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        city: user.city || "",
         profileFile: null
       });
 
       console.log("Profile data initialized with:", {
-        name: userInfo.name,
-        email: userInfo.email,
-        phone: userInfo.phone,
-        city: userInfo.city,
-        title: userInfo.title
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        city: user.city,
+        title: user.title
       });
     }
-  }, [isLoggedIn, show, userInfo]);
+  }, [isAuthenticated, show, user]);
 
   // Add this useEffect to debug the booking loading
   useEffect(() => {
     console.log("Debug - Current state:", {
-      isLoggedIn,
-      userInfo,
+      isAuthenticated,
+      user,
       bookingsCount: bookings.length,
       bookings,
-      loadingBookings
+      loadingBookings: bookingsLoading
     });
-  }, [bookings, loadingBookings, isLoggedIn, userInfo]);
+  }, [bookings, bookingsLoading, isAuthenticated, user]);
 
   const loadCustomerData = async () => {
     try {
-      setLoadingBookings(true);
-      if (!userInfo.email) {
+      if (!user?.email) {
         console.log("No email found");
         setBookings([]);
         return;
       }
 
-      const customerEmail = userInfo.email;
+      const customerEmail = user.email;
       console.log("Fetching bookings for:", customerEmail);
 
       // Load bookings from server
@@ -149,8 +148,6 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
     } catch (error) {
       console.error("Error loading customer data:", error);
       setBookings([]);
-    } finally {
-      setLoadingBookings(false);
     }
   };
 
@@ -370,42 +367,14 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
 
     setIsLoading(true);
     try {
-      // Create FormData
-      const formData = new FormData();
-      formData.append('name', registerData.name);
-      formData.append('email', registerData.email);
-      formData.append('phone', registerData.phone);
-      formData.append('city', registerData.city);
-      formData.append('password', registerData.password);
-
-      // Append profile picture if exists
-      if (registerData.profileFile) {
-        formData.append('profileImage', registerData.profileFile);
-        console.log("Appending profile image:", registerData.profileFile.name);
-      }
-
-      console.log("Sending registration request...");
-      const response = await fetch("http://localhost:5000/api/register", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await response.json();
-      console.log("Registration response:", data);
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to register");
-      }
-
-      // Auto login after successful registration
-      login({
-        name: data.customer.name,
-        email: data.customer.email,
-        phone: data.customer.phone,
-        city: data.customer.city,
-        customerId: data.customer.id,
-        profileImage: data.customer.profileImage,
-        title: data.customer.title || "Ms"
+      // Use Redux register action
+      await register({
+        name: registerData.name,
+        email: registerData.email,
+        phone: registerData.phone,
+        city: registerData.city,
+        password: registerData.password,
+        profileImage: registerData.profileFile
       });
 
       setCurrentView("main");
@@ -437,33 +406,8 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
 
     setIsLoading(true);
     try {
-      const response = await fetch("http://localhost:5000/api/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: loginData.email,
-          password: loginData.password
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to login");
-      }
-
-      // Login successful
-      login({
-        name: data.customer.name,
-        email: data.customer.email,
-        phone: data.customer.phone,
-        city: data.customer.city,
-        customerId: data.customer.id,
-        profileImage: data.customer.profileImage,
-        title: data.customer.title || "Ms"
-      });
+      // Use Redux login action
+      await login(loginData.email, loginData.password);
 
       setCurrentView("main");
       onHide();
@@ -477,27 +421,18 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    setCurrentView("main");
-    setBookings([]);
-    setPlans([]);
-    setProfilePreview(null);
-    onHide();
-  };
-
   // Handle profile save
   const handleProfileSave = async () => {
     console.log("=== DEBUG START ===");
     console.log("📋 Profile data to save:", profileData);
-    console.log("👤 Full userInfo object:", userInfo);
-    console.log("🆔 Customer ID value:", userInfo.id);
-    console.log("🆔 Customer ID type:", typeof userInfo.id);
+    console.log("👤 Full user object:", user);
+    console.log("🆔 Customer ID value:", user.id);
+    console.log("🆔 Customer ID type:", typeof user.id);
     console.log("=== DEBUG END ===");
 
     // Validation
-    if (!userInfo.id || userInfo.id === "undefined" || userInfo.id === "") {
-      console.error("❌ Invalid customerId:", userInfo.id);
+    if (!user?.id || user.id === "undefined" || user.id === "") {
+      console.error("❌ Invalid customerId:", user.id);
       alert("Customer ID is missing or invalid. Please:\n1. Log out\n2. Clear browser cache\n3. Log in again");
       return;
     }
@@ -529,77 +464,41 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
 
     setIsLoading(true);
     try {
-      // Create FormData for file upload
-      const formData = new FormData();
-      formData.append('customerId', userInfo.id);
-      formData.append('name', profileData.name);
-      formData.append('email', profileData.email);
-      formData.append('phone', profileData.phone);
-      formData.append('city', profileData.city);
-      formData.append('title', profileData.title || "Ms");
-
-      // Append profile file if exists
-      if (profileData.profileFile) {
-        formData.append('profileImage', profileData.profileFile);
-        console.log("📤 Uploading profile image:", profileData.profileFile.name);
-      }
-
-      console.log("📤 Sending update request to server...");
-      console.log("🔗 Endpoint: http://localhost:5000/api/update-profile");
-      console.log("🆔 Customer ID being sent:", userInfo.id);
-
-      const response = await fetch("http://localhost:5000/api/update-profile", {
-        method: "POST",
-        body: formData,
+      // Use Redux updateProfile action
+      await updateProfileAction({
+        customerId: user.id,
+        name: profileData.name,
+        email: profileData.email,
+        phone: profileData.phone,
+        city: profileData.city,
+        title: profileData.title,
+        profileImage: profileData.profileFile
       });
 
-      console.log("📥 Response status:", response.status);
-      console.log("📥 Response headers:", response.headers);
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log("✅ Profile update response:", data);
-
-        // Clean up preview URL if exists
-        if (profilePreview) {
-          URL.revokeObjectURL(profilePreview);
-        }
-
-        // Update customer info in context
-        const updatedUserInfo = {
-          ...userInfo,
-          name: data.customer.name,
-          email: data.customer.email,
-          phone: data.customer.phone,
-          city: data.customer.city,
-          title: data.customer.title || "Ms",
-          profileImage: data.customer.profileImage
-        };
-
-        console.log("🔄 Updating context with:", updatedUserInfo);
-        login(updatedUserInfo);
-
-        setProfilePreview(null);
-        setCurrentView("main");
-        alert("Profile updated successfully!");
-      } else {
-        const errorText = await response.text();
-        console.error("❌ Update failed - Response text:", errorText);
-
-        try {
-          const errorData = JSON.parse(errorText);
-          throw new Error(errorData.error || "Failed to update profile");
-        } catch {
-          throw new Error(`Server error: ${response.status} - ${errorText}`);
-        }
+      // Clean up preview URL if exists
+      if (profilePreview) {
+        URL.revokeObjectURL(profilePreview);
       }
 
+      setProfilePreview(null);
+      setCurrentView("main");
+      alert("Profile updated successfully!");
     } catch (error) {
       console.error("❌ Error updating profile:", error);
       alert("Failed to update profile: " + error.message);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    clearCart();
+    setCurrentView("main");
+    setProfilePreview(null);
+    setBookings([]);
+    setPlans([]);
+    onHide();
   };
 
   // Render profile picture component
@@ -783,9 +682,9 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
           type="submit"
           style={{ height: "45px" }}
           className="butn fw-semibold w-100"
-          disabled={isLoading}
+          disabled={isLoading || authLoading}
         >
-          {isLoading ? (
+          {isLoading || authLoading ? (
             <>
               <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
               Creating Account...
@@ -866,9 +765,9 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
           type="submit"
           style={{ height: "45px" }}
           className="butn fw-semibold w-100"
-          disabled={isLoading}
+          disabled={isLoading || authLoading}
         >
-          {isLoading ? (
+          {isLoading || authLoading ? (
             <>
               <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
               Logging in...
@@ -904,10 +803,10 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
   // Render profile editing view
   const renderProfileEditView = () => {
     console.log("Edit View - Current Profile Data:", profileData);
-    console.log("Edit View - Current User Info:", userInfo);
+    console.log("Edit View - Current User Info:", user);
 
     // Use preview if exists, otherwise use existing profile image
-    const displayImage = profilePreview || userInfo.profileImage;
+    const displayImage = profilePreview || user?.profileImage;
 
     return (
       <div>
@@ -959,7 +858,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
                       <button
                         key={title}
                         type="button"
-                        className={`btn border-0 rounded-0 flex-fill ${(profileData.title || userInfo.title || "Ms") === title
+                        className={`btn border-0 rounded-0 flex-fill ${(profileData.title || user?.title || "Ms") === title
                           ? 'btn-dark'
                           : 'btn-outline-secondary'
                           }`}
@@ -982,7 +881,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
                   <div className="">
                     <Form.Control
                       type="text"
-                      value={profileData.name || userInfo.name || ""}
+                      value={profileData.name || user?.name || ""}
                       onChange={(e) => handleProfileChange('name', e.target.value)}
                       className="border-0 p-0"
                       style={{
@@ -1004,7 +903,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
               <div>
                 <Form.Control
                   type="email"
-                  value={profileData.email || userInfo.email || ""}
+                  value={profileData.email || user?.email || ""}
                   onChange={(e) => handleProfileChange('email', e.target.value)}
                   placeholder="Enter email"
                   className="border-0 p-0"
@@ -1024,7 +923,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
               <p className="text-muted small mb-0" style={{ fontSize: "12px" }}>Phone Number</p>
               <Form.Control
                 type="tel"
-                value={profileData.phone || userInfo.phone || ""}
+                value={profileData.phone || user?.phone || ""}
                 onChange={(e) => handleProfileChange('phone', e.target.value.replace(/\D/g, ""))}
                 placeholder="Enter phone number"
                 className="border-0 p-0"
@@ -1044,7 +943,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
               <p className="text-muted small mb-0" style={{ fontSize: "12px" }}>City</p>
               <Form.Control
                 type="text"
-                value={profileData.city || userInfo.city || ""}
+                value={profileData.city || user?.city || ""}
                 onChange={(e) => handleProfileChange('city', e.target.value)}
                 placeholder="Enter your city"
                 className="border-0 p-0"
@@ -1064,9 +963,9 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
                 className="butn flex-grow-1 py-2"
                 style={{ backgroundColor: "black", height: "40px" }}
                 onClick={handleProfileSave}
-                disabled={isLoading}
+                disabled={isLoading || authLoading}
               >
-                {isLoading ? (
+                {isLoading || authLoading ? (
                   <>
                     <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                     Saving...
@@ -1087,7 +986,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
     // Calculate total for each booking
     const calculateBookingTotal = (booking) => {
       if (booking.isCurrent && totalPrice) {
-        return totalPrice;
+        return totalPrice();
       }
       if (booking.servicePrice) {
         return Number(booking.servicePrice) || 0;
@@ -1114,7 +1013,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
 
     return (
       <div className="p-2">
-        {loadingBookings ? (
+        {bookingsLoading ? (
           <div className="text-center py-5">
             <Spinner animation="border" variant="primary" />
             <p className="mt-2 text-muted">Loading your bookings...</p>
@@ -1336,7 +1235,6 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
   // Render plans view
   const renderPlansView = () => (
     <div>
-
       {plans.length === 0 ? (
         <div className="text-center py-5">
           <PiNotepadLight size={48} className="text-muted mb-3" />
@@ -1363,7 +1261,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
     </div>
   );
 
-  // Render plans view
+  // Render settings view
   const renderSettingsView = () => (
     <div style={{ padding: "10px" }}>
       <h5 className="fw-semibold">Order related messages</h5>
@@ -1376,11 +1274,10 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
   const renderMainViewAfterLogin = () => {
     // Debug logging
     console.log("Debug - In renderMainViewAfterLogin");
-    console.log("Debug - userInfo:", userInfo);
-    console.log("Debug - customerInfo:", customerInfo);
+    console.log("Debug - user:", user);
 
-    if (!userInfo) {
-      console.error("userInfo is undefined!");
+    if (!user) {
+      console.error("user is undefined!");
       return <div className="p-3">Loading user information...</div>;
     }
 
@@ -1392,13 +1289,13 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
           onClick={() => handleNavigation("profile-details")}
         >
           <div className="d-flex align-items-center gap-3">
-            {renderProfilePicture(userInfo.profileImage, 60, false)}
+            {renderProfilePicture(user.profileImage, 60, false)}
             <div className="flex-grow-1">
-              <h5 className="fw-semibold mb-1">{userInfo.name || "Customer"}</h5>
+              <h5 className="fw-semibold mb-1">{user.name || "Customer"}</h5>
               <p className="small text-muted mb-0">
-                +91 {userInfo.phone || ""}
+                +91 {user.phone || ""}
               </p>
-              <p className="small text-muted mb-1">{userInfo.email || ""}</p>
+              <p className="small text-muted mb-1">{user.email || ""}</p>
             </div>
             <MdOutlineArrowForwardIos size={14} className="text-muted" />
           </div>
@@ -1493,7 +1390,6 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
   const renderMainViewNotLoggedIn = () => (
     <div>
       <div className="text-center mb-4">
-
         <p className="text-muted small">Login or create an account to manage your bookings</p>
       </div>
 
@@ -1543,7 +1439,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
 
   const getViewTitle = () => {
     const titles = {
-      main: isLoggedIn ? "Profile" : "Profile",
+      main: isAuthenticated ? "Profile" : "Profile",
       login: "Login",
       register: "Create Account",
       "edit-profile": "My Profile",
@@ -1557,7 +1453,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
   };
 
   const renderMainContent = () => {
-    if (!isLoggedIn) {
+    if (!isAuthenticated) {
       switch (currentView) {
         case "login":
           return renderLoginView();
@@ -1624,7 +1520,6 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
             overflowY: 'auto'
           }}
         >
-
           <Container fluid>
             {renderMainContent()}
           </Container>

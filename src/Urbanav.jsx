@@ -13,7 +13,7 @@ import { IoMdHelpCircleOutline } from "react-icons/io";
 import { GoHomeFill } from "react-icons/go";
 import { MdAccountCircle, MdHome, MdApartment, MdBusinessCenter, MdDelete, MdMoreVert } from "react-icons/md";
 import AccountModal from "./AccountModal";
-import { useCart } from "./CartContext";
+import { useCart, useAuth } from "./hooks"; // Import from hooks
 import "./Urbancom.css";
 
 function Urbanav() {
@@ -33,7 +33,10 @@ function Urbanav() {
   const [currentLocationStatus, setCurrentLocationStatus] = useState("idle");
   const [savedAddresses, setSavedAddresses] = useState([]);
   
-  const { cartCount } = useCart();
+  // Use Redux hooks
+  const { items, count, clear: clearCart } = useCart();
+  const { user, isAuthenticated } = useAuth();
+  
   const dropdownRef = useRef(null);
   const location = useLocation();
   const fixedText = "Search for ";
@@ -480,7 +483,7 @@ function Urbanav() {
                       style={{ cursor: "pointer" }}
                     >
                       <CiShoppingCart size={20} className="text-muted" />
-                      <CartBadge count={cartCount} />
+                      <CartBadge count={count} />
                     </div>
                     
                     <CgProfile 
@@ -515,12 +518,12 @@ function Urbanav() {
                 {/* Mobile Cart Icon with Badge - Navigates to CartSummary page */}
                 {!location.pathname.startsWith("/salon") && (
                 <div 
-                  className="position-relative cart-icon-container"
+                  className="position-relative "
                   onClick={handleCartClick}
                   style={{ cursor: "pointer" }}
                 >
-                  <CiShoppingCart className="cart-icon" />
-                  <CartBadge count={cartCount} size="lg" />
+                  <CiShoppingCart />
+                  <CartBadge count={count} size="lg" />
                 </div>
               )}
               </div>
@@ -589,15 +592,20 @@ function Urbanav() {
                     onClick={handleCartClick}
                     style={{ cursor: 'pointer' }}
                   >
-                    {/* Note: You have GoHomeFill icon here, might want to change to CiShoppingCart */}
                     <GoHomeFill size={18} className="mb-1" />
                     <div className="nav-label" style={{ fontSize: "12px" }}>Cart</div>
+                    <CartBadge count={count} size="sm" />
                   </div>
                 </div>
                 <div className="col-3">
                   <div className="nav-item" onClick={handleAccountClick} style={{ cursor: 'pointer' }}>
                     <MdAccountCircle size={18} className="mb-1" />
                     <div className="nav-label" style={{ fontSize: "12px" }}>Account</div>
+                    {isAuthenticated && user?.name && (
+                      <span className="position-absolute top-0 start-100 translate-middle badge bg-success" style={{ fontSize: "8px" }}>
+                        ✓
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

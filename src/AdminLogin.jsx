@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react'; 
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Spinner } from 'react-bootstrap';
+import { useAuth } from './hooks'; // Import from hooks
 
 function AdminLogin({ onLogin }) {
   const [loginData, setLoginData] = useState({ email: '', password: '' });
@@ -7,18 +8,16 @@ function AdminLogin({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const logoUrl = 'http://localhost:5000/assets/Uc.png';
+  
+  const { login, token, role, isAuthenticated } = useAuth();
 
   // Check for existing token on component mount
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    const userRole = localStorage.getItem('userRole');
-    
-    if (token && userRole) {
-      // Auto-login if token exists
+    if (isAuthenticated && token && role) {
       console.log("Auto-login with existing token");
-      onLogin(token, userRole);
+      onLogin(token, role);
     }
-  }, [onLogin]);
+  }, [isAuthenticated, token, role, onLogin]);
 
   // Validation functions
   const validateEmail = (email) => {
@@ -40,10 +39,8 @@ function AdminLogin({ onLogin }) {
   const handleLogin = async (e) => {
     e.preventDefault();
     
-    // Mark all fields as touched on submit
     setTouched({ email: true, password: true });
     
-    // Check for validation errors
     const emailError = validateEmail(loginData.email);
     const passwordError = validatePassword(loginData.password);
     
@@ -56,45 +53,18 @@ function AdminLogin({ onLogin }) {
     setError('');
 
     try {
-      const isAdminEmail = loginData.email.includes('@urbancompany.com') ||
-        loginData.email.includes('admin');
-
-      const endpoint = isAdminEmail
-        ? 'http://localhost:5000/api/admin/login'
-        : 'http://localhost:5000/api/admin/user-login';
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(loginData)
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Store token and user info
-        localStorage.setItem('authToken', data.token);
-        
-        if (isAdminEmail) {
-          localStorage.setItem('userRole', 'admin');
-          localStorage.setItem('userPermissions', JSON.stringify(data.admin?.permissions || {}));
-          localStorage.setItem('userInfo', JSON.stringify(data.admin || {}));
-        } else {
-          localStorage.setItem('userRole', 'user');
-          localStorage.setItem('userPermissions', JSON.stringify(data.user?.permissions || {}));
-          localStorage.setItem('userInfo', JSON.stringify(data.user || {}));
-        }
-
-        // Store login timestamp
-        localStorage.setItem('loginTime', Date.now().toString());
-        
-        onLogin(data.token, isAdminEmail ? 'admin' : 'user');
-      } else {
-        setError(data.error || 'Login failed');
-      }
+      // Determine if it's admin login
+      const isAdminEmail = loginData.email.includes('@urbancompany.com') || loginData.email.includes('admin');
+      
+      // Use Redux login action
+      await login(loginData.email, loginData.password, isAdminEmail);
+      
+      // If login successful, token and role will be updated in Redux
+      // The useEffect above will handle the onLogin callback
+      
     } catch (error) {
       console.error('Login error:', error);
-      setError('Login failed. Please check your connection.');
+      setError(error.message || 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -102,7 +72,6 @@ function AdminLogin({ onLogin }) {
 
   const emailError = touched.email ? validateEmail(loginData.email) : '';
   const passwordError = touched.password ? validatePassword(loginData.password) : '';
-
   return (
     <div className="d-flex justify-content-center align-items-center bg-light" style={{ minHeight: "100vh" }}>
       <Container fluid className="px-3 px-lg-5">
