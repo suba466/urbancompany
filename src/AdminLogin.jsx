@@ -8,7 +8,7 @@ function AdminLogin({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const logoUrl = 'http://localhost:5000/assets/Uc.png';
-  
+
   const { login, token, role, isAuthenticated } = useAuth();
 
   // Check for existing token on component mount
@@ -38,30 +38,27 @@ function AdminLogin({ onLogin }) {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    
+
     setTouched({ email: true, password: true });
-    
+
     const emailError = validateEmail(loginData.email);
     const passwordError = validatePassword(loginData.password);
-    
+
     if (emailError || passwordError) {
       setError(emailError || passwordError);
       return;
     }
-    
+
     setLoading(true);
     setError('');
 
     try {
-      // Determine if it's admin login
-      const isAdminEmail = loginData.email.includes('@urbancompany.com') || loginData.email.includes('admin');
-      
-      // Use Redux login action
-      await login(loginData.email, loginData.password, isAdminEmail);
-      
+      // Use Redux login action - always pass true for Admin Panel login
+      await login(loginData.email, loginData.password, true);
+
       // If login successful, token and role will be updated in Redux
       // The useEffect above will handle the onLogin callback
-      
+
     } catch (error) {
       console.error('Login error:', error);
       setError(error.message || 'Login failed');
@@ -147,7 +144,7 @@ function AdminLogin({ onLogin }) {
                             </div>
                           )}
                         </Form.Group>
-                          
+
                         <Form.Group className="mb-2">
                           <Form.Label className=" fw-bold mb-0">Password</Form.Label>
                           <Form.Control

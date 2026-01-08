@@ -13,7 +13,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
   const [currentView, setCurrentView] = useState(initialView);
   const [isLoading, setIsLoading] = useState(false);
   const [profilePreview, setProfilePreview] = useState(null);
-  
+
   // Registration states
   const [registerData, setRegisterData] = useState({
     name: "",
@@ -46,17 +46,18 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
   const profileFileInputRef = useRef(null);
 
   // Use Redux hooks
-  const { 
-    user, 
-    isAuthenticated, 
-    login, 
-    logout, 
-    register, 
+  const {
+    user,
+    role,
+    isAuthenticated,
+    login,
+    logout,
+    register,
     updateProfile: updateProfileAction,
     loading: authLoading,
-    error: authError 
+    error: authError
   } = useAuth();
-  
+
   const { clear: clearCart } = useCart();
   const { bookings, plans, setBookings, setPlans, loading: bookingsLoading } = useBookings();
 
@@ -64,7 +65,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
   useEffect(() => {
     if (isAuthenticated && show && user?.email) {
       loadCustomerData();
-      
+
       // Initialize profile data with user info
       setProfileData({
         title: user.title || "Ms",
@@ -383,7 +384,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
 
     } catch (error) {
       console.error("Error registering:", error);
-      alert(error.message);
+      alert(error.message || error || "Registration failed");
     } finally {
       setIsLoading(false);
     }
@@ -415,7 +416,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
 
     } catch (error) {
       console.error("Error logging in:", error);
-      alert(error.message);
+      alert(error.message || error || "Login failed");
     } finally {
       setIsLoading(false);
     }
@@ -485,7 +486,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
       alert("Profile updated successfully!");
     } catch (error) {
       console.error("❌ Error updating profile:", error);
-      alert("Failed to update profile: " + error.message);
+      alert("Failed to update profile: " + (error.message || error));
     } finally {
       setIsLoading(false);
     }
@@ -1278,7 +1279,15 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
 
     if (!user) {
       console.error("user is undefined!");
-      return <div className="p-3">Loading user information...</div>;
+      // If user is missing but authenticated, show session error instead of infinite loading
+      return (
+        <div className="text-center p-4">
+          <p className="text-danger mb-3">Session information missing.</p>
+          <Button variant="outline-danger" size="sm" onClick={handleLogout}>
+            Reload Session
+          </Button>
+        </div>
+      );
     }
 
     return (
@@ -1463,6 +1472,29 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
           return renderMainViewNotLoggedIn();
       }
     } else {
+      // Check for Admin role
+      if (role === 'admin') {
+        return (
+          <div className="text-center p-5">
+            <MdAccountCircle size={64} className="text-warning mb-3" />
+            <h5 className="fw-bold">Admin Account</h5>
+            <p className="text-muted">
+              You are currently logged in as an Administrator.
+              <br />
+              Please use the Admin Panel to manage the platform.
+            </p>
+            <div className="d-grid gap-2 mt-4">
+              <Button href="/admin/dashboard" variant="primary">
+                Go to Admin Dashboard
+              </Button>
+              <Button variant="outline-danger" onClick={handleLogout}>
+                Logout
+              </Button>
+            </div>
+          </div>
+        );
+      }
+
       switch (currentView) {
         case "main":
           return renderMainViewAfterLogin();

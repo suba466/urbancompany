@@ -276,76 +276,124 @@ router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    console.log("Admin login attempt:", { email });
+    console.log("Admin/User login attempt:", { email });
 
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required" });
     }
 
+    // 1. Check Admin Collection
     const admin = await Admin.findOne({ email });
-    if (!admin) {
-      return res.status(400).json({ error: "Invalid email or password" });
-    }
 
-    if (!admin.isActive) {
-      return res.status(400).json({ error: "Account is deactivated" });
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, admin.password);
-    if (!isPasswordValid) {
-      return res.status(400).json({ error: "Invalid email or password" });
-    }
-
-    admin.lastLogin = new Date();
-    await admin.save();
-
-    // Generate JWT token
-    const token = jwt.sign(
-      {
-        id: admin._id,
-        email: admin.email,
-        role: 'admin',
-        permissions: {
-          Dashboard: true,
-          Users: true,
-          Customer: true,
-          Category: true,
-          Product: true,
-          Bookings: true,
-          Reports: true,
-          Settings: true
-        }
-      },
-      JWT_SECRET,
-      { expiresIn: '2h' }
-    );
-
-    console.log(`Admin logged in: ${email}`);
-
-    res.json({
-      success: true,
-      message: "Admin login successful",
-      token,
-      admin: {
-        id: admin._id,
-        username: admin.username,
-        email: admin.email,
-        role: admin.role,
-        permissions: {
-          Dashboard: true,
-          Users: true,
-          Customer: true,
-          Catalog: true,
-          Product: true,
-          Bookings: true,
-          Reports: true,
-          Settings: true
-        }
+    if (admin) {
+      // --- Handle Admin Login ---
+      if (!admin.isActive) {
+        return res.status(400).json({ error: "Account is deactivated" });
       }
-    });
+
+      const isPasswordValid = await bcrypt.compare(password, admin.password);
+      if (!isPasswordValid) {
+        return res.status(400).json({ error: "Invalid email or password" });
+      }
+
+      admin.lastLogin = new Date();
+      await admin.save();
+
+      const token = jwt.sign(
+        {
+          id: admin._id,
+          email: admin.email,
+          role: 'admin',
+          permissions: {
+            Dashboard: true,
+            Users: true,
+            Customer: true,
+            Catalog: true,
+            Product: true,
+            Bookings: true,
+            Reports: true,
+            Settings: true
+          }
+        },
+        JWT_SECRET,
+        { expiresIn: '2h' }
+      );
+
+      return res.json({
+        success: true,
+        message: "Admin login successful",
+        token,
+        role: 'admin',
+        admin: {
+          id: admin._id,
+          username: admin.username,
+          email: admin.email,
+          role: admin.role,
+          permissions: {
+            Dashboard: true,
+            Users: true,
+            Customer: true,
+            Catalog: true,
+            Product: true,
+            Bookings: true,
+            Reports: true,
+            Settings: true
+          }
+        }
+      });
+    }
+
+    // 2. Check User Collection (if not Admin)
+    const user = await User.findOne({ email });
+
+    if (user) {
+      // --- Handle User Login ---
+      if (!user.isActive) {
+        return res.status(400).json({ error: "Account is deactivated" });
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(400).json({ error: "Invalid email or password" });
+      }
+
+      await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
+
+      const token = jwt.sign(
+        {
+          id: user._id,
+          email: user.email,
+          role: 'user',
+          profileImage: user.profileImage,
+          permissions: user.permissions
+        },
+        JWT_SECRET,
+        { expiresIn: '2h' }
+      );
+
+      return res.json({
+        success: true,
+        message: "User login successful",
+        token,
+        role: 'user',
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          designation: user.designation,
+          profileImage: user.profileImage,
+          permissions: user.permissions,
+          role: 'user'
+        }
+      });
+    }
+
+    // 3. Neither found
+    return res.status(400).json({ error: "Invalid email or password" });
 
   } catch (error) {
-    console.error("Error in admin login:", error);
+    console.error("Error in login:", error);
     res.status(500).json({ error: "Failed to login" });
   }
 });

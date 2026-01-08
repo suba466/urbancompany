@@ -1,8 +1,8 @@
 import { useDispatch, useSelector } from 'react-redux';
-import { 
-  loginUser, 
-  registerUser, 
-  logoutUser, 
+import {
+  loginUser,
+  registerUser,
+  logoutUser,
   updateProfile,
   selectAuth,
   selectCart,
@@ -28,14 +28,14 @@ import {
 export const useAuth = () => {
   const dispatch = useDispatch();
   const auth = useSelector(selectAuth);
-  
+
   return {
     ...auth,
-    login: (email, password, isAdmin = false) => 
-      dispatch(loginUser({ email, password, isAdmin })),
-    register: (userData) => dispatch(registerUser(userData)),
+    login: (email, password, isAdmin = false) =>
+      dispatch(loginUser({ email, password, isAdmin })).unwrap(),
+    register: (userData) => dispatch(registerUser(userData)).unwrap(),
     logout: () => dispatch(logoutUser()),
-    updateProfile: (profileData) => dispatch(updateProfile(profileData))
+    updateProfile: (profileData) => dispatch(updateProfile(profileData)).unwrap()
   };
 };
 
@@ -49,7 +49,7 @@ export const useIsAuthenticated = () => useSelector(selectIsAuthenticated);
 export const useCart = () => {
   const dispatch = useDispatch();
   const cart = useSelector(selectCart);
-  
+
   return {
     ...cart,
     items: useSelector(selectCartItems),
@@ -67,7 +67,7 @@ export const useCart = () => {
 export const useBookings = () => {
   const dispatch = useDispatch();
   const bookings = useSelector(selectBookings);
-  
+
   return {
     ...bookings,
     setBookings: (bookings) => dispatch(setBookings(bookings)),

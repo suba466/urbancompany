@@ -6,32 +6,37 @@ export const loginUser = createAsyncThunk(
   'auth/loginUser',
   async ({ email, password, isAdmin = false }, { rejectWithValue }) => {
     try {
-      const endpoint = isAdmin 
+      const endpoint = isAdmin
         ? 'http://localhost:5000/api/admin/login'
-        : email.includes('@urbancompany.com') || email.includes('admin')
-          ? 'http://localhost:5000/api/admin/login'
-          : email.includes('@admin') || email.includes('admin')
-            ? 'http://localhost:5000/api/admin/user-login'
-            : 'http://localhost:5000/api/login';
+        : 'http://localhost:5000/api/login';
 
       const response = await axios.post(endpoint, { email, password });
-      
+
       if (response.data.success) {
         // Store token and user info
         const token = response.data.token;
-        const userRole = isAdmin || email.includes('@urbancompany.com') || email.includes('admin') ? 'admin' : 'user';
         const userInfo = response.data.user || response.data.customer || response.data.admin;
-        
+
+        // Determine role from backend response if available, else fallback
+        let userRole = response.data.role;
+        if (!userRole) {
+          userRole = isAdmin || email.includes('@urbancompany.com') || email.includes('admin') ? 'admin' : 'user';
+        }
+
         // Save to localStorage for persistence
         localStorage.setItem('authToken', token);
         localStorage.setItem('userRole', userRole);
         localStorage.setItem('userInfo', JSON.stringify(userInfo));
-        
+
+        // Extract permissions
+        const permissions = userInfo?.permissions || {};
+        localStorage.setItem('userPermissions', JSON.stringify(permissions));
+
         return {
           token,
           role: userRole,
           user: userInfo,
-          permissions: response.data.user?.permissions || response.data.admin?.permissions || {}
+          permissions: permissions
         };
       }
       return rejectWithValue(response.data.error || 'Login failed');
@@ -51,7 +56,7 @@ export const registerUser = createAsyncThunk(
       });
 
       const response = await axios.post('http://localhost:5000/api/register', formData);
-      
+
       if (response.data.success) {
         const { customer } = response.data;
         return {
@@ -77,7 +82,7 @@ export const logoutUser = createAsyncThunk(
     localStorage.removeItem('userPermissions');
     localStorage.removeItem('loginTime');
     localStorage.removeItem('urbanUser');
-    
+
     dispatch(clearAuth());
     return null;
   }
@@ -94,13 +99,35 @@ export const updateProfile = createAsyncThunk(
       });
 
       const response = await axios.post('http://localhost:5000/api/update-profile', formData);
-      
+
       if (response.data.success) {
         return response.data.customer;
       }
       return rejectWithValue(response.data.error || 'Update failed');
     } catch (error) {
       return rejectWithValue(error.response?.data?.error || 'Update failed');
+    }
+  }
+);
+
+export const fetchCustomerProfile = createAsyncThunk(
+  'auth/fetchCustomerProfile',
+  async (_, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) return rejectWithValue('No token found');
+
+      const response = await axios.get('http://localhost:5000/api/customer/profile', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.data.success) {
+        localStorage.setItem('userInfo', JSON.stringify(response.data.customer));
+        return response.data.customer;
+      }
+      return rejectWithValue(response.data.error || 'Failed to fetch profile');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Failed to fetch profile');
     }
   }
 );
@@ -115,7 +142,7 @@ const authSlice = createSlice({
     permissions: JSON.parse(localStorage.getItem('userPermissions') || '{}'),
     loading: false,
     error: null,
-    isAuthenticated: !!localStorage.getItem('authToken')
+    isAuthenticated: !!localStorage.getItem('authToken') && !!localStorage.getItem('userInfo')
   },
   reducers: {
     clearAuth: (state) => {
@@ -153,7 +180,7 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      
+
       // Register
       .addCase(registerUser.pending, (state) => {
         state.loading = true;
@@ -170,7 +197,7 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      
+
       // Logout
       .addCase(logoutUser.fulfilled, (state) => {
         state.token = null;
@@ -179,11 +206,33 @@ const authSlice = createSlice({
         state.permissions = {};
         state.isAuthenticated = false;
       })
-      
+
       // Update Profile
       .addCase(updateProfile.fulfilled, (state, action) => {
         state.user = action.payload;
         localStorage.setItem('userInfo', JSON.stringify(action.payload));
+      })
+
+      // Fetch Customer Profile
+      .addCase(fetchCustomerProfile.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchCustomerProfile.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload;
+        state.isAuthenticated = true; // Confirm authentication
+      })
+      .addCase(fetchCustomerProfile.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        // Optional: If 401/Invalid Token, maybe logout?
+        if (action.payload === 'Invalid Token' || action.payload === 'Access denied') {
+          state.isAuthenticated = false;
+          state.token = null;
+          state.user = null;
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('userInfo');
+        }
       });
   }
 });
@@ -282,7 +331,7 @@ export const selectToken = (state) => state.auth.token;
 export const selectPermissions = (state) => state.auth.permissions;
 export const selectCartItems = (state) => state.cart.items;
 export const selectCartCount = (state) => state.cart.items.reduce((total, item) => total + item.count, 0);
-export const selectCartTotal = (state) => 
+export const selectCartTotal = (state) =>
   state.cart.items.reduce((total, item) => {
     const price = parseFloat(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
     return total + (price * item.count);
