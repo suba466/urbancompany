@@ -116,8 +116,8 @@ function AdminDashboard() {
               <h5>Recent Bookings</h5>
             </Card.Header>
             <Card.Body>
-              <div>
-                <Table striped bordered hover style={{ border: "2px solid" }}>
+              <div style={{overflowX:'auto'}}>
+                <Table striped bordered hover style={{ border: "2px solid",minwidth:"600px" }}>
                   <thead>
                     <tr>
                       <th style={{ width: '80px' }}>Profile</th>

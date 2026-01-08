@@ -5,8 +5,8 @@ import { IoMdHelpCircleOutline, IoMdLogOut } from "react-icons/io";
 import { MdAccountCircle, MdOutlineArrowForwardIos, MdLocationOn, MdEdit, MdCameraAlt } from "react-icons/md";
 import { BiLeftArrowAlt } from "react-icons/bi";
 import { PiNotepadLight } from "react-icons/pi";
-import { useAuth } from "./AuthContext";
 import { IoSettingsOutline } from "react-icons/io5";
+import { useAuth } from "./AuthContext";
 
 function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "main" }) {
   const [logo1, setLogo1] = useState("");

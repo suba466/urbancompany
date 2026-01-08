@@ -1031,7 +1031,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
             </Alert>
           )}
 
-          <div>
+          <div style={{overflowX:"auto"}}>
             <Table striped bordered hover size="sm" style={{ border: "2px solid", fontSize: "14px" }}>
               <thead>
                 <tr>

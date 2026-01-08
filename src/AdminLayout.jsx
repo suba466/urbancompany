@@ -12,21 +12,34 @@ function AdminLayout({ userRole, userProfile, onLogout }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 992);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 992;
-      setIsMobile(mobile);
-      // Auto-collapse on mobile, expand on desktop if not explicitly set
-      if (mobile && sidebarOpen) setSidebarOpen(false);
-      if (!mobile && !sidebarOpen) setSidebarOpen(true);
-    };
+  // Update the useEffect in AdminLayout.js:
+useEffect(() => {
+  const handleResize = () => {
+    const mobile = window.innerWidth < 992;
+    setIsMobile(mobile);
+    
+    // Only adjust sidebar state on resize, not on initial load
+    // This prevents the sidebar from opening when switching from mobile to desktop
+    if (mobile && sidebarOpen) {
+      setSidebarOpen(false);
+    }
+    // Don't automatically open sidebar on desktop resize
+    // Let user's preference persist
+  };
 
-    window.addEventListener('resize', handleResize);
-    // Initial check
-    handleResize();
+  window.addEventListener('resize', handleResize);
+  
+  // Initial check - but don't change sidebar state on mount
+  const initialMobile = window.innerWidth < 992;
+  setIsMobile(initialMobile);
+  
+  // If it's desktop on initial load AND sidebar is not explicitly closed, open it
+  if (!initialMobile && sidebarOpen === false) {
+    // Keep it as user set it
+  }
 
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  return () => window.removeEventListener('resize', handleResize);
+}, [sidebarOpen]); // Add sidebarOpen as dependency
 
   return (
     <div className="d-flex position-relative" style={{ minHeight: '100vh', overflowX: 'hidden', backgroundColor: "#acacacff" }}>

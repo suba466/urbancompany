@@ -290,7 +290,7 @@ function BookingManagement() {
             </Alert>
           )}
 
-          <div>
+          <div style={{overflowX:"auto"}}>
             <Table striped bordered hover style={{ border: "2px solid #000000" }}>
               <thead>
                 <tr>

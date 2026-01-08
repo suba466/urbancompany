@@ -449,7 +449,7 @@ function Salon1() {
 
                         {/* --- ACTION COLUMN --- */}
                         <Col xs={4} className='position-relative' style={{ minHeight: "100px" }}>
-                          <div className="d-flex flex-column align-items-end h-100">
+                          <div className="d-flex flex-column h-100">
 
                             {shouldShowDiscountBanner ? (
                               /* --- SUPER SAVER DISCOUNT BOX LAYOUT --- */
