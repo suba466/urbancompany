@@ -1,18 +1,46 @@
 import { Row, Col, Button } from "react-bootstrap";
 import { GoDotFill } from "react-icons/go";
+import { useCart } from "./hooks";
 
 function CartBlock({
-  carts = [],
   formatPrice = (x) => x,
-  safePrice = (x) => x,
-  handleIncrease,
-  handleDecrease,
-  navigate,
   hideViewButton = false,
+  navigate,
   onEdit,
   customerEmail = "" 
 }) {
-  const totalPrice = carts.reduce((acc, c) => safePrice(c.price) * (c.count || 1), 0);
+  const { items: carts, updateItem, removeItem } = useCart();
+
+  const safePrice = (price) => {
+    if (!price) return 0;
+    const priceStr = price.toString();
+    const cleaned = priceStr.replace(/[₹,]/g, "");
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? 0 : num;
+  };
+
+  // Calculate TOTAL PRICE of ALL items in cart
+  const calculateTotalPrice = () => {
+    return carts.reduce((total, item) => {
+      const itemPrice = safePrice(item.price);
+      const itemCount = item.count || 1;
+      return total + (itemPrice * itemCount);
+    }, 0);
+  };
+
+  const totalPrice = calculateTotalPrice();
+
+  const handleIncrease = (item) => {
+    updateItem(item._id || item.productId, (item.count || 1) + 1);
+  };
+
+  const handleDecrease = (item) => {
+    if (item.count <= 1) {
+      removeItem(item._id || item.productId);
+    } else {
+      updateItem(item._id || item.productId, (item.count || 1) - 1);
+    }
+  };
 
   return (
     <div
@@ -37,25 +65,14 @@ function CartBlock({
         </div>
       ) : (
         <>
-          <h5 className="fw-semibold mb-2">Cart</h5>
+          <h5 className="fw-semibold mb-2">Cart ({carts.length} items)</h5>
 
           {carts.map((c) => {
-            const price = safePrice(c.price) * (c.count || 1);
-
-            // Get the product name from cart item
+            const itemPrice = safePrice(c.price) * (c.count || 1);
             const productName = c.name || c.serviceName || c.title || "Service";
 
-            console.log("Cart item debug:", {
-              id: c._id,
-              name: c.name,
-              serviceName: c.serviceName,
-              title: c.title,
-              finalName: productName,
-              customerEmail: customerEmail
-            });
-
             return (
-              <div key={c._id} className="mb-3">
+              <div key={c._id || c.productId} className="mb-3">
                 <Row className="align-items-center">
                   <Col className="pe-0">
                     <div className="d-flex align-items-center gap-2">
@@ -94,15 +111,18 @@ function CartBlock({
                           backgroundColor: "transparent",
                           color: "#000",
                           fontSize: "18px",
-                          fontWeight: "bold"
+                          fontWeight: "bold",
+                          opacity: (c.count || 1) >= 3 ? "0.5" : "1", // Disable when limit reached
+                          cursor: (c.count || 1) >= 3 ? "not-allowed" : "pointer"
                         }}
+                        disabled={(c.count || 1) >= 3} // Disable button
                       >
                         +
                       </Button>
                     </div>
 
                     <div className="text-end">
-                      <p style={{ fontSize: "13px", margin: 0, fontWeight: "500" }}>{formatPrice(price)}</p>
+                      <p style={{ fontSize: "13px", margin: 0, fontWeight: "500" }}>{formatPrice(itemPrice)}</p>
                     </div>
                   </Col>
                 </Row>
@@ -139,19 +159,34 @@ function CartBlock({
             );
           })}
 
+          {/* TOTAL SECTION - Shows sum of all items */}
+          <div className="border-top pt-2 mt-2">
+            <Row className="align-items-center">
+              <Col>
+                <p className="fw-semibold mb-0" style={{ fontSize: "14px" }}>
+                  Total
+                </p>
+              </Col>
+              <Col className="text-end">
+                <p className="fw-semibold mb-0" style={{ fontSize: "14px" }}>
+                  {formatPrice(totalPrice)}
+                </p>
+              </Col>
+            </Row>
+          </div>
+
           {!hideViewButton && (
             <Button
-              className="butn w-100 fw-bold"
+              className="butn w-100 fw-bold mt-3"
               style={{
                 height: "36px",
                 fontSize: "12px",
-                marginTop: "10px",
               }}
               onClick={() => navigate("/cart")}
             >
               <Row>
-                <Col className="text-start">{formatPrice(totalPrice)}</Col>
-                <Col className="text-end">View Cart</Col>
+                <Col className="text-start">View Cart</Col>
+                <Col className="text-end">{formatPrice(totalPrice)}</Col>
               </Row>
             </Button>
           )}

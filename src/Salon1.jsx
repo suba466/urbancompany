@@ -9,12 +9,12 @@ import { GoDotFill } from "react-icons/go";
 import Salon1modal from './Salon1modal';
 import { useNavigate } from 'react-router-dom';
 import CartBlock from './CartBlock';
+import { useCart } from "./hooks";  // IMPORT REDUX HOOK
 
 function Salon1() {
   const [savedExtras, setSavedExtras] = useState({});
   const [superPack, setSuperPack] = useState([]);
   const [packages, setPackages] = useState([]);
-  const [carts, setCarts] = useState([]);
   const [showMenu, setShowMenu] = useState(false);
   const [salon, setSalon] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -23,18 +23,19 @@ function Salon1() {
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const normalizeKey = (str) => str?.toLowerCase()?.trim()?.replace(/\s+/g, "-") || "";
   const roundPrice = (price) => Math.round(Number(price) || 0);
-  const totalItems = carts.reduce((sum, item) => sum + (item.count || 0), 0);
   const [showFrequentlyAdded, setShowFrequentlyAdded] = useState(false);
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [pageTitle, setPageTitle] = useState("Super Saver Package");
+
+  // USE REDUX CART
+  const { items: carts, addItem, removeItem, updateItem, count: totalItems } = useCart();
 
   // Group packages by subcategory (title)
   const groupPackagesBySubcategory = () => {
     const groups = {};
 
     packages.forEach(pkg => {
-      // Use title (which is subcategory name from admin) for grouping
       const subcategory = pkg.title || pkg.subcategory || pkg.name || "Uncategorized";
 
       if (!groups[subcategory]) {
@@ -58,10 +59,8 @@ function Salon1() {
         await Promise.all([
           fetchSuperPackages(),
           fetchPackages(),
-          fetchCarts(),
           fetchSalonForWomen()
         ]);
-        // After fetching packages, update page title
         updatePageTitle();
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -76,11 +75,9 @@ function Salon1() {
   // Update page title based on packages
   const updatePageTitle = () => {
     if (packages.length > 0) {
-      // Check for multiple subcategories
       const uniqueSubcats = new Set(packages.map(p => p.title || p.subcategory).filter(Boolean));
 
       if (uniqueSubcats.size > 1) {
-        // If multiple subcategories, hide the main title so we can use section headers
         setPageTitle("");
       } else {
         const firstPackage = packages[0];
@@ -97,7 +94,6 @@ function Salon1() {
 
   const fetchPackages = async () => {
     try {
-      // Try active-packages first
       let packages = [];
       try {
         const response1 = await fetch('http://localhost:5000/api/active-packages');
@@ -168,16 +164,9 @@ function Salon1() {
     }
   };
 
-  const fetchCarts = async () => {
-    try {
-      const response = await fetch("http://localhost:5000/api/carts");
-      const data = await response.json();
-      setCarts(data.carts || []);
-    } catch (err) { console.error(err); }
-  };
+  // REMOVED fetchCarts function since we use Redux
 
   useEffect(() => {
-    window.updateCartInstantly = async () => { await fetchCarts(); };
     window.openEditPackageFromCart = handleShowModal;
   }, []);
 
@@ -186,14 +175,9 @@ function Salon1() {
   const handleShowModal = async (item) => {
     try {
       let matched = item;
-      let existingCartItem = null;
-      try {
-        const cartsRes = await fetch("http://localhost:5000/api/carts");
-        const cartsData = await cartsRes.json();
-        existingCartItem = cartsData.carts?.find(c =>
-          c.productId === item._id || c.title === item.title || (item._id && c.productId === item._id.toString())
-        );
-      } catch (cartError) { }
+      let existingCartItem = carts.find(c => 
+        c.productId === item._id || c.title === item.title || (item._id && c.productId === item._id.toString())
+      );
 
       const mergedItem = {
         ...matched,
@@ -217,14 +201,9 @@ function Salon1() {
   const handleShowCarouselModal = async (item) => {
     try {
       let matched = item;
-      let existingCartItem = null;
-      try {
-        const cartsRes = await fetch("http://localhost:5000/api/carts");
-        const cartsData = await cartsRes.json();
-        existingCartItem = cartsData.carts?.find(c =>
-          c.productId === item._id || c.title === item.title || (item._id && c.productId === item._id.toString())
-        );
-      } catch (cartError) { }
+      let existingCartItem = carts.find(c => 
+        c.productId === item._id || c.title === item.title || (item._id && c.productId === item._id.toString())
+      );
 
       const mergedItem = {
         ...matched,
@@ -298,50 +277,75 @@ function Salon1() {
         category: pkg.category || "Salon for women"
       };
 
+      // USE REDUX TO UPDATE CART
       if (existing) {
+        // Update item count in Redux
+        updateItem(productId, existing.count + 1);
+        
+        // Also update in database
         await fetch(`http://localhost:5000/api/carts/${existing._id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
       } else {
+        // Add new item to Redux
+        addItem(payload);
+        
+        // Also add to database
         await fetch("http://localhost:5000/api/addcarts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
       }
-      await fetchCarts();
+      
       setShowFrequentlyAdded(true);
     } catch (error) { console.error(error); }
   };
 
-  const handleIncrease = async (cartItem) => {
-    try {
-      const totalItems = carts.reduce((sum, item) => sum + (item.count || 0), 0);
-      if (totalItems >= 3) { alert("You can't add anymore in this item"); return; }
-      await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ count: (cartItem.count || 1) + 1 })
-      });
-      fetchCarts();
-    } catch (err) { }
-  };
+ // In Salon1.js, update the handleIncrease function:
+
+const handleIncrease = async (cartItem) => {
+  try {
+    // Check if this specific item has reached 3 counts
+    if ((cartItem.count || 1) >= 3) { 
+      alert(`You can't add more than 3 of "${cartItem.title || cartItem.serviceName}"`);
+      return; 
+    }
+    
+    // Update in Redux
+    updateItem(cartItem._id || cartItem.productId, (cartItem.count || 1) + 1);
+    
+    // Update database
+    await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ count: (cartItem.count || 1) + 1 })
+    });
+  } catch (err) { console.error(err); }
+};
 
   const handleDecrease = async (cartItem) => {
     try {
       if ((cartItem.count || 1) <= 1) {
+        // Remove from Redux
+        removeItem(cartItem._id || cartItem.productId);
+        
+        // Remove from database
         await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, { method: "DELETE" });
       } else {
+        // Update in Redux
+        updateItem(cartItem._id || cartItem.productId, cartItem.count - 1);
+        
+        // Update database
         await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ count: cartItem.count - 1 })
         });
       }
-      fetchCarts();
-    } catch (err) { }
+    } catch (err) { console.error(err); }
   };
 
   const formatPrice = (amount) => {
@@ -391,7 +395,6 @@ function Salon1() {
                   const displayDuration = pkg.duration || "N/A";
                   const isSuperSaver = [group.title, displayTitle, pkg.subcategory].some(t => t && t.toLowerCase().includes("super saver"));
 
-                  // Check if package has an image
                   const hasImage = pkg.img && pkg.img.trim() !== "";
                   const shouldShowDiscountBanner = !hasImage && isSuperSaver;
 
@@ -532,13 +535,20 @@ function Salon1() {
                                       −
                                     </Button>
                                     <span className="fw-bold" style={{ fontSize: "14px", color: "rgb(110, 66, 229)" }}>{inCart.count || 1}</span>
-                                    <Button
-                                      onClick={() => handleIncrease(inCart)}
-                                      className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent'
-                                      style={{ width: "24px", height: "26px", fontSize: "18px", opacity: totalItems >= 3 ? "0.6" : "1" }}
-                                    >
-                                      +
-                                    </Button>
+                                  <Button
+                                    onClick={() => handleIncrease(inCart)}
+                                    className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent'
+                                    style={{ 
+                                      width: "24px", 
+                                      height: "26px", 
+                                      fontSize: "18px", 
+                                      opacity: (inCart.count || 1) >= 3 ? "0.6" : "1", // Check per item
+                                      cursor: (inCart.count || 1) >= 3 ? "not-allowed" : "pointer"
+                                    }}
+                                    disabled={(inCart.count || 1) >= 3} // Disable button when limit reached
+                                  >
+                                    +
+                                  </Button>
                                   </div>
                                 )}
                               </div>
@@ -642,7 +652,12 @@ function Salon1() {
         <Col xs={12} md={5} className="mt-4 mt-md-0 sticky-cart d-none d-md-block">
           <div style={{ flex: 1, height: "1px", backgroundColor: "rgba(192,192,195,1)" }}></div>
           <br />
-          <CartBlock carts={carts} formatPrice={formatPrice} safePrice={safePrice} handleIncrease={handleIncrease} handleDecrease={handleDecrease} navigate={navigate} onEdit={handleShowModal} />
+          {/* CartBlock gets cart from Redux automatically */}
+          <CartBlock 
+            formatPrice={formatPrice} 
+            navigate={navigate} 
+            onEdit={handleShowModal} 
+          />
         </Col>
       </Row>
       {carts.length > 0 && (
@@ -658,9 +673,6 @@ function Salon1() {
         onHide={handleCloseModal}
         selectedItem={selectedItem}
         handleAddToCart={handleAddToCart}
-        fetchCarts={fetchCarts}
-        carts={carts}
-        setCarts={setCarts}
         addButtonRefs={addButtonRefs}
         basePrice={basePrice}
         baseServices={baseServices}

@@ -7,17 +7,20 @@ import { TbCirclePercentageFilled } from "react-icons/tb";
 import { MdKeyboardArrowRight, MdPayments } from "react-icons/md";
 import AccountModal from "./AccountModal";
 import { ImLocation } from "react-icons/im";
-import { useAuth } from "./AuthContext";
-import { useCart } from "./CartContext";
 import { FaClock } from "react-icons/fa";
 import { MdEdit } from "react-icons/md";
 import { MdHomeFilled } from "react-icons/md";
 import { MdWork } from "react-icons/md";
 import { MdLocationOn } from "react-icons/md";
 import { LuClock3 } from "react-icons/lu";
+import { useNavigate } from "react-router-dom";
+import { useAuth, useCart } from "./hooks";  // USE REDUX HOOKS
 
 function CartPage() {
-  const { cartItems, refreshCart } = useCart();
+  const { items: cartItems, clearCart, updateItem, removeItem } = useCart();
+  const { isAuthenticated, user } = useAuth();  // FROM REDUX
+  const navigate = useNavigate();
+  
   const [showModal, setShowModal] = useState(false);
   const [selectedPkg, setSelectedPkg] = useState(null);
   const [addedImgs, setAddedImgs] = useState([]);
@@ -32,7 +35,6 @@ function CartPage() {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [showBookingsModal, setShowBookingsModal] = useState(false);
-  const { isLoggedIn, userInfo } = useAuth();
 
   const handleViewBookings = () => {
     setShowBookingsModal(true);
@@ -53,8 +55,8 @@ function CartPage() {
           });
         }
 
-        // Refresh cart context
-        refreshCart();
+        // Clear Redux cart
+        clearCart();
       }
     } catch (error) {
       console.error("Error clearing cart:", error);
@@ -75,7 +77,7 @@ function CartPage() {
     }
 
     // Check if user is logged in
-    if (!isLoggedIn) {
+    if (!isAuthenticated) {
       alert("Please login to place an order");
       setShowAccountModal(true);
       setShowLoginView(true);
@@ -83,7 +85,7 @@ function CartPage() {
     }
 
     // Validate user info
-    if (!userInfo || !userInfo.email) {
+    if (!user || !user.email) {
       alert("User information is incomplete. Please login again.");
       setShowAccountModal(true);
       setShowLoginView(true);
@@ -92,7 +94,7 @@ function CartPage() {
 
     try {
       // Debug: Check user info
-      console.log("📋 User Info for booking:", userInfo);
+      console.log("📋 User Info for booking:", user);
       console.log("📦 Cart items:", cartItems);
       console.log("🏠 Selected address:", selectedAddress);
       console.log("⏰ Selected slot:", selectedSlot);
@@ -106,12 +108,11 @@ function CartPage() {
 
       // Prepare booking data with CORRECT field names
       const bookingData = {
-        // Use correct field names that backend expects
-        customerId: userInfo.id || userInfo.customerId || `customer_${userInfo.email}`,
-        customerEmail: userInfo.email,
-        customerName: userInfo.name || "Customer",
-        customerPhone: userInfo.phone || "9787081119",
-        customerCity: userInfo.city || "",
+        customerId: user.id || user.customerId || `customer_${user.email}`,
+        customerEmail: user.email,
+        customerName: user.name || "Customer",
+        customerPhone: user.phone || "9787081119",
+        customerCity: user.city || "",
         serviceName: cartItems.length > 0 ? cartItems.map(item => item.title).join(', ') : "Beauty Services",
         servicePrice: totalPrice.toString(),
         originalPrice: itemTotal.toString(),
@@ -174,7 +175,6 @@ function CartPage() {
   const testBookingCreation = async () => {
     console.log("🔍 Testing booking creation...");
 
-    // Create test booking data
     const testData = {
       customerId: "test_customer_123",
       customerEmail: "test@example.com",
@@ -271,8 +271,7 @@ function CartPage() {
 
   useEffect(() => {
     fetchAddedItems();
-    refreshCart();
-
+    
     const savedAddress = localStorage.getItem('selectedAddress');
     if (savedAddress) {
       try {
@@ -357,39 +356,7 @@ function CartPage() {
     return itemTotal + tax + tip + slotExtraCharge;
   };
 
-  const handleIncrease = async (item) => {
-    try {
-      await fetch(`http://localhost:5000/api/carts/${item._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ count: item.count + 1 }),
-      });
-      refreshCart();
-      window.dispatchEvent(new Event('cartUpdated'));
-    } catch (error) {
-      console.error("Error increasing item:", error);
-    }
-  };
 
-  const handleDecrease = async (item) => {
-    try {
-      if (item.count <= 1) {
-        await fetch(`http://localhost:5000/api/carts/${item._id}`, {
-          method: "DELETE",
-        });
-      } else {
-        await fetch(`http://localhost:5000/api/carts/${item._id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ count: item.count - 1 }),
-        });
-      }
-      refreshCart();
-      window.dispatchEvent(new Event('cartUpdated'));
-    } catch (error) {
-      console.error("Error decreasing item:", error);
-    }
-  };
 
   const handleAddToCart = async (item, extraSelected = [], price, discount = 0, action = "add") => {
     try {
@@ -418,6 +385,7 @@ function CartPage() {
               count: existingItem.count + 1
             })
           });
+          updateItem(existingItem._id || existingItem.productId, existingItem.count + 1);
         } else {
           await fetch("http://localhost:5000/api/addcarts", {
             method: "POST",
@@ -434,14 +402,15 @@ function CartPage() {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ count: existingItem.count - 1 })
             });
+            updateItem(existingItem._id || existingItem.productId, existingItem.count - 1);
           } else {
             await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
               method: "DELETE"
             });
+            removeItem(existingItem._id || existingItem.productId);
           }
         }
       }
-      refreshCart();
       window.dispatchEvent(new Event('cartUpdated'));
     } catch (error) {
       console.error("Error handling cart:", error);
@@ -620,7 +589,7 @@ function CartPage() {
 
   // Add this function to check if order can be placed
   const canPlaceOrder = () => {
-    if (!isLoggedIn) {
+    if (!isAuthenticated) {
       console.log("Cannot place order: Not logged in");
       return false;
     }
@@ -638,7 +607,7 @@ function CartPage() {
     }
 
     // Check if user has required info
-    if (!userInfo?.email) {
+    if (!user?.email) {
       console.log("Cannot place order: Missing user email");
       return false;
     }
@@ -703,7 +672,7 @@ function CartPage() {
             overflow: "hidden"
           }}
         >
-          {isLoggedIn ? (
+          {isAuthenticated ? (
             <div>
               <div className="mb-3">
                 <p className="fw-semibold" style={{ fontSize: "15px" }}>
@@ -711,7 +680,7 @@ function CartPage() {
                   Send booking details to
                 </p>
                 <p style={{ marginTop: "-12px", marginLeft: "28px", fontSize: "14px" }}>
-                  {userInfo?.phone || "9787081119"}
+                  {user?.phone || "9787081119"}
                 </p>
               </div>
 
@@ -814,7 +783,7 @@ function CartPage() {
                       disabled={!canPlaceOrder()}
                       onClick={processPayment}
                     >
-                      {!isLoggedIn ? "Login to Continue" :
+                      {!isAuthenticated ? "Login to Continue" :
                         !selectedAddress ? "Select Address" :
                           !selectedSlot ? "Select Time Slot" :
                             "Place an order"}
@@ -845,12 +814,9 @@ function CartPage() {
 
         {/* Cart Column (full-width on mobile) */}
         <Col xs={12} md={6}>
+          {/* CartBlock gets cart from Redux automatically */}
           <CartBlock
-            carts={cartItems}
             formatPrice={formatPrice}
-            safePrice={safePrice}
-            handleIncrease={handleIncrease}
-            handleDecrease={handleDecrease}
             hideViewButton={true}
             onEdit={openEditModal}
           />
@@ -1008,7 +974,7 @@ function CartPage() {
         style={{ zIndex: 1050 }}>
         <Container>
           <Row className="align-items-center">
-            {isLoggedIn ? (
+            {isAuthenticated ? (
               <>
                 {/* Step 1: No Address Selected - Show Address Button */}
                 {!selectedAddress && (
@@ -1106,7 +1072,7 @@ function CartPage() {
                         disabled={!canPlaceOrder()}
                         onClick={processPayment}
                       >
-                        {!isLoggedIn ? "Login to Continue" :
+                        {!isAuthenticated ? "Login to Continue" :
                           !selectedAddress ? "Select Address" :
                             !selectedSlot ? "Select Time Slot" :
                               "Place an order"}
@@ -1140,7 +1106,6 @@ function CartPage() {
           show={showModal}
           onHide={() => setShowModal(false)}
           selectedItem={selectedPkg}
-          refresh={refreshCart}
         />
       )}
 

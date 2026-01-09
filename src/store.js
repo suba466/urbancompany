@@ -248,15 +248,28 @@ const cartSlice = createSlice({
     loading: false
   },
   reducers: {
-    addToCart: (state, action) => {
-      const existingItem = state.items.find(item => item.productId === action.payload.productId);
-      if (existingItem) {
-        existingItem.count += action.payload.count || 1;
-      } else {
-        state.items.push({ ...action.payload, count: action.payload.count || 1 });
-      }
-      localStorage.setItem('cartItems', JSON.stringify(state.items));
-    },
+   // In the cartSlice reducers:
+  addToCart: (state, action) => {
+    const existingItem = state.items.find(item => item.productId === action.payload.productId);
+    
+    // Ensure price is a number
+    const price = typeof action.payload.price === 'string' 
+      ? parseFloat(action.payload.price.replace(/[₹,]/g, "")) 
+      : Number(action.payload.price) || 0;
+    
+    const payload = {
+      ...action.payload,
+      price: price, // Store as number
+      count: action.payload.count || 1
+    };
+    
+    if (existingItem) {
+      existingItem.count += payload.count;
+    } else {
+      state.items.push(payload);
+    }
+    localStorage.setItem('cartItems', JSON.stringify(state.items));
+  },
     removeFromCart: (state, action) => {
       state.items = state.items.filter(item => item.productId !== action.payload);
       localStorage.setItem('cartItems', JSON.stringify(state.items));
@@ -331,10 +344,18 @@ export const selectToken = (state) => state.auth.token;
 export const selectPermissions = (state) => state.auth.permissions;
 export const selectCartItems = (state) => state.cart.items;
 export const selectCartCount = (state) => state.cart.items.reduce((total, item) => total + item.count, 0);
+// In your store.js file, update the selectCartTotal selector:
+
 export const selectCartTotal = (state) =>
   state.cart.items.reduce((total, item) => {
-    const price = parseFloat(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
-    return total + (price * item.count);
+    // Handle both string and number prices
+    let price = 0;
+    if (typeof item.price === 'string') {
+      price = parseFloat(item.price.replace(/[^0-9.-]+/g, "")) || 0;
+    } else if (typeof item.price === 'number') {
+      price = item.price;
+    }
+    return total + (price * (item.count || 1));
   }, 0);
 
 export default store;

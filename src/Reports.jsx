@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Row, Col, Card, Table, Badge, Form, Button, Dropdown } from 'react-bootstrap';
 
 function Reports() {
@@ -77,6 +77,12 @@ function Reports() {
 
   return (
     <>
+     <Card className="shadow-lg">
+      <Card.Body style={{ marginLeft: '25px', marginRight: '25px' }}>
+        <h5 className="mb-0 fw-semibold">Report Management
+        </h5>
+      </Card.Body>
+      </Card> <br />
       <Row className="mb-4">
         <Col md={3}>
           <Card className="text-center border-0 shadow-lg">
@@ -118,7 +124,7 @@ function Reports() {
         </Card.Header>
         <Card.Body>
           <div className="table-responsive">
-            <Table hover responsive>
+            <Table striped bordered hover style={{ border: "2px solid" }}>
               <thead>
                 <tr>
                   <th>Category</th>
@@ -173,7 +179,7 @@ function Reports() {
               <Form>
                 <Form.Group className="mb-3">
                   <Form.Label>Report Type</Form.Label>
-                  <Form.Select>
+                  <Form.Select className='cate'>
                     <option>Sales Report</option>
                     <option>Customer Report</option>
                     <option>Booking Report</option>
@@ -181,13 +187,13 @@ function Reports() {
                   </Form.Select>
                 </Form.Group>
                 <Form.Group className="mb-3">
-                  <Form.Label>Date Range</Form.Label>
+                  <Form.Label >Date Range</Form.Label>
                   <Row>
-                    <Col>
-                      <Form.Control type="date" />
+                    <Col >
+                      <Form.Control type="date" className='cate'/>
                     </Col>
                     <Col>
-                      <Form.Control type="date" />
+                      <Form.Control type="date" className='cate'/>
                     </Col>
                   </Row>
                 </Form.Group>
@@ -196,7 +202,7 @@ function Reports() {
             </Col>
             <Col md={6}>
               <h6>Quick Stats</h6>
-              <div className="list-group">
+              <div className="list-group" style={{border:"2px solid black"}}>
                 <div className="list-group-item d-flex justify-content-between">
                   <span>Total Services Offered</span>
                   <strong>8</strong>

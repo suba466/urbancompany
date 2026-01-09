@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Container, Button, Badge, Card, Row, Col } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { useCart } from './CartContext';
 import { BiLeftArrowAlt } from 'react-icons/bi';
 import { FaShoppingCart } from "react-icons/fa";
 import { GoDotFill } from "react-icons/go";
+import { useCart } from './hooks';  // USE REDUX HOOKS
 
 function CartSummary() {
   const navigate = useNavigate();
-  const { cartItems } = useCart();
+  const { items: cartItems } = useCart();  // GET CART FROM REDUX
   const [loading, setLoading] = useState(false);
 
   const handleContinueShopping = () => {
@@ -62,6 +62,8 @@ function CartSummary() {
 
   // Format price
   const formatPrice = (amount) => `₹${amount.toLocaleString("en-IN")}`;
+
+  const totalPrice = calculateOverallTotal();
 
   return (
     <Container className="py-4 min-vh-100" style={{width:"50%"}}>
@@ -138,15 +140,13 @@ function CartSummary() {
                                 {category}
                               </h5>
                               <div>
-                                <p  style={{color:"#5c5c5cff",fontSize:"14px"}}>
-                                  {items.length} service{items.length > 1 ? 's' : ''} <span  style={{fontSize: "14px"}}>
+                                <p style={{color:"#5c5c5cff",fontSize:"14px"}}>
+                                  {items.length} service{items.length > 1 ? 's' : ''} <span style={{fontSize: "14px"}}>
                                  <GoDotFill />{formatPrice(categoryTotal)}
                                 </span>
                                 </p>
-                                
                               </div>
                             </Col>
-                          
                           </Row>
                         </Col>
                       </Row>
@@ -185,12 +185,27 @@ function CartSummary() {
             </Card.Body>
           </Card>
           
-         
+          {/* Total Price Display */}
+          <Card className="border-0 shadow-sm mb-4">
+            <Card.Body className="p-3">
+              <Row className="align-items-center">
+                <Col>
+                  <h5 className="fw-bold mb-0">Total Amount</h5>
+                </Col>
+                <Col className="text-end">
+                  <h5 className="fw-bold mb-0" style={{color: "#4433caff"}}>
+                    {formatPrice(totalPrice)}
+                  </h5>
+                </Col>
+              </Row>
+            </Card.Body>
+          </Card>
           
           {/* Action Buttons */}
           <div className="d-flex gap-3">
             <Button 
-              className="flex-grow-1 py-3 edit" style={{height:"50px"}}
+              className="flex-grow-1 py-3 edit" 
+              style={{height:"50px"}}
               onClick={handleContinueShopping}
             >
               Add services
