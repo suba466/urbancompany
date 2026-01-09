@@ -1,43 +1,22 @@
 import { configureStore, createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-// Async thunks for authentication
-export const loginUser = createAsyncThunk(
-  'auth/loginUser',
-  async ({ email, password, isAdmin = false }, { rejectWithValue }) => {
+// Async thunks for Customer Authentication
+export const loginCustomer = createAsyncThunk(
+  'customerAuth/login',
+  async ({ email, password }, { rejectWithValue }) => {
     try {
-      const endpoint = isAdmin
-        ? 'http://localhost:5000/api/admin/login'
-        : 'http://localhost:5000/api/login';
-
-      const response = await axios.post(endpoint, { email, password });
+      const response = await axios.post('http://localhost:5000/api/login', { email, password });
 
       if (response.data.success) {
-        // Store token and user info
         const token = response.data.token;
-        const userInfo = response.data.user || response.data.customer || response.data.admin;
+        const userInfo = response.data.user || response.data.customer;
+        const role = 'user';
 
-        // Determine role from backend response if available, else fallback
-        let userRole = response.data.role;
-        if (!userRole) {
-          userRole = isAdmin || email.includes('@urbancompany.com') || email.includes('admin') ? 'admin' : 'user';
-        }
+        localStorage.setItem('customerToken', token);
+        localStorage.setItem('customerInfo', JSON.stringify(userInfo));
 
-        // Save to localStorage for persistence
-        localStorage.setItem('authToken', token);
-        localStorage.setItem('userRole', userRole);
-        localStorage.setItem('userInfo', JSON.stringify(userInfo));
-
-        // Extract permissions
-        const permissions = userInfo?.permissions || {};
-        localStorage.setItem('userPermissions', JSON.stringify(permissions));
-
-        return {
-          token,
-          role: userRole,
-          user: userInfo,
-          permissions: permissions
-        };
+        return { token, user: userInfo, role };
       }
       return rejectWithValue(response.data.error || 'Login failed');
     } catch (error) {
@@ -46,8 +25,8 @@ export const loginUser = createAsyncThunk(
   }
 );
 
-export const registerUser = createAsyncThunk(
-  'auth/registerUser',
+export const registerCustomer = createAsyncThunk(
+  'customerAuth/register',
   async (userData, { rejectWithValue }) => {
     try {
       const formData = new FormData();
@@ -58,11 +37,9 @@ export const registerUser = createAsyncThunk(
       const response = await axios.post('http://localhost:5000/api/register', formData);
 
       if (response.data.success) {
-        const { customer } = response.data;
         return {
-          user: customer,
-          role: 'user',
-          token: response.data.token || null
+          user: response.data.customer,
+          token: response.data.token
         };
       }
       return rejectWithValue(response.data.error || 'Registration failed');
@@ -72,24 +49,18 @@ export const registerUser = createAsyncThunk(
   }
 );
 
-export const logoutUser = createAsyncThunk(
-  'auth/logoutUser',
+export const logoutCustomer = createAsyncThunk(
+  'customerAuth/logout',
   async (_, { dispatch }) => {
-    // Clear localStorage
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userInfo');
-    localStorage.removeItem('userPermissions');
-    localStorage.removeItem('loginTime');
-    localStorage.removeItem('urbanUser');
-
-    dispatch(clearAuth());
+    localStorage.removeItem('customerToken');
+    localStorage.removeItem('customerInfo');
+    dispatch(clearCustomerAuth());
     return null;
   }
 );
 
-export const updateProfile = createAsyncThunk(
-  'auth/updateProfile',
+export const updateCustomerProfile = createAsyncThunk(
+  'customerAuth/updateProfile',
   async ({ customerId, ...profileData }, { rejectWithValue }) => {
     try {
       const formData = new FormData();
@@ -111,10 +82,10 @@ export const updateProfile = createAsyncThunk(
 );
 
 export const fetchCustomerProfile = createAsyncThunk(
-  'auth/fetchCustomerProfile',
+  'customerAuth/fetchProfile',
   async (_, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('customerToken');
       if (!token) return rejectWithValue('No token found');
 
       const response = await axios.get('http://localhost:5000/api/customer/profile', {
@@ -122,7 +93,7 @@ export const fetchCustomerProfile = createAsyncThunk(
       });
 
       if (response.data.success) {
-        localStorage.setItem('userInfo', JSON.stringify(response.data.customer));
+        localStorage.setItem('customerInfo', JSON.stringify(response.data.customer));
         return response.data.customer;
       }
       return rejectWithValue(response.data.error || 'Failed to fetch profile');
@@ -132,112 +103,173 @@ export const fetchCustomerProfile = createAsyncThunk(
   }
 );
 
-// Auth slice
-const authSlice = createSlice({
-  name: 'auth',
+// Async thunks for Admin Authentication
+export const loginAdmin = createAsyncThunk(
+  'adminAuth/login',
+  async ({ email, password }, { rejectWithValue }) => {
+    try {
+      const response = await axios.post('http://localhost:5000/api/admin/login', { email, password });
+
+      if (response.data.success) {
+        const token = response.data.token;
+        const adminInfo = response.data.admin || response.data.user; // Adapt based on backend response
+        const role = 'admin';
+
+        localStorage.setItem('adminToken', token);
+        localStorage.setItem('adminInfo', JSON.stringify(adminInfo));
+
+        // Extract permissions
+        const permissions = adminInfo?.permissions || {};
+        localStorage.setItem('adminPermissions', JSON.stringify(permissions));
+
+        return { token, admin: adminInfo, role, permissions };
+      }
+      return rejectWithValue(response.data.error || 'Admin Login failed');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || 'Admin Login failed');
+    }
+  }
+);
+
+export const logoutAdmin = createAsyncThunk(
+  'adminAuth/logout',
+  async (_, { dispatch }) => {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminInfo');
+    localStorage.removeItem('adminPermissions');
+    dispatch(clearAdminAuth());
+    return null;
+  }
+);
+
+// Customer Auth Slice
+const customerAuthSlice = createSlice({
+  name: 'customerAuth',
   initialState: {
-    token: localStorage.getItem('authToken') || null,
-    role: localStorage.getItem('userRole') || null,
-    user: JSON.parse(localStorage.getItem('userInfo') || 'null'),
-    permissions: JSON.parse(localStorage.getItem('userPermissions') || '{}'),
+    token: localStorage.getItem('customerToken') || null,
+    user: JSON.parse(localStorage.getItem('customerInfo') || 'null'),
+    role: 'user',
+    isAuthenticated: !!localStorage.getItem('customerToken'),
     loading: false,
     error: null,
-    isAuthenticated: !!localStorage.getItem('authToken') && !!localStorage.getItem('userInfo')
   },
   reducers: {
-    clearAuth: (state) => {
+    clearCustomerAuth: (state) => {
       state.token = null;
-      state.role = null;
       state.user = null;
-      state.permissions = {};
       state.isAuthenticated = false;
     },
-    setUser: (state, action) => {
+    setCustomerUser: (state, action) => {
       state.user = action.payload;
-      localStorage.setItem('userInfo', JSON.stringify(action.payload));
-    },
-    setToken: (state, action) => {
-      state.token = action.payload;
-      localStorage.setItem('authToken', action.payload);
+      localStorage.setItem('customerInfo', JSON.stringify(action.payload));
     }
   },
   extraReducers: (builder) => {
     builder
-      // Login
-      .addCase(loginUser.pending, (state) => {
+      // Customer Login
+      .addCase(loginCustomer.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(loginUser.fulfilled, (state, action) => {
+      .addCase(loginCustomer.fulfilled, (state, action) => {
         state.loading = false;
         state.token = action.payload.token;
-        state.role = action.payload.role;
         state.user = action.payload.user;
-        state.permissions = action.payload.permissions;
         state.isAuthenticated = true;
       })
-      .addCase(loginUser.rejected, (state, action) => {
+      .addCase(loginCustomer.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
-
-      // Register
-      .addCase(registerUser.pending, (state) => {
+      // Customer Register
+      .addCase(registerCustomer.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(registerUser.fulfilled, (state, action) => {
+      .addCase(registerCustomer.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload.user;
-        state.role = action.payload.role;
         state.token = action.payload.token;
         state.isAuthenticated = true;
       })
-      .addCase(registerUser.rejected, (state, action) => {
+      .addCase(registerCustomer.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
-
-      // Logout
-      .addCase(logoutUser.fulfilled, (state) => {
+      // Customer Logout
+      .addCase(logoutCustomer.fulfilled, (state) => {
         state.token = null;
-        state.role = null;
         state.user = null;
-        state.permissions = {};
         state.isAuthenticated = false;
       })
-
-      // Update Profile
-      .addCase(updateProfile.fulfilled, (state, action) => {
+      // Update Customer Profile
+      .addCase(updateCustomerProfile.fulfilled, (state, action) => {
         state.user = action.payload;
-        localStorage.setItem('userInfo', JSON.stringify(action.payload));
+        localStorage.setItem('customerInfo', JSON.stringify(action.payload));
       })
-
       // Fetch Customer Profile
-      .addCase(fetchCustomerProfile.pending, (state) => {
-        state.loading = true;
-      })
       .addCase(fetchCustomerProfile.fulfilled, (state, action) => {
-        state.loading = false;
         state.user = action.payload;
-        state.isAuthenticated = true; // Confirm authentication
-      })
-      .addCase(fetchCustomerProfile.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-        // Optional: If 401/Invalid Token, maybe logout?
-        if (action.payload === 'Invalid Token' || action.payload === 'Access denied') {
-          state.isAuthenticated = false;
-          state.token = null;
-          state.user = null;
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('userInfo');
-        }
+        state.isAuthenticated = true;
       });
   }
 });
 
-export const { clearAuth, setUser, setToken } = authSlice.actions;
+export const { clearCustomerAuth, setCustomerUser } = customerAuthSlice.actions;
+
+// Admin Auth Slice
+const adminAuthSlice = createSlice({
+  name: 'adminAuth',
+  initialState: {
+    token: localStorage.getItem('adminToken') || null,
+    admin: JSON.parse(localStorage.getItem('adminInfo') || 'null'),
+    permissions: JSON.parse(localStorage.getItem('adminPermissions') || '{}'),
+    role: 'admin',
+    isAuthenticated: !!localStorage.getItem('adminToken'),
+    loading: false,
+    error: null,
+  },
+  reducers: {
+    clearAdminAuth: (state) => {
+      state.token = null;
+      state.admin = null;
+      state.permissions = {};
+      state.isAuthenticated = false;
+    },
+    setAdminUser: (state, action) => {
+      state.admin = action.payload;
+      localStorage.setItem('adminInfo', JSON.stringify(action.payload));
+    }
+  },
+  extraReducers: (builder) => {
+    builder
+      // Admin Login
+      .addCase(loginAdmin.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(loginAdmin.fulfilled, (state, action) => {
+        state.loading = false;
+        state.token = action.payload.token;
+        state.admin = action.payload.admin;
+        state.permissions = action.payload.permissions;
+        state.isAuthenticated = true;
+      })
+      .addCase(loginAdmin.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Admin Logout
+      .addCase(logoutAdmin.fulfilled, (state) => {
+        state.token = null;
+        state.admin = null;
+        state.permissions = {};
+        state.isAuthenticated = false;
+      });
+  }
+});
+
+export const { clearAdminAuth, setAdminUser } = adminAuthSlice.actions;
 
 // Cart slice (for customer cart)
 const cartSlice = createSlice({
@@ -248,28 +280,28 @@ const cartSlice = createSlice({
     loading: false
   },
   reducers: {
-   // In the cartSlice reducers:
-  addToCart: (state, action) => {
-    const existingItem = state.items.find(item => item.productId === action.payload.productId);
-    
-    // Ensure price is a number
-    const price = typeof action.payload.price === 'string' 
-      ? parseFloat(action.payload.price.replace(/[₹,]/g, "")) 
-      : Number(action.payload.price) || 0;
-    
-    const payload = {
-      ...action.payload,
-      price: price, // Store as number
-      count: action.payload.count || 1
-    };
-    
-    if (existingItem) {
-      existingItem.count += payload.count;
-    } else {
-      state.items.push(payload);
-    }
-    localStorage.setItem('cartItems', JSON.stringify(state.items));
-  },
+    // In the cartSlice reducers:
+    addToCart: (state, action) => {
+      const existingItem = state.items.find(item => item.productId === action.payload.productId);
+
+      // Ensure price is a number
+      const price = typeof action.payload.price === 'string'
+        ? parseFloat(action.payload.price.replace(/[₹,]/g, ""))
+        : Number(action.payload.price) || 0;
+
+      const payload = {
+        ...action.payload,
+        price: price, // Store as number
+        count: action.payload.count || 1
+      };
+
+      if (existingItem) {
+        existingItem.count += payload.count;
+      } else {
+        state.items.push(payload);
+      }
+      localStorage.setItem('cartItems', JSON.stringify(state.items));
+    },
     removeFromCart: (state, action) => {
       state.items = state.items.filter(item => item.productId !== action.payload);
       localStorage.setItem('cartItems', JSON.stringify(state.items));
@@ -323,7 +355,8 @@ export const { setBookings, setPlans, setLoading, setError } = bookingsSlice.act
 // Configure store
 export const store = configureStore({
   reducer: {
-    auth: authSlice.reducer,
+    customerAuth: customerAuthSlice.reducer,
+    adminAuth: adminAuthSlice.reducer,
     cart: cartSlice.reducer,
     bookings: bookingsSlice.reducer
   },
@@ -334,14 +367,23 @@ export const store = configureStore({
 });
 
 // Selectors
-export const selectAuth = (state) => state.auth;
+// Customer Selectors
+export const selectCustomerAuth = (state) => state.customerAuth;
+export const selectCustomerUser = (state) => state.customerAuth.user;
+export const selectCustomerIsAuthenticated = (state) => state.customerAuth.isAuthenticated;
+export const selectCustomerLoading = (state) => state.customerAuth.loading;
+export const selectCustomerError = (state) => state.customerAuth.error;
+
+// Admin Selectors
+export const selectAdminAuth = (state) => state.adminAuth;
+export const selectAdminUser = (state) => state.adminAuth.admin; // Note: admin data
+export const selectAdminIsAuthenticated = (state) => state.adminAuth.isAuthenticated;
+export const selectAdminPermissions = (state) => state.adminAuth.permissions;
+export const selectAdminLoading = (state) => state.adminAuth.loading;
+export const selectAdminError = (state) => state.adminAuth.error;
+// Cart and Bookings Selectors
 export const selectCart = (state) => state.cart;
 export const selectBookings = (state) => state.bookings;
-export const selectIsAuthenticated = (state) => state.auth.isAuthenticated;
-export const selectUser = (state) => state.auth.user;
-export const selectUserRole = (state) => state.auth.role;
-export const selectToken = (state) => state.auth.token;
-export const selectPermissions = (state) => state.auth.permissions;
 export const selectCartItems = (state) => state.cart.items;
 export const selectCartCount = (state) => state.cart.items.reduce((total, item) => total + item.count, 0);
 // In your store.js file, update the selectCartTotal selector:

@@ -9,7 +9,7 @@ function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('adminToken');
       const response = await fetch('http://localhost:5000/api/admin/dashboard', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -116,8 +116,8 @@ function AdminDashboard() {
               <h5>Recent Bookings</h5>
             </Card.Header>
             <Card.Body>
-              <div style={{overflowX:'auto'}}>
-                <Table striped bordered hover style={{ border: "2px solid",minwidth:"600px" }}>
+              <div style={{ overflowX: 'auto' }}>
+                <Table striped bordered hover style={{ border: "2px solid", minwidth: "600px" }}>
                   <thead>
                     <tr>
                       <th style={{ width: '80px' }}>Profile</th>

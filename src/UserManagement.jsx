@@ -53,17 +53,17 @@ function UserManagement({ isAdding, isEditing, userId }) {
   const [touchedFields, setTouchedFields] = useState({});
 
   // Auth User Data for Permission Filtering
-  const [currentUserRole, setCurrentUserRole] = useState(localStorage.getItem('userRole') || 'admin');
+  const [currentUserRole, setCurrentUserRole] = useState('admin');
   const [currentUserPermissions, setCurrentUserPermissions] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem('userPermissions') || '{}');
+      return JSON.parse(localStorage.getItem('adminPermissions') || '{}');
     } catch {
       return {};
     }
   });
 
   const getAuthToken = () => {
-    return localStorage.getItem('authToken');
+    return localStorage.getItem('adminToken');
   };
 
   const getAuthHeaders = () => {
@@ -1031,7 +1031,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
             </Alert>
           )}
 
-          <div style={{overflowX:"auto"}}>
+          <div style={{ overflowX: "auto" }}>
             <Table striped bordered hover size="sm" style={{ border: "2px solid", fontSize: "14px" }}>
               <thead>
                 <tr>

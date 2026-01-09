@@ -63,7 +63,7 @@ function ProductManagement({ isAdding }) {
   const [imageFile, setImageFile] = useState(null);
 
   const getAuthToken = () => {
-    return localStorage.getItem('authToken');
+    return localStorage.getItem('adminToken');
   };
 
   const getAuthHeaders = () => {

@@ -1,17 +1,20 @@
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  loginUser,
-  registerUser,
-  logoutUser,
-  updateProfile,
-  selectAuth,
+  loginCustomer,
+  registerCustomer,
+  logoutCustomer,
+  updateCustomerProfile,
+  loginAdmin,
+  logoutAdmin,
+  selectCustomerAuth,
+  selectCustomerUser,
+  selectCustomerIsAuthenticated,
+  selectAdminAuth,
+  selectAdminUser,
+  selectAdminIsAuthenticated,
+  selectAdminPermissions,
   selectCart,
   selectBookings,
-  selectIsAuthenticated,
-  selectUser,
-  selectUserRole,
-  selectToken,
-  selectPermissions,
   selectCartItems,
   selectCartCount,
   selectCartTotal,
@@ -24,26 +27,42 @@ import {
   setPlans
 } from './store';
 
-// Auth hooks
-export const useAuth = () => {
+// Customer Auth Hook
+export const useCustomerAuth = () => {
   const dispatch = useDispatch();
-  const auth = useSelector(selectAuth);
+  const auth = useSelector(selectCustomerAuth);
 
   return {
     ...auth,
-    login: (email, password, isAdmin = false) =>
-      dispatch(loginUser({ email, password, isAdmin })).unwrap(),
-    register: (userData) => dispatch(registerUser(userData)).unwrap(),
-    logout: () => dispatch(logoutUser()),
-    updateProfile: (profileData) => dispatch(updateProfile(profileData)).unwrap()
+    login: (email, password) => dispatch(loginCustomer({ email, password })).unwrap(),
+    register: (userData) => dispatch(registerCustomer(userData)).unwrap(),
+    logout: () => dispatch(logoutCustomer()),
+    updateProfile: (profileData) => dispatch(updateCustomerProfile(profileData)).unwrap()
   };
 };
 
-export const useUser = () => useSelector(selectUser);
-export const useUserRole = () => useSelector(selectUserRole);
-export const useToken = () => useSelector(selectToken);
-export const usePermissions = () => useSelector(selectPermissions);
-export const useIsAuthenticated = () => useSelector(selectIsAuthenticated);
+// Admin Auth Hook
+export const useAdminAuth = () => {
+  const dispatch = useDispatch();
+  const auth = useSelector(selectAdminAuth);
+
+  return {
+    ...auth,
+    login: (email, password) => dispatch(loginAdmin({ email, password })).unwrap(),
+    logout: () => dispatch(logoutAdmin())
+  };
+};
+
+// Legacy support / Convenience for Customer
+// Most components (Navbar, Cart, etc.) are customer-facing.
+export const useAuth = useCustomerAuth;
+
+// Specific selectors hooks
+export const useCustomerUser = () => useSelector(selectCustomerUser);
+export const useCustomerIsAuthenticated = () => useSelector(selectCustomerIsAuthenticated);
+
+export const useAdminUser = () => useSelector(selectAdminUser);
+export const useAdminPermissions = () => useSelector(selectAdminPermissions);
 
 // Cart hooks
 export const useCart = () => {

@@ -22,7 +22,7 @@ function BookingManagement() {
   const [selectAllBookings, setSelectAllBookings] = useState(false);
 
   const getAuthToken = () => {
-    return localStorage.getItem('authToken');
+    return localStorage.getItem('adminToken');
   };
 
   const getAuthHeaders = () => {
@@ -290,7 +290,7 @@ function BookingManagement() {
             </Alert>
           )}
 
-          <div style={{overflowX:"auto"}}>
+          <div style={{ overflowX: "auto" }}>
             <Table striped bordered hover style={{ border: "2px solid #000000" }}>
               <thead>
                 <tr>

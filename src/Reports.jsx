@@ -1,230 +1,239 @@
-import { useState, useEffect } from 'react';
-import { Row, Col, Card, Table, Badge, Form, Button, Dropdown } from 'react-bootstrap';
+import { useState } from 'react';
+import { Card, Form, Button, Row, Col, Alert, Spinner, Dropdown, ButtonGroup } from 'react-bootstrap';
+import { exportAsExcel, exportAsCSV, exportAsPDF } from './downloadUtils';
+import { FaFileExcel, FaFilePdf, FaFileCsv } from "react-icons/fa";
 
 function Reports() {
-  const [reports, setReports] = useState({
-    dailyBookings: 0,
-    monthlyRevenue: 0,
-    customerGrowth: 0,
-    topCategories: []
-  });
+  const [reportType, setReportType] = useState('Catalog');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    fetchReports();
-  }, []);
+  const getAuthToken = () => {
+    return localStorage.getItem('adminToken');
+  };
 
-  const fetchReports = async () => {
+  const getAuthHeaders = () => {
+    const token = getAuthToken();
+    return {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
+  };
+
+  const handleGenerateReport = async (format) => {
+    // Validate Date Range
+    if (!startDate || !endDate) {
+      setError('Please select both start and end dates to generate the report.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('http://localhost:5000/api/admin/reports', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      let dataToExport = [];
+      let filename = reportType;
+
+      if (reportType === 'Catalog') {
+        const [catRes, subRes] = await Promise.all([
+          fetch('http://localhost:5000/api/admin/categories?limit=1000', { headers: getAuthHeaders() }),
+          fetch('http://localhost:5000/api/admin/subcategories?limit=1000', { headers: getAuthHeaders() })
+        ]);
+
+        const categories = (await catRes.json()).categories || [];
+        const subcategories = (await subRes.json()).subcategories || [];
+
+        dataToExport = subcategories.map(sub => {
+          const catName = sub.categoryId?.name || sub.categoryName || 'Unassigned';
+          return {
+            'Category Name': catName,
+            'Subcategory Name': sub.name,
+            'Subcategory Status': sub.isActive ? 'Active' : 'Inactive',
+            'Category Status': categories.find(c => c._id === (sub.categoryId?._id || sub.categoryId))?.isActive ? 'Active' : 'Inactive' || 'Unknown'
+          };
+        });
+
+      } else if (reportType === 'Products') {
+        const response = await fetch('http://localhost:5000/api/admin/packages?limit=1000', { headers: getAuthHeaders() });
+        const data = await response.json();
+        const products = data.packages || [];
+
+        dataToExport = products.map(p => ({
+          'Product Name': p.name,
+          'Category': p.category?.name || p.category || 'N/A',
+          'Subcategory': p.subcategory?.name || p.subcategory || 'N/A',
+          'Price': p.price,
+          'Discount Price': p.discountPrice || 'N/A',
+          'Rating': p.rating,
+          'Status': p.isActive ? 'Active' : 'Inactive',
+          'Created At': new Date(p.createdAt).toLocaleDateString()
+        }));
+
+      } else if (reportType === 'Bookings') {
+        let url = 'http://localhost:5000/api/admin/bookings?limit=1000';
+
+        const response = await fetch(url, { headers: getAuthHeaders() });
+        const data = await response.json();
+        let bookings = data.bookings || [];
+
+        if (startDate) {
+          const start = new Date(startDate);
+          bookings = bookings.filter(b => new Date(b.createdAt) >= start);
         }
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        setReports(data.reports);
-      } else {
-        // Fallback to mock data
-        const mockReports = {
-          dailyBookings: 45,
-          monthlyRevenue: 125000,
-          customerGrowth: '12%',
-          topCategories: [
-            { name: 'Salon', bookings: 120, revenue: 45000 },
-            { name: 'Cleaning', bookings: 85, revenue: 38000 },
-            { name: 'Repairs', bookings: 65, revenue: 28000 },
-            { name: 'Plumbing', bookings: 42, revenue: 19000 }
-          ]
-        };
-        setReports(mockReports);
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          bookings = bookings.filter(b => new Date(b.createdAt) <= end);
+        }
+
+        dataToExport = bookings.map(b => ({
+          'Booking ID': b._id,
+          'Customer Name': b.customer?.name || b.customerName || 'N/A',
+          'Service': b.serviceName || b.items?.map(i => i.name).join(', ') || 'N/A',
+          'Total Amount': b.totalAmount || b.price,
+          'Status': b.status,
+          'Date': new Date(b.date || b.createdAt).toLocaleDateString(),
+          'Time': b.time || 'N/A'
+        }));
       }
-    } catch (error) {
-      console.error('Error fetching reports:', error);
-      // Fallback to mock data
-      const mockReports = {
-        dailyBookings: 45,
-        monthlyRevenue: 125000,
-        customerGrowth: '12%',
-        topCategories: [
-          { name: 'Salon', bookings: 120, revenue: 45000 },
-          { name: 'Cleaning', bookings: 85, revenue: 38000 },
-          { name: 'Repairs', bookings: 65, revenue: 28000 },
-          { name: 'Plumbing', bookings: 42, revenue: 19000 }
-        ]
-      };
-      setReports(mockReports);
+
+      if (dataToExport.length === 0) {
+        setError('No data found for the selected criteria.');
+      } else {
+        const timestamp = new Date().toISOString().split('T')[0];
+        const finalFilename = `${filename}_Report_${timestamp}`;
+
+        if (format === 'excel') {
+          exportAsExcel(dataToExport, finalFilename);
+        } else if (format === 'csv') {
+          const headers = Object.keys(dataToExport[0]);
+          exportAsCSV(dataToExport, headers, finalFilename);
+        } else if (format === 'pdf') {
+          const headers = Object.keys(dataToExport[0]);
+          let html = `<h2 style="text-align: center; margin-bottom: 20px;">${filename} Report</h2>`;
+          html += `<p style="text-align: center; margin-bottom: 20px;">Generated on: ${new Date().toLocaleDateString()}</p>`;
+          html += '<table style="width:100%; border-collapse: collapse; font-size: 10px;">';
+          html += '<thead><tr>';
+          headers.forEach(h => html += `<th style="border:1px solid #ddd; padding: 6px; background-color: #f2f2f2; text-align: left;">${h}</th>`);
+          html += '</tr></thead><tbody>';
+          dataToExport.forEach(row => {
+            html += '<tr>';
+            headers.forEach(h => html += `<td style="border:1px solid #ddd; padding: 6px;">${row[h] || ''}</td>`);
+            html += '</tr>';
+          });
+          html += '</tbody></table>';
+
+          const element = document.createElement('div');
+          element.innerHTML = html;
+          exportAsPDF(element, finalFilename);
+        }
+      }
+
+    } catch (err) {
+      console.error('Error generating report:', err);
+      setError('Failed to generate report. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const exportAsPDF = () => {
-    const tableElement = document.querySelector('.table-responsive');
-    // PDF export logic here
-    alert('PDF export functionality would be implemented here');
-  };
-
-  const exportAsExcel = () => {
-    // Excel export logic here
-    alert('Excel export functionality would be implemented here');
-  };
-
-  const exportAsCSV = () => {
-    // CSV export logic here
-    alert('CSV export functionality would be implemented here');
-  };
-
   return (
-    <>
-     <Card className="shadow-lg">
-      <Card.Body style={{ marginLeft: '25px', marginRight: '25px' }}>
-        <h5 className="mb-0 fw-semibold">Report Management
-        </h5>
-      </Card.Body>
-      </Card> <br />
-      <Row className="mb-4">
-        <Col md={3}>
-          <Card className="text-center border-0 shadow-lg">
-            <Card.Body className="py-4">
-              <h5 className="text-muted mb-2">Daily Bookings</h5>
-              <h2 className="mb-0" style={{ color: "#667eea" }}>{reports.dailyBookings}</h2>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col md={3}>
-          <Card className="text-center border-0 shadow-lg">
-            <Card.Body className="py-4">
-              <h5 className="text-muted mb-2">Monthly Revenue</h5>
-              <h2 className="mb-0" style={{ color: "#38b2ac" }}>₹{reports.monthlyRevenue.toLocaleString()}</h2>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col md={3}>
-          <Card className="text-center border-0 shadow-lg">
-            <Card.Body className="py-4">
-              <h5 className="text-muted mb-2">Customer Growth</h5>
-              <h2 className="mb-0" style={{ color: "#ed64a6" }}>{reports.customerGrowth}</h2>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col md={3}>
-          <Card className="text-center border-0 shadow-lg">
-            <Card.Body className="py-4">
-              <h5 className="text-muted mb-2">Avg. Order Value</h5>
-              <h2 className="mb-0" style={{ color: "#764ba2" }}>₹1,250</h2>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+    <div>
+      <Card className="shadow-lg">
+        <Card.Body style={{ marginLeft: '25px', marginRight: '25px' }}>
+          <h5 className="mb-0 fw-semibold">Report Management</h5>
+        </Card.Body>
+      </Card>
+      <br />
 
-      <Card className="border-0 shadow-lg mb-4">
-        <Card.Header className="border-0">
-          <h5>Top Categories by Revenue</h5>
-        </Card.Header>
-        <Card.Body>
-          <div className="table-responsive">
-            <Table striped bordered hover style={{ border: "2px solid" }}>
-              <thead>
-                <tr>
-                  <th>Category</th>
-                  <th>Bookings</th>
-                  <th>Revenue</th>
-                  <th>Avg. Price</th>
-                  <th>Growth</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reports.topCategories.map((cat, index) => (
-                  <tr key={index}>
-                    <td><strong>{cat.name}</strong></td>
-                    <td>{cat.bookings}</td>
-                    <td>₹{cat.revenue.toLocaleString()}</td>
-                    <td>₹{(cat.revenue / cat.bookings).toFixed(0)}</td>
-                    <td>
-                      <Badge bg="success">+12%</Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+      <Card className="border-0 shadow-lg" style={{ maxWidth: "800px", margin: "0 auto" }}>
+        <Card.Header className="bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center flex-wrap">
+          <div>
+            <h5 className="mb-0">Generate Reports</h5>
+            <p className="text-muted small mb-0">Select the data range and download format.</p>
           </div>
-        </Card.Body>
-      </Card>
-
-      <Card className="border-0 shadow-lg">
-        <Card.Header className="border-0 d-flex justify-content-between align-items-center">
-          <h5 className="mb-0">Report Actions</h5>
-          <Dropdown>
-            <Dropdown.Toggle variant="primary">
-              <i className="bi bi-download me-2"></i>Export
-            </Dropdown.Toggle>
-            <Dropdown.Menu>
-              <Dropdown.Item onClick={exportAsPDF}>
-                <i className="bi bi-file-earmark-pdf me-2"></i>Export as PDF
-              </Dropdown.Item>
-              <Dropdown.Item onClick={exportAsExcel}>
-                <i className="bi bi-file-earmark-excel me-2"></i>Export as Excel
-              </Dropdown.Item>
-              <Dropdown.Item onClick={exportAsCSV}>
-                <i className="bi bi-file-earmark-text me-2"></i>Export as CSV
-              </Dropdown.Item>
-            </Dropdown.Menu>
-          </Dropdown>
+          <div className="d-flex gap-2 mt-2 mt-md-0">
+            <Button
+              variant="outline-light"
+              style={{ border: "1px solid #000000"}}
+              disabled={loading}
+              onClick={() => handleGenerateReport('pdf')}
+              title="Download as PDF"
+              size="sm"
+            >
+              {loading ? <Spinner as="span" animation="border" size="sm" /> : <><FaFilePdf className="text-danger" /> </>}
+            </Button>
+            <Button
+              variant="outline-light"
+              style={{ border: "1px solid #000000" }}
+              disabled={loading}
+              onClick={() => handleGenerateReport('excel')}
+              title="Download as Excel"
+              size="sm"
+            >
+              {loading ? <Spinner as="span" animation="border" size="sm" /> : <><FaFileExcel className="text-success " /> </>}
+            </Button>
+            <Button
+              variant="outline-light"
+              style={{ border: "1px solid #000000" }}
+              disabled={loading}
+              onClick={() => handleGenerateReport('csv')}
+              title="Download as CSV"
+              size="sm"
+            >
+              {loading ? <Spinner as="span" animation="border" size="sm" /> : <><FaFileCsv className="text-primary" /> </>}
+            </Button>
+          </div>
         </Card.Header>
-        <Card.Body>
-          <Row>
-            <Col md={6}>
-              <h6>Generate Custom Reports</h6>
-              <Form>
-                <Form.Group className="mb-3">
-                  <Form.Label>Report Type</Form.Label>
-                  <Form.Select className='cate'>
-                    <option>Sales Report</option>
-                    <option>Customer Report</option>
-                    <option>Booking Report</option>
-                    <option>Revenue Report</option>
-                  </Form.Select>
-                </Form.Group>
-                <Form.Group className="mb-3">
-                  <Form.Label >Date Range</Form.Label>
-                  <Row>
-                    <Col >
-                      <Form.Control type="date" className='cate'/>
-                    </Col>
-                    <Col>
-                      <Form.Control type="date" className='cate'/>
-                    </Col>
-                  </Row>
-                </Form.Group>
-                <Button variant="primary">Generate Report</Button>
-              </Form>
-            </Col>
-            <Col md={6}>
-              <h6>Quick Stats</h6>
-              <div className="list-group" style={{border:"2px solid black"}}>
-                <div className="list-group-item d-flex justify-content-between">
-                  <span>Total Services Offered</span>
-                  <strong>8</strong>
-                </div>
-                <div className="list-group-item d-flex justify-content-between">
-                  <span>Active Bookings Today</span>
-                  <strong>12</strong>
-                </div>
-                <div className="list-group-item d-flex justify-content-between">
-                  <span>New Customers Today</span>
-                  <strong>8</strong>
-                </div>
-                <div className="list-group-item d-flex justify-content-between">
-                  <span>Revenue Today</span>
-                  <strong>₹15,250</strong>
-                </div>
-              </div>
-            </Col>
-          </Row>
+        <Card.Body className="p-4">
+          {error && <Alert variant="danger">{error}</Alert>}
+
+          <Form>
+            <Form.Group className="mb-4">
+              <Form.Label className="fw-semibold">Report Type</Form.Label>
+              <Form.Select
+                value={reportType}
+                onChange={(e) => setReportType(e.target.value)}
+                className="shadow-sm py-2"
+              >
+                <option value="Catalog">Catalog (Categories & Subcategories)</option>
+                <option value="Products">Products</option>
+                <option value="Bookings">Bookings</option>
+              </Form.Select>
+            </Form.Group>
+
+            <Form.Group className="mb-4">
+              <Form.Label className="fw-semibold">Date Range</Form.Label>
+              <Row>
+                <Col md={6} className="mb-3 mb-md-0">
+                  <Form.Label className="text-muted small">From</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="shadow-sm"
+                    required
+                  />
+                </Col>
+                <Col md={6}>
+                  <Form.Label className="text-muted small">To</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="shadow-sm"
+                    required
+                  />
+                </Col>
+              </Row>
+            </Form.Group>
+
+            {/* Download buttons moved to Header */}
+          </Form>
         </Card.Body>
       </Card>
-    </>
+    </div>
   );
 }
 

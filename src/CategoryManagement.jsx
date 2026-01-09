@@ -6,7 +6,7 @@ import Categories from './Categories';
 function CategoryManagement({ isAdding, isEditing }) {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   const [categories, setCategories] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectAllCategories, setSelectAllCategories] = useState(false);
@@ -22,7 +22,7 @@ function CategoryManagement({ isAdding, isEditing }) {
   const [editCategory, setEditCategory] = useState(null);
 
   const getAuthToken = () => {
-    return localStorage.getItem('authToken');
+    return localStorage.getItem('adminToken');
   };
 
   const getAuthHeaders = () => {
@@ -37,39 +37,39 @@ function CategoryManagement({ isAdding, isEditing }) {
     try {
       setLoading(true);
       console.log(`Fetching categories... Page: ${page}, Search: ${search}, PerPage: ${perPage}`);
-      
+
       let url = `http://localhost:5000/api/admin/categories?page=${page}&limit=${perPage}&sort=-createdAt`;
-      
+
       if (search) {
         url += `&search=${encodeURIComponent(search)}`;
       }
-      
+
       const response = await fetch(url, {
         headers: getAuthHeaders()
       });
-      
+
       if (!response.ok) {
         console.error("Failed to fetch categories:", response.status);
         setCategories([]);
         return;
       }
-      
+
       const data = await response.json();
       console.log("Categories API response:", data);
-      
+
       if (data.success && data.categories && Array.isArray(data.categories)) {
         console.log(`Found ${data.categories.length} categories`);
-        
+
         const formattedCategories = data.categories.map(category => ({
           ...category,
           img: category.img || '/assets/default-category.png'
         }));
-        
+
         setCategories(formattedCategories);
-        
+
         // Save categories to localStorage for edit access
         localStorage.setItem('categoriesCache', JSON.stringify(formattedCategories));
-        
+
         // Set pagination data if available
         if (data.pagination) {
           setCategoryTotalPages(data.pagination.pages || 1);
@@ -96,11 +96,11 @@ function CategoryManagement({ isAdding, isEditing }) {
     if (categoryFromState) {
       return categoryFromState;
     }
-    
+
     // Then check localStorage cache
     const cachedCategories = JSON.parse(localStorage.getItem('categoriesCache') || '[]');
     const categoryFromCache = cachedCategories.find(cat => cat._id === categoryId);
-    
+
     return categoryFromCache || null;
   };
 
@@ -153,43 +153,43 @@ function CategoryManagement({ isAdding, isEditing }) {
   const updateCategoryStatus = async (categoryId, isActive) => {
     try {
       console.log(`Updating category ${categoryId} status to: ${isActive}`);
-      
+
       // Update local state immediately for better UX
-      setCategories(prevCategories => 
-        prevCategories.map(category => 
-          category._id === categoryId 
-            ? { ...category, isActive } 
+      setCategories(prevCategories =>
+        prevCategories.map(category =>
+          category._id === categoryId
+            ? { ...category, isActive }
             : category
         )
       );
-      
+
       // Update cache if exists
       const cachedCategories = JSON.parse(localStorage.getItem('categoriesCache') || '[]');
-      const updatedCache = cachedCategories.map(cat => 
+      const updatedCache = cachedCategories.map(cat =>
         cat._id === categoryId ? { ...cat, isActive } : cat
       );
       localStorage.setItem('categoriesCache', JSON.stringify(updatedCache));
-      
+
       // Make API call in background
       const response = await fetch(`http://localhost:5000/api/admin/categories/${categoryId}/toggle-status`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ isActive })
       });
-      
+
       const data = await response.json();
-      
+
       if (!data.success) {
         console.error("Failed to update category status:", data.error);
         // Revert local state if API call fails
-        setCategories(prevCategories => 
-          prevCategories.map(category => 
-            category._id === categoryId 
-              ? { ...category, isActive: !isActive } 
+        setCategories(prevCategories =>
+          prevCategories.map(category =>
+            category._id === categoryId
+              ? { ...category, isActive: !isActive }
               : category
           )
         );
-        
+
         // Show error toast or message (optional)
         alert(`Failed to update status: ${data.error || 'Unknown error'}`);
       } else {
@@ -197,16 +197,16 @@ function CategoryManagement({ isAdding, isEditing }) {
       }
     } catch (error) {
       console.error('Error updating category status:', error);
-      
+
       // Revert local state if API call fails
-      setCategories(prevCategories => 
-        prevCategories.map(category => 
-          category._id === categoryId 
-            ? { ...category, isActive: !isActive } 
+      setCategories(prevCategories =>
+        prevCategories.map(category =>
+          category._id === categoryId
+            ? { ...category, isActive: !isActive }
             : category
         )
       );
-      
+
       alert('Failed to update status due to network error');
     }
   };
@@ -219,7 +219,7 @@ function CategoryManagement({ isAdding, isEditing }) {
           method: 'DELETE',
           headers: getAuthHeaders()
         });
-        
+
         const data = await response.json();
         if (data.success) {
           alert('Category deleted successfully');
@@ -240,7 +240,7 @@ function CategoryManagement({ isAdding, isEditing }) {
   // Bulk delete categories
   const handleBulkDeleteCategories = async (selectedIds) => {
     if (selectedIds.length === 0) return;
-    
+
     if (window.confirm(`Are you sure you want to delete ${selectedIds.length} category(ies)?`)) {
       try {
         const response = await fetch('http://localhost:5000/api/admin/categories/bulk-delete', {
@@ -248,7 +248,7 @@ function CategoryManagement({ isAdding, isEditing }) {
           headers: getAuthHeaders(),
           body: JSON.stringify({ ids: selectedIds })
         });
-        
+
         const data = await response.json();
         if (data.success) {
           alert(`Successfully deleted ${data.deletedCount} category(ies)`);
@@ -276,27 +276,27 @@ function CategoryManagement({ isAdding, isEditing }) {
       formDataToSend.append('key', formData.key || formData.name.toLowerCase().replace(/ /g, '-'));
       formDataToSend.append('order', formData.order || 0);
       formDataToSend.append('isActive', formData.isActive !== undefined ? formData.isActive : true);
-      
+
       if (imageFile) {
         formDataToSend.append('image', imageFile);
       } else if (isEditing && editCategory?.img) {
         formDataToSend.append('img', editCategory.img);
       }
 
-      const url = isEditing 
+      const url = isEditing
         ? `http://localhost:5000/api/admin/categories/${editCategory._id}`
         : 'http://localhost:5000/api/admin/categories';
-      
+
       const response = await fetch(url, {
         method: isEditing ? 'PUT' : 'POST',
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${getAuthToken()}`
         },
         body: formDataToSend
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         alert(isEditing ? 'Category updated successfully!' : 'Category added successfully!');
         // Navigate back to categories list
@@ -313,10 +313,10 @@ function CategoryManagement({ isAdding, isEditing }) {
   // Handle edit click
   const handleEditCategory = (category) => {
     console.log("Edit clicked for:", category.name);
-    
+
     // Store the category data in localStorage temporarily
     localStorage.setItem('editingCategory', JSON.stringify(category));
-    
+
     // Navigate to edit route
     navigate(`/admin/categories/edit/${category._id}`);
   };
@@ -347,7 +347,7 @@ function CategoryManagement({ isAdding, isEditing }) {
   // If we're adding or editing, show the form
   if (isAdding || isEditing) {
     return (
-      <CategoryForm 
+      <CategoryForm
         isEditing={isEditing}
         categoryData={editCategory}
         onSubmit={handleCategorySubmit}
@@ -358,7 +358,7 @@ function CategoryManagement({ isAdding, isEditing }) {
 
   // Normal mode - show categories list
   return (
-    <Categories 
+    <Categories
       categories={categories}
       selectedCategories={selectedCategories}
       selectAllCategories={selectAllCategories}
@@ -367,7 +367,7 @@ function CategoryManagement({ isAdding, isEditing }) {
       onEdit={handleEditCategory}
       onDelete={deleteCategory}
       onToggleStatus={updateCategoryStatus}
-      
+
       // Pagination props
       currentPage={categoryPage}
       totalPages={categoryTotalPages}
@@ -376,20 +376,20 @@ function CategoryManagement({ isAdding, isEditing }) {
         setCategoryPage(page);
         fetchCategories(page, categorySearch, categoryPerPage);
       }}
-      
+
       // Search props
       searchQuery={categorySearch}
       onSearchChange={(value) => {
         setCategorySearch(value);
         fetchCategories(1, value, categoryPerPage);
       }}
-      
+
       itemsPerPage={categoryPerPage}
       onItemsPerPageChange={(perPage) => {
         setCategoryPerPage(perPage);
         fetchCategories(1, categorySearch, perPage);
       }}
-      
+
       loading={loading}
     />
   );

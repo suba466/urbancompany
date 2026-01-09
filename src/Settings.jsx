@@ -12,7 +12,7 @@ function Settings() {
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('adminToken');
       const response = await fetch('http://localhost:5000/api/admin/settings', {
         method: 'PUT',
         headers: {
@@ -21,7 +21,7 @@ function Settings() {
         },
         body: JSON.stringify(settings)
       });
-      
+
       const data = await response.json();
       if (data.success) {
         alert('Settings saved successfully!');
@@ -38,38 +38,38 @@ function Settings() {
     <div>
       <Card>
         <Card.Body style={{ marginLeft: "25px", marginRight: "25px" }}>
-        <h5 className="fw-semibold mb-0">Settings Management</h5>
-      </Card.Body>
+          <h5 className="fw-semibold mb-0">Settings Management</h5>
+        </Card.Body>
       </Card><br />
 
-    <Card className="border-0 shadow-lg">
-      
-      <Card.Body style={{ marginLeft: "25px", marginRight: "25px" }}>
-        <div >
-          <h5 className="mb-3">Settings</h5>
-          <Row>
-            <Col md={6}>
-              <h6>Site Title</h6>
-              <p>Urban company</p>
-            </Col>
-            <Col md={6}>
-              <h6>Contact e-mail</h6>
-              <p>support@urbancompany.com</p>
-            </Col>
-          </Row>
-          <Row>
-            <Col md={6}>
-              <h6>Contact Number</h6>
-              <p>1800-234-890</p>
-            </Col>
-            <Col md={6}>
-              <h6>Address</h6>
-              <p>18, Rs puram, Coimbatore, India</p>
-            </Col>
-          </Row>
-        </div>
-      </Card.Body>
-    </Card></div>
+      <Card className="border-0 shadow-lg">
+
+        <Card.Body style={{ marginLeft: "25px", marginRight: "25px" }}>
+          <div >
+            <h5 className="mb-3">Settings</h5>
+            <Row>
+              <Col md={6}>
+                <h6>Site Title</h6>
+                <p>Urban company</p>
+              </Col>
+              <Col md={6}>
+                <h6>Contact e-mail</h6>
+                <p>support@urbancompany.com</p>
+              </Col>
+            </Row>
+            <Row>
+              <Col md={6}>
+                <h6>Contact Number</h6>
+                <p>1800-234-890</p>
+              </Col>
+              <Col md={6}>
+                <h6>Address</h6>
+                <p>18, Rs puram, Coimbatore, India</p>
+              </Col>
+            </Row>
+          </div>
+        </Card.Body>
+      </Card></div>
   );
 }
 

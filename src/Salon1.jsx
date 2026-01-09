@@ -9,7 +9,7 @@ import { GoDotFill } from "react-icons/go";
 import Salon1modal from './Salon1modal';
 import { useNavigate } from 'react-router-dom';
 import CartBlock from './CartBlock';
-import { useCart } from "./hooks";  // IMPORT REDUX HOOK
+import { useCart } from "./hooks";
 
 function Salon1() {
   const [savedExtras, setSavedExtras] = useState({});
@@ -175,7 +175,7 @@ function Salon1() {
   const handleShowModal = async (item) => {
     try {
       let matched = item;
-      let existingCartItem = carts.find(c => 
+      let existingCartItem = carts.find(c =>
         c.productId === item._id || c.title === item.title || (item._id && c.productId === item._id.toString())
       );
 
@@ -201,7 +201,7 @@ function Salon1() {
   const handleShowCarouselModal = async (item) => {
     try {
       let matched = item;
-      let existingCartItem = carts.find(c => 
+      let existingCartItem = carts.find(c =>
         c.productId === item._id || c.title === item.title || (item._id && c.productId === item._id.toString())
       );
 
@@ -281,7 +281,7 @@ function Salon1() {
       if (existing) {
         // Update item count in Redux
         updateItem(productId, existing.count + 1);
-        
+
         // Also update in database
         await fetch(`http://localhost:5000/api/carts/${existing._id}`, {
           method: "PUT",
@@ -291,7 +291,7 @@ function Salon1() {
       } else {
         // Add new item to Redux
         addItem(payload);
-        
+
         // Also add to database
         await fetch("http://localhost:5000/api/addcarts", {
           method: "POST",
@@ -299,45 +299,45 @@ function Salon1() {
           body: JSON.stringify(payload),
         });
       }
-      
+
       setShowFrequentlyAdded(true);
     } catch (error) { console.error(error); }
   };
 
- // In Salon1.js, update the handleIncrease function:
+  // In Salon1.js, update the handleIncrease function:
 
-const handleIncrease = async (cartItem) => {
-  try {
-    // Check if this specific item has reached 3 counts
-    if ((cartItem.count || 1) >= 3) { 
-      alert(`You can't add more than 3 of "${cartItem.title || cartItem.serviceName}"`);
-      return; 
-    }
-    
-    // Update in Redux
-    updateItem(cartItem._id || cartItem.productId, (cartItem.count || 1) + 1);
-    
-    // Update database
-    await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ count: (cartItem.count || 1) + 1 })
-    });
-  } catch (err) { console.error(err); }
-};
+  const handleIncrease = async (cartItem) => {
+    try {
+      // Check if this specific item has reached 3 counts
+      if ((cartItem.count || 1) >= 3) {
+        alert(`You can't add more than 3 of "${cartItem.title || cartItem.serviceName}"`);
+        return;
+      }
+
+      // Update in Redux
+      updateItem(cartItem._id || cartItem.productId, (cartItem.count || 1) + 1);
+
+      // Update database
+      await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count: (cartItem.count || 1) + 1 })
+      });
+    } catch (err) { console.error(err); }
+  };
 
   const handleDecrease = async (cartItem) => {
     try {
       if ((cartItem.count || 1) <= 1) {
         // Remove from Redux
         removeItem(cartItem._id || cartItem.productId);
-        
+
         // Remove from database
         await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, { method: "DELETE" });
       } else {
         // Update in Redux
         updateItem(cartItem._id || cartItem.productId, cartItem.count - 1);
-        
+
         // Update database
         await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
           method: "PUT",
@@ -410,7 +410,7 @@ const handleIncrease = async (cartItem) => {
                             cursor: "pointer",
                             borderRadius: "16px",
                             overflow: "hidden",
-                            height: "250px",
+                            height: "160px",
                             marginTop: "10px"
                           }}
                         >
@@ -451,8 +451,8 @@ const handleIncrease = async (cartItem) => {
                         </Col>
 
                         {/* --- ACTION COLUMN --- */}
-                        <Col xs={4} className='position-relative' style={{ minHeight: "100px" }}>
-                          <div className="d-flex flex-column h-100">
+                        <Col xs={4} className='position-relative' style={{ minHeight: "100px", display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+                          <div className="d-flex flex-column h-100 w-100 align-items-end">
 
                             {shouldShowDiscountBanner ? (
                               /* --- SUPER SAVER DISCOUNT BOX LAYOUT --- */
@@ -465,12 +465,13 @@ const handleIncrease = async (cartItem) => {
                                   alignItems: "center",
                                   justifyContent: "center",
                                   position: "relative",
+                                  width: "100px",
                                   marginBottom: "20px",
-                                  cursor: "pointer"
+                                  overflow: "visible"
                                 }}
                               >
 
-                                <div className=" text-center">
+                                <div className="text-center">
                                   <h2 className="fw-bold m-0" style={{ color: "#0d5924", fontSize: "26px", lineHeight: "0.9" }}>25%</h2>
                                   <h6 className="fw-bold m-0" style={{ color: "#0d5924", fontSize: "14px", marginTop: "2px" }}>OFF</h6>
                                 </div>
@@ -491,70 +492,71 @@ const handleIncrease = async (cartItem) => {
                                     className="shadow-sm"
                                     style={{
                                       position: "absolute",
-                                      bottom: "-16px",
+                                      bottom: "-12px", // Pop out
                                       left: "50%",
                                       transform: "translateX(-50%)",
-                                      width: "80%",
+                                      width: "90%", // Slightly wider than box
                                       color: "rgb(110, 66, 229)",
-                                      backgroundColor: "rgba(255, 255, 255, 1)",
+                                      backgroundColor: "white",
                                       border: "1px solid rgb(110, 66, 229)",
                                       padding: "4px 0",
-                                      fontWeight: "600",
-                                      fontSize: "14px",
+                                      fontWeight: "700",
+                                      fontSize: "13px",
                                       borderRadius: "6px",
                                       height: "30px",
-                                      lineHeight: "1"
+                                      lineHeight: "1",
+                                      boxShadow: "0 2px 5px rgba(0,0,0,0.1)"
                                     }}
                                   >
                                     Add
                                   </Button>
                                 ) : (
                                   <div
-                                    className="d-flex align-items-center justify-content-between"
+                                    className="d-flex align-items-center justify-content-between shadow-sm"
                                     onClick={(e) => e.stopPropagation()}
                                     style={{
                                       position: "absolute",
-                                      bottom: "-16px",
+                                      bottom: "-12px",
                                       left: "50%",
                                       transform: "translateX(-50%)",
-                                      width: "80%",
-                                      backgroundColor: "rgba(255, 255, 255, 1)",
+                                      width: "90%",
+                                      backgroundColor: "white",
                                       border: "1px solid rgb(110, 66, 229)",
                                       borderRadius: "6px",
                                       height: "30px",
                                       zIndex: 2,
-                                      padding: "2px",
-                                      boxShadow: "0 .125rem .25rem rgba(0,0,0,.075)"
+                                      padding: "0 5px"
                                     }}>
-                                      
+
                                     <Button
                                       onClick={() => handleDecrease(inCart)}
                                       className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent'
-                                      style={{ width: "24px", height: "26px", fontSize: "18px" }}
+                                      style={{ width: "20px", height: "100%", fontSize: "18px", fontWeight: "bold" }}
                                     >
                                       −
                                     </Button>
-                                    <span className="fw-bold" style={{ fontSize: "14px", color: "rgb(110, 66, 229)" }}>{inCart.count || 1}</span>
-                                  <Button
-                                    onClick={() => handleIncrease(inCart)}
-                                    className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent'
-                                    style={{ 
-                                      width: "24px", 
-                                      height: "26px", 
-                                      fontSize: "18px", 
-                                      opacity: (inCart.count || 1) >= 3 ? "0.6" : "1", // Check per item
-                                      cursor: (inCart.count || 1) >= 3 ? "not-allowed" : "pointer"
-                                    }}
-                                    disabled={(inCart.count || 1) >= 3} // Disable button when limit reached
-                                  >
-                                    +
-                                  </Button>
+                                    <span className="fw-bold" style={{ fontSize: "13px", color: "rgb(110, 66, 229)" }}>{inCart.count || 1}</span>
+                                    <Button
+                                      onClick={() => handleIncrease(inCart)}
+                                      className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent'
+                                      style={{
+                                        width: "20px",
+                                        height: "100%",
+                                        fontSize: "18px",
+                                        fontWeight: "bold",
+                                        opacity: (inCart.count || 1) >= 3 ? "0.6" : "1",
+                                        cursor: (inCart.count || 1) >= 3 ? "not-allowed" : "pointer"
+                                      }}
+                                      disabled={(inCart.count || 1) >= 3}
+                                    >
+                                      +
+                                    </Button>
                                   </div>
                                 )}
                               </div>
                             ) : (
                               /* --- STANDARD LAYOUT --- */
-                              <div className="mt-auto" style={{ width: "100%" }}>
+                              <div className="mt-auto" style={{ width: "100%", display: "flex", justifyContent: "flex-end" }}>
                                 {!inCart ? (
                                   <Button
                                     ref={(el) => (addButtonRefs.current[pkg._id] = el)}
@@ -567,33 +569,36 @@ const handleIncrease = async (cartItem) => {
                                         productId: pkg._id
                                       }, []);
                                     }}
+                                    className="shadow-sm"
                                     style={{
                                       color: "rgb(110, 66, 229)",
-                                      backgroundColor: "rgba(255, 255, 255, 1)",
+                                      backgroundColor: "white",
                                       border: "1px solid rgb(110, 66, 229)",
-                                      padding: "5px 18px",
+                                      padding: "0",
                                       fontWeight: "600",
-                                      width: "100%",
-                                      maxWidth: "100px",
-                                      marginLeft: "auto"
+                                      width: "90px",
+                                      height: "36px",
+                                      borderRadius: "8px",
+                                      fontSize: "15px"
                                     }}
                                   >
                                     Add
                                   </Button>
                                 ) : (
                                   <div
-                                    className="d-flex align-items-center justify-content-between ms-auto"
+                                    className="d-flex align-items-center justify-content-between shadow-sm"
                                     style={{
                                       border: "1px solid rgb(110, 66, 229)",
-                                      borderRadius: "6px",
-                                      backgroundColor: "rgba(255, 255, 255, 1)",
-                                      width: "70px",
-                                      marginBottom: "5px"
+                                      borderRadius: "8px",
+                                      backgroundColor: "white",
+                                      width: "90px",
+                                      height: "36px",
+                                      padding: "0 5px"
                                     }}
                                   >
-                                    <Button onClick={() => handleDecrease(inCart)} className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent' style={{ width: "24px" }}>−</Button>
-                                    <span className="fw-bold" style={{ fontSize: "14px" }}>{inCart.count || 1}</span>
-                                    <Button onClick={() => handleIncrease(inCart)} className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent' style={{ width: "24px", opacity: totalItems >= 3 ? "0.6" : "1" }}>+</Button>
+                                    <Button onClick={() => handleDecrease(inCart)} className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent' style={{ width: "24px", height: "100%", fontSize: "18px", fontWeight: "bold" }}>−</Button>
+                                    <span className="fw-bold" style={{ fontSize: "14px", color: "rgb(110, 66, 229)" }}>{inCart.count || 1}</span>
+                                    <Button onClick={() => handleIncrease(inCart)} className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent' style={{ width: "24px", height: "100%", fontSize: "18px", opacity: totalItems >= 3 ? "0.6" : "1", fontWeight: "bold" }}>+</Button>
                                   </div>
                                 )}
                               </div>
@@ -653,10 +658,10 @@ const handleIncrease = async (cartItem) => {
           <div style={{ flex: 1, height: "1px", backgroundColor: "rgba(192,192,195,1)" }}></div>
           <br />
           {/* CartBlock gets cart from Redux automatically */}
-          <CartBlock 
-            formatPrice={formatPrice} 
-            navigate={navigate} 
-            onEdit={handleShowModal} 
+          <CartBlock
+            formatPrice={formatPrice}
+            navigate={navigate}
+            onEdit={handleShowModal}
           />
         </Col>
       </Row>

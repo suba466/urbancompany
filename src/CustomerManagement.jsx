@@ -22,7 +22,7 @@ function CustomerManagement() {
   const [selectAllCustomers, setSelectAllCustomers] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
-  
+
   // New state for status confirmation modal
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusChangeData, setStatusChangeData] = useState({
@@ -33,7 +33,7 @@ function CustomerManagement() {
   });
 
   const getAuthToken = () => {
-    return localStorage.getItem('authToken');
+    return localStorage.getItem('adminToken');
   };
 
   const getAuthHeaders = () => {
@@ -214,7 +214,7 @@ function CustomerManagement() {
   // Confirm status change
   const confirmStatusChange = async () => {
     const { customerId, newStatus, customerName } = statusChangeData;
-    
+
     try {
       // Optimistic update
       setCustomers(prev => prev.map(c =>
@@ -462,13 +462,13 @@ function CustomerManagement() {
                             id={`status-switch-${customer._id}`}
                             checked={customer.isActive !== false}
                             onChange={(e) => handleToggleClick(
-                              customer._id, 
-                              e.target.checked, 
+                              customer._id,
+                              e.target.checked,
                               customer.name,
                               customer.isActive
                             )}
                             className="mb-0"
-                            label={customer.isActive !==false ?"Enabled":"disabled"}
+                            label={customer.isActive !== false ? "Enabled" : "disabled"}
                           />
                         </div>
                       </td>
@@ -504,7 +504,7 @@ function CustomerManagement() {
 
       {/* Customer Details Modal */}
       <Modal show={showViewModal} onHide={() => setShowViewModal(false)} centered>
-        
+
         <Modal.Body className="p-4"
           tabIndex={0}
           style={{
@@ -572,20 +572,20 @@ function CustomerManagement() {
                         id="customer-status-switch"
                         checked={selectedCustomer.isActive !== false}
                         onChange={(e) => handleToggleClick(
-                          selectedCustomer._id, 
-                          e.target.checked, 
+                          selectedCustomer._id,
+                          e.target.checked,
                           selectedCustomer.name,
                           selectedCustomer.isActive
                         )}
                         label={selectedCustomer.isActive !== false ? 'Active' : 'Blocked'}
                         className="me-3"
                       />
-                     
+
                     </div>
                   </div>
                   <small className="text-muted d-block mt-2">
                     <i className="bi bi-info-circle me-1"></i>
-                    {selectedCustomer.isActive !== false 
+                    {selectedCustomer.isActive !== false
                       ? 'Customer can access their account and make bookings'
                       : 'Customer cannot login or use any services'}
                   </small>
@@ -621,7 +621,7 @@ function CustomerManagement() {
 
       {/* Status Change Confirmation Modal */}
       <Modal show={showStatusModal} onHide={() => setShowStatusModal(false)} centered>
-        
+
         <Modal.Body>
           <div className="text-center mb-3">
             <div className="mb-3">
@@ -635,14 +635,14 @@ function CustomerManagement() {
           </div>
         </Modal.Body>
         <Modal.Footer>
-          <Button 
-            variant="secondary" 
+          <Button
+            variant="secondary"
             onClick={() => setShowStatusModal(false)}
             style={{ borderRadius: "50px" }}
           >
             <i className="bi bi-x-circle me-1"></i> Cancel
           </Button>
-          <Button 
+          <Button
             variant={statusChangeData.newStatus ? "success" : "danger"}
             onClick={confirmStatusChange}
             style={{ borderRadius: "50px" }}

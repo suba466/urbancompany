@@ -1,23 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Spinner } from 'react-bootstrap';
-import { useAuth } from './hooks'; // Import from hooks
+import { useAdminAuth } from './hooks'; // Import from hooks
 
 function AdminLogin({ onLogin }) {
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [touched, setTouched] = useState({ email: false, password: false });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [loadingLocal, setLoadingLocal] = useState(false);
+  const [errorLocal, setErrorLocal] = useState('');
   const logoUrl = 'http://localhost:5000/assets/Uc.png';
 
-  const { login, token, role, isAuthenticated } = useAuth();
+  const { login, token, isAuthenticated, error: authError, loading: authLoading } = useAdminAuth();
 
   // Check for existing token on component mount
   useEffect(() => {
-    if (isAuthenticated && token && role) {
+    if (isAuthenticated && token) {
       console.log("Auto-login with existing token");
-      onLogin(token, role);
+      // Pass 'admin' role explicitly or derive from store
+      onLogin(token, 'admin');
     }
-  }, [isAuthenticated, token, role, onLogin]);
+  }, [isAuthenticated, token, onLogin]);
+
+  // Sync auth state to local state if needed, or just use auth vars
+  useEffect(() => {
+    if (authError) setErrorLocal(authError);
+  }, [authError]);
 
   // Validation functions
   const validateEmail = (email) => {
@@ -45,25 +51,22 @@ function AdminLogin({ onLogin }) {
     const passwordError = validatePassword(loginData.password);
 
     if (emailError || passwordError) {
-      setError(emailError || passwordError);
+      setErrorLocal(emailError || passwordError);
       return;
     }
 
-    setLoading(true);
-    setError('');
+    setLoadingLocal(true);
+    setErrorLocal('');
 
     try {
-      // Use Redux login action - always pass true for Admin Panel login
-      await login(loginData.email, loginData.password, true);
-
-      // If login successful, token and role will be updated in Redux
-      // The useEffect above will handle the onLogin callback
-
+      // Use Admin Auth login
+      await login(loginData.email, loginData.password);
+      // Success handled by useEffect
     } catch (error) {
       console.error('Login error:', error);
-      setError(error.message || 'Login failed');
+      setErrorLocal(error.message || 'Login failed');
     } finally {
-      setLoading(false);
+      setLoadingLocal(false);
     }
   };
 
@@ -115,8 +118,8 @@ function AdminLogin({ onLogin }) {
                       <div className="mb-4">
                         <h4 className='fw-bold mb-2'>Admin Login</h4>
                         <p className='text-muted mb-3'>Please sign in to continue</p>
-                        {error && !emailError && !passwordError && (
-                          <div className="alert alert-danger mt-2 py-3">{error}</div>
+                        {errorLocal && !emailError && !passwordError && (
+                          <div className="alert alert-danger mt-2 py-3">{errorLocal}</div>
                         )}
                       </div>
                       <Form onSubmit={handleLogin} noValidate>
@@ -129,7 +132,7 @@ function AdminLogin({ onLogin }) {
                             onChange={(e) => {
                               setLoginData({ ...loginData, email: e.target.value });
                               if (touched.email) {
-                                setError('');
+                                setErrorLocal('');
                               }
                             }}
                             onBlur={handleBlur('email')}
@@ -154,7 +157,7 @@ function AdminLogin({ onLogin }) {
                             onChange={(e) => {
                               setLoginData({ ...loginData, password: e.target.value });
                               if (touched.password) {
-                                setError('');
+                                setErrorLocal('');
                               }
                             }}
                             onBlur={handleBlur('password')}
@@ -173,7 +176,7 @@ function AdminLogin({ onLogin }) {
                         <Button
                           type="submit"
                           className="w-100 py-2 mb-4"
-                          disabled={loading}
+                          disabled={loadingLocal}
                           style={{
                             background: "#000000",
                             border: "none",
@@ -182,7 +185,7 @@ function AdminLogin({ onLogin }) {
                             fontSize: "1.1rem",
                           }}
                         >
-                          {loading ? (
+                          {loadingLocal ? (
                             <>
                               <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
                               <span className="ms-2">Signing in...</span>

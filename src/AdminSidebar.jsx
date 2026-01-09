@@ -11,7 +11,7 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole, isMobile }) {
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('userPermissions');
+      const stored = localStorage.getItem('adminPermissions');
       if (stored) {
         setPermissions(JSON.parse(stored));
       }
