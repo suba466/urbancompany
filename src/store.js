@@ -37,9 +37,15 @@ export const registerCustomer = createAsyncThunk(
       const response = await axios.post('http://localhost:5000/api/register', formData);
 
       if (response.data.success) {
+        const token = response.data.token;
+        const userInfo = response.data.customer;
+
+        localStorage.setItem('customerToken', token);
+        localStorage.setItem('customerInfo', JSON.stringify(userInfo));
+
         return {
-          user: response.data.customer,
-          token: response.data.token
+          user: userInfo,
+          token: token
         };
       }
       return rejectWithValue(response.data.error || 'Registration failed');
@@ -72,7 +78,9 @@ export const updateCustomerProfile = createAsyncThunk(
       const response = await axios.post('http://localhost:5000/api/update-profile', formData);
 
       if (response.data.success) {
-        return response.data.customer;
+        const updatedUser = response.data.customer;
+        localStorage.setItem('customerInfo', JSON.stringify(updatedUser));
+        return updatedUser;
       }
       return rejectWithValue(response.data.error || 'Update failed');
     } catch (error) {
@@ -112,13 +120,12 @@ export const loginAdmin = createAsyncThunk(
 
       if (response.data.success) {
         const token = response.data.token;
-        const adminInfo = response.data.admin || response.data.user; // Adapt based on backend response
+        const adminInfo = response.data.admin || response.data.user;
         const role = 'admin';
 
         localStorage.setItem('adminToken', token);
         localStorage.setItem('adminInfo', JSON.stringify(adminInfo));
 
-        // Extract permissions
         const permissions = adminInfo?.permissions || {};
         localStorage.setItem('adminPermissions', JSON.stringify(permissions));
 
@@ -158,10 +165,26 @@ const customerAuthSlice = createSlice({
       state.token = null;
       state.user = null;
       state.isAuthenticated = false;
+      state.error = null;
     },
     setCustomerUser: (state, action) => {
       state.user = action.payload;
-      localStorage.setItem('customerInfo', JSON.stringify(action.payload));
+      state.isAuthenticated = true;
+      state.token = localStorage.getItem('customerToken');
+    },
+    setCustomerAuth: (state, action) => {
+      state.user = action.payload.user;
+      state.token = action.payload.token;
+      state.isAuthenticated = true;
+    },
+    updateCustomerLocalState: (state) => {
+      // Sync with localStorage
+      const token = localStorage.getItem('customerToken');
+      const user = JSON.parse(localStorage.getItem('customerInfo') || 'null');
+      
+      state.token = token;
+      state.user = user;
+      state.isAuthenticated = !!token;
     }
   },
   extraReducers: (builder) => {
@@ -176,6 +199,7 @@ const customerAuthSlice = createSlice({
         state.token = action.payload.token;
         state.user = action.payload.user;
         state.isAuthenticated = true;
+        state.error = null;
       })
       .addCase(loginCustomer.rejected, (state, action) => {
         state.loading = false;
@@ -191,6 +215,7 @@ const customerAuthSlice = createSlice({
         state.user = action.payload.user;
         state.token = action.payload.token;
         state.isAuthenticated = true;
+        state.error = null;
       })
       .addCase(registerCustomer.rejected, (state, action) => {
         state.loading = false;
@@ -201,21 +226,46 @@ const customerAuthSlice = createSlice({
         state.token = null;
         state.user = null;
         state.isAuthenticated = false;
+        state.error = null;
       })
       // Update Customer Profile
+      .addCase(updateCustomerProfile.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(updateCustomerProfile.fulfilled, (state, action) => {
+        state.loading = false;
         state.user = action.payload;
-        localStorage.setItem('customerInfo', JSON.stringify(action.payload));
+        state.error = null;
+      })
+      .addCase(updateCustomerProfile.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       })
       // Fetch Customer Profile
+      .addCase(fetchCustomerProfile.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(fetchCustomerProfile.fulfilled, (state, action) => {
+        state.loading = false;
         state.user = action.payload;
         state.isAuthenticated = true;
+        state.error = null;
+      })
+      .addCase(fetchCustomerProfile.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
   }
 });
 
-export const { clearCustomerAuth, setCustomerUser } = customerAuthSlice.actions;
+export const { 
+  clearCustomerAuth, 
+  setCustomerUser, 
+  setCustomerAuth,
+  updateCustomerLocalState 
+} = customerAuthSlice.actions;
 
 // Admin Auth Slice
 const adminAuthSlice = createSlice({
@@ -235,6 +285,7 @@ const adminAuthSlice = createSlice({
       state.admin = null;
       state.permissions = {};
       state.isAuthenticated = false;
+      state.error = null;
     },
     setAdminUser: (state, action) => {
       state.admin = action.payload;
@@ -254,6 +305,7 @@ const adminAuthSlice = createSlice({
         state.admin = action.payload.admin;
         state.permissions = action.payload.permissions;
         state.isAuthenticated = true;
+        state.error = null;
       })
       .addCase(loginAdmin.rejected, (state, action) => {
         state.loading = false;
@@ -265,13 +317,13 @@ const adminAuthSlice = createSlice({
         state.admin = null;
         state.permissions = {};
         state.isAuthenticated = false;
+        state.error = null;
       });
   }
 });
 
 export const { clearAdminAuth, setAdminUser } = adminAuthSlice.actions;
 
-// Cart slice (for customer cart)
 const cartSlice = createSlice({
   name: 'cart',
   initialState: {
@@ -280,18 +332,16 @@ const cartSlice = createSlice({
     loading: false
   },
   reducers: {
-    // In the cartSlice reducers:
     addToCart: (state, action) => {
       const existingItem = state.items.find(item => item.productId === action.payload.productId);
 
-      // Ensure price is a number
       const price = typeof action.payload.price === 'string'
         ? parseFloat(action.payload.price.replace(/[₹,]/g, ""))
         : Number(action.payload.price) || 0;
 
       const payload = {
         ...action.payload,
-        price: price, // Store as number
+        price: price,
         count: action.payload.count || 1
       };
 
@@ -315,15 +365,34 @@ const cartSlice = createSlice({
     },
     clearCart: (state) => {
       state.items = [];
+      state.customerEmail = null;
       localStorage.removeItem('cartItems');
+      localStorage.removeItem('customerEmail');
     },
     setCustomerEmail: (state, action) => {
       state.customerEmail = action.payload;
+    },
+    syncCartWithLocalStorage: (state) => {
+      const items = JSON.parse(localStorage.getItem('cartItems') || '[]');
+      state.items = items;
+    },
+    // Force clear cart (for debugging)
+    forceClearCart: (state) => {
+      state.items = [];
+      localStorage.setItem('cartItems', JSON.stringify([]));
     }
   }
 });
 
-export const { addToCart, removeFromCart, updateCartItem, clearCart, setCustomerEmail } = cartSlice.actions;
+export const { 
+  addToCart, 
+  removeFromCart, 
+  updateCartItem, 
+  clearCart, 
+  setCustomerEmail,
+  syncCartWithLocalStorage,
+  forceClearCart
+} = cartSlice.actions;
 
 // Bookings slice
 const bookingsSlice = createSlice({
@@ -373,24 +442,23 @@ export const selectCustomerUser = (state) => state.customerAuth.user;
 export const selectCustomerIsAuthenticated = (state) => state.customerAuth.isAuthenticated;
 export const selectCustomerLoading = (state) => state.customerAuth.loading;
 export const selectCustomerError = (state) => state.customerAuth.error;
+export const selectCustomerToken = (state) => state.customerAuth.token;
 
 // Admin Selectors
 export const selectAdminAuth = (state) => state.adminAuth;
-export const selectAdminUser = (state) => state.adminAuth.admin; // Note: admin data
+export const selectAdminUser = (state) => state.adminAuth.admin;
 export const selectAdminIsAuthenticated = (state) => state.adminAuth.isAuthenticated;
 export const selectAdminPermissions = (state) => state.adminAuth.permissions;
 export const selectAdminLoading = (state) => state.adminAuth.loading;
 export const selectAdminError = (state) => state.adminAuth.error;
+
 // Cart and Bookings Selectors
 export const selectCart = (state) => state.cart;
 export const selectBookings = (state) => state.bookings;
 export const selectCartItems = (state) => state.cart.items;
 export const selectCartCount = (state) => state.cart.items.reduce((total, item) => total + item.count, 0);
-// In your store.js file, update the selectCartTotal selector:
-
 export const selectCartTotal = (state) =>
   state.cart.items.reduce((total, item) => {
-    // Handle both string and number prices
     let price = 0;
     if (typeof item.price === 'string') {
       price = parseFloat(item.price.replace(/[^0-9.-]+/g, "")) || 0;

@@ -6,7 +6,7 @@ import { MdAccountCircle, MdOutlineArrowForwardIos, MdLocationOn, MdEdit, MdCame
 import { BiLeftArrowAlt } from "react-icons/bi";
 import { PiNotepadLight } from "react-icons/pi";
 import { IoSettingsOutline } from "react-icons/io5";
-import { useAuth, useCart, useBookings } from "./hooks"; // Import from hooks
+import { useAuth, useCart, useBookings, notifyAuthChange } from "./hooks"; // Import notifyAuthChange
 
 function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "main" }) {
   const [logo1, setLogo1] = useState("");
@@ -55,7 +55,8 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
     register,
     updateProfile: updateProfileAction,
     loading: authLoading,
-    error: authError
+    error: authError,
+    syncAuth
   } = useAuth();
 
   const { clear: clearCart } = useCart();
@@ -249,7 +250,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
     const file = event.target.files[0];
     if (file) {
       // Check file size (max 2MB)
-      if (file.size > 2 * 1024 * 1024) {
+      if (file.size > 2 * 1024 * 1000) {
         alert("Please select an image smaller than 2MB");
         return;
       }
@@ -369,7 +370,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
     setIsLoading(true);
     try {
       // Use Redux register action
-      await register({
+      const result = await register({
         name: registerData.name,
         email: registerData.email,
         phone: registerData.phone,
@@ -377,6 +378,19 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
         password: registerData.password,
         profileImage: registerData.profileFile
       });
+
+      console.log("✅ Registration result:", result);
+
+      // Force sync auth state immediately
+      syncAuth();
+      
+      // Notify other components about auth change
+      notifyAuthChange();
+      
+      // Dispatch storage event to sync across tabs
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'customerToken'
+      }));
 
       setCurrentView("main");
       onHide();
@@ -409,6 +423,12 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
     try {
       // Use Redux login action
       await login(loginData.email, loginData.password);
+
+      // Force sync auth state
+      syncAuth();
+      
+      // Notify other components
+      notifyAuthChange();
 
       setCurrentView("main");
       onHide();
@@ -565,6 +585,10 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
       </div>
     );
   };
+
+  // Rest of the component remains the same...
+  // [Keep all the render functions exactly as they were in your original code]
+  // Only the registration and login handlers have been updated
 
   // Render registration view with profile picture
   const renderRegisterView = () => (

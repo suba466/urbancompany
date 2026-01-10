@@ -1,15 +1,16 @@
 import { Row, Col, Button } from "react-bootstrap";
 import { GoDotFill } from "react-icons/go";
 import { useCart } from "./hooks";
+import { useNavigate } from "react-router-dom";
 
 function CartBlock({
   formatPrice = (x) => x,
   hideViewButton = false,
-  navigate,
   onEdit,
-  customerEmail = "" 
+  customerEmail = ""
 }) {
   const { items: carts, updateItem, removeItem } = useCart();
+  const navigate = useNavigate();
 
   const safePrice = (price) => {
     if (!price) return 0;
@@ -39,6 +40,19 @@ function CartBlock({
       removeItem(item._id || item.productId);
     } else {
       updateItem(item._id || item.productId, (item.count || 1) - 1);
+    }
+  };
+
+  // Fixed: Handle view cart navigation
+  const handleViewCart = () => {
+    // Check if we're already on /cart page
+    if (window.location.pathname === '/cart') {
+      // If already on cart page, just scroll to top
+      window.scrollTo(0, 0);
+    } else {
+      // Navigate to cart page immediately using window.location
+      // This ensures immediate navigation without waiting for React Router
+      window.location.href = '/cart';
     }
   };
 
@@ -112,10 +126,10 @@ function CartBlock({
                           color: "#000",
                           fontSize: "18px",
                           fontWeight: "bold",
-                          opacity: (c.count || 1) >= 3 ? "0.5" : "1", // Disable when limit reached
+                          opacity: (c.count || 1) >= 3 ? "0.5" : "1",
                           cursor: (c.count || 1) >= 3 ? "not-allowed" : "pointer"
                         }}
-                        disabled={(c.count || 1) >= 3} // Disable button
+                        disabled={(c.count || 1) >= 3}
                       >
                         +
                       </Button>
@@ -182,7 +196,7 @@ function CartBlock({
                 height: "36px",
                 fontSize: "12px",
               }}
-              onClick={() => navigate("/cart")}
+              onClick={handleViewCart} // Use the fixed handler
             >
               <Row>
                 <Col className="text-start">View Cart</Col>

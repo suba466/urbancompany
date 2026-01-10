@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { Provider } from 'react-redux';
+import { Provider, useDispatch } from 'react-redux';
 import { store } from './store';
+import { setCustomerUser } from './store';
 import Shine from './Shine.jsx';
 import Banner from './Banner.jsx';
 import Urbanav from './Urbanav.jsx';
@@ -11,9 +12,32 @@ import Salon from './Salon.jsx';
 import CartSummary from './CartSummary'; 
 import AdminPanel from './AdminPanel.jsx'; 
 
+function AuthInitializer() {
+  const dispatch = useDispatch();
+  
+  useEffect(() => {
+    // Initialize auth state on app load
+    const customerToken = localStorage.getItem('customerToken');
+    const customerInfo = localStorage.getItem('customerInfo');
+    
+    if (customerToken && customerInfo) {
+      try {
+        const user = JSON.parse(customerInfo);
+        dispatch(setCustomerUser(user));
+        console.log("✅ Auth state initialized from localStorage");
+      } catch (error) {
+        console.error("Error initializing auth state:", error);
+      }
+    }
+  }, [dispatch]);
+  
+  return null;
+}
+
 function Urban() {
   return (
     <Provider store={store}>
+      <AuthInitializer />
       <Routes>
         {/* Public routes */}
         <Route path='/' element={

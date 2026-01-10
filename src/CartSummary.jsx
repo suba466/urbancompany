@@ -1,14 +1,16 @@
+// CartSummary.js
 import { useState, useEffect } from 'react';
 import { Container, Button, Badge, Card, Row, Col } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { BiLeftArrowAlt } from 'react-icons/bi';
 import { FaShoppingCart } from "react-icons/fa";
 import { GoDotFill } from "react-icons/go";
-import { useCart } from './hooks';  // USE REDUX HOOKS
+import { useCart, useAuth } from './hooks';  // USE REDUX HOOKS
 
 function CartSummary() {
   const navigate = useNavigate();
-  const { items: cartItems } = useCart();  // GET CART FROM REDUX
+  const { items: cartItems, clearCart } = useCart();  // GET CART FROM REDUX
+  const { isAuthenticated, user } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const handleContinueShopping = () => {
@@ -16,8 +18,37 @@ function CartSummary() {
   };
 
   const handleCheckout = () => {
+    if (cartItems.length === 0) {
+      alert('Your cart is empty');
+      return;
+    }
     navigate('/cart');
   };
+
+  // Clear cart after order is placed (listen for storage event)
+  useEffect(() => {
+    const handleOrderPlaced = () => {
+      clearCart();
+    };
+
+    // Listen for custom event when order is placed
+    window.addEventListener('orderPlaced', handleOrderPlaced);
+    
+    // Also check localStorage for order completion
+    const checkOrderCompletion = () => {
+      const orderCompleted = localStorage.getItem('orderCompleted');
+      if (orderCompleted === 'true') {
+        clearCart();
+        localStorage.removeItem('orderCompleted');
+      }
+    };
+
+    checkOrderCompletion();
+
+    return () => {
+      window.removeEventListener('orderPlaced', handleOrderPlaced);
+    };
+  }, [clearCart]);
 
   // Group items by category
   const groupedItems = cartItems.reduce((groups, item) => {
@@ -213,6 +244,7 @@ function CartSummary() {
             <Button 
               className="flex-grow-1 py-3 fw-bold butn"
               onClick={handleCheckout}
+              disabled={cartItems.length === 0}
             >
               Checkout
             </Button>

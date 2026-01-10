@@ -14,11 +14,14 @@ import { MdWork } from "react-icons/md";
 import { MdLocationOn } from "react-icons/md";
 import { LuClock3 } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
-import { useAuth, useCart } from "./hooks";  // USE REDUX HOOKS
+import { useAuth, useCart } from "./hooks";
+import { useDispatch } from 'react-redux';
+import { syncCartWithLocalStorage } from './store';
 
 function CartPage() {
+  const dispatch = useDispatch();
   const { items: cartItems, clearCart, updateItem, removeItem } = useCart();
-  const { isAuthenticated, user } = useAuth();  // FROM REDUX
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   
   const [showModal, setShowModal] = useState(false);
@@ -35,35 +38,66 @@ function CartPage() {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [showBookingsModal, setShowBookingsModal] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleViewBookings = () => {
     setShowBookingsModal(true);
   };
 
-  // Add clearCartFromDatabase function
+  // Enhanced clearCartFromDatabase function
   const clearCartFromDatabase = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/carts");
+      // If user is not authenticated, we can't clear from DB by email
+      if (!user?.email) {
+        console.log("User not authenticated, skipping DB cart clearing");
+        return;
+      }
+
+      const customerEmail = user.email;
+      
+      // First, get all cart items for this user
+      const response = await fetch(`http://localhost:5000/api/carts/email/${customerEmail}`);
+      
       if (response.ok) {
         const data = await response.json();
-        const cartItems = data.carts || [];
-
-        // Delete all cart items
-        for (const item of cartItems) {
-          await fetch(`http://localhost:5000/api/carts/${item._id}`, {
-            method: "DELETE"
-          });
-        }
-
-        // Clear Redux cart
-        clearCart();
+        const userCartItems = data.carts || [];
+        
+        console.log(`Found ${userCartItems.length} cart items to delete for ${customerEmail}`);
+        
+        // Delete each cart item
+        const deletePromises = userCartItems.map(async (item) => {
+          try {
+            await fetch(`http://localhost:5000/api/carts/${item._id}`, {
+              method: "DELETE"
+            });
+            console.log(`Deleted cart item: ${item._id}`);
+          } catch (error) {
+            console.error(`Failed to delete cart item ${item._id}:`, error);
+          }
+        });
+        
+        await Promise.all(deletePromises);
+        console.log(`Successfully cleared ${userCartItems.length} cart items from database`);
+      } else {
+        console.log("No cart items found or error fetching cart items");
       }
     } catch (error) {
-      console.error("Error clearing cart:", error);
+      console.error("Error clearing cart from database:", error);
+      // Don't throw error, just log it
     }
   };
 
-  // Fixed processPayment function
+  // Debug function
+  const debugCartState = () => {
+    console.log("=== CART DEBUG INFO ===");
+    console.log("Redux cart items:", cartItems);
+    console.log("Redux cart count:", cartItems.length);
+    console.log("LocalStorage cart:", JSON.parse(localStorage.getItem('cartItems') || '[]'));
+    console.log("User email:", user?.email);
+    console.log("Is authenticated:", isAuthenticated);
+    console.log("=========================");
+  };
+
   const processPayment = async () => {
     // First check if all required fields are filled
     if (!selectedAddress) {
@@ -92,13 +126,18 @@ function CartPage() {
       return;
     }
 
-    try {
-      // Debug: Check user info
-      console.log("📋 User Info for booking:", user);
-      console.log("📦 Cart items:", cartItems);
-      console.log("🏠 Selected address:", selectedAddress);
-      console.log("⏰ Selected slot:", selectedSlot);
+    // Check if cart is empty
+    if (cartItems.length === 0) {
+      alert("Your cart is empty. Please add services first.");
+      return;
+    }
 
+    // Debug cart state before processing
+    debugCartState();
+
+    setIsProcessing(true);
+
+    try {
       // Calculate totals
       const itemTotal = calculateItemTotal();
       const tax = calculateTax();
@@ -106,7 +145,7 @@ function CartPage() {
       const slotExtraCharge = calculateSlotExtraCharge();
       const totalPrice = itemTotal + tax + tip + slotExtraCharge;
 
-      // Prepare booking data with CORRECT field names
+      // Prepare booking data
       const bookingData = {
         customerId: user.id || user.customerId || `customer_${user.email}`,
         customerEmail: user.email,
@@ -119,10 +158,15 @@ function CartPage() {
         address: selectedAddress,
         scheduledDate: selectedDate ? selectedDate.toISOString() : new Date().toISOString(),
         scheduledTime: selectedSlot.time,
-        items: cartItems.map(item => ({
-          name: item.title,
-          quantity: item.count || 1,
-          price: item.price.toString()
+        // Use cartItems instead of mapping to items for consistency
+        cartItems: cartItems.map(item => ({
+          productId: item.productId || item._id,
+          name: item.title || item.name,
+          price: typeof item.price === 'string' 
+            ? item.price 
+            : `₹${item.price}`,
+          count: item.count || 1,
+          quantity: item.count || 1
         })),
         slotExtraCharge: slotExtraCharge,
         tipAmount: tip,
@@ -150,24 +194,88 @@ function CartPage() {
         throw new Error(result.error || "Failed to create booking");
       }
 
-      // Clear cart after successful booking
-      await clearCartFromDatabase();
+      // Clear cart after successful booking - DO THIS SYNCHRONOUSLY
+      try {
+        console.log("Starting cart clearing process...");
+        
+        // 1. Clear from Redux store first (this also clears localStorage)
+        clearCart();
+        console.log("✅ Cart cleared from Redux store and localStorage");
+        
+        // 2. Clear from database
+        await clearCartFromDatabase();
+        console.log("✅ Cart cleared from database");
+        
+        // 3. Clear address from localStorage
+        localStorage.removeItem('selectedAddress');
+        
+        // 4. Force a cart sync with localStorage
+        window.dispatchEvent(new CustomEvent('cartCleared'));
+        window.dispatchEvent(new CustomEvent('cartUpdated'));
+        
+        // 5. Dispatch action to sync cart state
+        dispatch(syncCartWithLocalStorage());
+        
+        // 6. Force update localStorage
+        localStorage.setItem('cartItems', JSON.stringify([]));
+        
+        console.log("✅ All cart clearing operations completed");
+        
+        // Debug cart state after clearing
+        debugCartState();
+        
+        // Show success message
+        const successMessage = `✅ Order placed successfully!\n
+Your Order ID: ${result.bookingId || result._id}\n
+Amount Paid: ₹${totalPrice}\n
+A confirmation has been sent to ${user.email}`;
+        
+        alert(successMessage);
 
-      // Clear local storage
-      localStorage.removeItem('selectedAddress');
+        // Reset form state
+        setSelectedAddress(null);
+        setSelectedSlot(null);
+        setSelectedDate(new Date());
+        setSelectedTip(0);
+        setCustomTip("");
+        
+        // Force a state refresh and redirect
+        setTimeout(() => {
+          // Check if cart is actually empty
+          console.log("Current cart items after clearing:", cartItems);
+          
+          // If cart is still not empty, force a page reload
+          const remainingItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
+          if (remainingItems.length > 0) {
+            console.warn("Cart still has items, forcing page reload");
+            localStorage.setItem('cartItems', JSON.stringify([]));
+            window.location.reload();
+          }
+          
+          // Redirect to home page
+          navigate('/');
+        }, 100);
 
-      // Show success message
-      alert(`✅ Order placed successfully!`);
-
-      // Refresh any booking lists
-      window.dispatchEvent(new Event('bookingCreated'));
-
-      // Redirect to home page
-      window.location.href = "/";
+      } catch (clearError) {
+        console.error("Error clearing cart:", clearError);
+        // Even if cart clearing fails, still show success and redirect
+        const fallbackMessage = `✅ Order placed successfully!\n
+Your Order ID: ${result.bookingId || result._id}\n
+Amount Paid: ₹${totalPrice}\n
+Note: There was an issue clearing your cart. Please refresh the page manually.`;
+        
+        alert(fallbackMessage);
+        
+        // Force clear localStorage as backup
+        localStorage.setItem('cartItems', JSON.stringify([]));
+        navigate('/');
+      }
 
     } catch (error) {
       console.error("❌ Error processing order:", error);
       alert(`❌ Order failed: ${error.message}\n\nPlease try again or contact support.`);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -270,6 +378,27 @@ function CartPage() {
   };
 
   useEffect(() => {
+    console.log("🔍 CartPage Auth State:", {
+      isAuthenticated,
+      user,
+      customerToken: localStorage.getItem('customerToken'),
+      customerInfo: localStorage.getItem('customerInfo'),
+      pathname: window.location.pathname
+    });
+    
+    // Only listen for auth changes if needed
+    const handleAuthChange = () => {
+      console.log("CartPage received auth change event");
+    };
+    
+    window.addEventListener('authStateChanged', handleAuthChange);
+    
+    return () => {
+      window.removeEventListener('authStateChanged', handleAuthChange);
+    };
+  }, [isAuthenticated, user]);
+
+  useEffect(() => {
     fetchAddedItems();
     
     const savedAddress = localStorage.getItem('selectedAddress');
@@ -355,8 +484,6 @@ function CartPage() {
     const slotExtraCharge = calculateSlotExtraCharge();
     return itemTotal + tax + tip + slotExtraCharge;
   };
-
-
 
   const handleAddToCart = async (item, extraSelected = [], price, discount = 0, action = "add") => {
     try {
@@ -492,7 +619,6 @@ function CartPage() {
     handleOpenLocationModal();
   };
 
-  // Function to get address icon based on type
   const getAddressIcon = (addressType) => {
     switch (addressType) {
       case 'home': return <MdHomeFilled style={{ marginRight: "4px", fontSize: "16px", verticalAlign: "text-bottom" }} />;
@@ -501,7 +627,6 @@ function CartPage() {
     }
   };
 
-  // Function to get address type text
   const getAddressTypeText = (addressType) => {
     switch (addressType) {
       case 'home': return 'Home';
@@ -510,7 +635,6 @@ function CartPage() {
     }
   };
 
-  // Function to format full address for display
   const formatFullAddress = (address) => {
     if (!address) return "";
 
@@ -531,13 +655,11 @@ function CartPage() {
     return parts.join(", ");
   };
 
-  // Function to format address for mobile footer (with truncation if needed)
   const formatMobileAddress = (address) => {
     if (!address) return "";
 
     const fullAddress = formatFullAddress(address);
 
-    // For mobile, show full address but truncate if too long
     if (fullAddress.length > 50) {
       return fullAddress.substring(0, 47) + "...";
     }
@@ -545,11 +667,9 @@ function CartPage() {
     return fullAddress;
   };
 
-  // Function to format date for mobile footer
   const formatDateForMobile = (date) => {
     if (!date) return "";
 
-    // Format: "Wed, Dec 4"
     const options = { weekday: 'short', month: 'short', day: 'numeric' };
     return date.toLocaleDateString('en-US', options);
   };
@@ -587,31 +707,22 @@ function CartPage() {
     }
   };
 
-  // Add this function to check if order can be placed
   const canPlaceOrder = () => {
     if (!isAuthenticated) {
-      console.log("Cannot place order: Not logged in");
       return false;
     }
     if (!selectedAddress) {
-      console.log("Cannot place order: No address selected");
       return false;
     }
     if (!selectedSlot) {
-      console.log("Cannot place order: No time slot selected");
       return false;
     }
     if (cartItems.length === 0) {
-      console.log("Cannot place order: Cart is empty");
       return false;
     }
-
-    // Check if user has required info
     if (!user?.email) {
-      console.log("Cannot place order: Missing user email");
       return false;
     }
-
     return true;
   };
 
@@ -643,7 +754,6 @@ function CartPage() {
           >
             Explore Services
           </Button>
-          {/* Test button for debugging */}
           <Button
             variant="outline-warning"
             className="mt-3"
@@ -659,7 +769,6 @@ function CartPage() {
   return (
     <div className="container mt-4">
       <Row>
-        {/* Account Column - Desktop View */}
         <Col md={6} className="d-none d-md-block"
           style={{
             position: "sticky",
@@ -780,13 +889,14 @@ function CartPage() {
                   <div style={{ marginLeft: "28px" }}>
                     <Button
                       className="butn fw-bold w-100 p-3"
-                      disabled={!canPlaceOrder()}
+                      disabled={!canPlaceOrder() || isProcessing}
                       onClick={processPayment}
                     >
-                      {!isAuthenticated ? "Login to Continue" :
+                      {isProcessing ? "Processing..." :
+                        !isAuthenticated ? "Login to Continue" :
                         !selectedAddress ? "Select Address" :
-                          !selectedSlot ? "Select Time Slot" :
-                            "Place an order"}
+                        !selectedSlot ? "Select Time Slot" :
+                        "Place an order"}
                     </Button>
                   </div>
                 )}
@@ -812,9 +922,7 @@ function CartPage() {
           )}
         </Col>
 
-        {/* Cart Column (full-width on mobile) */}
         <Col xs={12} md={6}>
-          {/* CartBlock gets cart from Redux automatically */}
           <CartBlock
             formatPrice={formatPrice}
             hideViewButton={true}
@@ -843,7 +951,6 @@ function CartPage() {
             </div>
           )}
 
-          {/* Coupons Box */}
           <div style={{ border: "1px solid #d9d9d9", borderRadius: "8px", marginTop: "15px" }}>
             <div style={{ padding: "12px" }}>
               <Row className="align-items-center">
@@ -865,7 +972,6 @@ function CartPage() {
             </div>
           </div>
 
-          {/* Payment Summary */}
           <div style={{ border: "1px solid #d9d9d9", borderRadius: "8px", marginTop: "15px" }}>
             <div style={{ padding: "12px" }}>
               <h5 className="fw-semibold mb-2">Payment summary</h5>
@@ -903,7 +1009,6 @@ function CartPage() {
               </Row>
               <hr />
 
-              {/* Tip Section */}
               <div className="mt-2">
                 <p className="fw-semibold mb-1" style={{ fontSize: "14px" }}>Add a tip to thank the professional</p>
                 <div className="d-flex gap-2 mb-2 align-items-center flex-wrap">
@@ -955,7 +1060,6 @@ function CartPage() {
             </div>
           </div>
 
-          {/* Amount to Pay Section - Only in 2nd column for desktop */}
           <div className="d-none position-sticky bottom-0 d-md-block mt-4 p-3" style={{ backgroundColor: "white" }}>
             <Row className="align-items-center">
               <Col>
@@ -969,14 +1073,12 @@ function CartPage() {
         </Col>
       </Row>
 
-      {/* Fixed Bottom Footer for Mobile Only */}
       <div className="d-md-none position-fixed bottom-0 start-0 end-0 bg-white border-top shadow-lg py-3"
         style={{ zIndex: 1050 }}>
         <Container>
           <Row className="align-items-center">
             {isAuthenticated ? (
               <>
-                {/* Step 1: No Address Selected - Show Address Button */}
                 {!selectedAddress && (
                   <Col xs={12}>
                     <Button
@@ -989,7 +1091,6 @@ function CartPage() {
                   </Col>
                 )}
 
-                {/* Step 2: Address Selected, No Slot - Show Slot Button */}
                 {selectedAddress && !selectedSlot && (
                   <Col xs={12}>
                     <div className="d-flex justify-content-between align-items-center mb-2 p-2">
@@ -1022,10 +1123,8 @@ function CartPage() {
                   </Col>
                 )}
 
-                {/* Step 3: Both Address & Slot Selected - Show Payment Button */}
                 {selectedAddress && selectedSlot && (
                   <Col xs={12}>
-                    {/* Address Section */}
                     <div className="d-flex justify-content-between align-items-center mb-2 p-2" style={{ borderBottom: "1px dashed" }}>
                       <div style={{ flex: 1 }}>
                         <div className="d-flex align-items-center mb-1">
@@ -1047,7 +1146,6 @@ function CartPage() {
                       </Button>
                     </div>
 
-                    {/* Slot Section */}
                     <div className="d-flex justify-content-between align-items-center  p-2" style={{ borderBottom: "3px solid #d4d1d1ff" }}>
                       <div style={{ flex: 1 }}>
                         <div >
@@ -1065,24 +1163,23 @@ function CartPage() {
                       </Button>
                     </div>
 
-                    {/* Amount and Pay Button */}
                     <div className=" mb-2 p-2">
                       <Button
                         className="butn fw-bold w-100 p-3"
-                        disabled={!canPlaceOrder()}
+                        disabled={!canPlaceOrder() || isProcessing}
                         onClick={processPayment}
                       >
-                        {!isAuthenticated ? "Login to Continue" :
+                        {isProcessing ? "Processing..." :
+                          !isAuthenticated ? "Login to Continue" :
                           !selectedAddress ? "Select Address" :
-                            !selectedSlot ? "Select Time Slot" :
-                              "Place an order"}
+                          !selectedSlot ? "Select Time Slot" :
+                          "Place an order"}
                       </Button>
                     </div>
                   </Col>
                 )}
               </>
             ) : (
-              /* Not Logged In - Show Login Button */
               <Col xs={12}>
                 <Button
                   className="butn w-100 fw-bold"
@@ -1097,10 +1194,8 @@ function CartPage() {
         </Container>
       </div>
 
-      {/* Add padding to bottom to prevent content from being hidden behind fixed footer (mobile only) */}
       <div className="d-md-none" style={{ height: "80px" }}></div>
 
-      {/* Salon Modal */}
       {showModal && (
         <Salon1modal
           show={showModal}
@@ -1109,7 +1204,6 @@ function CartPage() {
         />
       )}
 
-      {/* Account Modal for Login/Profile */}
       <AccountModal
         show={showAccountModal || showBookingsModal}
         totalPrice={totalPrice}
@@ -1120,7 +1214,6 @@ function CartPage() {
         initialView={showLoginView ? "login" : "main"}
       />
 
-      {/* Time Slot Selection Modal */}
       <Modal
         show={showSlotModal}
         onHide={() => setShowSlotModal(false)}
@@ -1152,8 +1245,6 @@ function CartPage() {
             overflowY: 'auto'
           }}>
 
-
-          {/* Date Selection Row */}
           <div className="mb-4">
             <div className="d-flex gap-2 overflow-auto pb-2" tabIndex={0}>
               <div className="d-flex gap-2 overflow-auto" tabIndex={0}>
@@ -1177,7 +1268,6 @@ function CartPage() {
             </div>
           </div>
 
-          {/* Time Slots */}
           <div className="mb-2">
             <h6 className="fw-semibold mb-2" style={{ fontSize: "15px", color: '#333' }}>
               Select start time of service

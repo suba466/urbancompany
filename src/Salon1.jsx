@@ -3,7 +3,7 @@ import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Modal from 'react-bootstrap/Modal';
 import { useState, useEffect, useRef } from 'react';
-import { Button, ModalBody } from 'react-bootstrap';
+import { Button } from 'react-bootstrap';
 import { MdBackpack, MdStars } from "react-icons/md";
 import { GoDotFill } from "react-icons/go";
 import Salon1modal from './Salon1modal';
@@ -30,6 +30,27 @@ function Salon1() {
 
   // USE REDUX CART
   const { items: carts, addItem, removeItem, updateItem, count: totalItems } = useCart();
+
+  // Calculate total price for mobile footer
+  const calculateTotalPrice = () => {
+    return carts.reduce((total, item) => {
+      const price = safePrice(item.price) || 0;
+      const count = item.count || 1;
+      return total + (price * count);
+    }, 0);
+  };
+
+  // Handle view cart navigation
+  const handleViewCart = () => {
+    // Use Redux cart data directly - no need to fetch
+    if (carts.length === 0) {
+      alert("Your cart is empty");
+      return;
+    }
+    
+    // Navigate to cart summary page
+    navigate('/cart-summary');
+  };
 
   // Group packages by subcategory (title)
   const groupPackagesBySubcategory = () => {
@@ -163,8 +184,6 @@ function Salon1() {
       } catch (e) { }
     }
   };
-
-  // REMOVED fetchCarts function since we use Redux
 
   useEffect(() => {
     window.openEditPackageFromCart = handleShowModal;
@@ -304,8 +323,6 @@ function Salon1() {
     } catch (error) { console.error(error); }
   };
 
-  // In Salon1.js, update the handleIncrease function:
-
   const handleIncrease = async (cartItem) => {
     try {
       // Check if this specific item has reached 3 counts
@@ -410,7 +427,7 @@ function Salon1() {
                             cursor: "pointer",
                             borderRadius: "16px",
                             overflow: "hidden",
-                            height: "160px",
+                            height: "250px",
                             marginTop: "10px"
                           }}
                         >
@@ -458,14 +475,14 @@ function Salon1() {
                               /* --- SUPER SAVER DISCOUNT BOX LAYOUT --- */
                               <div
                                 onClick={() => handleShowCarouselModal(pkg)}
-                                className="button2 shadow-sm mt-auto"
+                                className="button2 shadow-sm mt-auto me-3"
                                 style={{
                                   display: "flex",
                                   flexDirection: "column",
                                   alignItems: "center",
                                   justifyContent: "center",
                                   position: "relative",
-                                  width: "100px",
+                                  width: "120px",
                                   marginBottom: "20px",
                                   overflow: "visible"
                                 }}
@@ -667,7 +684,13 @@ function Salon1() {
       </Row>
       {carts.length > 0 && (
         <div className="mobile-cart-footer-wrapper position-fixed d-flex flex-column d-lg-none" style={{ bottom: 0, left: 0, right: 0, backgroundColor: "white", boxShadow: "0 -2px 10px rgba(0,0,0,0.1)", padding: "10px", zIndex: 999 }}>
-          <Button className="mobile-cart-footer-button mobile-cart-footer-total w-100 border-0" onClick={() => navigate("/cart")} style={{ backgroundColor: "#6e42e5", color: "white", padding: "12px" }}>View cart ({carts.length} items)</Button>
+          <Button 
+            className="mobile-cart-footer-button mobile-cart-footer-total w-100 border-0" 
+            onClick={handleViewCart}
+            style={{ backgroundColor: "#6e42e5", color: "white", padding: "12px" }}
+          >
+            View cart ({carts.length} items) - ₹{calculateTotalPrice()}
+          </Button>
         </div>
       )}
       <Salon1modal

@@ -155,8 +155,8 @@ function Banner() {
             return (
               <div
                 key={`empty-${rowIndex}-${index}`}
-                className="categories second-row-item"
-                style={{ width: '33.33%', visibility: 'hidden' }}
+                className=" second-row-item"
+                
               >
                 {/* Empty placeholder */}
               </div>
@@ -166,10 +166,10 @@ function Banner() {
           return (
             <div
               key={category._id || `category-${rowIndex}-${index}`}
-              className="categories second-row-item d-flex flex-column align-items-center position-relative"
+              className="second-row-item d-flex flex-column align-items-center position-relative"
               onClick={() => handleCategoryClick(category)}
             >
-              <div className="img-box w-100 d-flex justify-content-center align-items-center">
+              <div className="img-box w-100 d-flex justify-content-center align-items-center ">
                 {renderCategoryImage(category)}
               </div>
               <p className="first-row-text text-center mb-0 mt-2">{category.name}</p>
@@ -331,7 +331,7 @@ function Banner() {
   };
 
   return (
-    <Container className="contain" style={{ marginTop: "50px" }}>
+    <Container className="contain"  style={{ marginTop: "50px" }}>
       {error && (
         <Alert variant="warning" className="mb-3">
           {error}

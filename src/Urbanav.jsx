@@ -628,11 +628,16 @@ function Urbanav() {
         size={showAddressMap ? "xl" : "lg"}
         dialogClassName="location-modal"
       >
-        <Modal.Header closeButton className="border-bottom-0">
-          <Modal.Title className="fw-bold">
-            {showAddressMap ? "Confirm Your Address" : "Select Location"}
-          </Modal.Title>
-        </Modal.Header>
+        <Modal.Header className="border-bottom-0 position-relative">
+    <Modal.Title className="fw-bold">
+      {showAddressMap ? "Confirm Your Address" : "Select Location"}
+    </Modal.Title>
+    <Button 
+      type="button" 
+      onClick={resetLocationModal}
+      className="position-absolute border-0 justify-content-center closebtn p-0">X
+    </Button>
+  </Modal.Header>
         
         <Modal.Body className="p-0" style={{ maxHeight: "80vh", overflowY: "auto" }}>
           {!showAddressMap ? (
