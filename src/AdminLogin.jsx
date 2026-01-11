@@ -73,58 +73,60 @@ function AdminLogin({ onLogin }) {
   const emailError = touched.email ? validateEmail(loginData.email) : '';
   const passwordError = touched.password ? validatePassword(loginData.password) : '';
   return (
-    <div className="d-flex justify-content-center align-items-center bg-light" style={{ minHeight: "100vh" }}>
-      <Container fluid className="px-3 px-lg-5">
-        <Row className="justify-content-center">
+    <div className="d-flex justify-content-center align-items-center bg-light" style={{ minHeight: "100vh", backgroundColor: "#f0f2f5" }}>
+      <Container fluid className="px-3 px-lg-5 d-flex justify-content-center">
+        <Row className="justify-content-center w-100" style={{ maxWidth: "1000px" }}>
           <Col xs={12} lg={10} xl={8} xxl={7}>
             <div className='shadow-lg bg-white' style={{ borderRadius: "15px", overflow: "hidden" }}>
               <Row className="g-0">
                 <Col lg={6} className='d-none d-lg-block'>
                   <div
                     style={{
-                      background: "#000000",
+                      background: "linear-gradient(135deg, #000000 0%, #1a1a1a 100%)",
                       height: "100%",
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "center",
                       alignItems: "center",
                       color: "white",
-                      padding: "3rem"
+                      padding: "2rem"
                     }}
                   >
-                    <div className="text-center mb-4">
-                      <img
-                        src={logoUrl}
-                        alt="Urban Company Admin"
-                        style={{
-                          width: "160px",
-                          height: "160px",
-                          objectFit: "contain",
-                          backgroundColor: "white",
-                          borderRadius: "50%",
-                          padding: "20px"
-                        }}
-                      />
+
+                    <div className="text-center mb-3">
+                      <div className="bg-white p-3 rounded-circle shadow-sm d-inline-block mb-3">
+                        <img
+                          src={logoUrl}
+                          alt="Urban Company Admin"
+                          style={{
+                            width: "90px",
+                            height: "90px",
+                            objectFit: "contain",
+                          }}
+                        />
+                      </div>
                     </div>
 
-                    <h3 className="text-center mb-2" style={{ fontWeight: "bold", fontSize: "1.8rem" }}>Urban Company Admin</h3>
-                    <p className="text-center mb-0" style={{ fontSize: "1.1rem" }}>Home service platform</p>
+                    <h3 className="text-center mb-1 fw-bold">Urban Company</h3>
+                    <p className="text-center mb-0 opacity-75" style={{ fontSize: "1rem" }}>
+                      Enterprise Administration Portal
+                    </p>
                   </div>
                 </Col>
 
                 <Col xs={12} lg={6}>
                   <Card style={{ border: "0px", boxShadow: "none", height: "100%" }}>
-                    <Card.Body className="p-5">
-                      <div className="mb-4">
+                    <Card.Body className="p-4 d-flex flex-column justify-content-center">
+                      <div className="mb-3">
                         <h4 className='fw-bold mb-2'>Admin Login</h4>
-                        <p className='text-muted mb-3'>Please sign in to continue</p>
+                        <p className='text-muted mb-2'>Please sign in to continue</p>
                         {errorLocal && !emailError && !passwordError && (
-                          <div className="alert alert-danger mt-2 py-3">{errorLocal}</div>
+                          <div className="alert alert-danger mt-2 py-2">{errorLocal}</div>
                         )}
                       </div>
                       <Form onSubmit={handleLogin} noValidate>
-                        <Form.Group >
-                          <Form.Label className=" fw-bold mb-0">Username</Form.Label>
+                        <Form.Group className="mb-3">
+                          <Form.Label className="fw-bold mb-1">Username</Form.Label>
                           <Form.Control
                             type="email"
                             placeholder="Enter your email"
@@ -137,7 +139,7 @@ function AdminLogin({ onLogin }) {
                             }}
                             onBlur={handleBlur('email')}
                             required
-                            className={`cate py-3 mb-2 ${emailError ? 'is-invalid' : ''}`}
+                            className={`cate py-2 ps-3 ${emailError ? 'is-invalid' : ''}`}
                             autoComplete="username"
                             style={{ fontSize: "1rem" }}
                           />
@@ -148,8 +150,8 @@ function AdminLogin({ onLogin }) {
                           )}
                         </Form.Group>
 
-                        <Form.Group className="mb-2">
-                          <Form.Label className=" fw-bold mb-0">Password</Form.Label>
+                        <Form.Group className="mb-3">
+                          <Form.Label className="fw-bold mb-1">Password</Form.Label>
                           <Form.Control
                             type="password"
                             placeholder="Enter your password"
@@ -162,7 +164,7 @@ function AdminLogin({ onLogin }) {
                             }}
                             onBlur={handleBlur('password')}
                             required
-                            className={`cate py-3 ${passwordError ? 'is-invalid' : ''}`}
+                            className={`cate py-2 ps-3 ${passwordError ? 'is-invalid' : ''}`}
                             autoComplete="current-password"
                             style={{ fontSize: "1rem" }}
                           />
@@ -175,7 +177,7 @@ function AdminLogin({ onLogin }) {
 
                         <Button
                           type="submit"
-                          className="w-100 py-2 mb-4"
+                          className="w-100 py-2 mb-3"
                           disabled={loadingLocal}
                           style={{
                             background: "#000000",
@@ -194,14 +196,14 @@ function AdminLogin({ onLogin }) {
                         </Button>
                       </Form>
 
-                      <div className="border-top pt-4">
-                        <h6 className="fw-bold mb-3">Admin credentials:</h6>
+                      <div className="border-top pt-3">
+                        <h6 className="fw-bold mb-2">Admin credentials:</h6>
                         <div>
                           <div>
-                            <p className='text-muted mb-1'>Username : admin@urbancompany.com</p>
+                            <p className='text-muted mb-0 small'>Username : admin@urbancompany.com</p>
                           </div>
                           <div>
-                            <p className='text-muted mb-1'>Password : admin123</p>
+                            <p className='text-muted mb-0 small'>Password : admin123</p>
                           </div>
                         </div>
                       </div>

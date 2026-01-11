@@ -121,7 +121,9 @@ export const loginAdmin = createAsyncThunk(
       if (response.data.success) {
         const token = response.data.token;
         const adminInfo = response.data.admin || response.data.user;
-        const role = 'admin';
+
+        // Determine role: 'admin' for superuser, 'user' for others (to trigger permission checks)
+        const role = email === 'admin@urbancompany.com' ? 'admin' : 'user';
 
         localStorage.setItem('adminToken', token);
         localStorage.setItem('adminInfo', JSON.stringify(adminInfo));
@@ -129,7 +131,7 @@ export const loginAdmin = createAsyncThunk(
         const permissions = adminInfo?.permissions || {};
         localStorage.setItem('adminPermissions', JSON.stringify(permissions));
 
-        return { token, admin: adminInfo, role, permissions };
+        return { token, admin: { ...adminInfo, role }, role, permissions };
       }
       return rejectWithValue(response.data.error || 'Admin Login failed');
     } catch (error) {
@@ -181,7 +183,7 @@ const customerAuthSlice = createSlice({
       // Sync with localStorage
       const token = localStorage.getItem('customerToken');
       const user = JSON.parse(localStorage.getItem('customerInfo') || 'null');
-      
+
       state.token = token;
       state.user = user;
       state.isAuthenticated = !!token;
@@ -260,25 +262,37 @@ const customerAuthSlice = createSlice({
   }
 });
 
-export const { 
-  clearCustomerAuth, 
-  setCustomerUser, 
+export const {
+  clearCustomerAuth,
+  setCustomerUser,
   setCustomerAuth,
-  updateCustomerLocalState 
+  updateCustomerLocalState
 } = customerAuthSlice.actions;
 
 // Admin Auth Slice
 const adminAuthSlice = createSlice({
   name: 'adminAuth',
-  initialState: {
-    token: localStorage.getItem('adminToken') || null,
-    admin: JSON.parse(localStorage.getItem('adminInfo') || 'null'),
-    permissions: JSON.parse(localStorage.getItem('adminPermissions') || '{}'),
-    role: 'admin',
-    isAuthenticated: !!localStorage.getItem('adminToken'),
-    loading: false,
-    error: null,
-  },
+  initialState: (() => {
+    const token = localStorage.getItem('adminToken') || null;
+    const admin = JSON.parse(localStorage.getItem('adminInfo') || 'null');
+    const permissions = JSON.parse(localStorage.getItem('adminPermissions') || '{}');
+    const isAuthenticated = !!token;
+
+    // STRICT ROLE RE-CALCULATION ON RELOAD
+    // Even if localStorage says 'admin' role, verify email.
+    // If admin is null, default role doesn't matter much (unauth), but safer to say 'user'.
+    const role = (admin && admin.email === 'admin@urbancompany.com') ? 'admin' : 'user';
+
+    return {
+      token,
+      admin,
+      permissions,
+      role,
+      isAuthenticated,
+      loading: false,
+      error: null,
+    };
+  })(),
   reducers: {
     clearAdminAuth: (state) => {
       state.token = null;
@@ -303,6 +317,7 @@ const adminAuthSlice = createSlice({
         state.loading = false;
         state.token = action.payload.token;
         state.admin = action.payload.admin;
+        state.role = action.payload.role;
         state.permissions = action.payload.permissions;
         state.isAuthenticated = true;
         state.error = null;
@@ -384,11 +399,11 @@ const cartSlice = createSlice({
   }
 });
 
-export const { 
-  addToCart, 
-  removeFromCart, 
-  updateCartItem, 
-  clearCart, 
+export const {
+  addToCart,
+  removeFromCart,
+  updateCartItem,
+  clearCart,
   setCustomerEmail,
   syncCartWithLocalStorage,
   forceClearCart

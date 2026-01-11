@@ -161,7 +161,7 @@ const customerSchema = new mongoose.Schema({
   profileImage: { type: String, default: "" },
   title: { type: String, default: "Ms" },
   isVerified: { type: Boolean, default: true },
-  isActive: { type: Boolean, default: true }, 
+  isActive: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -315,7 +315,7 @@ app.post("/api/bookings", async (req, res) => {
         return sum + (price * count);
       }, 0);
 
-      finalServiceName = "Cart Booking - Multiple Services";
+      finalServiceName = cartItems.map(item => item.name || item.title || "Service").join(", ");
       finalServicePrice = totalPrice.toString();
 
       console.log(`Total calculated from cart: ₹${totalPrice}`);
@@ -667,8 +667,18 @@ app.post("/api/register", upload.single('profileImage'), async (req, res) => {
       return res.status(400).json({ error: "Please enter a valid 10-digit phone number" });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: "Password must be at least 6 characters long" });
+    // Password strength check
+    if (password.length <= 6) {
+      return res.status(400).json({ error: "Password must be greater than 6 characters" });
+    }
+    if (!/[A-Z]/.test(password)) {
+      return res.status(400).json({ error: "Password must contain at least one uppercase letter" });
+    }
+    if (!/[a-z]/.test(password)) {
+      return res.status(400).json({ error: "Password must contain at least one lowercase letter" });
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      return res.status(400).json({ error: "Password must contain at least one special character" });
     }
 
     // Check if customer already exists
@@ -746,8 +756,8 @@ app.post("/api/login", async (req, res) => {
 
     // Check if customer is blocked
     if (customer.isActive === false) {
-      return res.status(403).json({ 
-        error: "Your account has been blocked. Please contact support." 
+      return res.status(403).json({
+        error: "Your account has been blocked. Please contact support."
       });
     }
 
@@ -783,7 +793,7 @@ app.post("/api/login", async (req, res) => {
         city: customer.city,
         profileImage: customer.profileImage,
         title: customer.title,
-        isActive: customer.isActive, 
+        isActive: customer.isActive,
         role: 'customer'
       }
     });
@@ -1768,21 +1778,21 @@ const checkCustomerStatus = async (req, res, next) => {
     // Only check for customer routes that require active status
     const customerId = req.user?.id;
     const customerEmail = req.body?.email || req.params?.email;
-    
+
     if (customerId) {
       const customer = await Customer.findById(customerId);
       if (customer && customer.isActive === false) {
-        return res.status(403).json({ 
+        return res.status(403).json({
           success: false,
-          error: "Account is blocked. Please contact support." 
+          error: "Account is blocked. Please contact support."
         });
       }
     } else if (customerEmail) {
       const customer = await Customer.findOne({ email: customerEmail });
       if (customer && customer.isActive === false) {
-        return res.status(403).json({ 
+        return res.status(403).json({
           success: false,
-          error: "Account is blocked. Please contact support." 
+          error: "Account is blocked. Please contact support."
         });
       }
     }

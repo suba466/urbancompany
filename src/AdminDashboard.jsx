@@ -1,11 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Table, Badge } from 'react-bootstrap';
 import { FcBusinessman, FcPlanner, FcBullish, FcSupport } from "react-icons/fc";
+import { useAdminAuth } from './hooks';
 
 function AdminDashboard() {
+  const { role, admin } = useAdminAuth();
   const [stats, setStats] = useState(null);
   const [recentBookings, setRecentBookings] = useState([]);
   const [recentCustomers, setRecentCustomers] = useState([]);
+
+  // Helper to check permissions
+  const hasPermission = (perm) => {
+    if (role === 'admin') return true;
+    const permissions = admin?.permissions || {};
+    // Handle singular/plural variations
+    if (perm === 'Users') return permissions['Users'] || permissions['User'];
+    if (perm === 'Catalog') return permissions['Catalog'] || permissions['Category'] || permissions['Categories'];
+    if (perm === 'Product') return permissions['Product'] || permissions['Products'];
+    if (perm === 'Bookings') return permissions['Bookings'] || permissions['Booking'];
+    if (perm === 'Customer') return permissions['Customer'] || permissions['Customers'];
+    if (perm === 'Reports') return permissions['Reports'] || permissions['Report'];
+    if (perm === 'Settings') return permissions['Settings'] || permissions['Setting'];
+    return permissions[perm];
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -68,6 +85,7 @@ function AdminDashboard() {
             </Card.Body>
           </Card>
         </Col>
+
         <Col md={3}>
           <Card className="text-center border-0 shadow-lg">
             <Card.Body className="py-4">
@@ -81,6 +99,7 @@ function AdminDashboard() {
             </Card.Body>
           </Card>
         </Col>
+
         <Col md={3}>
           <Card className="text-center border-0 shadow-lg">
             <Card.Body className="py-4">
@@ -94,6 +113,7 @@ function AdminDashboard() {
             </Card.Body>
           </Card>
         </Col>
+
         <Col md={3}>
           <Card className="text-center border-0 shadow-lg">
             <Card.Body className="py-4">
@@ -192,6 +212,7 @@ function AdminDashboard() {
             </Card.Body>
           </Card>
         </Col>
+
         <Col md={4}>
           <Card className="border-0 shadow-lg">
             <Card.Header className="border-0">
@@ -221,20 +242,20 @@ function AdminDashboard() {
                         onError={(e) => {
                           e.target.style.display = 'none';
                           e.target.parentElement.innerHTML = `
-                            <div style="
-                              width: 100%;
-                              height: 100%;
-                              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                              display: flex;
-                              align-items: center;
-                              justify-content: center;
-                              color: white;
-                              font-weight: bold;
-                              font-size: 16px;
-                            ">
-                              ${getInitials(customer.name)}
-                            </div>
-                          `;
+                          <div style="
+                            width: 100%;
+                            height: 100%;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: white;
+                            font-weight: bold;
+                            font-size: 16px;
+                          ">
+                            ${getInitials(customer.name)}
+                          </div>
+                        `;
                         }}
                       />
                     ) : (

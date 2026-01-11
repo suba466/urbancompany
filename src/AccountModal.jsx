@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { Modal, Button, Container, Row, Col, Form, Spinner, Alert, Card, Badge } from "react-bootstrap";
+import { Modal, Button, Container, Row, Col, Form, Spinner, Alert, Card, Badge, InputGroup } from "react-bootstrap";
 import { LuNotepadText } from "react-icons/lu";
 import { IoMdHelpCircleOutline, IoMdLogOut } from "react-icons/io";
 import { MdAccountCircle, MdOutlineArrowForwardIos, MdLocationOn, MdEdit, MdCameraAlt } from "react-icons/md";
 import { BiLeftArrowAlt } from "react-icons/bi";
 import { PiNotepadLight } from "react-icons/pi";
 import { IoSettingsOutline } from "react-icons/io5";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { useAuth, useCart, useBookings, notifyAuthChange } from "./hooks"; // Import notifyAuthChange
 
 function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "main" }) {
@@ -41,6 +42,11 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
     city: "",
     profileFile: null
   });
+
+  // Password visibility states
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [showRegisterConfirmPassword, setShowRegisterConfirmPassword] = useState(false);
 
   const fileInputRef = useRef(null);
   const profileFileInputRef = useRef(null);
@@ -197,6 +203,9 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
         email: "",
         password: ""
       });
+      setShowLoginPassword(false);
+      setShowRegisterPassword(false);
+      setShowRegisterConfirmPassword(false);
     }
   }, [show, initialView]);
 
@@ -347,9 +356,22 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
       return;
     }
 
-    if (registerData.password.length < 6) {
+    if (registerData.password.length <= 6) {
       console.log("Validation failed: Password too short");
-      alert("Password must be at least 6 characters long");
+      alert("Password must be greater than 6 characters");
+      return;
+    }
+
+    if (!/[A-Z]/.test(registerData.password)) {
+      alert("Password must contain at least one uppercase letter");
+      return;
+    }
+    if (!/[a-z]/.test(registerData.password)) {
+      alert("Password must contain at least one lowercase letter");
+      return;
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(registerData.password)) {
+      alert("Password must contain at least one special character");
       return;
     }
 
@@ -383,10 +405,10 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
 
       // Force sync auth state immediately
       syncAuth();
-      
+
       // Notify other components about auth change
       notifyAuthChange();
-      
+
       // Dispatch storage event to sync across tabs
       window.dispatchEvent(new StorageEvent('storage', {
         key: 'customerToken'
@@ -426,7 +448,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
 
       // Force sync auth state
       syncAuth();
-      
+
       // Notify other components
       notifyAuthChange();
 
@@ -679,27 +701,75 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
           {/* Password */}
           <Form.Group className="mb-3">
             <Form.Label>Password *</Form.Label>
-            <Form.Control
-              type="password" className="cate p-3"
-              placeholder="Enter password (min 6 characters)"
-              value={registerData.password}
-              onChange={(e) => handleRegisterChange('password', e.target.value)}
-              required
-              style={{ height: "45px" }}
-            />
+            <InputGroup>
+              <Form.Control
+                type={showRegisterPassword ? "text" : "password"}
+                className="cate p-3"
+                placeholder="Enter password (min 6 characters)"
+                value={registerData.password}
+                onChange={(e) => handleRegisterChange('password', e.target.value)}
+                required
+                style={{
+                  height: "45px",
+                  border: "2px solid #000000",
+                  borderRight: "none",
+                  borderTopRightRadius: 0,
+                  borderBottomRightRadius: 0
+                }}
+              />
+              <Button
+                variant="outline-secondary"
+                style={{
+                  backgroundColor: "white",
+                  borderColor: "#000000",
+                  borderWidth: "2px",
+                  borderLeft: "none",
+                  height: "45px",
+                  borderTopLeftRadius: 0,
+                  borderBottomLeftRadius: 0
+                }}
+                onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+              >
+                {showRegisterPassword ? <FaEyeSlash size={14} color="#6c757d" /> : <FaEye size={14} color="#6c757d" />}
+              </Button>
+            </InputGroup>
           </Form.Group>
 
           {/* Confirm Password */}
           <Form.Group className="mb-3">
             <Form.Label>Confirm Password *</Form.Label>
-            <Form.Control
-              type="password" className="cate p-3"
-              placeholder="Confirm your password"
-              value={registerData.confirmPassword}
-              onChange={(e) => handleRegisterChange('confirmPassword', e.target.value)}
-              required
-              style={{ height: "45px" }}
-            />
+            <InputGroup>
+              <Form.Control
+                type={showRegisterConfirmPassword ? "text" : "password"}
+                className="cate p-3"
+                placeholder="Confirm your password"
+                value={registerData.confirmPassword}
+                onChange={(e) => handleRegisterChange('confirmPassword', e.target.value)}
+                required
+                style={{
+                  height: "45px",
+                  border: "2px solid #000000",
+                  borderRight: "none",
+                  borderTopRightRadius: 0,
+                  borderBottomRightRadius: 0
+                }}
+              />
+              <Button
+                variant="outline-secondary"
+                style={{
+                  backgroundColor: "white",
+                  borderColor: "#000000",
+                  borderWidth: "2px",
+                  borderLeft: "none",
+                  height: "45px",
+                  borderTopLeftRadius: 0,
+                  borderBottomLeftRadius: 0
+                }}
+                onClick={() => setShowRegisterConfirmPassword(!showRegisterConfirmPassword)}
+              >
+                {showRegisterConfirmPassword ? <FaEyeSlash size={14} color="#6c757d" /> : <FaEye size={14} color="#6c757d" />}
+              </Button>
+            </InputGroup>
           </Form.Group>
         </div>
 
@@ -763,14 +833,38 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
           {/* Password */}
           <Form.Group className="mb-3">
             <Form.Label>Password *</Form.Label>
-            <Form.Control
-              type="password" className="cate p-3"
-              placeholder="Enter your password"
-              value={loginData.password}
-              onChange={(e) => handleLoginChange('password', e.target.value)}
-              required
-              style={{ height: "45px" }}
-            />
+            <InputGroup>
+              <Form.Control
+                type={showLoginPassword ? "text" : "password"}
+                className="cate p-3"
+                placeholder="Enter your password"
+                value={loginData.password}
+                onChange={(e) => handleLoginChange('password', e.target.value)}
+                required
+                style={{
+                  height: "45px",
+                  border: "2px solid #000000",
+                  borderRight: "none",
+                  borderTopRightRadius: 0,
+                  borderBottomRightRadius: 0
+                }}
+              />
+              <Button
+                variant="outline-secondary"
+                style={{
+                  backgroundColor: "white",
+                  borderColor: "#000000",
+                  borderWidth: "2px",
+                  borderLeft: "none",
+                  height: "45px",
+                  borderTopLeftRadius: 0,
+                  borderBottomLeftRadius: 0
+                }}
+                onClick={() => setShowLoginPassword(!showLoginPassword)}
+              >
+                {showLoginPassword ? <FaEyeSlash size={14} color="#6c757d" /> : <FaEye size={14} color="#6c757d" />}
+              </Button>
+            </InputGroup>
           </Form.Group>
 
           {/* Forgot Password */}
@@ -1546,7 +1640,9 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
         show={show}
         onHide={onHide}
         centered
-        fullscreen="sm-down" className="account-modal"
+        size={['bookings', 'plans', 'edit-profile'].includes(currentView) ? "lg" : undefined}
+        fullscreen="sm-down"
+        className="account-modal"
       >
         <Modal.Header className="border-bottom-0">
           <Container fluid>

@@ -9,17 +9,18 @@ import Urbanav from './Urbanav.jsx';
 import Book from './Book.jsx';
 import CartPage from './CartPage.jsx';
 import Salon from './Salon.jsx';
-import CartSummary from './CartSummary'; 
-import AdminPanel from './AdminPanel.jsx'; 
+import CartSummary from './CartSummary';
+import AdminPanel from './AdminPanel.jsx';
+import OrderSuccess from './OrderSuccess.jsx';
 
 function AuthInitializer() {
   const dispatch = useDispatch();
-  
+
   useEffect(() => {
     // Initialize auth state on app load
     const customerToken = localStorage.getItem('customerToken');
     const customerInfo = localStorage.getItem('customerInfo');
-    
+
     if (customerToken && customerInfo) {
       try {
         const user = JSON.parse(customerInfo);
@@ -30,7 +31,7 @@ function AuthInitializer() {
       }
     }
   }, [dispatch]);
-  
+
   return null;
 }
 
@@ -42,24 +43,25 @@ function Urban() {
         {/* Public routes */}
         <Route path='/' element={
           <>
-            <Urbanav/> 
-            <Banner/> <br />
-            <Shine/> <br />
-            <Book/><br/>
+            <Urbanav />
+            <Banner /> <br />
+            <Shine /> <br />
+            <Book /><br />
           </>
-        }/>
+        } />
         <Route path='/salon' element={
           <>
-            <Urbanav/>
-            <Salon/>
+            <Urbanav />
+            <Salon />
           </>
-        }/>
-        
-        <Route path='/cart-summary' element={<CartSummary/>}/>
-        <Route path='/cart' element={<><Urbanav/><CartPage/></>}/>
-        
+        } />
+
+        <Route path='/cart-summary' element={<CartSummary />} />
+        <Route path='/cart' element={<><Urbanav /><CartPage /></>} />
+        <Route path='/order-success' element={<><Urbanav /><OrderSuccess /></>} />
+
         {/* Admin routes */}
-        <Route path='/admin/*' element={<AdminPanel/>}/>
+        <Route path='/admin/*' element={<AdminPanel />} />
       </Routes>
     </Provider>
   );

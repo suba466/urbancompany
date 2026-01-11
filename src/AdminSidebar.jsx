@@ -137,18 +137,20 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole, isMobile }) {
 
       <Nav className="flex-column px-2">
         {/* Dashboard */}
-        <Nav.Link
-          as={Link}
-          to="/admin/dashboard"
-          style={getMenuItemStyle('/admin/dashboard')}
-          title="Dashboard"
-        >
-          <i className="bi bi-speedometer2" style={{ fontSize: '1.2rem', marginRight: sidebarOpen ? '0.5rem' : '0' }}></i>
-          {sidebarOpen && <span>Dashboard</span>}
-        </Nav.Link>
+        {(userRole === 'admin' || (userRole === 'user' && permissions['Dashboard'])) && (
+          <Nav.Link
+            as={Link}
+            to="/admin/dashboard"
+            style={getMenuItemStyle('/admin/dashboard')}
+            title="Dashboard"
+          >
+            <i className="bi bi-speedometer2" style={{ fontSize: '1.2rem', marginRight: sidebarOpen ? '0.5rem' : '0' }}></i>
+            {sidebarOpen && <span>Dashboard</span>}
+          </Nav.Link>
+        )}
 
         {/* User Management */}
-        {(userRole === 'admin' || (userRole === 'user' && permissions['Users'])) && (
+        {(userRole === 'admin' || (userRole === 'user' && (permissions['Users'] || permissions['User']))) && (
           <Dropdown className="mb-2" drop={sidebarOpen ? 'down' : 'end'}>
             <Dropdown.Toggle
               as={Nav.Link}
@@ -182,7 +184,7 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole, isMobile }) {
         )}
 
         {/* Catalog Management */}
-        {(userRole === 'admin' || (userRole === 'user' && permissions['Catalog'])) && (
+        {(userRole === 'admin' || (userRole === 'user' && (permissions['Catalog'] || permissions['Category'] || permissions['Categories'] || permissions['Subcategory'] || permissions['Subcategories']))) && (
           <Dropdown className="mb-2" drop={sidebarOpen ? 'down' : 'end'}>
             <Dropdown.Toggle
               as={Nav.Link}
@@ -274,7 +276,7 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole, isMobile }) {
         )}
 
         {/* Product Management */}
-        {(userRole === 'admin' || (userRole === 'user' && permissions['Product'])) && (
+        {(userRole === 'admin' || (userRole === 'user' && (permissions['Product'] || permissions['Products']))) && (
           <Dropdown className="mb-2" drop={sidebarOpen ? 'down' : 'end'}>
             <Dropdown.Toggle
               as={Nav.Link}
@@ -306,7 +308,7 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole, isMobile }) {
         )}
 
         {/* Bookings */}
-        {(userRole === 'admin' || (userRole === 'user' && permissions['Bookings'])) && (
+        {(userRole === 'admin' || (userRole === 'user' && (permissions['Bookings'] || permissions['Booking']))) && (
           <Nav.Link
             as={Link}
             to="/admin/bookings"
@@ -319,7 +321,7 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole, isMobile }) {
         )}
 
         {/* Customer Management */}
-        {(userRole === 'admin' || (userRole === 'user' && permissions['Customer'])) && (
+        {(userRole === 'admin' || (userRole === 'user' && (permissions['Customer'] || permissions['Customers']))) && (
           <Nav.Link
             as={Link}
             to="/admin/customers"
@@ -332,7 +334,7 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole, isMobile }) {
         )}
 
         {/* Reports */}
-        {(userRole === 'admin' || (userRole === 'user' && permissions['Reports'])) && (
+        {(userRole === 'admin' || (userRole === 'user' && (permissions['Reports'] || permissions['Report']))) && (
           <Nav.Link
             as={Link}
             to="/admin/reports"
@@ -345,7 +347,7 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole, isMobile }) {
         )}
 
         {/* Settings */}
-        {(userRole === 'admin' || (userRole === 'user' && permissions['Settings'])) && (
+        {(userRole === 'admin' || (userRole === 'user' && (permissions['Settings'] || permissions['Setting']))) && (
           <Nav.Link
             as={Link}
             to="/admin/settings"

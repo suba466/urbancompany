@@ -20,10 +20,10 @@ import { syncCartWithLocalStorage } from './store';
 
 function CartPage() {
   const dispatch = useDispatch();
-  const { items: cartItems, clearCart, updateItem, removeItem } = useCart();
+  const { items: cartItems, clear: clearCart, updateItem, removeItem } = useCart();
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
-  
+
   const [showModal, setShowModal] = useState(false);
   const [selectedPkg, setSelectedPkg] = useState(null);
   const [addedImgs, setAddedImgs] = useState([]);
@@ -54,16 +54,16 @@ function CartPage() {
       }
 
       const customerEmail = user.email;
-      
+
       // First, get all cart items for this user
-      const response = await fetch(`http://localhost:5000/api/carts/email/${customerEmail}`);
-      
+      const response = await fetch(`http://localhost:5000/api/cart/${customerEmail}`);
+
       if (response.ok) {
         const data = await response.json();
-        const userCartItems = data.carts || [];
-        
+        const userCartItems = data.cartItems || data.carts || [];
+
         console.log(`Found ${userCartItems.length} cart items to delete for ${customerEmail}`);
-        
+
         // Delete each cart item
         const deletePromises = userCartItems.map(async (item) => {
           try {
@@ -75,7 +75,7 @@ function CartPage() {
             console.error(`Failed to delete cart item ${item._id}:`, error);
           }
         });
-        
+
         await Promise.all(deletePromises);
         console.log(`Successfully cleared ${userCartItems.length} cart items from database`);
       } else {
@@ -162,8 +162,8 @@ function CartPage() {
         cartItems: cartItems.map(item => ({
           productId: item.productId || item._id,
           name: item.title || item.name,
-          price: typeof item.price === 'string' 
-            ? item.price 
+          price: typeof item.price === 'string'
+            ? item.price
             : `₹${item.price}`,
           count: item.count || 1,
           quantity: item.count || 1
@@ -196,41 +196,43 @@ function CartPage() {
 
       // Clear cart after successful booking - DO THIS SYNCHRONOUSLY
       try {
+        // Show success message BEFORE clearing cart so UI background remains visible
+        const successMessage = `✅ Order placed successfully!\n
+Your Order ID: ${result.booking?._id || result._id || result.bookingId}\n
+Amount Paid: ₹${totalPrice}\n
+A confirmation has been sent to ${user.email}`;
+
+        alert(successMessage);
+
         console.log("Starting cart clearing process...");
-        
+
         // 1. Clear from Redux store first (this also clears localStorage)
         clearCart();
         console.log("✅ Cart cleared from Redux store and localStorage");
-        
+
         // 2. Clear from database
         await clearCartFromDatabase();
         console.log("✅ Cart cleared from database");
-        
+
         // 3. Clear address from localStorage
         localStorage.removeItem('selectedAddress');
-        
+
         // 4. Force a cart sync with localStorage
         window.dispatchEvent(new CustomEvent('cartCleared'));
         window.dispatchEvent(new CustomEvent('cartUpdated'));
-        
+
         // 5. Dispatch action to sync cart state
         dispatch(syncCartWithLocalStorage());
-        
+
         // 6. Force update localStorage
         localStorage.setItem('cartItems', JSON.stringify([]));
-        
+
         console.log("✅ All cart clearing operations completed");
-        
+
         // Debug cart state after clearing
         debugCartState();
-        
-        // Show success message
-        const successMessage = `✅ Order placed successfully!\n
-Your Order ID: ${result.bookingId || result._id}\n
-Amount Paid: ₹${totalPrice}\n
-A confirmation has been sent to ${user.email}`;
-        
-        alert(successMessage);
+
+        // Alert was here, moved up
 
         // Reset form state
         setSelectedAddress(null);
@@ -238,21 +240,8 @@ A confirmation has been sent to ${user.email}`;
         setSelectedDate(new Date());
         setSelectedTip(0);
         setCustomTip("");
-        
-        // Force a state refresh and redirect
+
         setTimeout(() => {
-          // Check if cart is actually empty
-          console.log("Current cart items after clearing:", cartItems);
-          
-          // If cart is still not empty, force a page reload
-          const remainingItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
-          if (remainingItems.length > 0) {
-            console.warn("Cart still has items, forcing page reload");
-            localStorage.setItem('cartItems', JSON.stringify([]));
-            window.location.reload();
-          }
-          
-          // Redirect to home page
           navigate('/');
         }, 100);
 
@@ -260,12 +249,12 @@ A confirmation has been sent to ${user.email}`;
         console.error("Error clearing cart:", clearError);
         // Even if cart clearing fails, still show success and redirect
         const fallbackMessage = `✅ Order placed successfully!\n
-Your Order ID: ${result.bookingId || result._id}\n
+Your Order ID: ${result.booking?._id || result._id || result.bookingId}\n
 Amount Paid: ₹${totalPrice}\n
 Note: There was an issue clearing your cart. Please refresh the page manually.`;
-        
+
         alert(fallbackMessage);
-        
+
         // Force clear localStorage as backup
         localStorage.setItem('cartItems', JSON.stringify([]));
         navigate('/');
@@ -385,14 +374,14 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
       customerInfo: localStorage.getItem('customerInfo'),
       pathname: window.location.pathname
     });
-    
+
     // Only listen for auth changes if needed
     const handleAuthChange = () => {
       console.log("CartPage received auth change event");
     };
-    
+
     window.addEventListener('authStateChanged', handleAuthChange);
-    
+
     return () => {
       window.removeEventListener('authStateChanged', handleAuthChange);
     };
@@ -400,7 +389,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
 
   useEffect(() => {
     fetchAddedItems();
-    
+
     const savedAddress = localStorage.getItem('selectedAddress');
     if (savedAddress) {
       try {
@@ -894,9 +883,9 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
                     >
                       {isProcessing ? "Processing..." :
                         !isAuthenticated ? "Login to Continue" :
-                        !selectedAddress ? "Select Address" :
-                        !selectedSlot ? "Select Time Slot" :
-                        "Place an order"}
+                          !selectedAddress ? "Select Address" :
+                            !selectedSlot ? "Select Time Slot" :
+                              "Place an order"}
                     </Button>
                   </div>
                 )}
@@ -1171,9 +1160,9 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
                       >
                         {isProcessing ? "Processing..." :
                           !isAuthenticated ? "Login to Continue" :
-                          !selectedAddress ? "Select Address" :
-                          !selectedSlot ? "Select Time Slot" :
-                          "Place an order"}
+                            !selectedAddress ? "Select Address" :
+                              !selectedSlot ? "Select Time Slot" :
+                                "Place an order"}
                       </Button>
                     </div>
                   </Col>

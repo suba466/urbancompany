@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
   Card, Row, Col, Form, Button, Alert,
-  Table, Badge, Modal
+  Table, Badge, Modal, InputGroup
 } from 'react-bootstrap';
 import { MdModeEdit, MdOutlineDelete } from "react-icons/md";
 import { IoEyeSharp } from "react-icons/io5";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import TableControls from './TableControls';
 import {
   prepareUserDataForExport,
@@ -49,6 +50,8 @@ function UserManagement({ isAdding, isEditing, userId }) {
   const [showUserDetails, setShowUserDetails] = useState(false);
   const [selectedUserDetails, setSelectedUserDetails] = useState(null);
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formErrors, setFormErrors] = useState({});
   const [touchedFields, setTouchedFields] = useState({});
 
@@ -785,16 +788,40 @@ function UserManagement({ isAdding, isEditing, userId }) {
               <Row className="mb-4 gx-5">
                 <Col md={3}>
                   <Form.Group>
-                    <Form.Control
-                      type="password"
-                      className={`cate py-3 ${touchedFields.password && formErrors.password ? 'is-invalid' : ''}`}
-                      value={newUser.password}
-                      onChange={(e) => handleFieldChange('password', e.target.value)}
-                      onBlur={() => handleFieldBlur('password')}
-                      placeholder="Password"
-                      autoComplete={isEditingUser ? "off" : "new-password"}
-                      required={!isEditingUser}
-                    />
+                    <InputGroup>
+                      <Form.Control
+                        type={showPassword ? "text" : "password"}
+                        className={`cate py-3 ${touchedFields.password && formErrors.password ? 'is-invalid' : ''}`}
+                        value={newUser.password}
+                        onChange={(e) => handleFieldChange('password', e.target.value)}
+                        onBlur={() => handleFieldBlur('password')}
+                        placeholder="Password"
+                        autoComplete={isEditingUser ? "off" : "new-password"}
+                        required={!isEditingUser}
+                        style={{
+                          border: touchedFields.password && formErrors.password ? "2px solid #dc3545" : "2px solid #000000",
+                          borderRight: "none",
+                          height: "45px",
+                          borderTopRightRadius: 0,
+                          borderBottomRightRadius: 0
+                        }}
+                      />
+                      <Button
+                        variant="outline-secondary"
+                        style={{
+                          backgroundColor: "white",
+                          borderColor: touchedFields.password && formErrors.password ? "#dc3545" : "#000000",
+                          borderWidth: "2px",
+                          borderLeft: "none",
+                          height: "45px",
+                          borderTopLeftRadius: 0,
+                          borderBottomLeftRadius: 0
+                        }}
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <FaEyeSlash size={14} color="#6c757d" /> : <FaEye size={14} color="#6c757d" />}
+                      </Button>
+                    </InputGroup>
                     {touchedFields.password && formErrors.password && (
                       <small className="text-danger d-block mt-1">{formErrors.password}</small>
                     )}
@@ -807,16 +834,40 @@ function UserManagement({ isAdding, isEditing, userId }) {
                 </Col>
                 <Col md={3}>
                   <Form.Group>
-                    <Form.Control
-                      type="password"
-                      className={`cate py-3 ${touchedFields.confirmPassword && formErrors.confirmPassword ? 'is-invalid' : ''}`}
-                      value={confirmPassword}
-                      onChange={(e) => handleFieldChange('confirmPassword', e.target.value)}
-                      onBlur={() => handleFieldBlur('confirmPassword')}
-                      placeholder="Confirm password"
-                      autoComplete={isEditingUser ? "off" : "new-password"}
-                      required={!isEditingUser}
-                    />
+                    <InputGroup>
+                      <Form.Control
+                        type={showConfirmPassword ? "text" : "password"}
+                        className={`cate py-3 ${touchedFields.confirmPassword && formErrors.confirmPassword ? 'is-invalid' : ''}`}
+                        value={confirmPassword}
+                        onChange={(e) => handleFieldChange('confirmPassword', e.target.value)}
+                        onBlur={() => handleFieldBlur('confirmPassword')}
+                        placeholder="Confirm password"
+                        autoComplete={isEditingUser ? "off" : "new-password"}
+                        required={!isEditingUser}
+                        style={{
+                          border: touchedFields.confirmPassword && formErrors.confirmPassword ? "2px solid #dc3545" : "2px solid #000000",
+                          borderRight: "none",
+                          height: "45px",
+                          borderTopRightRadius: 0,
+                          borderBottomRightRadius: 0
+                        }}
+                      />
+                      <Button
+                        variant="outline-secondary"
+                        style={{
+                          backgroundColor: "white",
+                          borderColor: touchedFields.confirmPassword && formErrors.confirmPassword ? "#dc3545" : "#000000",
+                          borderWidth: "2px",
+                          borderLeft: "none",
+                          height: "45px",
+                          borderTopLeftRadius: 0,
+                          borderBottomLeftRadius: 0
+                        }}
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? <FaEyeSlash size={14} color="#6c757d" /> : <FaEye size={14} color="#6c757d" />}
+                      </Button>
+                    </InputGroup>
                     {touchedFields.confirmPassword && formErrors.confirmPassword && (
                       <small className="text-danger d-block mt-1">{formErrors.confirmPassword}</small>
                     )}
@@ -829,38 +880,31 @@ function UserManagement({ isAdding, isEditing, userId }) {
                 </Col>
                 <Col md={6}>
                   <Form.Group>
-                    <Form.Control
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files[0];
-                        if (file) {
-                          setProfileImage(file);
-                          setProfileImagePreview(URL.createObjectURL(file));
-                        }
-                      }}
-                      className="py-2"
-                      style={{
-                        borderRadius: "5px",
-                        border: "2px solid #000000",
-                        height: "45px"
-                      }}
-                    />
-
-                    {profileImagePreview && (
-                      <div className="mt-2 text-center">
-                        <img
-                          src={profileImagePreview}
-                          alt="Preview"
-                          style={{
-                            width: '100px',
-                            height: '60px',
-                            objectFit: 'cover',
-                            borderRadius: '5px'
-                          }}
-                        />
-                      </div>
-                    )}
+                    <div className="d-flex gap-3">
+                      <Form.Control
+                        type="file"
+                        accept="image/*"
+                        className="cate"
+                        style={{ border: "2px solid #000000", height: "45px", paddingTop: "10px" }}
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            setProfileImage(file);
+                            setProfileImagePreview(URL.createObjectURL(file));
+                          }
+                        }}
+                      />
+                      {profileImagePreview && (
+                        <div style={{ width: '45px', height: '45px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: "2px solid #000000" }}>
+                          <img
+                            src={profileImagePreview}
+                            alt="Preview"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => e.target.style.display = 'none'}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </Form.Group>
                 </Col>
               </Row>
@@ -949,7 +993,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
             </Form>
           </Card.Body>
         </Card>
-      </div>
+      </div >
     );
   }
 

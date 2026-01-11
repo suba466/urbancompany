@@ -54,8 +54,8 @@ function BookingManagement() {
       const data = await response.json();
 
       if (data.success) {
-        // Get customer emails from bookings
-        const customerEmails = data.bookings.map(b => b.customerEmail);
+        // Create unique list of emails to fetch
+        const customerEmails = [...new Set(data.bookings.map(b => b.customerEmail).filter(email => email && email.trim() !== ''))];
 
         // Fetch customer profile images
         const customersResponse = await fetch(`http://localhost:5000/api/admin/customers-by-emails`, {
@@ -67,21 +67,40 @@ function BookingManagement() {
         const customersData = await customersResponse.json();
         const customerMap = {};
 
+        // Create map with normalized emails
         if (customersData.success) {
           customersData.customers.forEach(customer => {
-            customerMap[customer.email] = {
+            const normalizedEmail = customer.email.toLowerCase().trim();
+            customerMap[normalizedEmail] = {
               name: customer.name,
               profileImage: customer.profileImage
             };
           });
         }
 
+        console.log('Customer Map created:', Object.keys(customerMap).length, 'entries');
+
         // Add profile images to bookings
-        const bookingsWithProfiles = data.bookings.map(booking => ({
-          ...booking,
-          customerName: customerMap[booking.customerEmail]?.name || booking.customerName,
-          customerProfileImage: customerMap[booking.customerEmail]?.profileImage || ''
-        }));
+        const bookingsWithProfiles = data.bookings.map(booking => {
+          const emailKey = (booking.customerEmail || '').toLowerCase().trim();
+          const customerDetails = customerMap[emailKey];
+
+          let validProfileImage = '';
+          if (customerDetails?.profileImage) {
+            // Check if it's already an absolute URL (e.g. Google Auth) or relative
+            if (customerDetails.profileImage.startsWith('http')) {
+              validProfileImage = customerDetails.profileImage;
+            } else {
+              validProfileImage = `http://localhost:5000${customerDetails.profileImage}`;
+            }
+          }
+
+          return {
+            ...booking,
+            customerName: customerDetails?.name || booking.customerName,
+            customerProfileImage: validProfileImage // Now contains full usable URL
+          };
+        });
 
         setBookings(bookingsWithProfiles || []);
         setBookingTotalPages(data.pagination?.pages || 1);
@@ -336,27 +355,38 @@ function BookingManagement() {
                       </td>
                       <td>
                         <div style={{
-                          width: '40px',
-                          height: '40px',
+                          width: '45px',
+                          height: '45px',
                           borderRadius: '50%',
                           overflow: 'hidden',
-                          border: '2px solid #dee2e6'
+                          border: '2px solid #dee2e6',
+                          margin: '0 auto'  // Center the avatar in the cell
                         }}>
                           {booking.customerProfileImage ? (
                             <img
-                              src={`http://localhost:5000${booking.customerProfileImage}`}
+                              src={booking.customerProfileImage}
                               alt={booking.customerName}
                               style={{
                                 width: '100%',
                                 height: '100%',
                                 objectFit: 'cover'
                               }}
-
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                // Fallback to a generated avatar if image fails
+                                e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(booking.customerName)}&background=random`;
+                              }}
                             />
                           ) : (
-                            <div className='gradient'>
-                              {getInitials(booking.customerName)}
-                            </div>
+                            <img
+                              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(booking.customerName)}&background=random&color=fff&size=128`}
+                              alt={booking.customerName}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
+                            />
                           )}
                         </div>
                       </td>

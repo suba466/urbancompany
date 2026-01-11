@@ -466,6 +466,29 @@ router.post("/user-login", async (req, res) => {
 // Apply JWT authentication middleware to all routes below
 router.use(verifyToken);
 
+// Get customers by emails for booking profiles (Helper for Booking Management)
+router.post("/customers-by-emails", async (req, res) => {
+  try {
+    // No explicit permission check needed; verifyToken is sufficient.
+    const { emails } = req.body;
+    if (!emails || !Array.isArray(emails)) {
+      return res.status(400).json({ error: "Emails array is required" });
+    }
+
+    const customers = await Customer.find({
+      email: { $in: emails }
+    }).select('name email profileImage');
+
+    res.json({
+      success: true,
+      customers
+    });
+  } catch (error) {
+    console.error("Error fetching customers by emails:", error);
+    res.status(500).json({ error: "Failed to fetch customers" });
+  }
+});
+
 // ==================== PACKAGE ROUTES ====================
 
 // Create new package
@@ -1517,6 +1540,8 @@ router.put("/customers/:id/toggle-status", checkPermission('Customer'), async (r
     res.status(500).json({ error: "Failed to update customer status" });
   }
 });
+
+
 
 // Delete customer
 router.delete("/customers/:id", checkPermission('Customer'), async (req, res) => {

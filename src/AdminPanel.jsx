@@ -15,13 +15,40 @@ import Profile from './Profile';
 import AdminLogin from './AdminLogin';
 
 function AdminPanel() {
-  const { isAuthenticated, admin, logout } = useAdminAuth();
+  const { isAuthenticated, admin, logout, role } = useAdminAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
     navigate('/admin');
   };
+
+  // Check for token expiration
+  useEffect(() => {
+    const checkTokenExpiration = () => {
+      const token = localStorage.getItem('adminToken');
+      if (!token) return;
+
+      try {
+        // Simple JWT decode (header.payload.signature)
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.exp && Date.now() >= payload.exp * 1000) {
+          console.log('Admin session expired. Logging out.');
+          handleLogout();
+        }
+      } catch (error) {
+        console.error('Error checking token expiration:', error);
+      }
+    };
+
+    // Check on mount
+    checkTokenExpiration();
+
+    // Check every minute
+    const interval = setInterval(checkTokenExpiration, 60000);
+
+    return () => clearInterval(interval);
+  }, [logout, navigate]);
 
   // If not authenticated, show login screen
   if (!isAuthenticated) {
@@ -34,7 +61,7 @@ function AdminPanel() {
         path="/"
         element={
           <AdminLayout
-            userRole="admin"
+            userRole={role || 'user'}
             userProfile={admin}
             onLogout={handleLogout}
           />

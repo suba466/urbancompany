@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Navbar, Container, Nav, FormControl, Modal, Button, Row, Col, Dropdown, Badge
@@ -15,6 +15,26 @@ import { MdAccountCircle, MdHome, MdApartment, MdBusinessCenter, MdDelete, MdMor
 import AccountModal from "./AccountModal";
 import { useCart, useAuth } from "./hooks"; // Import from hooks
 import "./Urbancom.css";
+// Leaflet imports
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix for default marker icon in Leaflet with React
+// Note: In some build setups, you might need to import images explicitly.
+// For a simple Vite setup, we try to use the CDN or local node_modules referencing if possible,
+// but often explicit imports work best.
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+  iconUrl: icon,
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
 
 function Urbanav() {
   const navigate = useNavigate();
@@ -32,11 +52,11 @@ function Urbanav() {
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [currentLocationStatus, setCurrentLocationStatus] = useState("idle");
   const [savedAddresses, setSavedAddresses] = useState([]);
-  
+
   // Use Redux hooks
   const { items, count, clear: clearCart } = useCart();
   const { user, isAuthenticated } = useAuth();
-  
+
   const dropdownRef = useRef(null);
   const location = useLocation();
   const fixedText = "Search for ";
@@ -103,10 +123,10 @@ function Urbanav() {
         }
         const data = await response.json();
         console.log("Static data received:", data);
-        
+
         if (data && data.logo) {
-          const logoUrl = data.logo.startsWith('http') 
-            ? data.logo 
+          const logoUrl = data.logo.startsWith('http')
+            ? data.logo
             : `http://localhost:5000${data.logo}`;
           setLogo(logoUrl);
         } else {
@@ -174,7 +194,7 @@ function Urbanav() {
   // Filter locations based on search
   useEffect(() => {
     if (locationSearch.trim()) {
-      const filtered = locationDatabase.filter(loc => 
+      const filtered = locationDatabase.filter(loc =>
         loc.mainText.toLowerCase().includes(locationSearch.toLowerCase()) ||
         loc.subText.toLowerCase().includes(locationSearch.toLowerCase()) ||
         loc.fullAddress.toLowerCase().includes(locationSearch.toLowerCase())
@@ -194,7 +214,7 @@ function Urbanav() {
     };
 
     window.addEventListener('openLocationModal', handleOpenLocationModal);
-    
+
     const checkLocalStorage = setInterval(() => {
       if (localStorage.getItem('openLocationModal') === 'true') {
         console.log("Opening location modal via localStorage");
@@ -242,7 +262,7 @@ function Urbanav() {
     setIsGettingLocation(true);
     setLocationSearch("");
     setSuggestedLocations([]);
-    
+
     setTimeout(() => {
       const mockCurrentLocation = {
         id: 7,
@@ -278,13 +298,13 @@ function Urbanav() {
     };
 
     console.log("Final address:", finalAddress);
-    
+
     localStorage.setItem('selectedAddress', JSON.stringify(finalAddress));
-    
+
     if (addressDetails.saveAddress) {
       const existingAddresses = JSON.parse(localStorage.getItem('savedAddresses') || '[]');
-      const exists = existingAddresses.find(addr => 
-        addr.doorNo === finalAddress.doorNo && 
+      const exists = existingAddresses.find(addr =>
+        addr.doorNo === finalAddress.doorNo &&
         addr.mainText === finalAddress.mainText
       );
       if (!exists) {
@@ -293,7 +313,7 @@ function Urbanav() {
         setSavedAddresses(newAddresses);
       }
     }
-    
+
     const locationInput = document.querySelector('.location-input');
     if (locationInput) {
       locationInput.value = `${addressDetails.doorNo}, ${selectedLocation.mainText}`;
@@ -353,7 +373,7 @@ function Urbanav() {
   // Cart count badge component
   const CartBadge = ({ count, size = "sm" }) => {
     if (count === 0) return null;
-    
+
     const badgeSize = size === "lg" ? {
       fontSize: "11px",
       padding: "4px 8px",
@@ -365,10 +385,10 @@ function Urbanav() {
       minWidth: "18px",
       height: "18px"
     };
-    
+
     return (
-      <Badge 
-        bg="danger" 
+      <Badge
+        bg="danger"
         className="position-absolute top-0 start-100 translate-middle"
         style={{
           ...badgeSize,
@@ -383,6 +403,8 @@ function Urbanav() {
     );
   };
 
+
+
   return (
     <>
       <Navbar sticky="top" expand="md" className="urban-nav position-sticky top-0 d-flex justify-content-between">
@@ -390,10 +412,10 @@ function Urbanav() {
           <Container fluid className="py-2">
             <Row>
               <Col>
-                <img 
-                  src={logo1} 
-                  alt="UC Logo" 
-                  style={{ height: "34px", marginLeft: "10px" }} 
+                <img
+                  src={logo1}
+                  alt="UC Logo"
+                  style={{ height: "34px", marginLeft: "10px" }}
                   onError={(e) => {
                     console.error("Failed to load logo:", logo1);
                     e.target.src = "http://localhost:5000/assets/urban.png";
@@ -401,17 +423,17 @@ function Urbanav() {
                 />
               </Col>
               <Col>
-                <span className="fw-semibold" style={{fontSize:"20px"}}>Checkout</span>
+                <span className="fw-semibold" style={{ fontSize: "20px" }}>Checkout</span>
               </Col>
             </Row>
           </Container>
-        ) : (       
+        ) : (
           <Container fluid className="d-flex justify-content-between align-items-center">
             {/* Logo Section */}
             <Navbar.Brand className="d-flex align-items-center left display">
-              <img 
-                src={logo} 
-                alt="UC Logo" 
+              <img
+                src={logo}
+                alt="UC Logo"
                 className="logo w-100 h-auto"
                 style={{ maxHeight: "40px", objectFit: "contain" }}
                 onError={(e) => {
@@ -437,7 +459,7 @@ function Urbanav() {
                 <div
                   className="location-input-container position-relative desktop-only"
                   onClick={() => setShowLocationPopup(true)}
-                  style={{ cursor: "pointer"  }}
+                  style={{ cursor: "pointer" }}
                 >
                   <CiLocationOn className="location-icon-inside position-absolute top-50 left1" />
                   <FormControl
@@ -471,13 +493,13 @@ function Urbanav() {
                   )}
                 </div>
 
-              
+
                 {/* Icons - Desktop */}
                 {!location.pathname.startsWith("/salon") && (
-                  <div className="icons display desktop-only d-flex align-items-center gap-3" 
-                      style={{ marginLeft: 'auto' }}>
+                  <div className="icons display desktop-only d-flex align-items-center gap-3"
+                    style={{ marginLeft: 'auto' }}>
                     {/* Cart Icon with Badge - Navigates to CartSummary page */}
-                    <div 
+                    <div
                       className="position-relative"
                       onClick={handleCartClick}
                       style={{ cursor: "pointer" }}
@@ -485,12 +507,12 @@ function Urbanav() {
                       <CiShoppingCart size={20} className="text-muted" />
                       <CartBadge count={count} />
                     </div>
-                    
-                    <CgProfile 
-                      size={20} 
-                      className="text-muted" 
-                      onClick={handleAccountClick} 
-                      style={{ cursor: 'pointer' }} 
+
+                    <CgProfile
+                      size={20}
+                      className="text-muted"
+                      onClick={handleAccountClick}
+                      style={{ cursor: 'pointer' }}
                     />
                   </div>
                 )}
@@ -517,19 +539,19 @@ function Urbanav() {
 
                 {/* Mobile Cart Icon with Badge - Navigates to CartSummary page */}
                 {!location.pathname.startsWith("/salon") && (
-                <div 
-                  className="position-relative "
-                  onClick={handleCartClick}
-                  style={{ cursor: "pointer" }}
-                >
-                  <CiShoppingCart />
-                  <CartBadge count={count} size="lg" />
-                </div>
-              )}
+                  <div
+                    className="position-relative "
+                    onClick={handleCartClick}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <CiShoppingCart />
+                    <CartBadge count={count} size="lg" />
+                  </div>
+                )}
               </div>
 
               <div className="search-line ">
-                <div className="position-relative w-100"  ref={dropdownRef}>
+                <div className="position-relative w-100" ref={dropdownRef}>
                   <FormControl
                     type="text"
                     placeholder={placeholder}
@@ -539,7 +561,7 @@ function Urbanav() {
                     className="location-input"
                   />
                   {showDropdown && (
-                    <Searchdropdown 
+                    <Searchdropdown
                       searchValue={searchValue}
                       onSelect={(val) => {
                         setSearchValue(val);
@@ -562,14 +584,14 @@ function Urbanav() {
               <div className="row text-center">
                 <div className="col-3">
                   <div className="nav-item">
-                    <img 
-                      src={logo1} 
-                      alt="UC Logo" 
-                      style={{ 
-                        height: "18px", 
-                        width: "auto", 
+                    <img
+                      src={logo1}
+                      alt="UC Logo"
+                      style={{
+                        height: "18px",
+                        width: "auto",
                         marginBottom: "4px",
-                        objectFit: "contain" 
+                        objectFit: "contain"
                       }}
                       onError={(e) => {
                         console.error("Failed to load logo1:", logo1);
@@ -581,13 +603,13 @@ function Urbanav() {
                 </div>
                 <div className="col-3">
                   <div className="nav-item">
-                    <IoMdHelpCircleOutline size={18} className="mb-1" style={{color:"#8b8b8bff"}} />
+                    <IoMdHelpCircleOutline size={18} className="mb-1" style={{ color: "#8b8b8bff" }} />
                     <div className="nav-label" style={{ fontSize: "12px" }}>help</div>
                   </div>
                 </div>
                 <div className="col-3">
                   {/* Mobile Bottom Cart Icon - Navigates to CartSummary page */}
-                  <div 
+                  <div
                     className="nav-item position-relative"
                     onClick={handleCartClick}
                     style={{ cursor: 'pointer' }}
@@ -615,7 +637,7 @@ function Urbanav() {
       )}
 
       {/* Account Modal */}
-      <AccountModal 
+      <AccountModal
         show={showAccountModal}
         onHide={() => setShowAccountModal(false)}
       />
@@ -629,16 +651,16 @@ function Urbanav() {
         dialogClassName="location-modal"
       >
         <Modal.Header className="border-bottom-0 position-relative">
-    <Modal.Title className="fw-bold">
-      {showAddressMap ? "Confirm Your Address" : "Select Location"}
-    </Modal.Title>
-    <Button 
-      type="button" 
-      onClick={resetLocationModal}
-      className="position-absolute border-0 justify-content-center closebtn p-0">X
-    </Button>
-  </Modal.Header>
-        
+          <Modal.Title className="fw-bold">
+            {showAddressMap ? "Confirm Your Address" : "Select Location"}
+          </Modal.Title>
+          <Button
+            type="button"
+            onClick={resetLocationModal}
+            className="position-absolute border-0 justify-content-center closebtn p-0">X
+          </Button>
+        </Modal.Header>
+
         <Modal.Body className="p-0" style={{ maxHeight: "80vh", overflowY: "auto" }}>
           {!showAddressMap ? (
             // Location Search View
@@ -655,7 +677,7 @@ function Urbanav() {
                     autoFocus
                   />
                 </div>
-                
+
                 <div className="mt-3">
                   <a
                     href="#"
@@ -672,7 +694,7 @@ function Urbanav() {
                       cursor: "pointer",
                     }}
                   >
-                    <IoMdLocate size={20} /> 
+                    <IoMdLocate size={20} />
                     {currentLocationStatus === "fetching" ? "Fetching your location..." : "Use my current location"}
                   </a>
                 </div>
@@ -705,8 +727,8 @@ function Urbanav() {
                               </span>
                             </div>
                             <Dropdown>
-                              <Dropdown.Toggle 
-                                variant="light" 
+                              <Dropdown.Toggle
+                                variant="light"
                                 size="sm"
                                 className="border-0 p-1"
                                 onClick={(e) => {
@@ -717,7 +739,7 @@ function Urbanav() {
                                 <MdMoreVert size={16} />
                               </Dropdown.Toggle>
                               <Dropdown.Menu>
-                                <Dropdown.Item 
+                                <Dropdown.Item
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleDeleteAddress(address.id, e);
@@ -801,36 +823,74 @@ function Urbanav() {
             // Map & Address Details View
             <Row className="g-0">
               <Col md={7}>
-                <div 
-                  className="position-relative bg-light"
-                  style={{ height: "500px", backgroundColor: "#f8f9fa" }}
-                >
-                  <div 
-                    className="w-100 h-100 d-flex align-items-center justify-content-center"
-                    style={{ 
-                      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                      color: "white"
-                    }}
+                {/* Map View */}
+                <div className="position-relative" style={{ height: "320px" }}>
+                  <MapContainer
+                    center={[selectedLocation?.coordinates?.lat || 11.0168, selectedLocation?.coordinates?.lng || 76.9558]}
+                    zoom={15}
+                    style={{ height: "100%", width: "100%" }}
                   >
-                    <div className="text-center">
-                      <CiLocationOn size={48} className="mb-3" />
-                      <h5>Map View</h5>
-                      <p className="mb-0">Interactive map would be displayed here</p>
-                      <small>Google Maps/Mapbox integration</small>
-                      <div className="mt-3">
-                        <div className="bg-white text-dark p-2 rounded d-inline-block">
-                          {selectedLocation?.mainText}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <MapController selectedLocation={selectedLocation} />
+                    <DraggableMarker
+                      position={[selectedLocation?.coordinates?.lat || 11.0168, selectedLocation?.coordinates?.lng || 76.9558]}
+                      onDragEnd={async (newPos) => {
+                        const lat = newPos.lat;
+                        const lng = newPos.lng;
+
+                        // Optimistically update coordinates first
+                        setSelectedLocation(prev => ({
+                          ...prev,
+                          coordinates: { lat, lng },
+                          mainText: "Fetching address...",
+                          subText: "Please wait..."
+                        }));
+
+                        try {
+                          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                          const data = await response.json();
+
+                          if (data && data.display_name) {
+                            // Extract relevant parts for better display
+                            const parts = data.display_name.split(', ');
+                            const mainText = parts.length > 0 ? parts[0] : "Pinned Location";
+                            const subText = parts.slice(1).join(', ');
+
+                            setSelectedLocation(prev => ({
+                              ...prev,
+                              mainText: mainText,
+                              subText: subText,
+                              fullAddress: data.display_name,
+                              coordinates: { lat, lng }
+                            }));
+
+                            // Auto-fill landmark if possible
+                            setAddressDetails(prev => ({
+                              ...prev,
+                              landmark: mainText
+                            }));
+                          }
+                        } catch (error) {
+                          console.error("Reverse geocoding failed:", error);
+                          setSelectedLocation(prev => ({
+                            ...prev,
+                            mainText: "Pinned Location",
+                            subText: "Address lookup failed"
+                          }));
+                        }
+                      }}
+                    />
+                  </MapContainer>
                 </div>
               </Col>
 
               <Col md={5}>
-                <div className="p-4" style={{ height: "500px", overflowY: "auto" }}>
+                <div className="p-4" style={{ height: "320px", overflowY: "auto" }}>
                   <h6 className="fw-semibold mb-3">Add Address Details</h6>
-                  
+
                   <div className="bg-light p-3 rounded mb-4">
                     <h6 className="fw-semibold mb-1">Selected Location</h6>
                     <p className="text-muted mb-0 small">{selectedLocation?.fullAddress}</p>
@@ -916,6 +976,46 @@ function Urbanav() {
         </Modal.Body>
       </Modal>
     </>
+  );
+}
+
+// Helper to re-center map when location changes
+function MapController({ selectedLocation }) {
+  const map = useMap();
+  useEffect(() => {
+    if (selectedLocation?.coordinates) {
+      map.flyTo([selectedLocation.coordinates.lat, selectedLocation.coordinates.lng], map.getZoom());
+    }
+  }, [selectedLocation, map]);
+  return null;
+}
+
+// Draggable Marker Component
+function DraggableMarker({ position, onDragEnd }) {
+  const markerRef = useRef(null);
+  const eventHandlers = useMemo(
+    () => ({
+      dragend() {
+        const marker = markerRef.current;
+        if (marker != null) {
+          onDragEnd(marker.getLatLng());
+        }
+      },
+    }),
+    [onDragEnd],
+  );
+
+  return (
+    <Marker
+      draggable={true}
+      eventHandlers={eventHandlers}
+      position={position}
+      ref={markerRef}
+    >
+      <Popup minWidth={90}>
+        <span className="fw-semibold">Drag to adjust location</span>
+      </Popup>
+    </Marker>
   );
 }
 

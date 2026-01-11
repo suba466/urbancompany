@@ -47,7 +47,7 @@ function Salon1() {
       alert("Your cart is empty");
       return;
     }
-    
+
     // Navigate to cart summary page
     navigate('/cart-summary');
   };
@@ -427,7 +427,7 @@ function Salon1() {
                             cursor: "pointer",
                             borderRadius: "16px",
                             overflow: "hidden",
-                            height: "250px",
+                            height: "150px",
                             marginTop: "10px"
                           }}
                         >
@@ -475,16 +475,20 @@ function Salon1() {
                               /* --- SUPER SAVER DISCOUNT BOX LAYOUT --- */
                               <div
                                 onClick={() => handleShowCarouselModal(pkg)}
-                                className="button2 shadow-sm mt-auto me-3"
+                                className="shadow-sm mt-auto"
                                 style={{
                                   display: "flex",
                                   flexDirection: "column",
                                   alignItems: "center",
                                   justifyContent: "center",
                                   position: "relative",
-                                  width: "120px",
-                                  marginBottom: "20px",
-                                  overflow: "visible"
+                                  width: "110px",
+                                  height: "110px",
+                                  marginBottom: "10px",
+                                  overflow: "visible",
+                                  backgroundColor: "#f5f5f5",
+                                  borderRadius: "8px",
+                                  border: "1px solid #ededed"
                                 }}
                               >
 
@@ -512,7 +516,7 @@ function Salon1() {
                                       bottom: "-12px", // Pop out
                                       left: "50%",
                                       transform: "translateX(-50%)",
-                                      width: "90%", // Slightly wider than box
+                                      width: "70px", // Smaller width
                                       color: "rgb(110, 66, 229)",
                                       backgroundColor: "white",
                                       border: "1px solid rgb(110, 66, 229)",
@@ -536,13 +540,13 @@ function Salon1() {
                                       bottom: "-12px",
                                       left: "50%",
                                       transform: "translateX(-50%)",
-                                      width: "90%",
+                                      width: "70px",
                                       backgroundColor: "white",
                                       border: "1px solid rgb(110, 66, 229)",
                                       borderRadius: "6px",
                                       height: "30px",
                                       zIndex: 2,
-                                      padding: "0 5px"
+                                      padding: "0 2px"
                                     }}>
 
                                     <Button
@@ -593,7 +597,7 @@ function Salon1() {
                                       border: "1px solid rgb(110, 66, 229)",
                                       padding: "0",
                                       fontWeight: "600",
-                                      width: "90px",
+                                      width: "70px",
                                       height: "36px",
                                       borderRadius: "8px",
                                       fontSize: "15px"
@@ -608,9 +612,9 @@ function Salon1() {
                                       border: "1px solid rgb(110, 66, 229)",
                                       borderRadius: "8px",
                                       backgroundColor: "white",
-                                      width: "90px",
+                                      width: "70px",
                                       height: "36px",
-                                      padding: "0 5px"
+                                      padding: "0 2px"
                                     }}
                                   >
                                     <Button onClick={() => handleDecrease(inCart)} className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent' style={{ width: "24px", height: "100%", fontSize: "18px", fontWeight: "bold" }}>−</Button>
@@ -684,8 +688,8 @@ function Salon1() {
       </Row>
       {carts.length > 0 && (
         <div className="mobile-cart-footer-wrapper position-fixed d-flex flex-column d-lg-none" style={{ bottom: 0, left: 0, right: 0, backgroundColor: "white", boxShadow: "0 -2px 10px rgba(0,0,0,0.1)", padding: "10px", zIndex: 999 }}>
-          <Button 
-            className="mobile-cart-footer-button mobile-cart-footer-total w-100 border-0" 
+          <Button
+            className="mobile-cart-footer-button mobile-cart-footer-total w-100 border-0"
             onClick={handleViewCart}
             style={{ backgroundColor: "#6e42e5", color: "white", padding: "12px" }}
           >

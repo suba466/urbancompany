@@ -186,74 +186,68 @@ const TableControls = ({
       {/* Desktop View - Grid layout */}
       <div className="d-none d-md-block">
         {/* Main Controls Row */}
-        {/* Main Controls Row */}
-        <Row className="align-items-center mb-3 gy-3">
-          {/* Left Side: Search and Additional Actions */}
-          <Col xs={12} lg={7} xl={8} className="mb-md-2 mb-lg-0">
-            <div className="d-flex align-items-center gap-3 flex-wrap">
-              {/* Additional Actions (on LEFT of search) */}
-              {additionalActions && (
-                <div className="additional-actions">
-                  {additionalActions}
-                </div>
-              )}
-
-              {/* Search Bar */}
-              {showSearch && (
-                <div className="flex-grow-1" style={{ minWidth: "200px" }}>
-                  <div className="position-relative">
-                    <Form.Control
-                      type="search"
-                      placeholder={searchPlaceholder}
-                      value={searchValue}
-                      onChange={onSearchChange}
-                      style={{
-                        height: '40px',
-                        borderRadius: '0px',
-                        border: "2px solid #000000",
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </Col>
-
-          {/* Right Side: Download buttons */}
-          <Col xs={12} lg={5} xl={4}>
-            {showDownload && (
-              <div className="d-flex gap-2 justify-content-lg-end justify-content-md-start flex-nowrap">
-                <Button
-                  variant="outline-light"
-                  style={{ border: "1px solid #000000" }}
-                  size="sm"
-                  onClick={onDownloadPDF}
-                  title="Download as PDF"
-                >
-                  <FaFilePdf className="text-danger" />
-                </Button>
-                <Button
-                  variant="outline-light"
-                  style={{ border: "1px solid #000000" }}
-                  size="sm"
-                  onClick={onDownloadExcel}
-                  title="Download as Excel"
-                >
-                  <FaFileExcel className="text-success" />
-                </Button>
-                <Button
-                  variant="outline-light"
-                  style={{ border: "1px solid #000000" }}
-                  size="sm"
-                  onClick={onDownloadCSV}
-                  title="Download as CSV"
-                >
-                  <FaFileCsv className="text-primary" />
-                </Button>
+        {/* Desktop View - Single Line Toolbar */}
+        <div className="d-flex align-items-center justify-content-between mb-3 gap-3">
+          {/* Left Side: Actions + Search */}
+          <div className="d-flex align-items-center gap-2 flex-grow-1">
+            {/* Additional Actions */}
+            {additionalActions && (
+              <div className="d-flex align-items-center">
+                {additionalActions}
               </div>
             )}
-          </Col>
-        </Row>
+
+            {/* Search Bar - Flexible width */}
+            {showSearch && (
+              <div className="flex-grow-1" style={{ maxWidth: '400px' }}>
+                <Form.Control
+                  type="search"
+                  placeholder={searchPlaceholder}
+                  value={searchValue}
+                  onChange={onSearchChange}
+                  style={{
+                    height: '40px',
+                    borderRadius: '0px',
+                    border: "2px solid #000000",
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Right Side: Download Buttons - Fixed width, no wrap */}
+          {showDownload && (
+            <div className="d-flex gap-2 flex-shrink-0">
+              <Button
+                variant="outline-light"
+                style={{ border: "1px solid #000000" }}
+                size="sm"
+                onClick={onDownloadPDF}
+                title="Download as PDF"
+              >
+                <FaFilePdf size={16} color="red" />
+              </Button>
+              <Button
+                variant="outline-light"
+                style={{ border: "1px solid #000000" }}
+                size="sm"
+                onClick={onDownloadExcel}
+                title="Download as Excel"
+              >
+                <FaFileExcel className="text-success" />
+              </Button>
+              <Button
+                variant="outline-light"
+                style={{ border: "1px solid #000000" }}
+                size="sm"
+                onClick={onDownloadCSV}
+                title="Download as CSV"
+              >
+                <FaFileCsv className="text-primary" />
+              </Button>
+            </div>
+          )}
+        </div>
 
         {/* Second Row: Items per page and Pagination */}
         <Row className='d-flex justify-content-end align-items-center'>
