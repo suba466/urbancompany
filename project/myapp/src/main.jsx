@@ -5,10 +5,10 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import Urban from './Urban.jsx';
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    
-      <BrowserRouter>
-        <Urban />
-      </BrowserRouter>
-    
+
+    <BrowserRouter basename={import.meta.env.BASE_URL} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <Urban />
+    </BrowserRouter>
+
   </StrictMode>
 );
