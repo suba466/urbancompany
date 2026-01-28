@@ -33,32 +33,25 @@ function Banner() {
       setLoading(true);
       console.log("Fetching categories from API...");
       const response = await fetch("http://localhost:5000/api/categories");
-      
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: Failed to fetch categories`);
       }
-      
+
       const data = await response.json();
       console.log("API Response:", data);
-      
+
       // Check if data has categories array
       if (data.categories && Array.isArray(data.categories)) {
         // Debug: Log each category
         data.categories.forEach(category => {
           console.log(`Category: ${category.name}`);
         });
-        
+
         console.log(`Found ${data.categories.length} categories`);
-        
-        // Sort by order if available, otherwise by name
-        const sortedCategories = data.categories.sort((a, b) => {
-          if (a.order !== undefined && b.order !== undefined) {
-            return a.order - b.order;
-          }
-          return a.name?.localeCompare(b.name) || 0;
-        });
-        
-        setCategories(sortedCategories);
+
+        // Use the order from the API (which is now chronological)
+        setCategories(data.categories);
       } else {
         console.warn("No categories array in response:", data);
         setCategories([]);
@@ -84,13 +77,13 @@ function Banner() {
     'clean': '/cleaning',
     'electric': '/electrician',
     'water': '/water-purifier',
-    'plumb': '/plumbing' 
+    'plumb': '/plumbing'
   };
 
   // Then update handleCategoryClick:
   const handleCategoryClick = (category) => {
     console.log("Category clicked:", { name: category.name });
-    
+
     if (!category.name) {
       navigate("/categories");
       return;
@@ -103,7 +96,7 @@ function Banner() {
         return;
       }
     }
-    
+
     // Default fallback
     navigate("/categories");
   };
@@ -120,10 +113,10 @@ function Banner() {
 
   // Render category image with fallback
   const renderCategoryImage = (category) => {
-    const imageUrl = category.img 
+    const imageUrl = category.img
       ? `http://localhost:5000${category.img}`
       : 'http://localhost:5000/assets/default-category.png';
-    
+
     return (
       <div>
         <img
@@ -146,7 +139,7 @@ function Banner() {
         items.push(null); // Empty slot
       }
     }
-    
+
     return (
       <div key={`row-${rowIndex}`} className="first-row d-flex">
         {items.map((category, index) => {
@@ -156,13 +149,13 @@ function Banner() {
               <div
                 key={`empty-${rowIndex}-${index}`}
                 className=" second-row-item"
-                
+
               >
                 {/* Empty placeholder */}
               </div>
             );
           }
-          
+
           return (
             <div
               key={category._id || `category-${rowIndex}-${index}`}
@@ -183,7 +176,7 @@ function Banner() {
   // Dynamic layout based on number of categories
   const renderCategoriesGrid = () => {
     const totalCategories = categories.length;
-    
+
     if (totalCategories === 0) {
       return (
         <Alert variant="info" className="text-center">
@@ -191,7 +184,7 @@ function Banner() {
         </Alert>
       );
     }
-    
+
     // For 1-2 categories: show in first row only
     if (totalCategories <= 2) {
       return (
@@ -212,12 +205,12 @@ function Banner() {
         </>
       );
     }
-    
+
     // For 3 categories: show 2 in first row, 1 in second row (with 2 empty spaces)
     if (totalCategories === 3) {
       const firstRow = categories.slice(0, 2);
       const secondRow = categories.slice(2, 3); // Just 1 item
-      
+
       return (
         <>
           <div className="first-row d-flex">
@@ -236,12 +229,12 @@ function Banner() {
         </>
       );
     }
-    
+
     // For 4 categories: show 2 in first row, 2 in second row (with 1 empty space)
     if (totalCategories === 4) {
       const firstRow = categories.slice(0, 2);
       const secondRow = categories.slice(2, 4); // 2 items
-      
+
       return (
         <>
           <div className="first-row d-flex">
@@ -250,7 +243,7 @@ function Banner() {
                 key={c._id || index}
                 className="first-row-item d-flex align-items-center justify-content-between"
                 onClick={() => handleCategoryClick(c)}
-               >
+              >
                 <p className="first-row-text text-center mb-0">{c.name}</p>
                 {renderCategoryImage(c)}
               </div>
@@ -261,12 +254,12 @@ function Banner() {
         </>
       );
     }
-    
+
     // For 5 categories: show 2 in first row, 3 in second row (full row)
     if (totalCategories === 5) {
       const firstRow = categories.slice(0, 2);
       const secondRow = categories.slice(2, 5); // 3 items
-      
+
       return (
         <>
           <div className="first-row d-flex">
@@ -286,17 +279,17 @@ function Banner() {
         </>
       );
     }
-    
+
     // For 6 or more categories
     if (totalCategories >= 6) {
       const firstRow = categories.slice(0, 2);
       const secondRow = categories.slice(2, 5);
       const remainingCategories = categories.slice(5);
-      
+
       // Calculate how many additional rows we need
       const totalAdditionalRows = Math.ceil(remainingCategories.length / 3);
       const additionalRows = [];
-      
+
       // Create additional rows
       for (let i = 0; i < totalAdditionalRows; i++) {
         const startIndex = i * 3;
@@ -304,7 +297,7 @@ function Banner() {
         const rowCategories = remainingCategories.slice(startIndex, endIndex);
         additionalRows.push(renderThreeColumnRow(rowCategories, i + 2));
       }
-      
+
       return (
         <>
           <div className="first-row d-flex">
@@ -313,16 +306,16 @@ function Banner() {
                 key={c._id || index}
                 className="first-row-item d-flex align-items-center justify-content-between"
                 onClick={() => handleCategoryClick(c)}
-               >
+              >
                 <p className="first-row-text text-center mb-0">{c.name}</p>
                 {renderCategoryImage(c)}
               </div>
             ))}
           </div>
-          
+
           {/* Second row */}
           {renderThreeColumnRow(secondRow, 1)}
-          
+
           {/* Additional rows */}
           {additionalRows}
         </>
@@ -331,13 +324,13 @@ function Banner() {
   };
 
   return (
-    <Container className="contain"  style={{ marginTop: "50px" }}>
+    <Container className="contain" style={{ marginTop: "50px" }}>
       {error && (
         <Alert variant="warning" className="mb-3">
           {error}
         </Alert>
       )}
-      
+
       <Row>
         <Col md={6}>
           <h3 className="home fw-bold">
@@ -346,7 +339,7 @@ function Banner() {
 
           <div className="service-box" >
             <p className="service-heading home">What are you looking for?</p>
-            
+
             {/* Dynamic categories grid with exact same layout logic */}
             {renderCategoriesGrid()}
           </div>
@@ -360,7 +353,7 @@ function Banner() {
                 </Col>
                 <Col className="font">
                   <p style={{ color: "rgb(84,84,84)" }}>
-                    <span 
+                    <span
                       className="fw-bold"
                       style={{
                         fontSize: "20px",
@@ -382,7 +375,7 @@ function Banner() {
                 </Col>
                 <Col className="font">
                   <p style={{ color: "rgb(84,84,84)" }}>
-                    <span 
+                    <span
                       className="fw-bold"
                       style={{
                         fontSize: "20px",

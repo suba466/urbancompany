@@ -1139,7 +1139,7 @@ app.get("/api/categories", async (req, res) => {
 
     // FIRST: Try to get from MongoDB (your dynamic database)
     let categories = await Category.find({ isActive: true })
-      .sort({ order: 1, name: 1 });
+      .sort({ createdAt: 1 });
 
     // SECOND: If MongoDB has no categories, use static JSON file
     if (categories.length === 0) {
@@ -1182,7 +1182,7 @@ app.get("/api/categories", async (req, res) => {
 app.get("/api/all-categories", async (req, res) => {
   try {
     const categories = await Category.find()
-      .sort({ order: 1, name: 1 });
+      .sort({ createdAt: 1 });
     res.json({
       categories,
       count: categories.length
