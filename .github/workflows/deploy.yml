@@ -32,7 +32,9 @@ jobs:
           cache-dependency-path: project/myapp/package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          rm -f package-lock.json
+          npm install
         working-directory: project/myapp
 
       - name: Build
