@@ -186,9 +186,9 @@ function CartPage() {
         key: "rzp_test_S9N5uYU87mhzcY", // Enter the Key ID generated from the Dashboard
         amount: orderData.order.amount,
         currency: orderData.order.currency,
-        name: "Urban Company Clone",
+        name: "Urban Company",
         description: "Beauty Service Payment",
-        image: "http://localhost:5000/assets/logo.png", // Or any logo you have
+        image: "http://localhost:5000/assets/Uc.png", // Or any logo you have
         order_id: orderData.order.id,
         handler: async function (response) {
           try {
@@ -224,7 +224,7 @@ function CartPage() {
           contact: user.phone || "9999999999",
         },
         theme: {
-          color: "#000000",
+          color: "#6e42e5",
         },
         modal: {
           ondismiss: function () {
