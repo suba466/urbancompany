@@ -99,7 +99,18 @@ function CartPage() {
     console.log("=========================");
   };
 
+  const loadRazorpay = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const processPayment = async () => {
+
     // First check if all required fields are filled
     if (!selectedAddress) {
       alert("Please select an address first");
@@ -146,6 +157,95 @@ function CartPage() {
       const slotExtraCharge = calculateSlotExtraCharge();
       const totalPrice = itemTotal + tax + tip + slotExtraCharge;
 
+      // 1. Load Razorpay SDK
+      const res = await loadRazorpay();
+      if (!res) {
+        alert("Razorpay SDK failed to load. Please check your internet connection.");
+        setIsProcessing(false);
+        return;
+      }
+
+      // 2. Create Order on Backend
+      const orderResponse = await fetch("http://localhost:5000/api/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: totalPrice, // Amount in numeric rupees
+          currency: "INR",
+          receipt: `receipt_${Date.now()}`
+        })
+      });
+
+      const orderData = await orderResponse.json();
+      if (!orderData.success) {
+        throw new Error(orderData.error || "Failed to create payment order");
+      }
+
+      // 3. Initialize Razorpay options
+      const options = {
+        key: "rzp_test_S9N5uYU87mhzcY", // Enter the Key ID generated from the Dashboard
+        amount: orderData.order.amount,
+        currency: orderData.order.currency,
+        name: "Urban Company Clone",
+        description: "Beauty Service Payment",
+        image: "http://localhost:5000/assets/logo.png", // Or any logo you have
+        order_id: orderData.order.id,
+        handler: async function (response) {
+          try {
+            // 4. Verify Payment on Backend
+            const verifyResponse = await fetch("http://localhost:5000/api/verify-payment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              })
+            });
+
+            const verifyData = await verifyResponse.json();
+
+            if (verifyData.success) {
+              // 5. Create Booking after successful payment
+              await createBooking(totalPrice, itemTotal, tax, tip, slotExtraCharge, response.razorpay_payment_id);
+            } else {
+              alert("Payment verification failed! Please contact support.");
+              setIsProcessing(false);
+            }
+          } catch (error) {
+            console.error("Payment verification error:", error);
+            alert("An error occurred during payment verification.");
+            setIsProcessing(false);
+          }
+        },
+        prefill: {
+          name: user.name,
+          email: user.email,
+          contact: user.phone || "9999999999",
+        },
+        theme: {
+          color: "#000000",
+        },
+        modal: {
+          ondismiss: function () {
+            setIsProcessing(false);
+            console.log("Payment modal closed");
+          }
+        }
+      };
+
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.open();
+
+    } catch (error) {
+      console.error("❌ Error initiating payment:", error);
+      alert(`❌ Payment failed: ${error.message}\n\nPlease try again.`);
+      setIsProcessing(false);
+    }
+  };
+
+  const createBooking = async (totalPrice, itemTotal, tax, tip, slotExtraCharge, paymentId) => {
+    try {
       // Prepare booking data
       const bookingData = {
         customerId: user.id || user.customerId || `customer_${user.email}`,
@@ -172,7 +272,8 @@ function CartPage() {
         slotExtraCharge: slotExtraCharge,
         tipAmount: tip,
         taxAmount: tax,
-        paymentMethod: "UPI",
+        paymentMethod: "Razorpay",
+        transactionId: paymentId,
         status: "Confirmed",
         paymentStatus: "Paid"
       };
@@ -195,16 +296,14 @@ function CartPage() {
         throw new Error(result.error || "Failed to create booking");
       }
 
-      // Clear cart after successful booking - DO THIS SYNCHRONOUSLY
+      // Clear cart after successful booking
       try {
-        // Show success message BEFORE clearing cart so UI background remains visible
-        const successMessage = `✅ Order placed successfully!\n`;
-
+        const successMessage = `✅ Order placed successfully!\nTransaction ID: ${paymentId}`;
         alert(successMessage);
 
         console.log("Starting cart clearing process...");
 
-        // 1. Clear from Redux store first (this also clears localStorage)
+        // 1. Clear from Redux store first
         clearCart();
         console.log("✅ Cart cleared from Redux store and localStorage");
 
@@ -230,8 +329,6 @@ function CartPage() {
         // Debug cart state after clearing
         debugCartState();
 
-        // Alert was here, moved up
-
         // Reset form state
         setSelectedAddress(null);
         setSelectedSlot(null);
@@ -245,22 +342,20 @@ function CartPage() {
 
       } catch (clearError) {
         console.error("Error clearing cart:", clearError);
-        // Even if cart clearing fails, still show success and redirect
         const fallbackMessage = `✅ Order placed successfully!\n
 Your Order ID: ${result.booking?._id || result._id || result.bookingId}\n
-Amount Paid: ₹${totalPrice}\n
+Transaction ID: ${paymentId}\n
 Note: There was an issue clearing your cart. Please refresh the page manually.`;
 
         alert(fallbackMessage);
 
-        // Force clear localStorage as backup
         localStorage.setItem('cartItems', JSON.stringify([]));
         navigate('/');
       }
 
     } catch (error) {
-      console.error("❌ Error processing order:", error);
-      alert(`❌ Order failed: ${error.message}\n\nPlease try again or contact support.`);
+      console.error("❌ Error processing booking:", error);
+      alert(`❌ Booking creation failed: ${error.message}\nHowever, your payment of ₹${totalPrice} was successful.\nTransaction ID: ${paymentId}\nPlease contact support.`);
     } finally {
       setIsProcessing(false);
     }
@@ -874,9 +969,10 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
                     <Button
                       className="butn fw-bold w-100 p-3"
                       disabled={!canPlaceOrder() || isProcessing}
-                       onClick={() => {
-                         setShowConfirmAddressModal(false);
-                         processPayment(); }}
+                      onClick={() => {
+                        setShowConfirmAddressModal(false);
+                        processPayment();
+                      }}
                     >
                       {isProcessing ? "Processing..." :
                         !isAuthenticated ? "Login to Continue" :

@@ -8,10 +8,18 @@ import fs from "fs";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import adminRoutes from "./adminRoutes.js";
+import Razorpay from "razorpay";
+import crypto from "crypto";
 
 const app = express();
 const PORT = 5000;
 const JWT_SECRET = "your-jwt-secret-key-change-this";
+
+// Initialize Razorpay
+const razorpay = new Razorpay({
+  key_id: "rzp_test_S9N5uYU87mhzcY",
+  key_secret: "fcXZxv9dQDIG7E5fuihYYv9Y"
+});
 
 // Middleware
 app.use(cors());
@@ -307,16 +315,18 @@ app.post("/api/bookings", async (req, res) => {
       }));
 
       // Calculate total price from cart
-      const totalPrice = cartItems.reduce((sum, item) => {
+      const itemTotalRaw = cartItems.reduce((sum, item) => {
         const price = parseFloat(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
         const count = item.count || 1;
         return sum + (price * count);
       }, 0);
 
-      finalServiceName = cartItems.map(item => item.name || item.title || "Service").join(", ");
-      finalServicePrice = totalPrice.toString();
+      const grandTotal = itemTotalRaw + (parseFloat(slotExtraCharge) || 0) + (parseFloat(tipAmount) || 0) + (parseFloat(taxAmount) || 0);
 
-      console.log(`Total calculated from cart: ₹${totalPrice}`);
+      finalServiceName = cartItems.map(item => item.name || item.title || "Service").join(", ");
+      finalServicePrice = grandTotal.toString();
+
+      console.log(`Total calculated from cart: ₹${grandTotal}`);
 
     } else if (items && items.length > 0) {
       // Use the existing items format
@@ -542,6 +552,64 @@ app.delete("/api/cart/clear/:email", async (req, res) => {
 });
 
 // ==================== OTHER ROUTES ====================
+
+// ==================== PAYMENT ROUTES ====================
+
+// Create Razorpay Order
+app.post("/api/create-order", async (req, res) => {
+  try {
+    const { amount, currency = "INR", receipt } = req.body;
+
+    // Amount must be in paisa (multiply by 100)
+    // ensure amount is an integer
+    const amountInPaisa = Math.round(parseFloat(amount) * 100);
+
+    const options = {
+      amount: amountInPaisa,
+      currency,
+      receipt,
+      payment_capture: 1
+    };
+
+    console.log("Creating Razorpay order:", options);
+
+    const order = await razorpay.orders.create(options);
+
+    console.log("Razorpay order created:", order);
+
+    res.json({
+      success: true,
+      order
+    });
+  } catch (error) {
+    console.error("Error creating Razorpay order:", error);
+    res.status(500).json({ error: "Failed to create payment order" });
+  }
+});
+
+// Verify Payment
+app.post("/api/verify-payment", async (req, res) => {
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+    const sign = razorpay_order_id + "|" + razorpay_payment_id;
+    const expectedSign = crypto
+      .createHmac("sha256", "fcXZxv9dQDIG7E5fuihYYv9Y") // Using the key_secret
+      .update(sign.toString())
+      .digest("hex");
+
+    if (razorpay_signature === expectedSign) {
+      console.log("Payment verification successful");
+      res.json({ success: true, message: "Payment verified successfully" });
+    } else {
+      console.error("Payment verification failed: Invalid signature");
+      res.status(400).json({ error: "Invalid payment signature" });
+    }
+  } catch (error) {
+    console.error("Error verifying payment:", error);
+    res.status(500).json({ error: "Payment verification failed" });
+  }
+});
 
 app.get("/api/debug-categories", async (req, res) => {
   try {
