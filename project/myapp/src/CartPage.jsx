@@ -1262,7 +1262,10 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
                       <Button
                         className="butn fw-bold w-100 p-3"
                         disabled={!canPlaceOrder() || isProcessing}
-                        onClick={() => setShowConfirmAddressModal(true)}
+                        onClick={() => {
+                          setShowConfirmAddressModal(false);
+                          processPayment();
+                        }}
                       >
                         {isProcessing ? "Processing..." :
                           !isAuthenticated ? "Login to Continue" :

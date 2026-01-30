@@ -452,8 +452,8 @@ function Salon1() {
                             cursor: isCustomPackage(pkg) ? "pointer" : "default",
                             borderRadius: "16px",
                             overflow: "hidden",
-                            height: "210px",
-                            marginTop: "10px"
+                            height: "180px",
+                            marginTop: "10px",width:"300px"
                           }}
                         >
                           <img
