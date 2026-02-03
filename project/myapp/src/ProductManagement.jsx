@@ -309,7 +309,7 @@ function ProductManagement({ isAdding }) {
           setTimeout(() => {
             setFormSuccess(false);
             resetForm();
-            setShowFormView(false);
+            // setShowFormView(false); // Stay on form for continuous entry
             fetchProducts();
           }, 1500);
         } else {

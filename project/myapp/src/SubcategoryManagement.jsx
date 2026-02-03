@@ -370,8 +370,10 @@ function SubcategoryManagement({ isAdding, isEditing }) {
         // Clear cache
         localStorage.removeItem('subcategoriesCache');
         localStorage.removeItem('editingSubcategory');
-        // Navigate back to list
-        navigate('/admin/subcategories');
+        // Navigate back to list only if editing
+        if (isEditing) {
+          navigate('/admin/subcategories');
+        }
       } else {
         throw new Error(data.error || data.message || `Failed to ${isEditing ? 'update' : 'add'} subcategory`);
       }

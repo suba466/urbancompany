@@ -57,7 +57,7 @@ function Salon1() {
     const groups = {};
 
     packages.forEach(pkg => {
-      const subcategory = pkg.title || pkg.subcategory || pkg.name || "Uncategorized";
+      const subcategory = pkg.subcategory || pkg.title || pkg.name || "Uncategorized";
 
       if (!groups[subcategory]) {
         groups[subcategory] = {
@@ -147,6 +147,23 @@ function Salon1() {
             }
           }
         } catch (error) { console.error(error); }
+      }
+      if (packages.length > 0) {
+        // Filter by active subcategory if present in localStorage
+        const activeSubCategory = localStorage.getItem('activeSubCategory');
+        if (activeSubCategory) {
+          packages = packages.filter(pkg =>
+            (pkg.subcategory && pkg.subcategory === activeSubCategory) ||
+            (pkg.title && pkg.title === activeSubCategory)
+          );
+        } else {
+          // If no specific subcategory selected, default behavior:
+          // Maybe filter out generic "Salon for women" items if you don't want them showing up as "Uncategorized"
+          packages = packages.filter(pkg =>
+            pkg.subcategory && pkg.subcategory !== "Salon for women" &&
+            pkg.title && pkg.title !== "Salon for women"
+          );
+        }
       }
       setPackages(packages);
     } catch (error) {
@@ -434,13 +451,19 @@ function Salon1() {
                   const isSuperSaver = [group.title, displayTitle, pkg.subcategory].some(t => t && t.toLowerCase().includes("super saver"));
 
                   const hasImage = pkg.img && pkg.img.trim() !== "";
+
+                  // Check if this is one of the categories that should show a thumbnail image
+                  const targetCategories = ["cleanup", "pedicure", "manicure", "hair bleach", "bleach"];
+                  const checkText = (displayTitle + " " + (group.title || "")).toLowerCase();
+                  const showThumbnailVariant = hasImage && targetCategories.some(t => checkText.includes(t));
+
                   const shouldShowDiscountBanner = !hasImage && isSuperSaver;
 
                   return (
                     <div key={pkg._id} className=' position-relative package-item' style={{ marginBottom: "40px" }}>
 
-                      {/* --- BANNER IMAGE SECTION - Only show if has image --- */}
-                      {hasImage && (
+                      {/* --- BANNER IMAGE SECTION - Only show if has image AND not showing thumbnail variant --- */}
+                      {hasImage && !showThumbnailVariant && (
                         <div
                           className="mb-3 position-relative shadow-sm"
                           onClick={() => {
@@ -452,8 +475,9 @@ function Salon1() {
                             cursor: isCustomPackage(pkg) ? "pointer" : "default",
                             borderRadius: "16px",
                             overflow: "hidden",
-                            height: "180px",
-                            marginTop: "10px",width:"300px"
+                            height: "150px",
+                            marginTop: "10px",
+                            width: "100%"
                           }}
                         >
                           <img
@@ -500,10 +524,16 @@ function Salon1() {
                         <Col xs={4} className='position-relative' style={{ minHeight: "100px", display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
                           <div className="d-flex flex-column h-100 w-100 align-items-end">
 
-                            {shouldShowDiscountBanner ? (
-                              /* --- SUPER SAVER DISCOUNT BOX LAYOUT --- */
+                            {shouldShowDiscountBanner || showThumbnailVariant ? (
+                              /* --- SUPER SAVER DISCOUNT BOX OR THUMBNAIL IMAGE LAYOUT --- */
                               <div
-                                onClick={() => handleShowCarouselModal(pkg)}
+                                onClick={() => {
+                                  if (showThumbnailVariant && isCustomPackage(pkg)) {
+                                    handleShowModal(pkg);
+                                  } else if (shouldShowDiscountBanner) {
+                                    handleShowCarouselModal(pkg);
+                                  }
+                                }}
                                 className="shadow-sm mt-auto"
                                 style={{
                                   display: "flex",
@@ -515,16 +545,33 @@ function Salon1() {
                                   height: "110px",
                                   marginBottom: "10px",
                                   overflow: "visible",
-                                  backgroundColor: "#f5f5f5",
+                                  backgroundColor: showThumbnailVariant ? "white" : "#f5f5f5",
                                   borderRadius: "8px",
-                                  border: "1px solid #ededed"
+                                  border: showThumbnailVariant ? "none" : "1px solid #ededed"
                                 }}
                               >
 
-                                <div className="text-center">
-                                  <h2 className="fw-bold m-0" style={{ color: "#0d5924", fontSize: "26px", lineHeight: "0.9" }}>25%</h2>
-                                  <h6 className="fw-bold m-0" style={{ color: "#0d5924", fontSize: "14px", marginTop: "2px" }}>OFF</h6>
-                                </div>
+                                {showThumbnailVariant ? (
+                                  <img
+                                    src={pkg.img.startsWith("http") ? pkg.img : `http://localhost:5000${pkg.img}`}
+                                    alt={serviceName}
+                                    style={{
+                                      width: "100%",
+                                      height: "100%",
+                                      objectFit: "cover",
+                                      borderRadius: "8px"
+                                    }}
+                                    onError={(e) => {
+                                      e.target.onerror = null;
+                                      e.target.src = "http://localhost:5000/assets/placeholder.png";
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="text-center">
+                                    <h2 className="fw-bold m-0" style={{ color: "#0d5924", fontSize: "26px", lineHeight: "0.9" }}>25%</h2>
+                                    <h6 className="fw-bold m-0" style={{ color: "#0d5924", fontSize: "14px", marginTop: "2px" }}>OFF</h6>
+                                  </div>
+                                )}
 
                                 {!inCart ? (
                                   <Button
@@ -729,6 +776,19 @@ function Salon1() {
           </Button>
         </div>
       )}
+
+      {/* --- MOBILE BOTTOM NAVIGATION (Visible < 576px) --- */}
+      <style>
+        {`
+          @media (max-width: 575.98px) {
+            .mobile-cart-footer-wrapper {
+              bottom: 60px !important;
+            }
+          }
+        `}
+      </style>
+
+
       <Salon1modal
         showFrequentlyAdded={showFrequentlyAdded}
         setShowFrequentlyAdded={setShowFrequentlyAdded}

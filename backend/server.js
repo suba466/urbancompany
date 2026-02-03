@@ -546,7 +546,7 @@ app.delete("/api/cart/clear/:email", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("❌ Error clearing cart:", error);
+    console.error(" Error clearing cart:", error);
     res.status(500).json({ error: "Failed to clear cart" });
   }
 });

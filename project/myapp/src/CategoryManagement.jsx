@@ -299,8 +299,10 @@ function CategoryManagement({ isAdding, isEditing }) {
 
       if (result.success) {
         alert(isEditing ? 'Category updated successfully!' : 'Category added successfully!');
-        // Navigate back to categories list
-        navigate('/admin/categories');
+        // Navigate back to categories list only if editing
+        if (isEditing) {
+          navigate('/admin/categories');
+        }
       } else {
         alert(result.error || `Failed to ${isEditing ? 'update' : 'add'} category`);
       }

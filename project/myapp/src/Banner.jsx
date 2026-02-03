@@ -84,21 +84,15 @@ function Banner() {
   const handleCategoryClick = (category) => {
     console.log("Category clicked:", { name: category.name });
 
-    if (!category.name) {
-      navigate("/categories");
-      return;
-    }
-    const nameLower = category.name.toLowerCase();
-    // Check each route mapping
-    for (const [keyword, route] of Object.entries(ROUTE_MAPPINGS)) {
-      if (nameLower.includes(keyword)) {
-        navigate(route);
-        return;
-      }
-    }
+    if (!category.name) return;
 
-    // Default fallback
-    navigate("/categories");
+    const nameLower = category.name.toLowerCase();
+
+    if (nameLower.includes('salon')) {
+      navigate('/salon');
+    } else {
+      navigate('/');
+    }
   };
 
   if (loading) {

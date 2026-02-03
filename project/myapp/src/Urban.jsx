@@ -12,6 +12,8 @@ import Salon from './Salon.jsx';
 import CartSummary from './CartSummary';
 import AdminPanel from './AdminPanel.jsx';
 import OrderSuccess from './OrderSuccess.jsx';
+import UCPage from './UCPage.jsx';
+import HelpPage from './HelpPage.jsx';
 
 function AuthInitializer() {
   const dispatch = useDispatch();
@@ -59,6 +61,8 @@ function Urban() {
         <Route path='/cart-summary' element={<CartSummary />} />
         <Route path='/cart' element={<><Urbanav /><CartPage /></>} />
         <Route path='/order-success' element={<><Urbanav /><OrderSuccess /></>} />
+        <Route path='/uc' element={<><Urbanav /><UCPage /></>} />
+        <Route path='/help' element={<><Urbanav /><HelpPage /></>} />
 
         {/* Admin routes */}
         <Route path='/admin/*' element={<AdminPanel />} />

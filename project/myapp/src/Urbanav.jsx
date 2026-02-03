@@ -610,7 +610,7 @@ function Urbanav() {
             <div className="container-fluid">
               <div className="row text-center">
                 <div className="col-3">
-                  <div className="nav-item">
+                  <div className="nav-item" onClick={() => navigate('/uc')} style={{ cursor: "pointer" }}>
                     <img
                       src={logo1}
                       alt="UC Logo"
@@ -629,7 +629,7 @@ function Urbanav() {
                   </div>
                 </div>
                 <div className="col-3">
-                  <div className="nav-item">
+                  <div className="nav-item" onClick={() => navigate('/help')} style={{ cursor: "pointer" }}>
                     <IoMdHelpCircleOutline size={18} className="mb-1" style={{ color: "#8b8b8bff" }} />
                     <div className="nav-label" style={{ fontSize: "12px" }}>help</div>
                   </div>

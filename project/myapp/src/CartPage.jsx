@@ -20,7 +20,7 @@ import { syncCartWithLocalStorage } from './store';
 
 function CartPage() {
   const dispatch = useDispatch();
-  const { items: cartItems, clear: clearCart, updateItem, removeItem } = useCart();
+  const { items: cartItems, clear: clearCart, updateItem, removeItem, addItem } = useCart();
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
@@ -188,7 +188,7 @@ function CartPage() {
         currency: orderData.order.currency,
         name: "Urban Company",
         description: "Beauty Service Payment",
-        image: "http://localhost:5000/assets/Uc.png", // Or any logo you have
+        image: "http://localhost:5000/assets/urban.png", // Or any logo you have
         order_id: orderData.order.id,
         handler: async function (response) {
           try {
@@ -224,7 +224,7 @@ function CartPage() {
           contact: user.phone || "9999999999",
         },
         theme: {
-          color: "#6e42e5",
+          color: "#843ff5",
         },
         modal: {
           ondismiss: function () {
@@ -568,10 +568,14 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
   };
 
   const handleAddToCart = async (item, extraSelected = [], price, discount = 0, action = "add") => {
+    console.log("handleAddToCart called:", { item, action });
     try {
       if (action === "add") {
+        // Use _id if available, otherwise key, otherwise name
+        const productId = item._id || item.key || item.name;
+
         const cartPayload = {
-          productId: item.key || item.name,
+          productId: productId,
           title: item.name,
           price: item.price,
           count: 1,
@@ -586,7 +590,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
         const existingItem = cartItems.find(cart => cart.title === item.name);
 
         if (existingItem) {
-          await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
+          const response = await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -594,42 +598,77 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
               count: existingItem.count + 1
             })
           });
+
+          if (!response.ok) {
+            throw new Error(`Failed to update cart: ${response.statusText}`);
+          }
+
           updateItem(existingItem._id || existingItem.productId, existingItem.count + 1);
         } else {
-          await fetch("http://localhost:5000/api/addcarts", {
+          const response = await fetch("http://localhost:5000/api/addcarts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(cartPayload)
           });
+
+          if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || "Failed to add to cart");
+          }
+
+          const data = await response.json();
+          // Backend returns: { message: "Cart added", cart: newCart }
+          if (data.cart) {
+            // Add to local state
+            addItem(data.cart);
+          } else {
+            // Fallback if backend structure differs
+            addItem(cartPayload);
+          }
         }
       } else if (action === "remove") {
         const existingItem = cartItems.find(cart => cart.title === item.name);
         if (existingItem) {
           if (existingItem.count > 1) {
-            await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
+            const response = await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ count: existingItem.count - 1 })
             });
-            updateItem(existingItem._id || existingItem.productId, existingItem.count - 1);
+            if (response.ok) {
+              updateItem(existingItem._id || existingItem.productId, existingItem.count - 1);
+            }
           } else {
-            await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
+            const response = await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
               method: "DELETE"
             });
-            removeItem(existingItem._id || existingItem.productId);
+            if (response.ok) {
+              removeItem(existingItem._id || existingItem.productId);
+            }
           }
         }
       }
       window.dispatchEvent(new Event('cartUpdated'));
     } catch (error) {
       console.error("Error handling cart:", error);
+      alert(`Failed to update cart: ${error.message}`);
     }
   };
 
-  const visibleCarouselItems = addedImgs.filter(img => {
-    const inCart = cartItems.some(c => c.title === img.name);
-    return !inCart;
+  // Check if cart contains any "Super Saver Package" items
+  const hasSuperSaverItem = cartItems.some(item => {
+    const termsToCheck = [item.subcategory, item.title, item.name, item.category];
+    return termsToCheck.some(term =>
+      term && (
+        term.toLowerCase().includes("super saver") ||
+        term.toLowerCase().includes("2uper saver")
+      )
+    );
   });
+
+  const visibleCarouselItems = hasSuperSaverItem
+    ? addedImgs.filter(img => !cartItems.some(c => c.title === img.name))
+    : [];
 
   const openEditModal = (item) => {
     setSelectedPkg(item);
@@ -677,8 +716,6 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
     setShowLoginView(true);
   };
 
-
-
   const handleSlotSelect = (slot) => {
     setSelectedSlot(slot);
   };
@@ -716,39 +753,22 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
 
   const formatFullAddress = (address) => {
     if (!address) return "";
-
     const parts = [];
-
-    if (address.doorNo && address.doorNo.trim() !== "") {
-      parts.push(address.doorNo.trim());
-    }
-
-    if (address.mainText && address.mainText.trim() !== "") {
-      parts.push(address.mainText.trim());
-    }
-
-    if (address.subText && address.subText.trim() !== "") {
-      parts.push(address.subText.trim());
-    }
-
+    if (address.doorNo && address.doorNo.trim() !== "") parts.push(address.doorNo.trim());
+    if (address.mainText && address.mainText.trim() !== "") parts.push(address.mainText.trim());
+    if (address.subText && address.subText.trim() !== "") parts.push(address.subText.trim());
     return parts.join(", ");
   };
 
   const formatMobileAddress = (address) => {
     if (!address) return "";
-
     const fullAddress = formatFullAddress(address);
-
-    if (fullAddress.length > 50) {
-      return fullAddress.substring(0, 47) + "...";
-    }
-
+    if (fullAddress.length > 50) return fullAddress.substring(0, 47) + "...";
     return fullAddress;
   };
 
   const formatDateForMobile = (date) => {
     if (!date) return "";
-
     const options = { weekday: 'short', month: 'short', day: 'numeric' };
     return date.toLocaleDateString('en-US', options);
   };
@@ -787,21 +807,11 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
   };
 
   const canPlaceOrder = () => {
-    if (!isAuthenticated) {
-      return false;
-    }
-    if (!selectedAddress) {
-      return false;
-    }
-    if (!selectedSlot) {
-      return false;
-    }
-    if (cartItems.length === 0) {
-      return false;
-    }
-    if (!user?.email) {
-      return false;
-    }
+    if (!isAuthenticated) return false;
+    if (!selectedAddress) return false;
+    if (!selectedSlot) return false;
+    if (cartItems.length === 0) return false;
+    if (!user?.email) return false;
     return true;
   };
 
@@ -845,6 +855,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
     );
   }
 
+  // ... (lines in between)
   return (
     <div className="container mt-4">
       <Row>
@@ -1016,6 +1027,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
                 carts={cartItems}
                 onAdd={(item) => handleAddToCart(item, [], item.price, 0, "add")}
                 onRemove={(item) => handleAddToCart(item, [], item.price, 0, "remove")}
+                onViewProduct={openEditModal}
               />
               <div className="mt-4 pt-3 border-top">
                 <Form.Check
@@ -1028,9 +1040,11 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
                 />
               </div>
             </div>
-          )}
+          )
+          }
 
-          <div style={{ border: "1px solid #d9d9d9", borderRadius: "8px", marginTop: "15px" }}>
+          < div style={{ border: "1px solid #d9d9d9", borderRadius: "8px", marginTop: "15px" }
+          }>
             <div style={{ padding: "12px" }}>
               <Row className="align-items-center">
                 <Col xs={8}>
@@ -1049,7 +1063,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
                 </Col>
               </Row>
             </div>
-          </div>
+          </div >
 
           <div style={{ border: "1px solid #d9d9d9", borderRadius: "8px", marginTop: "15px" }}>
             <div style={{ padding: "12px" }}>
@@ -1165,8 +1179,8 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
               </Col>
             </Row>
           </div>
-        </Col>
-      </Row>
+        </Col >
+      </Row >
 
       <div className="d-md-none position-fixed bottom-0 start-0 end-0 bg-white border-top shadow-lg py-3"
         style={{ zIndex: 1050 }}>
@@ -1294,13 +1308,15 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
 
       <div className="d-md-none" style={{ height: "80px" }}></div>
 
-      {showModal && (
-        <Salon1modal
-          show={showModal}
-          onHide={() => setShowModal(false)}
-          selectedItem={selectedPkg}
-        />
-      )}
+      {
+        showModal && (
+          <Salon1modal
+            show={showModal}
+            onHide={() => setShowModal(false)}
+            selectedItem={selectedPkg}
+          />
+        )
+      }
 
       <AccountModal
         show={showAccountModal || showBookingsModal}
@@ -1449,7 +1465,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
           </div>
         </Modal.Footer>
       </Modal>
-    </div>
+    </div >
   );
 }
 
