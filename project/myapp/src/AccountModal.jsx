@@ -7,7 +7,8 @@ import { BiLeftArrowAlt } from "react-icons/bi";
 import { PiNotepadLight } from "react-icons/pi";
 import { IoSettingsOutline } from "react-icons/io5";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { useAuth, useCart, useBookings, notifyAuthChange } from "./hooks"; 
+import { useAuth, useCart, useBookings, notifyAuthChange } from "./hooks";
+import API_URL from "./config";
 
 function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "main" }) {
   const [logo1, setLogo1] = useState("");
@@ -116,7 +117,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
       console.log("Fetching bookings for:", customerEmail);
 
       // Load bookings from server
-      const bookingsResponse = await fetch(`http://localhost:5000/api/bookings/${customerEmail}`);
+      const bookingsResponse = await fetch(`${API_URL}/api/bookings/${customerEmail}`);
 
       if (bookingsResponse.ok) {
         const bookingsData = await bookingsResponse.json();
@@ -147,7 +148,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
       }
 
       // Load plans from same email
-      const plansResponse = await fetch(`http://localhost:5000/api/plans/${customerEmail}`);
+      const plansResponse = await fetch(`${API_URL}/api/plans/${customerEmail}`);
       if (plansResponse.ok) {
         const plansData = await plansResponse.json();
         setPlans(plansData.plans || []);
@@ -163,19 +164,19 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
   useEffect(() => {
     const fetchLogo = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/static-data");
+        const response = await fetch(`${API_URL}/api/static-data`);
         if (response.ok) {
           const data = await response.json();
           if (data && data.logo1) {
             const logoUrl = data.logo1.startsWith('http')
               ? data.logo1
-              : `http://localhost:5000${data.logo1}`;
+              : `${API_URL}${data.logo1}`;
             setLogo1(logoUrl);
           }
         }
       } catch (error) {
         console.error("Error fetching logo:", error);
-        setLogo1("http://localhost:5000/assets/urban.png");
+        setLogo1(`${API_URL}/assets/urban.png`);
       }
     };
 
@@ -553,9 +554,9 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
         return url;
       }
       if (url.startsWith('/assets/')) {
-        return `http://localhost:5000${url}`;
+        return `${API_URL}${url}`;
       }
-      return `http://localhost:5000/assets/${url}`;
+      return `${API_URL}/assets/${url}`;
     };
 
     const fullImageUrl = getFullImageUrl(pictureUrl);
@@ -1261,12 +1262,12 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
                     )}
 
                     {/* Action buttons */}
-                    <div style={{float:"right"}}>
-                      
+                    <div style={{ float: "right" }}>
+
                       {/* DELETE BUTTON */}
                       <Button
                         variant="outline-danger"
-                        size="sm"  
+                        size="sm"
                         onClick={async () => {
                           if (window.confirm("Are you sure you want to delete this booking record?")) {
                             try {

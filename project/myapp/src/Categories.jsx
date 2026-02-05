@@ -14,6 +14,7 @@ import {
   getCSVHeadersFromData,
   generatePDFReportHTML
 } from './downloadUtils';
+import API_URL from "./config";
 
 function Categories({
   categories,
@@ -101,7 +102,7 @@ function Categories({
   // Download functions using utilities
   const handleDownloadPDF = () => {
     const data = filteredCategories.map(cat => ({
-      'Image': cat.img ? `http://localhost:5000${cat.img}` : null,
+      'Image': cat.img ? `${API_URL}${cat.img}` : null,
       'Name': cat.name,
       'Description': cat.description || 'No description',
       'Status': cat.isActive !== false ? 'Active' : 'Inactive'
@@ -116,7 +117,7 @@ function Categories({
       'Name': cat.name,
       'Description': cat.description || 'No description',
       'Status': cat.isActive !== false ? 'Active' : 'Inactive',
-      'Image URL': cat.img ? `http://localhost:5000${cat.img}` : 'No Image',
+      'Image URL': cat.img ? `${API_URL}${cat.img}` : 'No Image',
       'Key': cat.key || ''
     }));
 
@@ -128,7 +129,7 @@ function Categories({
       'Name': cat.name,
       'Description': cat.description || 'No description',
       'Status': cat.isActive !== false ? 'Active' : 'Inactive',
-      'Image URL': cat.img ? `http://localhost:5000${cat.img}` : 'No Image',
+      'Image URL': cat.img ? `${API_URL}${cat.img}` : 'No Image',
       'Key': cat.key || ''
     }));
 
@@ -175,7 +176,7 @@ function Categories({
       const results = {};
       for (const category of categories) {
         if (category.img) {
-          const fullUrl = `http://localhost:5000${category.img}`;
+          const fullUrl = `${API_URL}${category.img}`;
           const exists = await checkImageExists(fullUrl);
           results[category._id] = exists;
         }
@@ -324,8 +325,8 @@ function Categories({
                     ) : (
                       filteredCategories.map((category) => {
                         const imageUrl = category.img
-                          ? `http://localhost:5000${category.img}`
-                          : 'http://localhost:5000/assets/default-category.png';
+                          ? `${API_URL}${category.img}`
+                          : `${API_URL}/assets/default-category.png`;
 
                         return (
                           <tr key={category._id} className="align-middle">
@@ -487,7 +488,7 @@ function Categories({
                 <div className="mb-3">
                   {selectedCategory.img ? (
                     <img
-                      src={`http://localhost:5000${selectedCategory.img}`}
+                      src={`${API_URL}${selectedCategory.img}`}
                       alt={selectedCategory.name}
                       style={{
                         width: '100px',
@@ -562,7 +563,7 @@ function Categories({
                   <div className="list-group-item px-0 border-bottom-0">
                     <small className="text-muted d-block">Image URL</small>
                     <small className="text-truncate d-block" style={{ maxWidth: '100%' }}>
-                      {`http://localhost:5000${selectedCategory.img}`}
+                      {`${API_URL}${selectedCategory.img}`}
                     </small>
                   </div>
                 )}

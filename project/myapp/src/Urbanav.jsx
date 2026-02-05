@@ -110,36 +110,44 @@ function Urbanav() {
   };
 
   // Fetch logos from backend
+  // Fetch logos with fallback
   useEffect(() => {
     const fetchLogos = async () => {
       try {
-        console.log("Fetching logos from backend...");
-        const response = await fetch(`${API_URL}/api/static-data`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch static data');
+        console.log("Fetching logos...");
+        let data;
+        try {
+          const response = await fetch(`${API_URL}/api/static-data`);
+          if (!response.ok) throw new Error('Failed to fetch static data');
+          data = await response.json();
+        } catch (apiError) {
+          console.warn("API fetch failed, falling back to local data");
+          // Fallback to local data
+          try {
+            const basePath = import.meta.env.BASE_URL || '/';
+            const response = await fetch(`${basePath}data.json`);
+            data = await response.json();
+          } catch (e) {
+            console.error("Static data fetch failed:", e);
+          }
         }
-        const data = await response.json();
-        console.log("Static data received:", data);
 
         if (data && data.logo) {
-          const logoUrl = data.logo.startsWith('http')
-            ? data.logo
-            : `${API_URL}${data.logo}`;
-          setLogo(logoUrl);
+          // Use path as-is (relative) unless it's an absolute URL
+          setLogo(data.logo);
         } else {
-          setLogo(`${API_URL}/assets/Uc.png`);
+          setLogo("/assets/Uc.png");
         }
 
         if (data && data.logo1) {
-          const logo1Url = data.logo1.startsWith('http')
-            ? data.logo1
-            : `${API_URL}${data.logo1}`;
-          setLogo1(logo1Url);
+          setLogo1(data.logo1);
+        } else {
+          setLogo1("/assets/urban.png");
         }
       } catch (error) {
         console.error("Error fetching logos:", error);
-        setLogo(`${API_URL}/assets/Uc.png`);
-        setLogo1(`${API_URL}/assets/urban.png`);
+        setLogo("/assets/Uc.png");
+        setLogo1("/assets/urban.png");
       }
     };
 
@@ -446,7 +454,7 @@ function Urbanav() {
                   style={{ height: "34px", marginLeft: "10px" }}
                   onError={(e) => {
                     console.error("Failed to load logo:", logo1);
-                    e.target.src = `${API_URL}/assets/urban.png`;
+                    e.target.src = "/assets/urban.png";
                   }}
                 />
               </Col>
@@ -466,7 +474,7 @@ function Urbanav() {
                 style={{ maxHeight: "40px", objectFit: "contain" }}
                 onError={(e) => {
                   console.error("Failed to load main logo:", logo);
-                  e.target.src = `${API_URL}/assets/Uc.png`;
+                  e.target.src = "/assets/Uc.png";
                 }}
               />
               {!location.pathname.startsWith("/salon") && (
@@ -623,7 +631,7 @@ function Urbanav() {
                       }}
                       onError={(e) => {
                         console.error("Failed to load logo1:", logo1);
-                        e.target.src = `${API_URL}/assets/uc.png`;
+                        e.target.src = "/assets/urban.png";
                       }}
                     />
                     <div className="nav-label" style={{ fontSize: "12px" }}>UC</div>

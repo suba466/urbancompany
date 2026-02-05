@@ -11,6 +11,7 @@ import {
   exportAsCSV,
   generatePDFReportHTML
 } from './downloadUtils';
+import API_URL from './config';
 
 function CustomerManagement() {
   const [customers, setCustomers] = useState([]);
@@ -47,7 +48,7 @@ function CustomerManagement() {
 
   const fetchCustomers = async (page = 1, search = '', perPage = customerPerPage) => {
     try {
-      let url = `http://localhost:5000/api/admin/customers?page=${page}&limit=${perPage}`;
+      let url = `${API_URL}/api/admin/customers?page=${page}&limit=${perPage}`;
 
       // Build query params properly
       const params = new URLSearchParams();
@@ -82,7 +83,7 @@ function CustomerManagement() {
   const deleteCustomer = async (customerId) => {
     if (window.confirm('Are you sure you want to delete this customer?')) {
       try {
-        const response = await fetch(`http://localhost:5000/api/admin/customers/${customerId}`, {
+        const response = await fetch(`${API_URL}/api/admin/customers/${customerId}`, {
           method: 'DELETE',
           headers: getAuthHeaders()
         });
@@ -105,7 +106,7 @@ function CustomerManagement() {
 
     if (window.confirm(`Are you sure you want to delete ${selectedIds.length} customer(s)?`)) {
       try {
-        const response = await fetch('http://localhost:5000/api/admin/bulk-delete', {
+        const response = await fetch(`${API_URL}/api/admin/bulk-delete`, {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({
@@ -226,7 +227,7 @@ function CustomerManagement() {
         setSelectedCustomer(prev => ({ ...prev, isActive: newStatus }));
       }
 
-      const response = await fetch(`http://localhost:5000/api/admin/customers/${customerId}/toggle-status`, {
+      const response = await fetch(`${API_URL}/api/admin/customers/${customerId}/toggle-status`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ isActive: newStatus })
@@ -263,7 +264,7 @@ function CustomerManagement() {
 
   const handleDownloadPDF = () => {
     const data = customers.map(c => ({
-      'Profile': c.profileImage ? `http://localhost:5000${c.profileImage}` : null,
+      'Profile': c.profileImage ? `${API_URL}${c.profileImage}` : null,
       'Name': c.name,
       'Email': c.email,
       'Phone': c.phone || 'N/A',
@@ -285,7 +286,7 @@ function CustomerManagement() {
 
     if (window.confirm(confirmMessage)) {
       try {
-        const response = await fetch('http://localhost:5000/api/admin/customers/bulk-block', {
+        const response = await fetch(`${API_URL}/api/admin/customers/bulk-block`, {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({
@@ -434,7 +435,7 @@ function CustomerManagement() {
                         }}>
                           {customer.profileImage ? (
                             <img
-                              src={`http://localhost:5000${customer.profileImage}`}
+                              src={`${API_URL}${customer.profileImage}`}
                               alt={customer.name}
                               style={{
                                 width: '100%',
@@ -534,7 +535,7 @@ function CustomerManagement() {
                 <div className="mb-3">
                   {selectedCustomer.profileImage ? (
                     <img
-                      src={`http://localhost:5000${selectedCustomer.profileImage}`}
+                      src={`${API_URL}${selectedCustomer.profileImage}`}
                       alt={selectedCustomer.name}
                       style={{
                         width: '150px',
@@ -613,7 +614,7 @@ function CustomerManagement() {
                   <div className="list-group-item px-0 border-bottom-0">
                     <small className="text-muted d-block">Profile Image URL</small>
                     <small className="text-truncate d-block" style={{ maxWidth: '100%' }}>
-                      {`http://localhost:5000${selectedCustomer.profileImage}`}
+                      {`${API_URL}${selectedCustomer.profileImage}`}
                     </small>
                   </div>
                 )}

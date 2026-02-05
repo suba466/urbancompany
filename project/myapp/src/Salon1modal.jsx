@@ -6,6 +6,7 @@ import { TbCirclePercentageFilled } from "react-icons/tb";
 import { FaStar, FaTag } from "react-icons/fa";
 import { GoDotFill } from "react-icons/go";
 import FrequentlyAddedCarousel from "./FrequentlyAddedCarousel";
+import API_URL from "./config";
 
 function Salon1modal({
   show,
@@ -110,7 +111,7 @@ function Salon1modal({
   useEffect(() => {
     const fetchAddedImages = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/added");
+        const response = await fetch(`${API_URL}/api/added`);
         if (!response.ok) {
           throw new Error('Failed to fetch added items');
         }
@@ -120,7 +121,8 @@ function Salon1modal({
         console.error("Failed to load added images:", error);
         // Fallback: Try static data API
         try {
-          const staticResponse = await fetch("http://localhost:5000/api/static-data");
+          const basePath = import.meta.env.BASE_URL || '/';
+          const staticResponse = await fetch(`${basePath}data.json`);
           const staticData = await staticResponse.json();
           setAddedImgs(staticData.added || []);
         } catch (staticError) {
@@ -142,7 +144,7 @@ function Salon1modal({
   }, [showDiscountModal, selectedItem]);
 
   const fetchCarts = () => {
-    return fetch("http://localhost:5000/api/carts")
+    return fetch(`${API_URL}/api/carts`)
       .then(res => res.json())
       .then(data => {
         setCarts(data.carts || []);
@@ -153,7 +155,7 @@ function Salon1modal({
 
   useEffect(() => {
     if (show && selectedItem) {
-      fetch("http://localhost:5000/api/carts")
+      fetch(`${API_URL}/api/carts`)
         .then(res => res.json())
         .then(data => {
           const found = (data?.carts || []).find(c => c.title === selectedItem.title);
@@ -311,7 +313,7 @@ function Salon1modal({
 
                     // Refresh cart from server
                     try {
-                      const refreshed = await fetch("http://localhost:5000/api/carts").then(r => r.json()).then(d => d.carts || []);
+                      const refreshed = await fetch(`${API_URL}/api/carts`).then(r => r.json()).then(d => d.carts || []);
                       setCarts(refreshed);
                     } catch (err) {
                       console.error("Failed to refresh cart:", err);
@@ -472,7 +474,7 @@ function Salon1modal({
                     await handleAddToCart(itemToAdd, [], item.price, true);
 
                     // Refresh cart from server
-                    const refreshed = await fetch("http://localhost:5000/api/carts")
+                    const refreshed = await fetch(`${API_URL}/api/carts`)
                       .then(res => res.json())
                       .then(data => data.carts || []);
                     setCarts(refreshed);
@@ -492,13 +494,13 @@ function Salon1modal({
                     const cartItem = carts.find(c => c.title === item.name);
                     if (cartItem) {
                       if (cartItem.count > 1) {
-                        await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
+                        await fetch(`${API_URL}/api/carts/${cartItem._id}`, {
                           method: "PUT",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ count: cartItem.count - 1 })
                         });
                       } else {
-                        await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
+                        await fetch(`${API_URL}/api/carts/${cartItem._id}`, {
                           method: "DELETE"
                         });
                       }
@@ -570,7 +572,7 @@ function Salon1modal({
                   if (cartItem) {
                     // Update existing item
                     if (updateItem) updateItem(cartItem.productId || cartItem._id, cartCount);
-                    await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
+                    await fetch(`${API_URL}/api/carts/${cartItem._id}`, {
                       method: "PUT",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ count: cartCount })
@@ -582,7 +584,7 @@ function Salon1modal({
                 } else if (cartCount === 0 && cartItem) {
                   // Remove item if count is 0
                   if (removeItem) removeItem(cartItem.productId || cartItem._id);
-                  await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
+                  await fetch(`${API_URL}/api/carts/${cartItem._id}`, {
                     method: "DELETE"
                   });
                 }
@@ -604,13 +606,13 @@ function Salon1modal({
                     const existingCarouselItem = carts.find(c => c.title === img.name);
 
                     if (existingCarouselItem) {
-                      await fetch(`http://localhost:5000/api/carts/${existingCarouselItem._id}`, {
+                      await fetch(`${API_URL}/api/carts/${existingCarouselItem._id}`, {
                         method: "PUT",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ ...cartPayload, count: count })
                       });
                     } else {
-                      await fetch("http://localhost:5000/api/addcarts", {
+                      await fetch(`${API_URL}/api/addcarts`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify(cartPayload)
@@ -619,8 +621,9 @@ function Salon1modal({
                   } else if (img && count === 0) {
                     // Remove carousel item if count is 0
                     const existingCarouselItem = carts.find(c => c.title === img.name);
+
                     if (existingCarouselItem) {
-                      await fetch(`http://localhost:5000/api/carts/${existingCarouselItem._id}`, {
+                      await fetch(`${API_URL}/api/carts/${existingCarouselItem._id}`, {
                         method: "DELETE"
                       });
                     }

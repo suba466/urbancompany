@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth, useCart } from "./hooks";
 import { useDispatch } from 'react-redux';
 import { syncCartWithLocalStorage } from './store';
+import API_URL from "./config";
 
 function CartPage() {
   const dispatch = useDispatch();
@@ -57,7 +58,7 @@ function CartPage() {
       const customerEmail = user.email;
 
       // First, get all cart items for this user
-      const response = await fetch(`http://localhost:5000/api/cart/${customerEmail}`);
+      const response = await fetch(`${API_URL}/api/cart/${customerEmail}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -68,7 +69,7 @@ function CartPage() {
         // Delete each cart item
         const deletePromises = userCartItems.map(async (item) => {
           try {
-            await fetch(`http://localhost:5000/api/carts/${item._id}`, {
+            await fetch(`${API_URL}/api/carts/${item._id}`, {
               method: "DELETE"
             });
             console.log(`Deleted cart item: ${item._id}`);
@@ -166,7 +167,7 @@ function CartPage() {
       }
 
       // 2. Create Order on Backend
-      const orderResponse = await fetch("http://localhost:5000/api/create-order", {
+      const orderResponse = await fetch(`${API_URL}/api/create-order`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -188,12 +189,12 @@ function CartPage() {
         currency: orderData.order.currency,
         name: "Urban Company",
         description: "Beauty Service Payment",
-        image: "http://localhost:5000/assets/urban.png", // Or any logo you have
+        image: `${API_URL}/assets/urban.png`, // Or any logo you have
         order_id: orderData.order.id,
         handler: async function (response) {
           try {
             // 4. Verify Payment on Backend
-            const verifyResponse = await fetch("http://localhost:5000/api/verify-payment", {
+            const verifyResponse = await fetch(`${API_URL}/api/verify-payment`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -281,7 +282,7 @@ function CartPage() {
       console.log("📤 Sending booking data to server:", bookingData);
 
       // Send booking to server
-      const response = await fetch("http://localhost:5000/api/bookings", {
+      const response = await fetch(`${API_URL}/api/bookings`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -397,7 +398,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
     try {
       console.log("📤 Sending test data:", testData);
 
-      const response = await fetch("http://localhost:5000/api/bookings", {
+      const response = await fetch(`${API_URL}/api/bookings`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -453,7 +454,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
   };
 
   const fetchAddedItems = () => {
-    fetch("http://localhost:5000/api/added")
+    fetch(`${API_URL}/api/added`)
       .then(res => res.json())
       .then(data => setAddedImgs(data.added || []))
       .catch(err => console.error("Failed to load added images:", err));
@@ -590,7 +591,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
         const existingItem = cartItems.find(cart => cart.title === item.name);
 
         if (existingItem) {
-          const response = await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
+          const response = await fetch(`${API_URL}/api/carts/${existingItem._id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -605,7 +606,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
 
           updateItem(existingItem._id || existingItem.productId, existingItem.count + 1);
         } else {
-          const response = await fetch("http://localhost:5000/api/addcarts", {
+          const response = await fetch(`${API_URL}/api/addcarts`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(cartPayload)
@@ -630,7 +631,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
         const existingItem = cartItems.find(cart => cart.title === item.name);
         if (existingItem) {
           if (existingItem.count > 1) {
-            const response = await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
+            const response = await fetch(`${API_URL}/api/carts/${existingItem._id}`, {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ count: existingItem.count - 1 })
@@ -639,7 +640,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
               updateItem(existingItem._id || existingItem.productId, existingItem.count - 1);
             }
           } else {
-            const response = await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
+            const response = await fetch(`${API_URL}/api/carts/${existingItem._id}`, {
               method: "DELETE"
             });
             if (response.ok) {
@@ -827,7 +828,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
         <div className="text-center mt-5">
           <div>
             <img
-              src="http://localhost:5000/assets/cart.png"
+              src={`${API_URL}/assets/cart.png`}
               alt="cart-placeholder"
               style={{ padding: "10px", width: "33%" }}
             />

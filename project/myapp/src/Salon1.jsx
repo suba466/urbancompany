@@ -10,6 +10,7 @@ import Salon1modal from './Salon1modal';
 import { useNavigate } from 'react-router-dom';
 import CartBlock from './CartBlock';
 import { useCart } from "./hooks";
+import API_URL from "./config";
 
 function Salon1() {
   const [savedExtras, setSavedExtras] = useState({});
@@ -117,7 +118,7 @@ function Salon1() {
     try {
       let packages = [];
       try {
-        const response1 = await fetch('http://localhost:5000/api/active-packages');
+        const response1 = await fetch(`${API_URL}/api/active-packages`);
         if (response1.ok) {
           const data1 = await response1.json();
           packages = data1.packages || [];
@@ -127,7 +128,7 @@ function Salon1() {
 
       if (packages.length === 0) {
         try {
-          const response2 = await fetch('http://localhost:5000/api/packages');
+          const response2 = await fetch(`${API_URL}/api/packages`);
           if (response2.ok) {
             const data2 = await response2.json();
             packages = (data2.packages || []).filter(pkg => pkg.isActive !== false);
@@ -138,7 +139,7 @@ function Salon1() {
 
       if (packages.length === 0) {
         try {
-          const response3 = await fetch('http://localhost:5000/api/salonforwomen');
+          const response3 = await fetch(`${API_URL}/api/salonforwomen`);
           if (response3.ok) {
             const data3 = await response3.json();
             packages = data3.salonforwomen || [];
@@ -148,8 +149,21 @@ function Salon1() {
           }
         } catch (error) { console.error(error); }
       }
+
+      // Fallback
+      if (packages.length === 0) {
+        try {
+          const basePath = import.meta.env.BASE_URL || '/';
+          const res = await fetch(`${basePath}data.json`);
+          if (res.ok) {
+            const data = await res.json();
+            // Assuming data.json structure for general packages if available
+            // For now leaving as empty or rudimentary fallback if needed
+          }
+        } catch (e) { }
+      }
+
       if (packages.length > 0) {
-        // Filter by active subcategory if present in localStorage
         const activeSubCategory = localStorage.getItem('activeSubCategory');
         if (activeSubCategory) {
           packages = packages.filter(pkg =>
@@ -157,8 +171,6 @@ function Salon1() {
             (pkg.title && pkg.title === activeSubCategory)
           );
         } else {
-          // If no specific subcategory selected, default behavior:
-          // Maybe filter out generic "Salon for women" items if you don't want them showing up as "Uncategorized"
           packages = packages.filter(pkg =>
             pkg.subcategory && pkg.subcategory !== "Salon for women" &&
             pkg.title && pkg.title !== "Salon for women"
@@ -174,13 +186,14 @@ function Salon1() {
 
   const fetchSuperPackages = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/super");
+      const response = await fetch(`${API_URL}/api/super`);
       if (!response.ok) throw new Error('Failed');
       const data = await response.json();
       setSuperPack(data.super ? [data.super[0]] : []);
     } catch (error) {
       try {
-        const staticResponse = await fetch("http://localhost:5000/api/static-data");
+        const basePath = import.meta.env.BASE_URL || '/';
+        const staticResponse = await fetch(`${basePath}data.json`);
         const staticData = await staticResponse.json();
         setSuperPack(staticData.super ? [staticData.super[0]] : []);
       } catch (e) { }
@@ -189,13 +202,14 @@ function Salon1() {
 
   const fetchSalonForWomen = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/salonforwomen");
+      const response = await fetch(`${API_URL}/api/salonforwomen`);
       if (!response.ok) throw new Error('Failed');
       const data = await response.json();
       setSalon(data.salonforwomen || []);
     } catch (error) {
       try {
-        const staticResponse = await fetch("http://localhost:5000/api/static-data");
+        const basePath = import.meta.env.BASE_URL || '/';
+        const staticResponse = await fetch(`${basePath}data.json`);
         const staticData = await staticResponse.json();
         setSalon(staticData.salonforwomen || []);
       } catch (e) { }
@@ -340,7 +354,7 @@ function Salon1() {
         updateItem(productId, existing.count + 1);
 
         // Also update in database
-        await fetch(`http://localhost:5000/api/carts/${existing._id}`, {
+        await fetch(`${API_URL}/api/carts/${existing._id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -350,7 +364,7 @@ function Salon1() {
         addItem(payload);
 
         // Also add to database
-        await fetch("http://localhost:5000/api/addcarts", {
+        await fetch(`${API_URL}/api/addcarts`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -373,7 +387,7 @@ function Salon1() {
       updateItem(cartItem._id || cartItem.productId, (cartItem.count || 1) + 1);
 
       // Update database
-      await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
+      await fetch(`${API_URL}/api/carts/${cartItem._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ count: (cartItem.count || 1) + 1 })
@@ -388,13 +402,13 @@ function Salon1() {
         removeItem(cartItem._id || cartItem.productId);
 
         // Remove from database
-        await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, { method: "DELETE" });
+        await fetch(`${API_URL}/api/carts/${cartItem._id}`, { method: "DELETE" });
       } else {
         // Update in Redux
         updateItem(cartItem._id || cartItem.productId, cartItem.count - 1);
 
         // Update database
-        await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
+        await fetch(`${API_URL}/api/carts/${cartItem._id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ count: cartItem.count - 1 })
@@ -482,7 +496,7 @@ function Salon1() {
                         >
                           <img
                             src={
-                              pkg.img.startsWith("http") ? pkg.img : `http://localhost:5000${pkg.img}`
+                              pkg.img.startsWith("http") ? pkg.img : pkg.img
                             }
                             alt={pkg.name || "Service"}
                             style={{
@@ -493,7 +507,7 @@ function Salon1() {
                             }}
                             onError={(e) => {
                               e.target.onerror = null;
-                              e.target.src = "http://localhost:5000/assets/placeholder.png";
+                              e.target.src = "/assets/placeholder.png";
                             }}
                           />
                         </div>
@@ -553,7 +567,7 @@ function Salon1() {
 
                                 {showThumbnailVariant ? (
                                   <img
-                                    src={pkg.img.startsWith("http") ? pkg.img : `http://localhost:5000${pkg.img}`}
+                                    src={pkg.img.startsWith("http") ? pkg.img : pkg.img}
                                     alt={serviceName}
                                     style={{
                                       width: "100%",
@@ -563,7 +577,7 @@ function Salon1() {
                                     }}
                                     onError={(e) => {
                                       e.target.onerror = null;
-                                      e.target.src = "http://localhost:5000/assets/placeholder.png";
+                                      e.target.src = "/assets/placeholder.png";
                                     }}
                                   />
                                 ) : (
