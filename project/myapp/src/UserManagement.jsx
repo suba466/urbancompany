@@ -15,6 +15,7 @@ import {
   generatePDFReportHTML,
   prepareUserDataForExport
 } from './downloadUtils';
+import API_URL from './config';
 
 function UserManagement({ isAdding, isEditing, userId }) {
   const [users, setUsers] = useState([]);
@@ -81,7 +82,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
 
   const fetchUsers = async (page = 1, search = '', perPage = userPerPage) => {
     try {
-      let url = `http://localhost:5000/api/admin/users?page=${page}&limit=${perPage}&search=${search}`;
+      let url = `${API_URL}/api/admin/users?page=${page}&limit=${perPage}&search=${search}`;
 
       const response = await fetch(url, {
         headers: getAuthHeaders()
@@ -114,7 +115,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
 
   const fetchUserDetails = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/users/${id}`, {
+      const response = await fetch(`${API_URL}/api/admin/users/${id}`, {
         headers: getAuthHeaders()
       });
       const data = await response.json();
@@ -366,8 +367,8 @@ function UserManagement({ isAdding, isEditing, userId }) {
       }
 
       const url = isEditingUser
-        ? `http://localhost:5000/api/admin/users/${editUserId}`
-        : 'http://localhost:5000/api/admin/users';
+        ? `${API_URL}/api/admin/users/${editUserId}`
+        : `${API_URL}/api/admin/users`;
 
       const method = isEditingUser ? 'PUT' : 'POST';
 
@@ -451,7 +452,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
     });
 
     if (userMember.profileImage) {
-      setProfileImagePreview(`http://localhost:5000${userMember.profileImage}`);
+      setProfileImagePreview(`${API_URL}${userMember.profileImage}`);
     } else {
       setProfileImagePreview("");
     }
@@ -469,7 +470,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
   const deleteUser = async (userId) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
-        const response = await fetch(`http://localhost:5000/api/admin/users/${userId}`, {
+        const response = await fetch(`${API_URL}/api/admin/users/${userId}`, {
           method: 'DELETE',
           headers: getAuthHeaders()
         });
@@ -492,7 +493,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
 
     if (window.confirm(`Are you sure you want to delete ${selectedIds.length} user(s)?`)) {
       try {
-        const response = await fetch('http://localhost:5000/api/admin/bulk-delete', {
+        const response = await fetch(`${API_URL}/api/admin/bulk-delete`, {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({
@@ -556,7 +557,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
         setSelectedUserDetails(prev => ({ ...prev, isActive }));
       }
 
-      const response = await fetch(`http://localhost:5000/api/admin/users/${userId}/toggle-status`, {
+      const response = await fetch(`${API_URL}/api/admin/users/${userId}/toggle-status`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ isActive })
@@ -1044,7 +1045,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
                 searchPlaceholder="Search users..."
                 onDownloadPDF={() => {
                   const userDataForPDF = users.map(user => ({
-                    'Profile': user.profileImage ? `http://localhost:5000${user.profileImage}` : null,
+                    'Profile': user.profileImage ? `${API_URL}${user.profileImage}` : null,
                     'Name': user.name,
                     'Email': user.email,
                     'Contact': user.phone,
@@ -1133,7 +1134,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
                       }}>
                         {user.profileImage ? (
                           <img
-                            src={`http://localhost:5000${user.profileImage}`}
+                            src={`${API_URL}${user.profileImage}`}
                             alt={user.name}
                             style={{
                               width: '100%',
@@ -1227,7 +1228,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
                 <div className="mb-3">
                   {selectedUserDetails.profileImage ? (
                     <img
-                      src={`http://localhost:5000${selectedUserDetails.profileImage}`}
+                      src={`${API_URL}${selectedUserDetails.profileImage}`}
                       alt={selectedUserDetails.name}
                       style={{
                         width: '100px',

@@ -3,6 +3,7 @@ import { Container, Row, Col, Card, Form, Button, Spinner, InputGroup } from 're
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 import { useAdminAuth } from './hooks'; // Import from hooks
+import API_URL from './config';
 
 function AdminLogin({ onLogin }) {
   const [loginData, setLoginData] = useState({ email: '', password: '' });
@@ -10,7 +11,8 @@ function AdminLogin({ onLogin }) {
   const [loadingLocal, setLoadingLocal] = useState(false);
   const [errorLocal, setErrorLocal] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const logoUrl = 'http://localhost:5000/assets/Uc.png';
+
+  const logoUrl = `${API_URL}/assets/Uc.png`;
 
   const { login, token, isAuthenticated, error: authError, loading: authLoading } = useAdminAuth();
 
@@ -186,7 +188,7 @@ function AdminLogin({ onLogin }) {
                                 borderLeft: "none",
                                 zIndex: 0
                               }}
-                             className={`cate py-2 ps-3 ${passwordError ? 'is-invalid' : ''}`}
+                              className={`cate py-2 ps-3 ${passwordError ? 'is-invalid' : ''}`}
                             >
                               {showPassword ? <FaEyeSlash color="#6c757d" /> : <FaEye color="#6c757d" />}
                             </Button>
