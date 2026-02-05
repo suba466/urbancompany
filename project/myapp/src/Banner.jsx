@@ -57,7 +57,7 @@ function Banner() {
         }
       }
 
-      if (data.categories && Array.isArray(data.categories)) {
+      if (data && data.categories && Array.isArray(data.categories)) {
         setCategories(data.categories);
       } else {
         setCategories([]);

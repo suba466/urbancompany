@@ -30,13 +30,15 @@ function Shine() {
         setCarouselItems(data.carousel || []);
       } catch (error) {
         console.error("Error fetching carousel:", error);
-        // Fallback: Try static data API
+        // Fallback: Try local data.json
         try {
-          const staticResponse = await fetch(`${API_URL}/api/static-data`);
-          const staticData = await staticResponse.json();
-          setCarouselItems(staticData.carousel || []);
+          const basePath = import.meta.env.BASE_URL || '/';
+          const res = await fetch(`${basePath}data.json`);
+          if (!res.ok) throw new Error("Failed to fetch local data.json");
+          const data = await res.json();
+          setCarouselItems(data.carousel || []);
         } catch (staticError) {
-          console.error("Error fetching static data:", staticError);
+          console.error("Error fetching local data:", staticError);
           setCarouselItems([]);
         }
       } finally {

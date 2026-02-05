@@ -453,11 +453,24 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
     ]
   };
 
-  const fetchAddedItems = () => {
-    fetch(`${API_URL}/api/added`)
-      .then(res => res.json())
-      .then(data => setAddedImgs(data.added || []))
-      .catch(err => console.error("Failed to load added images:", err));
+  const fetchAddedItems = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/added`);
+      if (!res.ok) throw new Error("API fail");
+      const data = await res.json();
+      setAddedImgs(data.added || []);
+    } catch (err) {
+      console.warn("Failed to load added images from API, trying fallback:", err);
+      try {
+        const basePath = import.meta.env.BASE_URL || '/';
+        const staticRes = await fetch(`${basePath}data.json`);
+        if (!staticRes.ok) throw new Error("Local data not found");
+        const staticData = await staticRes.json();
+        setAddedImgs(staticData.added || []);
+      } catch (staticError) {
+        console.error("Error fetching static data:", staticError);
+      }
+    }
   };
 
   useEffect(() => {

@@ -128,11 +128,13 @@ function Salon() {
       } catch (error) {
         console.error("Error fetching salon: ", error);
         try {
-          const staticResponse = await fetch(`${API_URL}/api/static-data`);
+          const basePath = import.meta.env.BASE_URL || '/';
+          const staticResponse = await fetch(`${basePath}data.json`);
+          if (!staticResponse.ok) throw new Error("Local data not found");
           const staticData = await staticResponse.json();
           setSalon(staticData.salonforwomen || []);
         } catch (staticError) {
-          console.error("Error fetching static data:", staticError);
+          console.error("Error fetching local data:", staticError);
         }
       }
     };
@@ -150,11 +152,13 @@ function Salon() {
       } catch (error) {
         console.error("Error fetching advanced: ", error);
         try {
-          const staticResponse = await fetch(`${API_URL}/api/static-data`);
+          const basePath = import.meta.env.BASE_URL || '/';
+          const staticResponse = await fetch(`${basePath}data.json`);
+          if (!staticResponse.ok) throw new Error("Local data not found");
           const staticData = await staticResponse.json();
           setAdvanced(staticData.advanced || []);
         } catch (staticError) {
-          console.error("Error fetching static data:", staticError);
+          console.error("Error fetching local data:", staticError);
         }
       }
     };

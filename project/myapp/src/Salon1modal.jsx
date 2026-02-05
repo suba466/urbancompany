@@ -119,14 +119,15 @@ function Salon1modal({
         setAddedImgs(data.added || []);
       } catch (error) {
         console.error("Failed to load added images:", error);
-        // Fallback: Try static data API
+        // Fallback: Try local data.json
         try {
           const basePath = import.meta.env.BASE_URL || '/';
           const staticResponse = await fetch(`${basePath}data.json`);
+          if (!staticResponse.ok) throw new Error("Local data not found");
           const staticData = await staticResponse.json();
           setAddedImgs(staticData.added || []);
         } catch (staticError) {
-          console.error("Error fetching static data:", staticError);
+          console.error("Error fetching local data:", staticError);
           setAddedImgs([]);
         }
       }
