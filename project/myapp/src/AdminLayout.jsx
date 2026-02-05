@@ -3,6 +3,7 @@ import { Outlet, useNavigate, Link } from 'react-router-dom'; // Add useNavigate
 import { Navbar, Container, Nav, Dropdown, Button } from 'react-bootstrap';
 import { MdMenu } from "react-icons/md";
 import AdminSidebar from './AdminSidebar';
+import API_URL from './config';
 
 function AdminLayout({ userRole, userProfile, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -105,7 +106,7 @@ function AdminLayout({ userRole, userProfile, onLogout }) {
                 <Dropdown.Toggle variant="light" className="d-flex align-items-center border-0 bg-transparent">
                   {userProfile?.profileImage ? (
                     <img
-                      src={`http://localhost:5000${userProfile.profileImage}`}
+                      src={`${API_URL}${userProfile.profileImage}`}
                       alt="Profile"
                       style={{
                         width: '35px',

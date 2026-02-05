@@ -6,7 +6,7 @@ import Col from "react-bootstrap/Col";
 import { CiStar } from "react-icons/ci";
 import { TiGroup } from "react-icons/ti";
 import { Alert, Spinner } from "react-bootstrap";
-import API_URL from "./config";
+import API_URL, { getAssetPath } from "./config";
 
 function Banner() {
   const [banner, setBanner] = useState(null);
@@ -98,16 +98,14 @@ function Banner() {
   }
 
   const renderCategoryImage = (category) => {
-    // Assets are now in public/assets, so just use the relative path if it starts with /assets
-    // If it's a full URL, use it.
-    let imageUrl = category.img || '/assets/default-category.png';
+    let imageUrl = getAssetPath(category.img || '/assets/default-category.png');
     return (
       <div>
         <img
           src={imageUrl}
           alt={category.name}
           style={{ width: '60px', height: '60px', objectFit: 'cover' }}
-          onError={(e) => { e.target.src = '/assets/default-category.png'; }}
+          onError={(e) => { e.target.src = getAssetPath('/assets/default-category.png'); }}
         />
       </div>
     );
@@ -228,11 +226,11 @@ function Banner() {
         <Col md={6} className="text-center">
           {banner ? (
             <img
-              src={banner.img}
+              src={banner.img.startsWith('http') ? banner.img : getAssetPath(banner.img)}
               alt="Banner"
               className="banner-img w-100"
               style={{ maxHeight: "400px", objectFit: "cover", borderRadius: "10px" }}
-              onError={(e) => { e.target.src = '/assets/default.png'; }}
+              onError={(e) => { e.target.src = getAssetPath('/assets/default.png'); }}
             />
           ) : (
             <div className="text-muted">No banner available</div>

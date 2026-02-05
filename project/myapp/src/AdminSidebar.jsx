@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Nav, Dropdown, Button } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
+import { getAssetPath } from './config';
 
 function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole, isMobile }) {
   const location = useLocation();
   const [catOpen, setCatOpen] = useState(false);
   const [subCatOpen, setSubCatOpen] = useState(false);
   const [permissions, setPermissions] = useState({});
-  const logoUrl = 'http://localhost:5000/assets/Uc.png';
+  const logoUrl = getAssetPath("/assets/Uc.png");
 
   useEffect(() => {
     try {

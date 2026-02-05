@@ -15,7 +15,7 @@ import { MdAccountCircle, MdHome, MdApartment, MdBusinessCenter, MdDelete, MdMor
 import AccountModal from "./AccountModal";
 import { useCart, useAuth } from "./hooks"; // Import from hooks
 import "./Urbancom.css";
-import API_URL from "./config";
+import API_URL, { getAssetPath } from "./config";
 // Leaflet imports
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -35,8 +35,8 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 function Urbanav() {
   const navigate = useNavigate();
-  const [logo, setLogo] = useState(`${API_URL}/assets/Uc.png`);
-  const [logo1, setLogo1] = useState(`${API_URL}/assets/urban.png`);
+  const [logo, setLogo] = useState(getAssetPath("/assets/Uc.png"));
+  const [logo1, setLogo1] = useState(getAssetPath("/assets/urban.png"));
   const [searchValue, setSearchValue] = useState("");
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
@@ -133,21 +133,20 @@ function Urbanav() {
         }
 
         if (data && data.logo) {
-          // Use path as-is (relative) unless it's an absolute URL
-          setLogo(data.logo);
+          setLogo(getAssetPath(data.logo));
         } else {
-          setLogo("/assets/Uc.png");
+          setLogo(getAssetPath("/assets/Uc.png"));
         }
 
         if (data && data.logo1) {
-          setLogo1(data.logo1);
+          setLogo1(getAssetPath(data.logo1));
         } else {
-          setLogo1("/assets/urban.png");
+          setLogo1(getAssetPath("/assets/urban.png"));
         }
       } catch (error) {
         console.error("Error fetching logos:", error);
-        setLogo("/assets/Uc.png");
-        setLogo1("/assets/urban.png");
+        setLogo(getAssetPath("/assets/Uc.png"));
+        setLogo1(getAssetPath("/assets/urban.png"));
       }
     };
 
@@ -454,7 +453,7 @@ function Urbanav() {
                   style={{ height: "34px", marginLeft: "10px" }}
                   onError={(e) => {
                     console.error("Failed to load logo:", logo1);
-                    e.target.src = "/assets/urban.png";
+                    e.target.src = getAssetPath("/assets/urban.png");
                   }}
                 />
               </Col>
@@ -474,7 +473,7 @@ function Urbanav() {
                 style={{ maxHeight: "40px", objectFit: "contain" }}
                 onError={(e) => {
                   console.error("Failed to load main logo:", logo);
-                  e.target.src = "/assets/Uc.png";
+                  e.target.src = getAssetPath("/assets/Uc.png");
                 }}
               />
               {!location.pathname.startsWith("/salon") && (
@@ -631,7 +630,7 @@ function Urbanav() {
                       }}
                       onError={(e) => {
                         console.error("Failed to load logo1:", logo1);
-                        e.target.src = "/assets/urban.png";
+                        e.target.src = getAssetPath("/assets/urban.png");
                       }}
                     />
                     <div className="nav-label" style={{ fontSize: "12px" }}>UC</div>

@@ -17,7 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth, useCart } from "./hooks";
 import { useDispatch } from 'react-redux';
 import { syncCartWithLocalStorage } from './store';
-import API_URL from "./config";
+import API_URL, { getAssetPath } from "./config";
 
 function CartPage() {
   const dispatch = useDispatch();
@@ -189,7 +189,7 @@ function CartPage() {
         currency: orderData.order.currency,
         name: "Urban Company",
         description: "Beauty Service Payment",
-        image: `${API_URL}/assets/urban.png`, // Or any logo you have
+        image: getAssetPath("/assets/urban.png"), // Or any logo you have
         order_id: orderData.order.id,
         handler: async function (response) {
           try {
@@ -828,7 +828,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
         <div className="text-center mt-5">
           <div>
             <img
-              src={`${API_URL}/assets/cart.png`}
+              src={getAssetPath("/assets/cart.png")}
               alt="cart-placeholder"
               style={{ padding: "10px", width: "33%" }}
             />

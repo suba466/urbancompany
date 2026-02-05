@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card, Form, Button, Row, Col, Alert, Spinner, Table, Pagination } from 'react-bootstrap';
 import { exportAsExcel, exportAsCSV, exportAsPDF, generatePDFReportHTML } from './downloadUtils';
 import { FaEye, FaFilePdf, FaFileExcel, FaFileCsv } from "react-icons/fa";
+import API_URL from './config';
 
 function Reports() {
   const [reportType, setReportType] = useState('Category');
@@ -31,7 +32,7 @@ function Reports() {
   const getImageUrl = (imgPath) => {
     if (!imgPath) return '';
     if (imgPath.startsWith('http')) return imgPath;
-    return `http://localhost:5000${imgPath}`;
+    return `${API_URL}${imgPath}`;
   };
 
   // Helper function to get initials
@@ -62,7 +63,7 @@ function Reports() {
       let reportHeaders = [];
 
       if (reportType === 'Category') {
-        const response = await fetch('http://localhost:5000/api/admin/categories?limit=1000', { headers: getAuthHeaders() });
+        const response = await fetch(`${API_URL}/api/admin/categories?limit=1000`, { headers: getAuthHeaders() });
         const data = await response.json();
         const categories = data.categories || [];
 
@@ -76,7 +77,7 @@ function Reports() {
         reportHeaders = ['Image', 'Name', 'Description', 'Status'];
 
       } else if (reportType === 'Subcategory') {
-        const response = await fetch('http://localhost:5000/api/admin/subcategories?limit=1000', { headers: getAuthHeaders() });
+        const response = await fetch(`${API_URL}/api/admin/subcategories?limit=1000`, { headers: getAuthHeaders() });
         const data = await response.json();
         const subcategories = data.subcategories || [];
 
@@ -90,7 +91,7 @@ function Reports() {
         reportHeaders = ['Image', 'Name', 'Category Name', 'Status'];
 
       } else if (reportType === 'Products') {
-        const response = await fetch('http://localhost:5000/api/admin/packages?limit=1000', { headers: getAuthHeaders() });
+        const response = await fetch(`${API_URL}/api/admin/packages?limit=1000`, { headers: getAuthHeaders() });
         const data = await response.json();
         const products = data.packages || [];
 
@@ -118,7 +119,7 @@ function Reports() {
         reportHeaders = ['Image', 'Name', 'Category', 'Subcategory', 'Price', 'Status'];
 
       } else if (reportType === 'Bookings') {
-        let url = 'http://localhost:5000/api/admin/bookings?limit=1000';
+        let url = `${API_URL}/api/admin/bookings?limit=1000`;
 
         const response = await fetch(url, { headers: getAuthHeaders() });
         const data = await response.json();
@@ -148,7 +149,7 @@ function Reports() {
         // Fetch customer profiles in bulk (similar to BookingManagement)
         if (customerEmails.length > 0) {
           try {
-            const customersResponse = await fetch('http://localhost:5000/api/admin/customers-by-emails', {
+            const customersResponse = await fetch(`${API_URL}/api/admin/customers-by-emails`, {
               method: 'POST',
               headers: getAuthHeaders(),
               body: JSON.stringify({ emails: customerEmails })
@@ -166,7 +167,7 @@ function Reports() {
                   if (customer.profileImage.startsWith('http')) {
                     validProfileImage = customer.profileImage;
                   } else {
-                    validProfileImage = `http://localhost:5000${customer.profileImage}`;
+                    validProfileImage = `${API_URL}${customer.profileImage}`;
                   }
                 }
 
@@ -261,7 +262,7 @@ function Reports() {
       const newRow = { ...row };
       headers.forEach(h => {
         if ((h.includes('Image') || h.includes('Profile')) && newRow[h] && typeof newRow[h] === 'string' && !newRow[h].startsWith('http')) {
-          newRow[h] = `http://localhost:5000${newRow[h]}`;
+          newRow[h] = `${API_URL}${newRow[h]}`;
         }
       });
       return newRow;

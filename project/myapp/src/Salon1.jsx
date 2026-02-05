@@ -495,9 +495,7 @@ function Salon1() {
                           }}
                         >
                           <img
-                            src={
-                              pkg.img.startsWith("http") ? pkg.img : pkg.img
-                            }
+                            src={pkg.img.startsWith("http") ? pkg.img : getAssetPath(pkg.img)}
                             alt={pkg.name || "Service"}
                             style={{
                               width: "100%",
@@ -506,8 +504,9 @@ function Salon1() {
                               objectPosition: "center"
                             }}
                             onError={(e) => {
+                              console.error("Failed to load image in Salon1:", pkg.img);
                               e.target.onerror = null;
-                              e.target.src = "/assets/placeholder.png";
+                              e.target.src = getAssetPath("/assets/placeholder.png");
                             }}
                           />
                         </div>
@@ -567,7 +566,7 @@ function Salon1() {
 
                                 {showThumbnailVariant ? (
                                   <img
-                                    src={pkg.img.startsWith("http") ? pkg.img : pkg.img}
+                                    src={pkg.img.startsWith("http") ? pkg.img : getAssetPath(pkg.img)}
                                     alt={serviceName}
                                     style={{
                                       width: "100%",
@@ -576,8 +575,9 @@ function Salon1() {
                                       borderRadius: "8px"
                                     }}
                                     onError={(e) => {
+                                      console.error("Failed to load thumbnail in Salon1:", pkg.img);
                                       e.target.onerror = null;
-                                      e.target.src = "/assets/placeholder.png";
+                                      e.target.src = getAssetPath("/assets/placeholder.png");
                                     }}
                                   />
                                 ) : (

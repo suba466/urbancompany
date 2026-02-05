@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
 import { Card, Spinner, Badge } from 'react-bootstrap';
+import API_URL from './config';
 
 function Profile() {
   const [profile, setProfile] = useState(null);
@@ -43,8 +43,8 @@ function Profile() {
       }
 
       const endpoint = userRole === 'admin'
-        ? 'http://localhost:5000/api/admin/profile'
-        : 'http://localhost:5000/api/admin/user-profile';
+        ? `${API_URL}/api/admin/profile`
+        : `${API_URL}/api/admin/user-profile`;
 
       const response = await fetch(endpoint, {
         headers: getAuthHeaders()
@@ -53,8 +53,8 @@ function Profile() {
       if (response.status === 401) {
         // Try the other endpoint if 401 (maybe role mismatch in local storage)
         const otherEndpoint = userRole === 'admin'
-          ? 'http://localhost:5000/api/admin/user-profile'
-          : 'http://localhost:5000/api/admin/profile';
+          ? `${API_URL}/api/admin/user-profile`
+          : `${API_URL}/api/admin/profile`;
 
         const retryResponse = await fetch(otherEndpoint, { headers: getAuthHeaders() });
 
@@ -187,7 +187,7 @@ function Profile() {
             <div className="mb-3">
               {profile.profileImage ? (
                 <img
-                  src={`http://localhost:5000${profile.profileImage}`}
+                  src={`${API_URL}${profile.profileImage}`}
                   alt={profile.name}
                   className="rounded-circle"
                   style={{

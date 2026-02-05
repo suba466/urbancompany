@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Row, Col, Card } from "react-bootstrap";
 import { FaStar } from "react-icons/fa";
-import API_URL from "./config";
+import API_URL, { getAssetPath } from "./config";
 
 function Book() {
   const [carouselItems, setCarouselItems] = useState([]);
@@ -107,7 +107,7 @@ function Book() {
               }}
             >
               <img
-                src={item.img || "/assets/placeholder.png"}
+                src={getAssetPath(item.img || "/assets/placeholder.png")}
                 alt={item.name}
                 style={{
                   width: "101%",
@@ -116,7 +116,7 @@ function Book() {
                   borderRadius: "8px",
                 }}
                 onError={(e) => {
-                  e.target.src = "/assets/placeholder.png";
+                  e.target.src = getAssetPath("/assets/placeholder.png");
                 }}
               />
               <p
@@ -199,11 +199,11 @@ function Book() {
                     </Card.Body>
                     <Card.Img
                       variant="bottom"
-                      src={item.img || "/assets/placeholder.png"}
+                      src={getAssetPath(item.img || "/assets/placeholder.png")}
                       alt={item.key}
                       style={{ height: "200px", objectFit: "cover" }}
                       onError={(e) => {
-                        e.target.src = "/assets/placeholder.png";
+                        e.target.src = getAssetPath("/assets/placeholder.png");
                       }}
                     />
                   </Card>
@@ -227,7 +227,7 @@ function Book() {
                   </Card.Body>
                   <Card.Img
                     variant="bottom"
-                    src={item.img || "/assets/placeholder.png"}
+                    src={getAssetPath(item.img || "/assets/placeholder.png")}
                     alt={item.key}
                     style={{
                       height: "200px",
@@ -235,7 +235,7 @@ function Book() {
                       borderRadius: "0 0 10px 10px",
                     }}
                     onError={(e) => {
-                      e.target.src = "/assets/placeholder.png";
+                      e.target.src = getAssetPath("/assets/placeholder.png");
                     }}
                   />
                 </Card>

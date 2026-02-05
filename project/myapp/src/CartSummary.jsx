@@ -6,6 +6,7 @@ import { BiLeftArrowAlt } from 'react-icons/bi';
 import { FaShoppingCart } from "react-icons/fa";
 import { GoDotFill } from "react-icons/go";
 import { useCart, useAuth } from './hooks';  // USE REDUX HOOKS
+import { getAssetPath } from './config';
 
 function CartSummary() {
   const navigate = useNavigate();
@@ -63,14 +64,14 @@ function CartSummary() {
   // Get category image directly
   const getCategoryImage = (category) => {
     const categoryImages = {
-      'Salon for women': "http://localhost:5000/assets/salon.webp",
-      'AC & Appliance Repair': "http://localhost:5000/assets/ac.webp",
-      'Cleaning': "http://localhost:5000/assets/clean.webp",
-      'Electrician, Plumber & Carpenters': "http://localhost:5000/assets/electric.webp",
-      'Native Water Purifier': "http://localhost:5000/assets/native.webp"
+      'Salon for women': getAssetPath("/assets/salon.webp"),
+      'AC & Appliance Repair': getAssetPath("/assets/ac.webp"),
+      'Cleaning': getAssetPath("/assets/clean.webp"),
+      'Electrician, Plumber & Carpenters': getAssetPath("/assets/electric.webp"),
+      'Native Water Purifier': getAssetPath("/assets/native.webp")
     };
 
-    return categoryImages[category] || "http://localhost:5000/assets/placeholder.png";
+    return categoryImages[category] || getAssetPath("/assets/placeholder.png");
   };
 
   // Calculate total price for a specific category
@@ -158,7 +159,7 @@ function CartSummary() {
                             }}
                             onError={(e) => {
                               console.error(`Failed to load image for ${category}:`, e.target.src);
-                              e.target.src = "http://localhost:5000/assets/placeholder.png";
+                              e.target.src = getAssetPath("/assets/placeholder.png");
                             }}
                           />
                         </Col>

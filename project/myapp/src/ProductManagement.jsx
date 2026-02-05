@@ -15,6 +15,7 @@ import {
   exportAsCSV,
   generatePDFReportHTML
 } from './downloadUtils';
+import API_URL from './config';
 
 function ProductManagement({ isAdding }) {
   const navigate = useNavigate();
@@ -86,7 +87,7 @@ function ProductManagement({ isAdding }) {
         ...(search && { search })
       }).toString();
 
-      const response = await fetch(`http://localhost:5000/api/admin/packages?${params}`, {
+      const response = await fetch(`${API_URL}/api/admin/packages?${params}`, {
         headers: getAuthHeaders()
       });
       const data = await response.json();
@@ -107,7 +108,7 @@ function ProductManagement({ isAdding }) {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/admin/categories', {
+      const response = await fetch(`${API_URL}/api/admin/categories`, {
         headers: getAuthHeaders()
       });
       const data = await response.json();
@@ -121,7 +122,7 @@ function ProductManagement({ isAdding }) {
 
   const fetchSubcategories = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/admin/subcategories', {
+      const response = await fetch(`${API_URL}/api/admin/subcategories`, {
         headers: getAuthHeaders()
       });
       const data = await response.json();
@@ -135,7 +136,7 @@ function ProductManagement({ isAdding }) {
 
   const fetchProductById = async (productId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/packages/${productId}`, {
+      const response = await fetch(`${API_URL}/api/admin/packages/${productId}`, {
         headers: getAuthHeaders()
       });
       const data = await response.json();
@@ -202,7 +203,7 @@ function ProductManagement({ isAdding }) {
     formData.append('image', imageFile);
 
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/packages/${productId}/upload-image`, {
+      const response = await fetch(`${API_URL}/api/admin/packages/${productId}/upload-image`, {
         method: 'POST',
         headers: getAuthHeadersMultipart(),
         body: formData
@@ -249,7 +250,7 @@ function ProductManagement({ isAdding }) {
 
       if (isEditing && editingProductId) {
         // Update existing product
-        const response = await fetch(`http://localhost:5000/api/admin/packages/${editingProductId}`, {
+        const response = await fetch(`${API_URL}/api/admin/packages/${editingProductId}`, {
           method: 'PUT',
           headers: getAuthHeaders(),
           body: JSON.stringify(productData)
@@ -262,7 +263,7 @@ function ProductManagement({ isAdding }) {
             const imageUrl = await handleImageUpload(editingProductId);
             if (imageUrl) {
               // Update product with image URL
-              await fetch(`http://localhost:5000/api/admin/packages/${editingProductId}`, {
+              await fetch(`${API_URL}/api/admin/packages/${editingProductId}`, {
                 method: 'PUT',
                 headers: getAuthHeaders(),
                 body: JSON.stringify({ ...productData, img: imageUrl })
@@ -284,7 +285,7 @@ function ProductManagement({ isAdding }) {
         }
       } else {
         // Create new product
-        const response = await fetch('http://localhost:5000/api/admin/packages', {
+        const response = await fetch(`${API_URL}/api/admin/packages`, {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify(productData)
@@ -297,7 +298,7 @@ function ProductManagement({ isAdding }) {
             const imageUrl = await handleImageUpload(data.package._id);
             if (imageUrl) {
               // Update product with image URL
-              await fetch(`http://localhost:5000/api/admin/packages/${data.package._id}`, {
+              await fetch(`${API_URL}/api/admin/packages/${data.package._id}`, {
                 method: 'PUT',
                 headers: getAuthHeaders(),
                 body: JSON.stringify({ img: imageUrl })
@@ -478,7 +479,7 @@ function ProductManagement({ isAdding }) {
     const newStatus = !currentStatus;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/packages/${productId}/toggle-status`, {
+      const response = await fetch(`${API_URL}/api/admin/packages/${productId}/toggle-status`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ isActive: newStatus })
@@ -518,7 +519,7 @@ function ProductManagement({ isAdding }) {
   const deleteProduct = async (productId) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
-        const response = await fetch(`http://localhost:5000/api/admin/packages/${productId}`, {
+        const response = await fetch(`${API_URL}/api/admin/packages/${productId}`, {
           method: 'DELETE',
           headers: getAuthHeaders()
         });
@@ -541,7 +542,7 @@ function ProductManagement({ isAdding }) {
 
     if (window.confirm(`Are you sure you want to delete ${selectedProducts.length} product(s)?`)) {
       try {
-        const response = await fetch('http://localhost:5000/api/admin/bulk-delete', {
+        const response = await fetch(`${API_URL}/api/admin/bulk-delete`, {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({
@@ -596,7 +597,7 @@ function ProductManagement({ isAdding }) {
       'Duration': product.duration || '',
       'Status': product.isActive ? 'Active' : 'Inactive',
       'Rating': product.rating || '',
-      'Image URL': product.img ? `http://localhost:5000${product.img}` : '',
+      'Image URL': product.img ? `${API_URL}${product.img}` : '',
       'Items Count': product.items?.length || 0
     }));
   };
@@ -604,7 +605,7 @@ function ProductManagement({ isAdding }) {
   // Export functions using downloadUtils
   const handleExportPDF = () => {
     const data = products.map(product => ({
-      'Image': product.img ? `http://localhost:5000${product.img}` : null,
+      'Image': product.img ? `${API_URL}${product.img}` : null,
       'Name': product.name,
       'Category': product.category || '',
       'Subcategory': product.subcategory || '',
@@ -663,7 +664,7 @@ function ProductManagement({ isAdding }) {
               <div className="mb-3">
                 {selectedProduct.img ? (
                   <img
-                    src={`http://localhost:5000${selectedProduct.img}`}
+                    src={`${API_URL}${selectedProduct.img}`}
                     alt={selectedProduct.name}
                     style={{
                       width: '150px',
@@ -766,7 +767,7 @@ function ProductManagement({ isAdding }) {
                 <div className="text-muted small mb-1">Image URL</div>
                 <div className="bg-light p-2 rounded">
                   <small className="text-break d-block" style={{ fontSize: '11px' }}>
-                    {`http://localhost:5000${selectedProduct.img}`}
+                    {`${API_URL}${selectedProduct.img}`}
                   </small>
                 </div>
               </div>

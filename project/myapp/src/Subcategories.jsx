@@ -13,6 +13,7 @@ import {
   exportAsExcel,
   getCSVHeadersFromData
 } from './downloadUtils';
+import API_URL from './config';
 
 const Subcategories = ({
   subcategories = [],
@@ -115,7 +116,7 @@ const Subcategories = ({
 
   const handleDownloadPDF = () => {
     const data = filteredSubcategories.map(sub => ({
-      'Image': sub.img ? `http://localhost:5000${sub.img}` : null,
+      'Image': sub.img ? `${API_URL}${sub.img}` : null,
       'Name': sub.name,
       'Category': sub.categoryName || 'Unknown',
       'Status': sub.isActive ? 'Active' : 'Inactive'
@@ -253,7 +254,7 @@ const Subcategories = ({
                       <td>
                         <img
                           src={sub.img
-                            ? `http://localhost:5000${sub.img}`
+                            ? `${API_URL}${sub.img}`
                             : 'https://via.placeholder.com/40'}
                           alt={sub.name}
                           width="40"

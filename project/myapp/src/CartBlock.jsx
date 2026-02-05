@@ -2,7 +2,7 @@ import { Row, Col, Button } from "react-bootstrap";
 import { GoDotFill } from "react-icons/go";
 import { useCart } from "./hooks";
 import { useNavigate } from "react-router-dom";
-import API_URL from "./config";
+import API_URL, { getAssetPath } from "./config";
 
 function CartBlock({
   formatPrice = (x) => x,
@@ -68,7 +68,7 @@ function CartBlock({
       {carts.length === 0 ? (
         <div className="text-center py-4">
           <img
-            src={`${API_URL}/assets/cart.jpg`}
+            src={getAssetPath("/assets/cart.jpg")}
             alt="cart-empty"
             className="w-50 mb-3"
             style={{ maxWidth: "120px", objectFit: "contain" }}

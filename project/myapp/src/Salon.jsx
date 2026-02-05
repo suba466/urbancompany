@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Salon1 from './Salon1.jsx';
 import { Alert } from "react-bootstrap";
+import API_URL, { getAssetPath } from "./config";
 
 function Salon() {
   const [salon, setSalon] = useState([]);
@@ -25,7 +26,7 @@ function Salon() {
         setHasSubcategories(false);
 
         // 1. Get ALL active subcategories from PUBLIC API
-        const response = await fetch("http://localhost:5000/api/subcategories");
+        const response = await fetch(`${API_URL}/api/subcategories`);
 
         if (!response.ok) {
           console.error("Failed to fetch subcategories");
@@ -85,7 +86,7 @@ function Salon() {
   useEffect(() => {
     const fetchFromPublicAPI = async () => {
       try {
-        const publicSubcatsResponse = await fetch("http://localhost:5000/api/subcategories");
+        const publicSubcatsResponse = await fetch(`${API_URL}/api/subcategories`);
 
         if (publicSubcatsResponse.ok) {
           const publicSubcatsData = await publicSubcatsResponse.json();
@@ -120,14 +121,14 @@ function Salon() {
   useEffect(() => {
     const fetchSalonForWomen = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/salonforwomen");
+        const response = await fetch(`${API_URL}/api/salonforwomen`);
         if (!response.ok) throw new Error('Failed to fetch salon for women');
         const data = await response.json();
         setSalon(data.salonforwomen || []);
       } catch (error) {
         console.error("Error fetching salon: ", error);
         try {
-          const staticResponse = await fetch("http://localhost:5000/api/static-data");
+          const staticResponse = await fetch(`${API_URL}/api/static-data`);
           const staticData = await staticResponse.json();
           setSalon(staticData.salonforwomen || []);
         } catch (staticError) {
@@ -142,14 +143,14 @@ function Salon() {
   useEffect(() => {
     const fetchAdvanced = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/advanced");
+        const response = await fetch(`${API_URL}/api/advanced`);
         if (!response.ok) throw new Error('Failed to fetch advanced');
         const data = await response.json();
         setAdvanced(data.advanced || []);
       } catch (error) {
         console.error("Error fetching advanced: ", error);
         try {
-          const staticResponse = await fetch("http://localhost:5000/api/static-data");
+          const staticResponse = await fetch(`${API_URL}/api/static-data`);
           const staticData = await staticResponse.json();
           setAdvanced(staticData.advanced || []);
         } catch (staticError) {
@@ -195,14 +196,14 @@ function Salon() {
                     a.img && typeof a.img === "string"
                       ? a.img.startsWith("http")
                         ? a.img
-                        : `http://localhost:5000${a.img}`
-                      : "http://localhost:5000/assets/placeholder.png"
+                        : getAssetPath(a.img)
+                      : getAssetPath("/assets/placeholder.png")
                   }
                   alt={a.key || "Advanced service"}
                   className="extra w-100"
                   style={{ height: "400px", objectFit: "cover" }}
                   onError={(e) => {
-                    e.target.src = "http://localhost:5000/assets/placeholder.png";
+                    e.target.src = getAssetPath("/assets/placeholder.png");
                   }}
                 />
                 <Carousel.Caption
@@ -329,8 +330,8 @@ function Salon() {
                             subcategory.img && typeof subcategory.img === "string"
                               ? subcategory.img.startsWith("http")
                                 ? subcategory.img
-                                : `http://localhost:5000${subcategory.img}`
-                              : "http://localhost:5000/assets/placeholder.png"
+                                : getAssetPath(subcategory.img)
+                              : getAssetPath("/assets/placeholder.png")
                           }
                           alt={subcategory.name}
                           style={{
@@ -339,7 +340,7 @@ function Salon() {
                             objectFit: "cover"
                           }}
                           onError={(e) => {
-                            e.target.src = "http://localhost:5000/assets/placeholder.png";
+                            e.target.src = getAssetPath("/assets/placeholder.png");
                           }}
                         />
                       </div>

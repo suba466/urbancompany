@@ -2,7 +2,7 @@ import React from 'react';
 import { Container, Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { MdArrowBack } from 'react-icons/md';
-import API_URL from "./config";
+import API_URL, { getAssetPath } from "./config";
 
 function UCPage() {
     const navigate = useNavigate();
@@ -15,10 +15,13 @@ function UCPage() {
             <div className="text-center mt-5">
                 <h1 className="fw-bold mb-4">Urban Company</h1>
                 <img
-                    src={`${API_URL}/assets/urban.png`}
+                    src={getAssetPath("/assets/urban.png")}
                     alt="Urban Company"
                     style={{ width: "150px", marginBottom: "30px" }}
-                    onError={(e) => e.target.style.display = 'none'}
+                    onError={(e) => {
+                        console.error("Failed to load logo in UCPage");
+                        e.target.style.display = 'none';
+                    }}
                 />
                 <p className="lead text-muted">
                     Empowering millions of service professionals worldwide to deliver services at home like never before.
