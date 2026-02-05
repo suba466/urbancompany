@@ -114,7 +114,7 @@ function AdminLogin({ onLogin }) {
 
                     <h3 className="text-center mb-1 fw-bold">Urban Company</h3>
                     <p className="text-center mb-0 opacity-75" style={{ fontSize: "1rem" }}>
-                      Enterprise Administration Portal
+                       Administration Portal
                     </p>
                   </div>
                 </Col>
