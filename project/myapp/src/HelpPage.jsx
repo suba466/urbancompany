@@ -6,7 +6,7 @@ import { MdArrowBack, MdHelpOutline } from 'react-icons/md';
 function HelpPage() {
     const navigate = useNavigate();
 
-    return (
+    return (  
         <Container className="p-4">
             <Button variant="link" className="p-0 mb-3 text-dark" onClick={() => navigate(-1)}>
                 <MdArrowBack size={24} /> 
