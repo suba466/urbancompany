@@ -121,14 +121,16 @@ function Salon1modal({
         console.error("Failed to load added images:", error);
         // Fallback: Try local data.json
         try {
-          const basePath = import.meta.env.BASE_URL || '/';
-          const staticResponse = await fetch(`${basePath}data.json`);
+          const staticResponse = await fetch(getAssetPath("data.json"));
           if (!staticResponse.ok) throw new Error("Local data not found");
           const staticData = await staticResponse.json();
           setAddedImgs(staticData.added || []);
         } catch (staticError) {
           console.error("Error fetching local data:", staticError);
-          setAddedImgs([]);
+          // Hardcoded fallback
+          setAddedImgs([
+            { name: "Foot massage", price: "199", img: "/assets/foot.webp" }
+          ]);
         }
       }
     };

@@ -33,9 +33,8 @@ function Book() {
         setError("Failed to fetch service data, trying fallback");
         // Fallback to static data
         try {
-          // Try fetching from public/data.json using base path
-          const basePath = import.meta.env.BASE_URL || '/';
-          const staticRes = await fetch(`${basePath}data.json`);
+          // Try fetching from public/data.json using getAssetPath
+          const staticRes = await fetch(getAssetPath("data.json"));
           if (!staticRes.ok) throw new Error("Local data not found");
           const staticData = await staticRes.json();
           setCarouselItems(staticData.book || []);
@@ -43,6 +42,12 @@ function Book() {
           setError(null);
         } catch (staticError) {
           console.error("Error fetching static data:", staticError);
+          setCarouselItems([
+            { name: "Intense cleaning (2 bathrooms)", value: "₹1,016", img: "/assets/intenseclean.png" }
+          ]);
+          setSalonItems([
+            { key: "waxing", img: "/assets/waxing.png" }
+          ]);
         }
       } finally {
         setLoading(false);

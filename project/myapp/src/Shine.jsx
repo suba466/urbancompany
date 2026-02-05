@@ -32,14 +32,16 @@ function Shine() {
         console.error("Error fetching carousel:", error);
         // Fallback: Try local data.json
         try {
-          const basePath = import.meta.env.BASE_URL || '/';
-          const res = await fetch(`${basePath}data.json`);
+          const res = await fetch(getAssetPath("data.json"));
           if (!res.ok) throw new Error("Failed to fetch local data.json");
           const data = await res.json();
           setCarouselItems(data.carousel || []);
         } catch (staticError) {
           console.error("Error fetching local data:", staticError);
-          setCarouselItems([]);
+          // Hardcoded fallback
+          setCarouselItems([
+            { name: "Shine your bathroom deserves", img: "/assets/shine.png" }
+          ]);
         }
       } finally {
         setLoading(false);

@@ -462,13 +462,17 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
     } catch (err) {
       console.warn("Failed to load added images from API, trying fallback:", err);
       try {
-        const basePath = import.meta.env.BASE_URL || '/';
-        const staticRes = await fetch(`${basePath}data.json`);
+        const staticRes = await fetch(getAssetPath("data.json"));
         if (!staticRes.ok) throw new Error("Local data not found");
         const staticData = await staticRes.json();
         setAddedImgs(staticData.added || []);
       } catch (staticError) {
         console.error("Error fetching static data:", staticError);
+        // Fail-safe hardcoded data
+        setAddedImgs([
+          { name: "Foot massage", price: "199", img: "/assets/foot.webp" },
+          { name: "Sara fruit cleanup", price: "699", img: "/assets/sara.webp" }
+        ]);
       }
     }
   };

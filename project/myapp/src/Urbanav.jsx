@@ -124,8 +124,7 @@ function Urbanav() {
           console.warn("API fetch failed, falling back to local data");
           // Fallback to local data
           try {
-            const basePath = import.meta.env.BASE_URL || '/';
-            const response = await fetch(`${basePath}data.json`);
+            const response = await fetch(getAssetPath("data.json"));
             if (!response.ok) throw new Error("Local data not found");
             data = await response.json();
           } catch (e) {

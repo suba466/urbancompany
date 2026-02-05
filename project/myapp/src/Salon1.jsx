@@ -162,18 +162,18 @@ function Salon1() {
       // Fallback
       if (packages.length === 0) {
         try {
-          const basePath = import.meta.env.BASE_URL || '/';
-          const res = await fetch(`${basePath}data.json`);
+          const res = await fetch(getAssetPath("data.json"));
           if (res.ok) {
             const data = await res.json();
-            // Map 'book' items to 'packages' format as a fallback
-            if (data.book && Array.isArray(data.book)) {
-              packages = data.book.map((item, idx) => ({
-                _id: `fallback-pkg-${idx}`,
+            // Map 'book' items or 'added' items as a fallback
+            const sourceItems = data.book || data.added || [];
+            if (sourceItems.length > 0) {
+              packages = sourceItems.map((item, idx) => ({
+                _id: item._id || item.key || `fallback-pkg-${idx}`,
                 name: item.name,
-                title: "Waxing", // Default subcategory
-                subcategory: "Waxing",
-                price: item.value?.replace('₹', '') || "0",
+                title: item.subcategory || "Waxing",
+                subcategory: item.subcategory || "Waxing",
+                price: item.value?.replace('₹', '') || item.price || "499",
                 rating: item.title?.split('(')[0] || "4.8",
                 reviews: item.title?.match(/\(([^)]+)\)/)?.[1] || "1M",
                 img: item.img,
@@ -181,9 +181,24 @@ function Salon1() {
                 items: ["Service included", "Professional technician"]
               }));
             }
+          } else {
+            throw new Error("Local data not found");
           }
         } catch (e) {
-          console.error("Local packages fallback failed:", e);
+          console.error("Local packages fallback failed, using hardcoded items:", e);
+          packages = [
+            {
+              _id: 'hardcoded-1',
+              name: 'Roll-on waxing (Full hands)',
+              title: "Waxing",
+              subcategory: "Waxing",
+              price: "499",
+              rating: "4.8",
+              img: "/assets/waxing.png",
+              isActive: true,
+              items: ["Smooth finish", "Minimal pain"]
+            }
+          ];
         }
       }
 
@@ -216,13 +231,19 @@ function Salon1() {
       setSuperPack(data.super ? [data.super[0]] : []);
     } catch (error) {
       try {
-        const basePath = import.meta.env.BASE_URL || '/';
-        const staticResponse = await fetch(`${basePath}data.json`);
+        const staticResponse = await fetch(getAssetPath("data.json"));
         if (!staticResponse.ok) throw new Error("Local data not found");
         const staticData = await staticResponse.json();
         setSuperPack(staticData.super ? [staticData.super[0]] : []);
       } catch (e) {
         console.error("Local super fallback failed:", e);
+        setSuperPack([{
+          key: "super",
+          img: "/assets/super.jpg",
+          title: "Festive ready package",
+          price: "25% off",
+          text: "Facials & more"
+        }]);
       }
     }
   };
@@ -235,14 +256,15 @@ function Salon1() {
       setSalon(data.salonforwomen || []);
     } catch (error) {
       try {
-        const basePath = import.meta.env.BASE_URL || '/';
-        const staticResponse = await fetch(`${basePath}data.json`);
+        const staticResponse = await fetch(getAssetPath("data.json"));
         if (!staticResponse.ok) throw new Error("Local data not found");
         const staticData = await staticResponse.json();
-        // Fallback to 'added' or 'salon' if 'salonforwomen' is missing in data.json
         setSalon(staticData.salonforwomen || staticData.added || []);
       } catch (e) {
         console.error("Local salon fallback failed:", e);
+        setSalon([
+          { name: "Foot massage", price: "199", img: "/assets/foot.webp" }
+        ]);
       }
     }
   };

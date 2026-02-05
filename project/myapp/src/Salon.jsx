@@ -72,26 +72,35 @@ function Salon() {
         console.error("Error fetching salon subcategories: ", error);
         // Fallback to local data
         try {
-          const basePath = import.meta.env.BASE_URL || '/';
-          const staticRes = await fetch(`${basePath}data.json`);
+          const staticRes = await fetch(getAssetPath("data.json"));
           if (staticRes.ok) {
             const staticData = await staticRes.json();
-            if (staticData.salon) {
-              const mapped = staticData.salon.map(s => ({
-                _id: s.key,
-                name: s.key.charAt(0).toUpperCase() + s.key.slice(1),
-                img: s.img,
-                isActive: true,
-                categoryName: "Salon for women"
-              }));
-              setSalonSubcategories(mapped.slice(0, 6));
-              setHasSubcategories(true);
-            }
+            const salonData = staticData.salon || [
+              { key: "waxing", img: "/assets/waxing.png" },
+              { key: "cleanup", img: "/assets/cleanup.png" },
+              { key: "haircare", img: "/assets/haircare.png" }
+            ];
+            const mapped = salonData.map(s => ({
+              _id: s.key,
+              name: s.key.charAt(0).toUpperCase() + s.key.slice(1),
+              img: s.img,
+              isActive: true,
+              categoryName: "Salon for women"
+            }));
+            setSalonSubcategories(mapped.slice(0, 6));
+            setHasSubcategories(true);
           } else {
-            setHasSubcategories(false);
+            throw new Error("Local data not found");
           }
         } catch (e) {
-          setHasSubcategories(false);
+          console.error("Critical fallback failed, using hardcoded subcategories");
+          const hardcoded = [
+            { _id: 'waxing', name: 'Waxing', img: '/assets/waxing.png', isActive: true },
+            { _id: 'cleanup', name: 'Cleanup', img: '/assets/cleanup.png', isActive: true },
+            { _id: 'haircare', name: 'Haircare', img: '/assets/haircare.png', isActive: true }
+          ];
+          setSalonSubcategories(hardcoded);
+          setHasSubcategories(true);
         }
       } finally {
         setLoading(false);
@@ -171,13 +180,23 @@ function Salon() {
       } catch (error) {
         console.error("Error fetching advanced: ", error);
         try {
-          const basePath = import.meta.env.BASE_URL || '/';
-          const staticResponse = await fetch(`${basePath}data.json`);
-          if (!staticResponse.ok) throw new Error("Local data not found");
-          const staticData = await staticResponse.json();
+          const staticRes = await fetch(getAssetPath("data.json"));
+          if (!staticRes.ok) throw new Error("Local data not found");
+          const staticData = await staticRes.json();
           setAdvanced(staticData.advanced || []);
         } catch (staticError) {
           console.error("Error fetching local data:", staticError);
+          setAdvanced([
+            {
+              price: "₹799",
+              value: "₹1,098",
+              title: "Roll-on waxing",
+              tit: "Full arms, legs & underarms",
+              text: "Extra 25% off for new users*",
+              key: "facial",
+              img: "/assets/facial.jpg"
+            }
+          ]);
         }
       }
     };
