@@ -78,14 +78,17 @@ function Salon1() {
     const fetchAllData = async () => {
       setIsLoading(true);
       try {
-        await Promise.all([
+        console.log("Salon1: Fetching all data...");
+        // Use individual try-catches or a timeout to prevent hanging
+        await Promise.allSettled([
           fetchSuperPackages(),
           fetchPackages(),
           fetchSalonForWomen()
         ]);
+        console.log("Salon1: Data fetch completed (or settled)");
         updatePageTitle();
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error in Salon1 fetchAllData:", error);
       } finally {
         setIsLoading(false);
       }
@@ -123,6 +126,8 @@ function Salon1() {
           const data1 = await response1.json();
           packages = data1.packages || [];
           packages.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        } else {
+          throw new Error('API 1 failed');
         }
       } catch (error) { console.error(error); }
 
@@ -133,6 +138,8 @@ function Salon1() {
             const data2 = await response2.json();
             packages = (data2.packages || []).filter(pkg => pkg.isActive !== false);
             packages.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+          } else {
+            throw new Error('API 2 failed');
           }
         } catch (error) { console.error(error); }
       }
@@ -146,6 +153,8 @@ function Salon1() {
             if (packages[0] && packages[0].isActive !== undefined) {
               packages = packages.filter(pkg => pkg.isActive !== false);
             }
+          } else {
+            throw new Error('API 3 failed');
           }
         } catch (error) { console.error(error); }
       }
@@ -157,10 +166,25 @@ function Salon1() {
           const res = await fetch(`${basePath}data.json`);
           if (res.ok) {
             const data = await res.json();
-            // Assuming data.json structure for general packages if available
-            // For now leaving as empty or rudimentary fallback if needed
+            // Map 'book' items to 'packages' format as a fallback
+            if (data.book && Array.isArray(data.book)) {
+              packages = data.book.map((item, idx) => ({
+                _id: `fallback-pkg-${idx}`,
+                name: item.name,
+                title: "Waxing", // Default subcategory
+                subcategory: "Waxing",
+                price: item.value?.replace('₹', '') || "0",
+                rating: item.title?.split('(')[0] || "4.8",
+                reviews: item.title?.match(/\(([^)]+)\)/)?.[1] || "1M",
+                img: item.img,
+                isActive: true,
+                items: ["Service included", "Professional technician"]
+              }));
+            }
           }
-        } catch (e) { }
+        } catch (e) {
+          console.error("Local packages fallback failed:", e);
+        }
       }
 
       if (packages.length > 0) {
@@ -194,9 +218,12 @@ function Salon1() {
       try {
         const basePath = import.meta.env.BASE_URL || '/';
         const staticResponse = await fetch(`${basePath}data.json`);
+        if (!staticResponse.ok) throw new Error("Local data not found");
         const staticData = await staticResponse.json();
         setSuperPack(staticData.super ? [staticData.super[0]] : []);
-      } catch (e) { }
+      } catch (e) {
+        console.error("Local super fallback failed:", e);
+      }
     }
   };
 
@@ -210,9 +237,13 @@ function Salon1() {
       try {
         const basePath = import.meta.env.BASE_URL || '/';
         const staticResponse = await fetch(`${basePath}data.json`);
+        if (!staticResponse.ok) throw new Error("Local data not found");
         const staticData = await staticResponse.json();
-        setSalon(staticData.salonforwomen || []);
-      } catch (e) { }
+        // Fallback to 'added' or 'salon' if 'salonforwomen' is missing in data.json
+        setSalon(staticData.salonforwomen || staticData.added || []);
+      } catch (e) {
+        console.error("Local salon fallback failed:", e);
+      }
     }
   };
 

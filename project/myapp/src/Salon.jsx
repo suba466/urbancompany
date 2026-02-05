@@ -29,9 +29,7 @@ function Salon() {
         const response = await fetch(`${API_URL}/api/subcategories`);
 
         if (!response.ok) {
-          console.error("Failed to fetch subcategories");
-          setHasSubcategories(false);
-          return;
+          throw new Error("Failed to fetch subcategories");
         }
 
         const data = await response.json();
@@ -67,13 +65,34 @@ function Salon() {
             setHasSubcategories(false);
           }
         } else {
-          console.log("No subcategories data received");
-          setHasSubcategories(false);
+          throw new Error("No subcategories data received");
         }
 
       } catch (error) {
         console.error("Error fetching salon subcategories: ", error);
-        setHasSubcategories(false);
+        // Fallback to local data
+        try {
+          const basePath = import.meta.env.BASE_URL || '/';
+          const staticRes = await fetch(`${basePath}data.json`);
+          if (staticRes.ok) {
+            const staticData = await staticRes.json();
+            if (staticData.salon) {
+              const mapped = staticData.salon.map(s => ({
+                _id: s.key,
+                name: s.key.charAt(0).toUpperCase() + s.key.slice(1),
+                img: s.img,
+                isActive: true,
+                categoryName: "Salon for women"
+              }));
+              setSalonSubcategories(mapped.slice(0, 6));
+              setHasSubcategories(true);
+            }
+          } else {
+            setHasSubcategories(false);
+          }
+        } catch (e) {
+          setHasSubcategories(false);
+        }
       } finally {
         setLoading(false);
       }

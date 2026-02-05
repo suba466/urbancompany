@@ -126,9 +126,15 @@ function Urbanav() {
           try {
             const basePath = import.meta.env.BASE_URL || '/';
             const response = await fetch(`${basePath}data.json`);
+            if (!response.ok) throw new Error("Local data not found");
             data = await response.json();
           } catch (e) {
             console.error("Static data fetch failed:", e);
+            // Provide hardcoded fallback if everything fails
+            data = {
+              logo: "/assets/Uc.png",
+              logo1: "/assets/urban.png"
+            };
           }
         }
 
