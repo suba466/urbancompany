@@ -10,7 +10,7 @@ import Salon1modal from './Salon1modal';
 import { useNavigate } from 'react-router-dom';
 import CartBlock from './CartBlock';
 import { useCart } from "./hooks";
-import API_URL from "./config";
+import API_URL, { getAssetPath } from "./config";
 
 function Salon1() {
   const [savedExtras, setSavedExtras] = useState({});
