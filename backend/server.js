@@ -22,7 +22,10 @@ const razorpay = new Razorpay({
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ["http://localhost:5173", "https://suba466.github.io"],
+  credentials: true
+}));
 app.use(express.json());
 
 // __dirname for ES modules

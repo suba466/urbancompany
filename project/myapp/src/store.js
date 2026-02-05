@@ -1,12 +1,13 @@
 import { configureStore, createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
+import API_URL from './config';
 
 // Async thunks for Customer Authentication
 export const loginCustomer = createAsyncThunk(
   'customerAuth/login',
   async ({ email, password }, { rejectWithValue }) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/login', { email, password });
+      const response = await axios.post(`${API_URL}/api/login`, { email, password });
 
       if (response.data.success) {
         const token = response.data.token;
@@ -34,7 +35,7 @@ export const registerCustomer = createAsyncThunk(
         if (userData[key]) formData.append(key, userData[key]);
       });
 
-      const response = await axios.post('http://localhost:5000/api/register', formData);
+      const response = await axios.post(`${API_URL}/api/register`, formData);
 
       if (response.data.success) {
         const token = response.data.token;
@@ -75,7 +76,7 @@ export const updateCustomerProfile = createAsyncThunk(
         if (profileData[key]) formData.append(key, profileData[key]);
       });
 
-      const response = await axios.post('http://localhost:5000/api/update-profile', formData);
+      const response = await axios.post(`${API_URL}/api/update-profile`, formData);
 
       if (response.data.success) {
         const updatedUser = response.data.customer;
@@ -96,7 +97,7 @@ export const fetchCustomerProfile = createAsyncThunk(
       const token = localStorage.getItem('customerToken');
       if (!token) return rejectWithValue('No token found');
 
-      const response = await axios.get('http://localhost:5000/api/customer/profile', {
+      const response = await axios.get(`${API_URL}/api/customer/profile`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -116,7 +117,7 @@ export const loginAdmin = createAsyncThunk(
   'adminAuth/login',
   async ({ email, password }, { rejectWithValue }) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/admin/login', { email, password });
+      const response = await axios.post(`${API_URL}/api/admin/login`, { email, password });
 
       if (response.data.success) {
         const token = response.data.token;

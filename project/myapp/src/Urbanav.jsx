@@ -15,6 +15,7 @@ import { MdAccountCircle, MdHome, MdApartment, MdBusinessCenter, MdDelete, MdMor
 import AccountModal from "./AccountModal";
 import { useCart, useAuth } from "./hooks"; // Import from hooks
 import "./Urbancom.css";
+import API_URL from "./config";
 // Leaflet imports
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -34,8 +35,8 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 function Urbanav() {
   const navigate = useNavigate();
-  const [logo, setLogo] = useState("http://localhost:5000/assets/Uc.png");
-  const [logo1, setLogo1] = useState("http://localhost:5000/assets/urban.png");
+  const [logo, setLogo] = useState(`${API_URL}/assets/Uc.png`);
+  const [logo1, setLogo1] = useState(`${API_URL}/assets/urban.png`);
   const [searchValue, setSearchValue] = useState("");
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
@@ -113,7 +114,7 @@ function Urbanav() {
     const fetchLogos = async () => {
       try {
         console.log("Fetching logos from backend...");
-        const response = await fetch("http://localhost:5000/api/static-data");
+        const response = await fetch(`${API_URL}/api/static-data`);
         if (!response.ok) {
           throw new Error('Failed to fetch static data');
         }
@@ -123,22 +124,22 @@ function Urbanav() {
         if (data && data.logo) {
           const logoUrl = data.logo.startsWith('http')
             ? data.logo
-            : `http://localhost:5000${data.logo}`;
+            : `${API_URL}${data.logo}`;
           setLogo(logoUrl);
         } else {
-          setLogo("http://localhost:5000/assets/Uc.png");
+          setLogo(`${API_URL}/assets/Uc.png`);
         }
 
         if (data && data.logo1) {
           const logo1Url = data.logo1.startsWith('http')
             ? data.logo1
-            : `http://localhost:5000${data.logo1}`;
+            : `${API_URL}${data.logo1}`;
           setLogo1(logo1Url);
         }
       } catch (error) {
         console.error("Error fetching logos:", error);
-        setLogo("http://localhost:5000/assets/Uc.png");
-        setLogo1("http://localhost:5000/assets/urban.png");
+        setLogo(`${API_URL}/assets/Uc.png`);
+        setLogo1(`${API_URL}/assets/urban.png`);
       }
     };
 
@@ -445,7 +446,7 @@ function Urbanav() {
                   style={{ height: "34px", marginLeft: "10px" }}
                   onError={(e) => {
                     console.error("Failed to load logo:", logo1);
-                    e.target.src = "http://localhost:5000/assets/urban.png";
+                    e.target.src = `${API_URL}/assets/urban.png`;
                   }}
                 />
               </Col>
@@ -465,7 +466,7 @@ function Urbanav() {
                 style={{ maxHeight: "40px", objectFit: "contain" }}
                 onError={(e) => {
                   console.error("Failed to load main logo:", logo);
-                  e.target.src = "http://localhost:5000/assets/Uc.png";
+                  e.target.src = `${API_URL}/assets/Uc.png`;
                 }}
               />
               {!location.pathname.startsWith("/salon") && (
@@ -622,7 +623,7 @@ function Urbanav() {
                       }}
                       onError={(e) => {
                         console.error("Failed to load logo1:", logo1);
-                        e.target.src = "http://localhost:5000/assets/uc.png";
+                        e.target.src = `${API_URL}/assets/uc.png`;
                       }}
                     />
                     <div className="nav-label" style={{ fontSize: "12px" }}>UC</div>
