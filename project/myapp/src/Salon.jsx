@@ -249,13 +249,19 @@ function Salon() {
                         }}
                       >
                         <img
-                          src={
-                            subcategory.img && typeof subcategory.img === "string"
+                          src={(() => {
+                            const name = subcategory.name?.toLowerCase() || "";
+                            if (name.includes("pedicure")) return getAssetPath("/assets/foot.webp");
+                            if (name.includes("manicure")) return getAssetPath("/assets/british.webp");
+                            if (name.includes("facial")) return getAssetPath("/assets/facial.jpg");
+                            if (name.includes("bleach")) return getAssetPath("/assets/hairbleach.webp");
+
+                            return subcategory.img && typeof subcategory.img === "string"
                               ? subcategory.img.startsWith("http")
                                 ? subcategory.img
                                 : getAssetPath(subcategory.img)
-                              : getAssetPath("/assets/placeholder.png")
-                          }
+                              : getAssetPath("/assets/placeholder.png");
+                          })()}
                           alt={subcategory.name}
                           style={{
                             width: "100%",
