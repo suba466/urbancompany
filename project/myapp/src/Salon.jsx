@@ -32,7 +32,7 @@ function Salon() {
         });
 
         if (filtered.length > 0) {
-          setSalonSubcategories(filtered.slice(0, 6));
+          setSalonSubcategories(filtered.slice(0, 3));
           setHasSubcategories(true);
         } else {
           setHasSubcategories(false);
@@ -41,10 +41,7 @@ function Salon() {
         const hardcoded = [
           { _id: 'waxing', name: 'Waxing', img: '/assets/waxing.png', isActive: true },
           { _id: 'cleanup', name: 'Cleanup', img: '/assets/cleanup.png', isActive: true },
-          { _id: 'haircare', name: 'Haircare', img: '/assets/haircare.png', isActive: true },
-          { _id: 'pedicure', name: 'Pedicure & Manicure', img: '/assets/foot.webp', isActive: true },
-          { _id: 'facial', name: 'Facial', img: '/assets/facial.jpg', isActive: true },
-          { _id: 'bleach', name: 'Bleach & Detan', img: '/assets/hairbleach.webp', isActive: true }
+          { _id: 'haircare', name: 'Haircare', img: '/assets/haircare.png', isActive: true }
         ];
         setSalonSubcategories(hardcoded);
         setHasSubcategories(true);

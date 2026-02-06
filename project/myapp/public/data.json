@@ -156,18 +156,6 @@
         {
             "key": "haircare",
             "img": "/assets/haircare.png"
-        },
-        {
-            "key": "pedicure",
-            "img": "/assets/foot.webp"
-        },
-        {
-            "key": "manicure",
-            "img": "/assets/british.webp"
-        },
-        {
-            "key": "bleach",
-            "img": "/assets/hairbleach.webp"
         }
     ],
     "subcategories": [
@@ -189,27 +177,6 @@
             "_id": "haircare",
             "name": "Haircare",
             "img": "/assets/haircare.png",
-            "isActive": true,
-            "categoryName": "Salon for women"
-        },
-        {
-            "_id": "pedicure",
-            "name": "Pedicure & Manicure",
-            "img": "/assets/foot.webp",
-            "isActive": true,
-            "categoryName": "Salon for women"
-        },
-        {
-            "_id": "facial",
-            "name": "Facial",
-            "img": "/assets/facial.jpg",
-            "isActive": true,
-            "categoryName": "Salon for women"
-        },
-        {
-            "_id": "bleach",
-            "name": "Bleach & Detan",
-            "img": "/assets/hairbleach.webp",
             "isActive": true,
             "categoryName": "Salon for women"
         }
