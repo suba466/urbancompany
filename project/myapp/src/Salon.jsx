@@ -32,8 +32,8 @@ function Salon() {
         });
 
         if (filtered.length > 0) {
-          // Display only the first 3 items (Waxing, Cleanup, Haircare) as per requirements
-          setSalonSubcategories(filtered.slice(0, 3));
+          // Display up to 6 items as requested
+          setSalonSubcategories(filtered.slice(0, 6));
           setHasSubcategories(true);
         } else {
           setHasSubcategories(false);
@@ -42,7 +42,10 @@ function Salon() {
         const hardcoded = [
           { _id: 'waxing', name: 'Waxing', img: '/assets/waxing.png', isActive: true },
           { _id: 'cleanup', name: 'Cleanup', img: '/assets/cleanup.png', isActive: true },
-          { _id: 'haircare', name: 'Haircare', img: '/assets/haircare.png', isActive: true }
+          { _id: 'haircare', name: 'Haircare', img: '/assets/haircare.png', isActive: true },
+          { _id: 'pedicure', name: 'Pedicure', img: '/assets/foot.webp', isActive: true },
+          { _id: 'manicure', name: 'Manicure', img: '/assets/british.webp', isActive: true },
+          { _id: 'facial', name: 'Facial', img: '/assets/facial.jpg', isActive: true }
         ];
         setSalonSubcategories(hardcoded);
         setHasSubcategories(true);
