@@ -77,12 +77,28 @@
     ],
     "book": [
         {
-            "name": "Intense cleaning (2 bathrooms)",
-            "title": "4.79 (3.1M)",
-            "value": "₹1,016",
+            "name": "Roll-on waxing",
+            "title": "4.82 (1.2M)",
+            "value": "₹799",
             "option": "₹1,098",
-            "key": "intenseclean",
-            "img": "/assets/intenseclean.png"
+            "key": "book-wax",
+            "img": "/assets/waxing.png"
+        },
+        {
+            "name": "Skin lightening glow facial",
+            "title": "4.84 (235k)",
+            "value": "₹1,699",
+            "option": "₹2,499",
+            "key": "book-facial",
+            "img": "/assets/facial.jpg"
+        },
+        {
+            "name": "Elysian British Rose Pedicure",
+            "title": "4.86 (101k)",
+            "value": "₹219",
+            "option": "₹499",
+            "key": "book-pedi",
+            "img": "/assets/british.webp"
         },
         {
             "name": "Classic cleaning (2 bathrooms)",
@@ -91,20 +107,46 @@
             "option": "₹938",
             "key": "classic",
             "img": "/assets/classic.png"
+        },
+        {
+            "name": "Sara fruit cleanup",
+            "title": "4.85 (120k)",
+            "value": "₹699",
+            "option": "₹999",
+            "key": "book-sara",
+            "img": "/assets/sara.webp"
         }
     ],
     "salon": [
         {
-            "key": "waxing",
-            "img": "/assets/waxing.png"
-        },
-        {
+            "name": "Cleanup",
             "key": "cleanup",
             "img": "/assets/cleanup.png"
         },
         {
-            "key": "haircare",
-            "img": "/assets/haircare.png"
+            "name": "Man. bleach & detan",
+            "key": "bleach",
+            "img": "/assets/hairbleach.webp"
+        },
+        {
+            "name": "Pedicure & manicure",
+            "key": "pedi",
+            "img": "/assets/foot.webp"
+        },
+        {
+            "name": "Signature facials",
+            "key": "facial",
+            "img": "/assets/facial.jpg"
+        },
+        {
+            "name": "Super saver package",
+            "key": "super",
+            "img": "/assets/super.webp"
+        },
+        {
+            "name": "Waxing & threading",
+            "key": "wax",
+            "img": "/assets/waxing.png"
         }
     ],
     "subcategories": [
@@ -117,7 +159,7 @@
         },
         {
             "_id": "bleach-detan",
-            "name": "Man, bleach & detan",
+            "name": "Man. bleach & detan",
             "img": "/assets/hairbleach.webp",
             "isActive": true,
             "categoryName": "Salon for women"
@@ -139,7 +181,7 @@
         {
             "_id": "super-saver",
             "name": "Super saver package",
-            "img": "/assets/super.jpg",
+            "img": "/assets/super.webp",
             "isActive": true,
             "categoryName": "Salon for women"
         },
@@ -149,6 +191,26 @@
             "img": "/assets/waxing.png",
             "isActive": true,
             "categoryName": "Salon for women"
+        }
+    ],
+    "advanced": [
+        {
+            "price": "₹799",
+            "value": "₹1,098",
+            "title": "Roll-on waxing",
+            "tit": "Full arms, legs & underarms",
+            "text": "Extra 25% off for new users*",
+            "key": "waxing-banner",
+            "img": "/assets/facial.jpg"
+        }
+    ],
+    "added": [
+        {
+            "name": "Elysian British Rose Pedicure",
+            "price": "219",
+            "subcategory": "Pedicure & manicure",
+            "rating": "4.86 (101k bookings)",
+            "img": "/assets/british.webp"
         }
     ],
     "packages": [
@@ -167,128 +229,10 @@
             "isActive": true,
             "items": [
                 {
-                    "name": "Deep cleaning",
+                    "name": "Details",
                     "description": "Foot soak, scrub, serum-massage"
-                },
-                {
-                    "name": "Polish",
-                    "description": "Nail filing & polishing"
                 }
             ]
-        },
-        {
-            "_id": "pkg-o3-shine",
-            "name": "Skin tightening glow facial",
-            "title": "Signature facials",
-            "subcategory": "Signature facials",
-            "category": "Salon for women",
-            "price": "1699",
-            "originalPrice": "2499",
-            "rating": "4.84",
-            "bookings": "235k",
-            "duration": "60 min",
-            "img": "/assets/o3 shine.webp",
-            "isActive": true,
-            "items": [
-                {
-                    "description": "Reduces fine lines & provides skin tightening"
-                }
-            ]
-        },
-        {
-            "_id": "pkg-head",
-            "name": "Head massage",
-            "title": "Man, bleach & detan",
-            "subcategory": "Man, bleach & detan",
-            "category": "Salon for women",
-            "price": "199",
-            "originalPrice": "299",
-            "rating": "4.87",
-            "bookings": "670k",
-            "duration": "20 min",
-            "img": "/assets/relax.png",
-            "isActive": true,
-            "items": [
-                {
-                    "description": "Massage to relieve stress"
-                }
-            ]
-        },
-        {
-            "_id": "pkg-sara",
-            "name": "Sara fruit cleanup",
-            "title": "Cleanup",
-            "subcategory": "Cleanup",
-            "category": "Salon for women",
-            "price": "699",
-            "originalPrice": "999",
-            "rating": "4.85",
-            "bookings": "120k",
-            "duration": "40 min",
-            "img": "/assets/sara.webp",
-            "isActive": true,
-            "items": [
-                {
-                    "description": "Fruit extract for skin rejuvenation"
-                }
-            ]
-        },
-        {
-            "_id": "pkg-waxing",
-            "name": "Full arms + half legs waxing",
-            "title": "Waxing & threading",
-            "subcategory": "Waxing & threading",
-            "category": "Salon for women",
-            "price": "399",
-            "originalPrice": "599",
-            "rating": "4.82",
-            "bookings": "1.2M",
-            "duration": "30 min",
-            "img": "/assets/waxing.png",
-            "isActive": true,
-            "items": [
-                {
-                    "description": "Quick and smooth hair removal"
-                }
-            ]
-        },
-        {
-            "_id": "pkg-make-your-own",
-            "name": "Make your own package",
-            "title": "Super saver package",
-            "subcategory": "Super saver package",
-            "category": "Salon for women",
-            "price": "1499",
-            "rating": "4.89",
-            "bookings": "500k",
-            "duration": "Flexible",
-            "img": "/assets/super.jpg",
-            "isActive": true,
-            "items": [
-                {
-                    "description": "Customizable services at great discounts"
-                }
-            ]
-        }
-    ],
-    "added": [
-        {
-            "name": "Elysian British Rose Pedicure",
-            "key": "british",
-            "img": "/assets/british.webp",
-            "price": "219",
-            "subcategory": "Pedicure & manicure",
-            "rating": "4.86 (101k reviews)",
-            "duration": "45 min"
-        },
-        {
-            "name": "Skin tightening glow facial",
-            "key": "o3 shine",
-            "img": "/assets/o3 shine.webp",
-            "price": "1699",
-            "subcategory": "Signature facials",
-            "rating": "4.84 (235k reviews)",
-            "duration": "60 min"
         }
     ]
 }

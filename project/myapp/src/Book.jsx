@@ -179,7 +179,7 @@ function Book() {
                           padding: "28px",
                         }}
                       >
-                        {item.key.charAt(0).toUpperCase() + item.key.slice(1)}
+                        {item.name || (item.key?.charAt(0).toUpperCase() + item.key?.slice(1))}
                       </Card.Title>
                     </Card.Body>
                     <Card.Img
@@ -207,7 +207,7 @@ function Book() {
                         padding: "28px",
                       }}
                     >
-                      {item.key.charAt(0).toUpperCase() + item.key.slice(1)}
+                      {item.name || (item.key?.charAt(0).toUpperCase() + item.key?.slice(1))}
                     </Card.Title>
                   </Card.Body>
                   <Card.Img

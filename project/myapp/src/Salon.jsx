@@ -258,7 +258,7 @@ function Salon() {
                         <img
                           src={(() => {
                             const name = subcategory.name?.toLowerCase() || "";
-                            if (name.includes("super saver") || name.includes("25%")) return getAssetPath("/assets/super.jpg");
+                            if (name.includes("super saver") || name.includes("25%")) return getAssetPath("/assets/super.webp");
                             if (name.includes("pedicure") || name.includes("manicure")) return getAssetPath("/assets/foot.webp");
                             if (name.includes("facial")) return getAssetPath("/assets/facial.jpg");
                             if (name.includes("bleach") || name.includes("detan")) return getAssetPath("/assets/hairbleach.webp");
@@ -271,7 +271,7 @@ function Salon() {
                                 : getAssetPath(subcategory.img)
                               : getAssetPath("/assets/placeholder.png");
                           })()}
-                          alt={subcategory.name}
+                          alt={subcategory.name || "Service"}
                           style={{
                             width: "100%",
                             height: "100%",
