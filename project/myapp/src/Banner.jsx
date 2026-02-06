@@ -93,6 +93,9 @@ function Banner() {
               className="second-row-item d-flex flex-column align-items-center position-relative"
               onClick={() => handleCategoryClick(category)}
             >
+              {category.isNew && (
+                <span className="position-absolute badge bg-success" style={{ top: "-5px", right: "20px", fontSize: "10px", zIndex: 10 }}>New</span>
+              )}
               <div className="img-box w-100 d-flex justify-content-center align-items-center ">
                 {renderCategoryImage(category)}
               </div>
@@ -138,7 +141,10 @@ function Banner() {
       <>
         <div className="first-row d-flex">
           {firstRow.map((c, index) => (
-            <div key={index} className="first-row-item d-flex align-items-center justify-content-between" onClick={() => handleCategoryClick(c)}>
+            <div key={index} className="first-row-item d-flex align-items-center justify-content-between position-relative" onClick={() => handleCategoryClick(c)}>
+              {c.isNew && (
+                <span className="position-absolute badge bg-success" style={{ top: "5px", right: "45px", fontSize: "10px", zIndex: 10 }}>New</span>
+              )}
               <p className="first-row-text text-center mb-0">{c.name}</p>
               {renderCategoryImage(c)}
             </div>

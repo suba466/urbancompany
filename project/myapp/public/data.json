@@ -3,15 +3,22 @@
     "logo1": "/assets/urban.png",
     "categories": [
         {
-            "name": "Women's Therapies",
-            "key": "therapies",
-            "img": "/assets/relax.png",
-            "isActive": true
-        },
-        {
             "name": "Salon for women",
             "key": "salon",
             "img": "/assets/salon.webp",
+            "isActive": true,
+            "isNew": true
+        },
+        {
+            "name": "Cleaning",
+            "key": "clean",
+            "img": "/assets/clean.webp",
+            "isActive": true
+        },
+        {
+            "name": "Carpenters",
+            "key": "carpenter",
+            "img": "/assets/brush.png",
             "isActive": true
         },
         {
@@ -21,27 +28,9 @@
             "isActive": true
         },
         {
-            "name": "Cleaning",
-            "key": "clean",
-            "img": "/assets/clean.webp",
-            "isActive": true
-        },
-        {
-            "name": "Electrician, Plumber & Carpenters",
-            "key": "electric",
-            "img": "/assets/electric.webp",
-            "isActive": true
-        },
-        {
             "name": "Native Water Purifier",
             "key": "native",
             "img": "/assets/native.webp",
-            "isActive": true
-        },
-        {
-            "name": "Painting & Waterproofing",
-            "key": "painting",
-            "img": "/assets/wall.png",
             "isActive": true
         }
     ],
@@ -67,50 +56,16 @@
             "descriptions": "Massage for men",
             "key": "relax",
             "img": "/assets/relax.png"
-        },
-        {
-            "name": "RO Water Purifier",
-            "descriptions": "Needs no service for 2 years",
-            "key": "water",
-            "img": "/assets/water.png"
-        },
-        {
-            "name": "Get experts in 2 hours at ₹149",
-            "descriptions": "Electricians, plumbers, carpenters",
-            "key": "expert",
-            "img": "/assets/expert.png"
-        },
-        {
-            "name": "Deep clean with foam-jet AC service",
-            "descriptions": "AC service & repair",
-            "key": "deepclean",
-            "img": "/assets/deepclean.png"
         }
     ],
     "book": [
         {
-            "name": "Roll-on waxing",
-            "title": "4.82 (1.2M)",
-            "value": "₹799",
+            "name": "Intense cleaning (2 bathrooms)",
+            "title": "4.79 (3.1M)",
+            "value": "₹1,016",
             "option": "₹1,098",
-            "key": "book-wax",
-            "img": "/assets/waxing.png"
-        },
-        {
-            "name": "Skin lightening glow facial",
-            "title": "4.84 (235k)",
-            "value": "₹1,699",
-            "option": "₹2,499",
-            "key": "book-facial",
-            "img": "/assets/facial.jpg"
-        },
-        {
-            "name": "Elysian British Rose Pedicure",
-            "title": "4.86 (101k)",
-            "value": "₹219",
-            "option": "₹499",
-            "key": "book-pedi",
-            "img": "/assets/foot.webp"
+            "key": "intenseclean",
+            "img": "/assets/intenseclean.png"
         },
         {
             "name": "Classic cleaning (2 bathrooms)",
@@ -121,44 +76,45 @@
             "img": "/assets/classic.png"
         },
         {
-            "name": "Sara fruit cleanup",
-            "title": "4.85 (120k)",
-            "value": "₹699",
-            "option": "₹999",
-            "key": "book-sara",
-            "img": "/assets/sara.webp"
+            "name": "Switch/socket replacement",
+            "title": "4.91 (1.1M)",
+            "value": "₹49",
+            "option": "₹99",
+            "key": "socket",
+            "img": "/assets/socket.png"
+        },
+        {
+            "name": "Drill & hang (wall decor)",
+            "title": "4.6 (123k)",
+            "value": "₹39",
+            "option": "₹79",
+            "key": "wall",
+            "img": "/assets/wall.png"
+        },
+        {
+            "name": "Switchboard/fusebox repair",
+            "title": "4.88 (450k)",
+            "value": "₹79",
+            "option": "₹149",
+            "key": "switchboard",
+            "img": "/assets/switch.png"
         }
     ],
     "salon": [
+        {
+            "name": "Waxing",
+            "key": "waxing",
+            "img": "/assets/waxing.png"
+        },
         {
             "name": "Cleanup",
             "key": "cleanup",
             "img": "/assets/cleanup.png"
         },
         {
-            "name": "Man. bleach & detan",
-            "key": "bleach",
-            "img": "/assets/hairbleach.webp"
-        },
-        {
-            "name": "Pedicure & manicure",
-            "key": "pedi",
-            "img": "/assets/foot.webp"
-        },
-        {
-            "name": "Signature facials",
-            "key": "facial",
-            "img": "/assets/facial.jpg"
-        },
-        {
-            "name": "Super saver package",
-            "key": "super",
-            "img": "/assets/super.webp"
-        },
-        {
-            "name": "Waxing & threading",
-            "key": "wax",
-            "img": "/assets/waxing.png"
+            "name": "Haircare",
+            "key": "haircare",
+            "img": "/assets/haircare.png"
         }
     ],
     "subcategories": [
@@ -170,37 +126,16 @@
             "categoryName": "Salon for women"
         },
         {
-            "_id": "bleach-detan",
-            "name": "Man. bleach & detan",
-            "img": "/assets/hairbleach.webp",
-            "isActive": true,
-            "categoryName": "Salon for women"
-        },
-        {
-            "_id": "pedicure-manicure",
-            "name": "Pedicure & manicure",
-            "img": "/assets/foot.webp",
-            "isActive": true,
-            "categoryName": "Salon for women"
-        },
-        {
-            "_id": "signature-facials",
-            "name": "Signature facials",
-            "img": "/assets/facial.jpg",
-            "isActive": true,
-            "categoryName": "Salon for women"
-        },
-        {
-            "_id": "super-saver",
-            "name": "Super saver package",
-            "img": "/assets/super.webp",
-            "isActive": true,
-            "categoryName": "Salon for women"
-        },
-        {
-            "_id": "waxing-threading",
+            "_id": "wax-thread",
             "name": "Waxing & threading",
             "img": "/assets/waxing.png",
+            "isActive": true,
+            "categoryName": "Salon for women"
+        },
+        {
+            "_id": "pedicure",
+            "name": "Pedicure & manicure",
+            "img": "/assets/foot.webp",
             "isActive": true,
             "categoryName": "Salon for women"
         }
