@@ -23,12 +23,12 @@ function Salon() {
         const data = await fetchData("api/subcategories", "subcategories");
 
         const hardcoded = [
-          { _id: 'waxing', name: 'Waxing', img: '/assets/waxing.png', isActive: true },
           { _id: 'cleanup', name: 'Cleanup', img: '/assets/cleanup.png', isActive: true },
-          { _id: 'haircare', name: 'Haircare', img: '/assets/haircare.png', isActive: true },
-          { _id: 'pedicure', name: 'Pedicure', img: '/assets/foot.webp', isActive: true },
-          { _id: 'manicure', name: 'Manicure', img: '/assets/british.webp', isActive: true },
-          { _id: 'facial', name: 'Facial', img: '/assets/facial.jpg', isActive: true }
+          { _id: 'facial', name: 'Facial', img: '/assets/facial.jpg', isActive: true },
+          { _id: 'pedicure-manicure', name: 'Pedicure & manicure', img: '/assets/foot.webp', isActive: true },
+          { _id: 'signature-facials', name: 'Signature facials', img: '/assets/facial.jpg', isActive: true },
+          { _id: 'super-saver', name: 'Super saver package', img: '/assets/super.jpg', isActive: true },
+          { _id: 'waxing-threading', name: 'Waxing & threading', img: '/assets/waxing.png', isActive: true }
         ];
 
         let finalSubcategories = [];
@@ -266,10 +266,12 @@ function Salon() {
                         <img
                           src={(() => {
                             const name = subcategory.name?.toLowerCase() || "";
-                            if (name.includes("pedicure")) return getAssetPath("/assets/foot.webp");
-                            if (name.includes("manicure")) return getAssetPath("/assets/british.webp");
+                            if (name.includes("super saver") || name.includes("25%")) return getAssetPath("/assets/super.jpg");
+                            if (name.includes("pedicure") || name.includes("manicure")) return getAssetPath("/assets/foot.webp");
                             if (name.includes("facial")) return getAssetPath("/assets/facial.jpg");
                             if (name.includes("bleach")) return getAssetPath("/assets/hairbleach.webp");
+                            if (name.includes("waxing")) return getAssetPath("/assets/waxing.png");
+                            if (name.includes("cleanup")) return getAssetPath("/assets/cleanup.png");
 
                             return subcategory.img && typeof subcategory.img === "string"
                               ? subcategory.img.startsWith("http")

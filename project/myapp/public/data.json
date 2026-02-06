@@ -160,13 +160,6 @@
     ],
     "subcategories": [
         {
-            "_id": "waxing",
-            "name": "Waxing",
-            "img": "/assets/waxing.png",
-            "isActive": true,
-            "categoryName": "Salon for women"
-        },
-        {
             "_id": "cleanup",
             "name": "Cleanup",
             "img": "/assets/cleanup.png",
@@ -174,9 +167,37 @@
             "categoryName": "Salon for women"
         },
         {
-            "_id": "haircare",
-            "name": "Haircare",
-            "img": "/assets/haircare.png",
+            "_id": "facial",
+            "name": "Facial",
+            "img": "/assets/facial.jpg",
+            "isActive": true,
+            "categoryName": "Salon for women"
+        },
+        {
+            "_id": "pedicure-manicure",
+            "name": "Pedicure & manicure",
+            "img": "/assets/foot.webp",
+            "isActive": true,
+            "categoryName": "Salon for women"
+        },
+        {
+            "_id": "signature-facials",
+            "name": "Signature facials",
+            "img": "/assets/facial.jpg",
+            "isActive": true,
+            "categoryName": "Salon for women"
+        },
+        {
+            "_id": "super-saver",
+            "name": "Super saver package",
+            "img": "/assets/super.jpg",
+            "isActive": true,
+            "categoryName": "Salon for women"
+        },
+        {
+            "_id": "waxing-threading",
+            "name": "Waxing & threading",
+            "img": "/assets/waxing.png",
             "isActive": true,
             "categoryName": "Salon for women"
         }
@@ -228,40 +249,85 @@
     ],
     "added": [
         {
-            "name": "Foot massage",
+            "name": "Elysian British Rose Pedicure",
+            "key": "british",
+            "img": "/assets/british.webp",
+            "price": "219",
+            "subcategory": "Pedicure & manicure",
+            "rating": "4.86 (101k reviews)",
+            "duration": "45 min",
+            "items": [
+                {
+                    "name": "Deep cleaning",
+                    "description": "foot soak, scrub, serum-massage, mask for soft & nourished feet"
+                },
+                {
+                    "name": "Includes",
+                    "description": "nail filing, cuticle care & polishing"
+                }
+            ]
+        },
+        {
+            "name": "Skin tightening/glow facial",
+            "key": "o3 shine",
+            "img": "/assets/o3 shine.webp",
+            "price": "1699",
+            "subcategory": "Signature facials",
+            "rating": "4.84 (235k reviews)",
+            "duration": "60 min",
+            "items": [
+                {
+                    "description": "Reduces fine lines & provides skin tightening and protection from UV rays"
+                },
+                {
+                    "description": "Suitable for combination skin"
+                }
+            ]
+        },
+        {
+            "name": "Head massage",
             "key": "foot",
             "img": "/assets/foot.webp",
-            "price": "199"
+            "price": "199",
+            "subcategory": "Man, bleach & detan",
+            "rating": "4.87 (670k reviews)",
+            "duration": "20 min",
+            "items": [
+                {
+                    "description": "Massage to relieve stress & promote hair growth"
+                }
+            ]
         },
         {
             "name": "Sara fruit cleanup",
             "key": "sara",
             "img": "/assets/sara.webp",
-            "price": "699"
+            "price": "699",
+            "subcategory": "Cleanup",
+            "rating": "4.85 (120k reviews)",
+            "duration": "40 min",
+            "items": [
+                {
+                    "description": "Fruit extract for skin rejuvenation and protection from UV damage"
+                },
+                {
+                    "description": "Suitable for all skin types"
+                }
+            ]
         },
         {
-            "name": "Hair color/mehandi (only application)",
-            "key": "hair",
-            "img": "/assets/hair.webp",
-            "price": "399"
-        },
-        {
-            "name": "O3+tan clear cleanup",
-            "key": "o3",
-            "img": "/assets/o3.webp",
-            "price": "849"
-        },
-        {
-            "name": "O3+shine & glow facial ",
-            "key": "o3 shine",
-            "img": "/assets/o3 shine.webp",
-            "price": "1,699"
-        },
-        {
-            "name": "Elysian British rose manicure",
-            "key": "british",
-            "img": "/assets/british.webp",
-            "price": "649"
+            "name": "Standard Waxing",
+            "key": "waxing",
+            "img": "/assets/waxing.png",
+            "price": "399",
+            "subcategory": "Waxing & threading",
+            "rating": "4.82 (1.2M reviews)",
+            "duration": "30 min",
+            "items": [
+                {
+                    "description": "Full arms and half legs waxing"
+                }
+            ]
         }
     ],
     "upi": "/assets/upi.webp",
