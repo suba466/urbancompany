@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Row, Col, Card } from "react-bootstrap";
 import { FaStar } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 import API_URL, { getAssetPath } from "./config";
 import { fetchData } from "./apiService";
 
@@ -11,6 +12,7 @@ function Book() {
   const [error, setError] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardsPerSlide, setCardsPerSlide] = useState(5);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchComponentsData = async () => {
@@ -155,7 +157,25 @@ function Book() {
 
       {/* Salon Section */}
       <div className="container mt-5 position-relative">
-        <h2 className="fw-semibold mb-4">Salon for women</h2>
+        <h2 className="fw-semibold mb-1">Salon for women</h2>
+        <p className="mb-4" style={{ color: "#666", fontSize: "14px" }}>
+          <FaStar className="me-1" style={{ color: "#6e42e5", fontSize: "12px" }} />
+          <span className="fw-bold">4.85 (1.5M+ bookings)</span>
+        </p>
+        <style>
+          {`
+            .saloncard {
+              cursor: pointer;
+              transition: transform 0.2s ease;
+              border: 1px solid #ededed;
+              border-radius: 12px;
+              overflow: hidden;
+            }
+            .saloncard:hover {
+              transform: translateY(-5px);
+            }
+          `}
+        </style>
         {cardsPerSlide === 1 ? (
           <Row className="justify-content-center">
             {salonItems
@@ -171,7 +191,7 @@ function Book() {
                     transition: "transform 0.4s ease",
                   }}
                 >
-                  <Card className="saloncard">
+                  <Card className="saloncard" onClick={() => navigate('/salon')}>
                     <Card.Body style={{ flex: 1 }}>
                       <Card.Title className="fw-semibold"
                         style={{
@@ -199,7 +219,7 @@ function Book() {
           <Row className="g-4">
             {salonItems.map((item, idx) => (
               <Col key={idx} xs={12} sm={6} md={4} lg={3}>
-                <Card className="saloncard">
+                <Card className="saloncard" onClick={() => navigate('/salon')}>
                   <Card.Body style={{ flex: 1 }}>
                     <Card.Title className="fw-semibold"
                       style={{
