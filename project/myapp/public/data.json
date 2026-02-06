@@ -3,6 +3,12 @@
     "logo1": "/assets/urban.png",
     "categories": [
         {
+            "name": "Women's Therapies",
+            "key": "therapies",
+            "img": "/assets/relax.png",
+            "isActive": true
+        },
+        {
             "name": "Salon for women",
             "key": "salon",
             "img": "/assets/salon.webp",
@@ -30,6 +36,12 @@
             "name": "Native Water Purifier",
             "key": "native",
             "img": "/assets/native.webp",
+            "isActive": true
+        },
+        {
+            "name": "Painting & Waterproofing",
+            "key": "painting",
+            "img": "/assets/wall.png",
             "isActive": true
         }
     ],
@@ -201,7 +213,7 @@
             "tit": "Full arms, legs & underarms",
             "text": "Extra 25% off for new users*",
             "key": "waxing-banner",
-            "img": "/assets/facial.jpg"
+            "img": "/assets/waxing.png"
         }
     ],
     "added": [
