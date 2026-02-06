@@ -56,6 +56,24 @@
             "descriptions": "Massage for men",
             "key": "relax",
             "img": "/assets/relax.png"
+        },
+        {
+            "name": "RO Water Purifier",
+            "descriptions": "Needs no service for 2 years",
+            "key": "water",
+            "img": "/assets/water.png"
+        },
+        {
+            "name": "Get experts in 2 hours at ₹149",
+            "descriptions": "Electricians, plumbers, carpenters",
+            "key": "expert",
+            "img": "/assets/expert.png"
+        },
+        {
+            "name": "Deep clean with foam-jet AC service",
+            "descriptions": "AC service & repair",
+            "key": "deepclean",
+            "img": "/assets/deepclean.png"
         }
     ],
     "book": [
@@ -98,6 +116,30 @@
             "option": "₹149",
             "key": "switchboard",
             "img": "/assets/switch.png"
+        },
+        {
+            "name": "Full house deep cleaning",
+            "title": "4.81 (800k)",
+            "value": "₹2,999",
+            "option": "₹3,499",
+            "key": "fullhouse",
+            "img": "/assets/deepclean.png"
+        },
+        {
+            "name": "Sofa deep cleaning",
+            "title": "4.85 (500k)",
+            "value": "₹499",
+            "option": "₹599",
+            "key": "sofa",
+            "img": "/assets/shine.png"
+        },
+        {
+            "name": "Kitchen deep cleaning",
+            "title": "4.76 (1.2M)",
+            "value": "₹1,299",
+            "option": "₹1,499",
+            "key": "kitchen",
+            "img": "/assets/expert.png"
         }
     ],
     "salon": [

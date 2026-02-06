@@ -66,7 +66,7 @@ function Shine() {
   const handleNext = () => carouselRef.current && carouselRef.current.next();
 
   return (
-    <div className="container mt-4 position-relative d-flex w-100" style={{ overflow: "hidden" }}>
+    <div className="container mt-4 position-relative d-flex w-100">
       <Carousel
         ref={carouselRef}
         interval={null}
@@ -168,25 +168,29 @@ function Shine() {
       </Carousel>
 
       {/* Conditional arrows */}
-      {currentIndex > 0 && (
-        <div
-          className="carousel-arrow left"
-          onClick={handlePrev}
+      {
+        currentIndex > 0 && (
+          <div
+            className="carousel-arrow left"
+            onClick={handlePrev}
 
-        >
-          &#10094;
-        </div>
-      )}
-      {currentIndex < chunkedItems.length - 1 && (
-        <div
-          className="carousel-arrow right"
-          onClick={handleNext}
+          >
+            &#10094;
+          </div>
+        )
+      }
+      {
+        currentIndex < chunkedItems.length - 1 && (
+          <div
+            className="carousel-arrow right"
+            onClick={handleNext}
 
-        >
-          &#10095;
-        </div>
-      )}
-    </div>
+          >
+            &#10095;
+          </div>
+        )
+      }
+    </div >
   );
 }
 

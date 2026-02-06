@@ -79,7 +79,7 @@ function Book() {
   return (
     <>
       {/* Most Booked Services Section */}
-      <div className="container mt-4 position-relative">
+      <div className="container mt-4 position-relative px-0">
         <h2 className="fw-semibold mb-4">Most booked services</h2>
         <Row className="justify-content-center">
           {visibleItems.map((item, idx) => (

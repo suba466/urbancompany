@@ -189,30 +189,36 @@
 
 .carousel-arrow {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 50px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: white;
-  font-size: 30px;
-  opacity: 0.8;
-  transition: opacity 0.3s;
-  z-index: 10;
+  color: #333;
+  background-color: rgba(255, 255, 255, 0.9);
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  font-size: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  z-index: 100;
 }
 
 .carousel-arrow:hover {
-  opacity: 1;
+  background-color: #fff;
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
 }
 
 .carousel-arrow.left {
-  left: 0;
+  left: -20px;
 }
 
 .carousel-arrow.right {
-  right: 0;
+  right: -20px;
 }
 
 .super {
@@ -632,7 +638,8 @@
   border-radius: 50px;
   height: 45px;
 }
-.login{
+
+.login {
   padding: 150px;
 }
 
@@ -893,7 +900,7 @@
     padding: 0;
     margin: 10px 0;
   }
- 
+
   .search-container input {
     width: 100%;
     height: 35px;
@@ -904,7 +911,7 @@
     border: 1px solid #ccc;
   }
 
-  
+
 
 }
 
@@ -1018,7 +1025,7 @@
     word-wrap: break-word;
   }
 
- 
+
 
   .search-line {
     width: 100%;
