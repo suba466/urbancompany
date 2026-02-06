@@ -123,70 +123,80 @@ function Salon1() {
     try {
       let packages = [];
 
-      // Try active packages first
+      // 1. Try active packages
       const data1 = await fetchData("api/active-packages", "packages");
       if (data1 && data1.packages) {
         packages = data1.packages;
-        packages.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       }
 
-      // Try regular packages if none found
+      // 2. Try all packages if needed
       if (packages.length === 0) {
         const data2 = await fetchData("api/packages", "packages");
         if (data2 && data2.packages) {
-          packages = data2.packages.filter(pkg => pkg.isActive !== false);
-          packages.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+          packages = data2.packages;
         }
       }
 
-      // Try salon for women as last API resort
+      // 3. Try specifically salon for women endpoint
       if (packages.length === 0) {
         const data3 = await fetchData("api/salonforwomen", "salonforwomen");
         if (data3 && data3.salonforwomen) {
           packages = data3.salonforwomen;
-          if (packages[0] && packages[0].isActive !== undefined) {
-            packages = packages.filter(pkg => pkg.isActive !== false);
-          }
         }
       }
 
-      // Final fallback logic handled inside fetchData(..., key) if we use it, 
-      // but Salon1 has specific custom mapping, so we handle it here if still empty
+      // Ensure we only have active ones
+      if (packages.length > 0) {
+        packages = packages.filter(pkg => pkg.isActive !== false);
+
+        // Filter by category if possible - very broad search for "salon"
+        const salonPackages = packages.filter(pkg => {
+          const cat = (pkg.category || pkg.categoryName || "").toLowerCase();
+          return cat.includes('salon');
+        });
+
+        // If we found specific salon packages in the database, use them!
+        if (salonPackages.length > 0) {
+          packages = salonPackages;
+        }
+
+        packages.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      }
+
+      // 4. Fallback to local data if still empty
       if (packages.length === 0) {
         const data = await fetchData("data.json");
         if (data) {
-          // Map 'added' items first for Salon page as they are more relevant
           const sourceItems = data.added || data.book || [];
-          if (sourceItems.length > 0) {
-            packages = sourceItems.map((item, idx) => ({
-              _id: item._id || item.key || `fallback-pkg-${idx}`,
-              name: item.name,
-              title: item.subcategory || item.category || "Salon for women",
-              subcategory: item.subcategory || item.category || "Salon for women",
-              price: (item.value || "").replace('₹', '') || item.price || "499",
-              rating: (item.title || "").split('(')[0] || "4.8",
-              reviews: (item.title || "").match(/\(([^)]+)\)/)?.[1] || "1M",
-              img: item.img,
-              isActive: true,
-              items: ["Service included", "Professional technician"]
-            }));
-          }
+          packages = sourceItems.map((item, idx) => ({
+            _id: item._id || item.key || `fallback-pkg-${idx}`,
+            name: item.name,
+            title: item.subcategory || item.category || "Salon for women",
+            subcategory: item.subcategory || item.category || "Salon for women",
+            price: (item.value || "").replace('₹', '') || item.price || "499",
+            rating: item.rating || (item.title || "").split('(')[0] || "4.8",
+            reviews: (item.title || "").match(/\(([^)]+)\)/)?.[1] || "1M",
+            img: item.img,
+            isActive: true,
+            items: item.items || ["Service included", "Professional technician"]
+          }));
         }
       }
 
-      if (packages.length > 0) {
-        const activeSubCategory = localStorage.getItem('activeSubCategory');
-        if (activeSubCategory) {
-          packages = packages.filter(pkg =>
-            (pkg.subcategory && pkg.subcategory === activeSubCategory) ||
-            (pkg.title && pkg.title === activeSubCategory)
-          );
-        } else {
-          // Allow all packages, even if they default to "Salon for women"
-          // This ensures fallback data is visible when no specific subcategory is selected
-          packages = packages;
+      // 5. Final Subcategory Filtering (if applicable)
+      const activeSubCategory = localStorage.getItem('activeSubCategory');
+      if (activeSubCategory && packages.length > 0) {
+        const filtered = packages.filter(pkg =>
+          (pkg.subcategory && pkg.subcategory.toLowerCase() === activeSubCategory.toLowerCase()) ||
+          (pkg.title && pkg.title.toLowerCase() === activeSubCategory.toLowerCase()) ||
+          (pkg.category && pkg.category.toLowerCase() === activeSubCategory.toLowerCase())
+        );
+        // Only override if filtered results exist
+        if (filtered.length > 0) {
+          packages = filtered;
         }
       }
+
       setPackages(packages);
     } catch (error) {
       console.error("Error fetching packages:", error);

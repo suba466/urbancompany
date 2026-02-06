@@ -35,27 +35,24 @@ function Salon() {
 
         if (data && data.subcategories) {
           const filtered = data.subcategories.filter(sub => {
-            const hasSalonCategory =
-              sub.categoryName?.toLowerCase().includes('salon') ||
-              (sub.categoryId && sub.categoryId.name?.toLowerCase().includes('salon'));
-            const hasSalonName = sub.name?.toLowerCase().includes('salon');
-            const isActive = sub.isActive === true || sub.isActive === undefined;
-            return (hasSalonCategory || hasSalonName) && isActive;
+            const categoryName = (sub.categoryName || sub.categoryId?.name || "").toLowerCase();
+            const subName = (sub.name || "").toLowerCase();
+
+            // Match anything in Salon category or explicitly mentioned items
+            const matchesSalon = categoryName.includes('salon');
+            const matchesSuperSaver = subName.includes('super saver') || subName.includes('25%');
+            const isActive = sub.isActive !== false;
+
+            return (matchesSalon || matchesSuperSaver) && isActive;
           });
 
           if (filtered.length > 0) {
+            // Priority to database subcategories. Fill up to 6.
             finalSubcategories = filtered.slice(0, 6);
-
-            // If we have fewer than 6, supplement from hardcoded to ensure exactly 6
-            if (finalSubcategories.length < 6) {
-              const existingNames = new Set(finalSubcategories.map(s => s.name?.toLowerCase()));
-              const supplements = hardcoded.filter(h => !existingNames.has(h.name.toLowerCase()));
-              finalSubcategories = [...finalSubcategories, ...supplements].slice(0, 6);
-            }
           }
         }
 
-        // Final fallback if still empty or data was missing
+        // Only if API returned nothing at all, use hardcoded as a safety net
         if (finalSubcategories.length === 0) {
           finalSubcategories = hardcoded;
         }
