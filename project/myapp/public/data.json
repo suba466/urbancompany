@@ -5,27 +5,32 @@
         {
             "name": "Salon for women",
             "key": "salon",
-            "img": "/assets/salon.webp"
+            "img": "/assets/salon.webp",
+            "isActive": true
         },
         {
             "name": "AC & Appliance Repair",
             "key": "ac",
-            "img": "/assets/ac.webp"
+            "img": "/assets/ac.webp",
+            "isActive": true
         },
         {
             "name": "Cleaning",
             "key": "clean",
-            "img": "/assets/clean.webp"
+            "img": "/assets/clean.webp",
+            "isActive": true
         },
         {
             "name": "Electrician, Plumber & Carpenters",
             "key": "electric",
-            "img": "/assets/electric.webp"
+            "img": "/assets/electric.webp",
+            "isActive": true
         },
         {
             "name": "Native Water Purifier",
             "key": "native",
-            "img": "/assets/native.webp"
+            "img": "/assets/native.webp",
+            "isActive": true
         }
     ],
     "banner": {
@@ -36,7 +41,8 @@
         {
             "name": "Shine your bathroom deserves",
             "key": "shine",
-            "img": "/assets/shine.png"
+            "img": "/assets/shine.png",
+            "descriptions": "Professional bathroom cleaning"
         },
         {
             "name": "Festive packages upto 25% off",
@@ -145,27 +151,124 @@
             "categoryName": "Salon for women"
         }
     ],
-    "advanced": [
+    "packages": [
         {
-            "price": "₹799",
-            "value": "₹1,098",
-            "title": "Roll-on waxing",
-            "tit": "Full arms, legs & underarms",
-            "text": "Extra 25% off for new users*",
-            "key": "facial",
-            "img": "/assets/facial.jpg"
-        }
-    ],
-    "super": [
+            "_id": "pkg-british",
+            "name": "Elysian British Rose Pedicure",
+            "title": "Pedicure & manicure",
+            "subcategory": "Pedicure & manicure",
+            "category": "Salon for women",
+            "price": "219",
+            "originalPrice": "499",
+            "rating": "4.86",
+            "bookings": "101k",
+            "duration": "45 min",
+            "img": "/assets/british.webp",
+            "isActive": true,
+            "items": [
+                {
+                    "name": "Deep cleaning",
+                    "description": "Foot soak, scrub, serum-massage"
+                },
+                {
+                    "name": "Polish",
+                    "description": "Nail filing & polishing"
+                }
+            ]
+        },
         {
-            "key": "super",
+            "_id": "pkg-o3-shine",
+            "name": "Skin tightening glow facial",
+            "title": "Signature facials",
+            "subcategory": "Signature facials",
+            "category": "Salon for women",
+            "price": "1699",
+            "originalPrice": "2499",
+            "rating": "4.84",
+            "bookings": "235k",
+            "duration": "60 min",
+            "img": "/assets/o3 shine.webp",
+            "isActive": true,
+            "items": [
+                {
+                    "description": "Reduces fine lines & provides skin tightening"
+                }
+            ]
+        },
+        {
+            "_id": "pkg-head",
+            "name": "Head massage",
+            "title": "Man, bleach & detan",
+            "subcategory": "Man, bleach & detan",
+            "category": "Salon for women",
+            "price": "199",
+            "originalPrice": "299",
+            "rating": "4.87",
+            "bookings": "670k",
+            "duration": "20 min",
+            "img": "/assets/relax.png",
+            "isActive": true,
+            "items": [
+                {
+                    "description": "Massage to relieve stress"
+                }
+            ]
+        },
+        {
+            "_id": "pkg-sara",
+            "name": "Sara fruit cleanup",
+            "title": "Cleanup",
+            "subcategory": "Cleanup",
+            "category": "Salon for women",
+            "price": "699",
+            "originalPrice": "999",
+            "rating": "4.85",
+            "bookings": "120k",
+            "duration": "40 min",
+            "img": "/assets/sara.webp",
+            "isActive": true,
+            "items": [
+                {
+                    "description": "Fruit extract for skin rejuvenation"
+                }
+            ]
+        },
+        {
+            "_id": "pkg-waxing",
+            "name": "Full arms + half legs waxing",
+            "title": "Waxing & threading",
+            "subcategory": "Waxing & threading",
+            "category": "Salon for women",
+            "price": "399",
+            "originalPrice": "599",
+            "rating": "4.82",
+            "bookings": "1.2M",
+            "duration": "30 min",
+            "img": "/assets/waxing.png",
+            "isActive": true,
+            "items": [
+                {
+                    "description": "Quick and smooth hair removal"
+                }
+            ]
+        },
+        {
+            "_id": "pkg-make-your-own",
+            "name": "Make your own package",
+            "title": "Super saver package",
+            "subcategory": "Super saver package",
+            "category": "Salon for women",
+            "price": "1499",
+            "rating": "4.89",
+            "bookings": "500k",
+            "duration": "Flexible",
             "img": "/assets/super.jpg",
-            "title": "Festive ready package",
-            "price": "25% off",
-            "text": "Pick from mani-pedi,",
-            "tex": "facials & more",
-            "content": "Extra 25% off for",
-            "con": "new users with NEW25*"
+            "isActive": true,
+            "items": [
+                {
+                    "description": "Customizable services at great discounts"
+                }
+            ]
         }
     ],
     "added": [
@@ -176,17 +279,7 @@
             "price": "219",
             "subcategory": "Pedicure & manicure",
             "rating": "4.86 (101k reviews)",
-            "duration": "45 min",
-            "items": [
-                {
-                    "name": "Deep cleaning",
-                    "description": "foot soak, scrub, serum-massage, mask for soft & nourished feet"
-                },
-                {
-                    "name": "Includes",
-                    "description": "nail filing, cuticle care & polishing"
-                }
-            ]
+            "duration": "45 min"
         },
         {
             "name": "Skin tightening glow facial",
@@ -195,117 +288,7 @@
             "price": "1699",
             "subcategory": "Signature facials",
             "rating": "4.84 (235k reviews)",
-            "duration": "60 min",
-            "items": [
-                {
-                    "description": "Reduces fine lines & provides skin tightening and protection from UV rays"
-                },
-                {
-                    "description": "Suitable for combination skin"
-                }
-            ]
-        },
-        {
-            "name": "Head massage",
-            "key": "head-massage",
-            "img": "/assets/relax.png",
-            "price": "199",
-            "subcategory": "Man, bleach & detan",
-            "rating": "4.87 (670k reviews)",
-            "duration": "20 min",
-            "items": [
-                {
-                    "description": "Massage to relieve stress & promote hair growth"
-                }
-            ]
-        },
-        {
-            "name": "Sara fruit cleanup",
-            "key": "sara",
-            "img": "/assets/sara.webp",
-            "price": "699",
-            "subcategory": "Cleanup",
-            "rating": "4.85 (120k reviews)",
-            "duration": "40 min",
-            "items": [
-                {
-                    "description": "Fruit extract for skin rejuvenation and protection from UV damage"
-                },
-                {
-                    "description": "Suitable for all skin types"
-                }
-            ]
-        },
-        {
-            "name": "Full arms + half legs waxing",
-            "key": "waxing-pkg",
-            "img": "/assets/waxing.png",
-            "price": "399",
-            "subcategory": "Waxing & threading",
-            "rating": "4.82 (1.2M reviews)",
-            "duration": "30 min",
-            "items": [
-                {
-                    "description": "Quick and smooth hair removal for soft skin"
-                }
-            ]
-        }
-    ],
-    "packages": [
-        {
-            "name": "Elysian British Rose Pedicure",
-            "key": "british",
-            "img": "/assets/british.webp",
-            "price": "219",
-            "subcategory": "Pedicure & manicure",
-            "rating": "4.86",
-            "reviews": "101k reviews",
-            "duration": "45 min",
-            "isActive": true
-        },
-        {
-            "name": "Skin tightening glow facial",
-            "key": "o3 shine",
-            "img": "/assets/o3 shine.webp",
-            "price": "1699",
-            "subcategory": "Signature facials",
-            "rating": "4.84",
-            "reviews": "235k reviews",
-            "duration": "60 min",
-            "isActive": true
-        },
-        {
-            "name": "Head massage",
-            "key": "head-massage",
-            "img": "/assets/relax.png",
-            "price": "199",
-            "subcategory": "Man, bleach & detan",
-            "rating": "4.87",
-            "reviews": "670k reviews",
-            "duration": "20 min",
-            "isActive": true
-        },
-        {
-            "name": "Sara fruit cleanup",
-            "key": "sara",
-            "img": "/assets/sara.webp",
-            "price": "699",
-            "subcategory": "Cleanup",
-            "rating": "4.85",
-            "reviews": "120k reviews",
-            "duration": "40 min",
-            "isActive": true
-        },
-        {
-            "name": "Full arms + half legs waxing",
-            "key": "waxing-pkg",
-            "img": "/assets/waxing.png",
-            "price": "399",
-            "subcategory": "Waxing & threading",
-            "rating": "4.82",
-            "reviews": "1.2M reviews",
-            "duration": "30 min",
-            "isActive": true
+            "duration": "60 min"
         }
     ]
 }
