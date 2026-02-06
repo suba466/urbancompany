@@ -23,12 +23,7 @@ function Salon() {
         const data = await fetchData("api/subcategories", "subcategories");
 
         const hardcoded = [
-          { _id: 'cleanup', name: 'Cleanup', img: '/assets/cleanup.png', isActive: true },
-          { _id: 'bleach-detan', name: 'Man, bleach & detan', img: '/assets/hairbleach.webp', isActive: true },
-          { _id: 'pedicure-manicure', name: 'Pedicure & manicure', img: '/assets/foot.webp', isActive: true },
-          { _id: 'signature-facials', name: 'Signature facials', img: '/assets/facial.jpg', isActive: true },
-          { _id: 'super-saver', name: 'Super saver package', img: '/assets/super.jpg', isActive: true },
-          { _id: 'waxing-threading', name: 'Waxing & threading', img: '/assets/waxing.png', isActive: true }
+
         ];
 
         let finalSubcategories = [];
