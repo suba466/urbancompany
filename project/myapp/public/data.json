@@ -189,7 +189,7 @@
             ]
         },
         {
-            "name": "Skin lightening glow facial",
+            "name": "Skin tightening glow facial",
             "key": "o3 shine",
             "img": "/assets/o3 shine.webp",
             "price": "1699",
@@ -249,6 +249,63 @@
                     "description": "Quick and smooth hair removal for soft skin"
                 }
             ]
+        }
+    ],
+    "packages": [
+        {
+            "name": "Elysian British Rose Pedicure",
+            "key": "british",
+            "img": "/assets/british.webp",
+            "price": "219",
+            "subcategory": "Pedicure & manicure",
+            "rating": "4.86",
+            "reviews": "101k reviews",
+            "duration": "45 min",
+            "isActive": true
+        },
+        {
+            "name": "Skin tightening glow facial",
+            "key": "o3 shine",
+            "img": "/assets/o3 shine.webp",
+            "price": "1699",
+            "subcategory": "Signature facials",
+            "rating": "4.84",
+            "reviews": "235k reviews",
+            "duration": "60 min",
+            "isActive": true
+        },
+        {
+            "name": "Head massage",
+            "key": "head-massage",
+            "img": "/assets/relax.png",
+            "price": "199",
+            "subcategory": "Man, bleach & detan",
+            "rating": "4.87",
+            "reviews": "670k reviews",
+            "duration": "20 min",
+            "isActive": true
+        },
+        {
+            "name": "Sara fruit cleanup",
+            "key": "sara",
+            "img": "/assets/sara.webp",
+            "price": "699",
+            "subcategory": "Cleanup",
+            "rating": "4.85",
+            "reviews": "120k reviews",
+            "duration": "40 min",
+            "isActive": true
+        },
+        {
+            "name": "Full arms + half legs waxing",
+            "key": "waxing-pkg",
+            "img": "/assets/waxing.png",
+            "price": "399",
+            "subcategory": "Waxing & threading",
+            "rating": "4.82",
+            "reviews": "1.2M reviews",
+            "duration": "30 min",
+            "isActive": true
         }
     ]
 }

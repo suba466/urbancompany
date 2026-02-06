@@ -30,15 +30,12 @@ function Salon() {
 
         if (data && data.subcategories) {
           const filtered = data.subcategories.filter(sub => {
-            const categoryName = (sub.categoryName || sub.categoryId?.name || "").toLowerCase();
             const subName = (sub.name || "").toLowerCase();
-
-            // Match anything in Salon category or explicitly mentioned items
-            const matchesSalon = categoryName.includes('salon');
-            const matchesSuperSaver = subName.includes('super saver') || subName.includes('25%');
             const isActive = sub.isActive !== false;
 
-            return (matchesSalon || matchesSuperSaver) && isActive;
+            // On the Salon page, we want to show everything the user manages in the subcategory form
+            // that is active. We only limit to 6 for the sidebar display.
+            return isActive;
           });
 
           if (filtered.length > 0) {

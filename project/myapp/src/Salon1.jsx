@@ -148,18 +148,6 @@ function Salon1() {
       // Ensure we only have active ones
       if (packages.length > 0) {
         packages = packages.filter(pkg => pkg.isActive !== false);
-
-        // Filter by category if possible - very broad search for "salon"
-        const salonPackages = packages.filter(pkg => {
-          const cat = (pkg.category || pkg.categoryName || "").toLowerCase();
-          return cat.includes('salon');
-        });
-
-        // If we found specific salon packages in the database, use them!
-        if (salonPackages.length > 0) {
-          packages = salonPackages;
-        }
-
         packages.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       }
 
@@ -167,7 +155,7 @@ function Salon1() {
       if (packages.length === 0) {
         const data = await fetchData("data.json");
         if (data) {
-          const sourceItems = data.added || data.book || [];
+          const sourceItems = data.packages || data.added || data.book || [];
           packages = sourceItems.map((item, idx) => ({
             _id: item._id || item.key || `fallback-pkg-${idx}`,
             name: item.name,
@@ -175,7 +163,7 @@ function Salon1() {
             subcategory: item.subcategory || item.category || "Salon for women",
             price: (item.value || "").replace('₹', '') || item.price || "499",
             rating: item.rating || (item.title || "").split('(')[0] || "4.8",
-            reviews: (item.title || "").match(/\(([^)]+)\)/)?.[1] || "1M",
+            reviews: item.reviews || (item.title || "").match(/\(([^)]+)\)/)?.[1] || "1M",
             img: item.img,
             isActive: true,
             items: item.items || ["Service included", "Professional technician"]
