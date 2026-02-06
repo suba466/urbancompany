@@ -31,8 +31,14 @@ jobs:
           cache: 'npm'
           cache-dependency-path: project/myapp/package-lock.json
 
+      - name: Clean install cache
+        run: |
+          rm -rf node_modules package-lock.json
+          npm cache clean --force
+        working-directory: project/myapp
+
       - name: Install dependencies
-        run: npm install
+        run: npm ci
         working-directory: project/myapp
 
 
