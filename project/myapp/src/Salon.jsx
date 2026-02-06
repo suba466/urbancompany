@@ -23,19 +23,27 @@ function Salon() {
         const data = await fetchData("api/subcategories", "subcategories");
 
         const hardcoded = [
-
+          { _id: 'waxing', name: 'Waxing', img: '/assets/waxing.png', isActive: true },
+          { _id: 'cleanup', name: 'Cleanup', img: '/assets/cleanup.png', isActive: true },
+          { _id: 'haircare', name: 'Haircare', img: '/assets/haircare.png', isActive: true },
+          { _id: 'pedicure', name: 'Pedicure', img: '/assets/foot.webp', isActive: true },
+          { _id: 'manicure', name: 'Manicure', img: '/assets/british.webp', isActive: true },
+          { _id: 'facial', name: 'Facial', img: '/assets/facial.jpg', isActive: true }
         ];
 
         let finalSubcategories = [];
 
         if (data && data.subcategories) {
           const filtered = data.subcategories.filter(sub => {
+            const categoryName = (sub.categoryName || sub.categoryId?.name || "").toLowerCase();
             const subName = (sub.name || "").toLowerCase();
+
+            // Match anything in Salon category or explicitly mentioned items
+            const matchesSalon = categoryName.includes('salon');
+            const matchesSuperSaver = subName.includes('super saver') || subName.includes('25%');
             const isActive = sub.isActive !== false;
 
-            // On the Salon page, we want to show everything the user manages in the subcategory form
-            // that is active. We only limit to 6 for the sidebar display.
-            return isActive;
+            return (matchesSalon || matchesSuperSaver) && isActive;
           });
 
           if (filtered.length > 0) {
@@ -258,12 +266,10 @@ function Salon() {
                         <img
                           src={(() => {
                             const name = subcategory.name?.toLowerCase() || "";
-                            if (name.includes("super saver") || name.includes("25%")) return getAssetPath("/assets/super.webp");
-                            if (name.includes("pedicure") || name.includes("manicure")) return getAssetPath("/assets/foot.webp");
+                            if (name.includes("pedicure")) return getAssetPath("/assets/foot.webp");
+                            if (name.includes("manicure")) return getAssetPath("/assets/british.webp");
                             if (name.includes("facial")) return getAssetPath("/assets/facial.jpg");
-                            if (name.includes("bleach") || name.includes("detan")) return getAssetPath("/assets/hairbleach.webp");
-                            if (name.includes("waxing")) return getAssetPath("/assets/waxing.png");
-                            if (name.includes("cleanup")) return getAssetPath("/assets/cleanup.png");
+                            if (name.includes("bleach")) return getAssetPath("/assets/hairbleach.webp");
 
                             return subcategory.img && typeof subcategory.img === "string"
                               ? subcategory.img.startsWith("http")
@@ -271,7 +277,7 @@ function Salon() {
                                 : getAssetPath(subcategory.img)
                               : getAssetPath("/assets/placeholder.png");
                           })()}
-                          alt={subcategory.name || "Service"}
+                          alt={subcategory.name}
                           style={{
                             width: "100%",
                             height: "100%",
