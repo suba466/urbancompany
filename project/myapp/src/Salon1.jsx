@@ -182,11 +182,9 @@ function Salon1() {
             (pkg.title && pkg.title === activeSubCategory)
           );
         } else {
-          // Default filter to exclude the main page title if not selecting a subcategory
-          packages = packages.filter(pkg =>
-            pkg.subcategory && pkg.subcategory !== "Salon for women" &&
-            pkg.title && pkg.title !== "Salon for women"
-          );
+          // Allow all packages, even if they default to "Salon for women"
+          // This ensures fallback data is visible when no specific subcategory is selected
+          packages = packages;
         }
       }
       setPackages(packages);
