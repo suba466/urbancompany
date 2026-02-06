@@ -464,9 +464,9 @@ function Salon1() {
   const groupedPackages = groupPackagesBySubcategory();
 
   return (
-    <Container className="mt-5">
+    <div className="mt-4 pb-5">
       <Row>
-        <Col xs={12} md={7} style={{ border: "1px solid rgba(192,192,195,1)", padding: "15px" }} className='suppad'>
+        <Col xs={12} md={8} style={{ border: "1px solid rgba(192,192,195,1)", padding: "15px" }} className='suppad'>
           {pageTitle && <h4 className="fw-semibold mt-4">{pageTitle}</h4>}
 
           {groupedPackages.length === 0 ? (
@@ -797,7 +797,7 @@ function Salon1() {
             ))
           )}
         </Col>
-        <Col xs={12} md={5} className="mt-4 mt-md-0 sticky-cart d-none d-md-block">
+        <Col xs={12} md={4} className="mt-4 mt-md-0 sticky-cart d-none d-md-block">
           <div style={{ flex: 1, height: "1px", backgroundColor: "rgba(192,192,195,1)" }}></div>
           <br />
           {/* CartBlock gets cart from Redux automatically */}
@@ -852,7 +852,7 @@ function Salon1() {
         updateItem={updateItem}
         removeItem={removeItem}
       />
-    </Container>
+    </div>
   );
 }
 

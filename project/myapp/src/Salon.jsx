@@ -105,7 +105,7 @@ function Salon() {
     <div className="p-2 p-md-4 p-lg-5">
       <Row className="g-4">
         {/* Carousel section */}
-        <Col xs={12} lg={8} className="order-1 order-lg-2">
+        <Col xs={12} lg={9} className="order-1 order-lg-2">
           <Carousel
             activeIndex={activeIndex}
             onSelect={handleSelect}
@@ -179,8 +179,8 @@ function Salon() {
         </Col>
 
         {/* Salon subcategories section */}
-        <Col xs={12} lg={4} className="row1 order-2 order-lg-1">
-          <h4 className="fw-semibold" style={{ fontSize: "30px" }}>Salon for women</h4>
+        <Col xs={12} lg={3} className="row1 order-2 order-lg-1">
+          <h4 className="fw-semibold" style={{ fontSize: "24px" }}>Salon for women</h4>
           <p>
             <MdStars style={{ fontSize: "23px", color: "#6800faff" }} />{" "}
             <span
