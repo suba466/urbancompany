@@ -19,26 +19,9 @@ function Salon() {
   useEffect(() => {
     const fetchSalonSubcategories = async () => {
       setLoading(true);
-      const data = await fetchData("api/subcategories", "subcategories");
+      try {
+        const data = await fetchData("api/subcategories", "subcategories");
 
-      if (data && data.subcategories) {
-        const filtered = data.subcategories.filter(sub => {
-          const hasSalonCategory =
-            sub.categoryName?.toLowerCase().includes('salon') ||
-            (sub.categoryId && sub.categoryId.name?.toLowerCase().includes('salon'));
-          const hasSalonName = sub.name?.toLowerCase().includes('salon');
-          const isActive = sub.isActive === true || sub.isActive === undefined;
-          return (hasSalonCategory || hasSalonName) && isActive;
-        });
-
-        if (filtered.length > 0) {
-          // Display up to 6 items as requested
-          setSalonSubcategories(filtered.slice(0, 6));
-          setHasSubcategories(true);
-        } else {
-          setHasSubcategories(false);
-        }
-      } else {
         const hardcoded = [
           { _id: 'waxing', name: 'Waxing', img: '/assets/waxing.png', isActive: true },
           { _id: 'cleanup', name: 'Cleanup', img: '/assets/cleanup.png', isActive: true },
@@ -47,10 +30,44 @@ function Salon() {
           { _id: 'manicure', name: 'Manicure', img: '/assets/british.webp', isActive: true },
           { _id: 'facial', name: 'Facial', img: '/assets/facial.jpg', isActive: true }
         ];
-        setSalonSubcategories(hardcoded);
-        setHasSubcategories(true);
+
+        let finalSubcategories = [];
+
+        if (data && data.subcategories) {
+          const filtered = data.subcategories.filter(sub => {
+            const hasSalonCategory =
+              sub.categoryName?.toLowerCase().includes('salon') ||
+              (sub.categoryId && sub.categoryId.name?.toLowerCase().includes('salon'));
+            const hasSalonName = sub.name?.toLowerCase().includes('salon');
+            const isActive = sub.isActive === true || sub.isActive === undefined;
+            return (hasSalonCategory || hasSalonName) && isActive;
+          });
+
+          if (filtered.length > 0) {
+            finalSubcategories = filtered.slice(0, 6);
+
+            // If we have fewer than 6, supplement from hardcoded to ensure exactly 6
+            if (finalSubcategories.length < 6) {
+              const existingNames = new Set(finalSubcategories.map(s => s.name?.toLowerCase()));
+              const supplements = hardcoded.filter(h => !existingNames.has(h.name.toLowerCase()));
+              finalSubcategories = [...finalSubcategories, ...supplements].slice(0, 6);
+            }
+          }
+        }
+
+        // Final fallback if still empty or data was missing
+        if (finalSubcategories.length === 0) {
+          finalSubcategories = hardcoded;
+        }
+
+        setSalonSubcategories(finalSubcategories);
+        setHasSubcategories(finalSubcategories.length > 0);
+      } catch (error) {
+        console.error("Error fetching subcategories:", error);
+        setHasSubcategories(false);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchSalonSubcategories();
