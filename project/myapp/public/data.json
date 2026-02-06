@@ -156,6 +156,62 @@
         {
             "key": "haircare",
             "img": "/assets/haircare.png"
+        },
+        {
+            "key": "pedicure",
+            "img": "/assets/pedicure.png"
+        },
+        {
+            "key": "manicure",
+            "img": "/assets/manicure.png"
+        },
+        {
+            "key": "bleach",
+            "img": "/assets/bleach.png"
+        }
+    ],
+    "subcategories": [
+        {
+            "_id": "waxing",
+            "name": "Waxing",
+            "img": "/assets/waxing.png",
+            "isActive": true,
+            "categoryName": "Salon for women"
+        },
+        {
+            "_id": "cleanup",
+            "name": "Cleanup",
+            "img": "/assets/cleanup.png",
+            "isActive": true,
+            "categoryName": "Salon for women"
+        },
+        {
+            "_id": "haircare",
+            "name": "Haircare",
+            "img": "/assets/haircare.png",
+            "isActive": true,
+            "categoryName": "Salon for women"
+        },
+        {
+            "_id": "pedicure",
+            "name": "Pedicure & Manicure",
+            "img": "/assets/pedicure.png",
+            "isActive": true,
+            "categoryName": "Salon for women"
+        },
+        {
+            "_id": "facial",
+            "name": "Facial",
+            "img": "/assets/facial.png",
+            "isActive": true,
+            "categoryName": "Salon for women"
+        },
+        {
+            "_id": "bleach",
+            "name": "Bleach & Detan",
+            "img": "/assets/bleach.png",
+            "isActive": true,
+            "categoryName": "Salon for women"
         }
     ],
     "advanced": [

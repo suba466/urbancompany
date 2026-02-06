@@ -41,7 +41,10 @@ function Salon() {
         const hardcoded = [
           { _id: 'waxing', name: 'Waxing', img: '/assets/waxing.png', isActive: true },
           { _id: 'cleanup', name: 'Cleanup', img: '/assets/cleanup.png', isActive: true },
-          { _id: 'haircare', name: 'Haircare', img: '/assets/haircare.png', isActive: true }
+          { _id: 'haircare', name: 'Haircare', img: '/assets/haircare.png', isActive: true },
+          { _id: 'pedicure', name: 'Pedicure & Manicure', img: '/assets/pedicure.png', isActive: true },
+          { _id: 'facial', name: 'Facial', img: '/assets/facial.png', isActive: true },
+          { _id: 'bleach', name: 'Bleach & Detan', img: '/assets/bleach.png', isActive: true }
         ];
         setSalonSubcategories(hardcoded);
         setHasSubcategories(true);
