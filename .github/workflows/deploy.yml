@@ -28,17 +28,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
-          cache-dependency-path: project/myapp/package-lock.json
 
-      - name: Clean install cache
+      - name: Clean and install dependencies
         run: |
           rm -rf node_modules package-lock.json
           npm cache clean --force
-        working-directory: project/myapp
-
-      - name: Install dependencies
-        run: npm ci
+          npm install --force
         working-directory: project/myapp
 
 
