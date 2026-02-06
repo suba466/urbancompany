@@ -6,7 +6,7 @@ import { TbCirclePercentageFilled } from "react-icons/tb";
 import { FaStar, FaTag } from "react-icons/fa";
 import { GoDotFill } from "react-icons/go";
 import FrequentlyAddedCarousel from "./FrequentlyAddedCarousel";
-import API_URL, { getAssetPath } from "./config";
+import API_URL, { getAssetPath, shouldCallApi } from "./config";
 
 function Salon1modal({
   show,
