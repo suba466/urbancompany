@@ -24,9 +24,38 @@ export const fetchData = async (endpoint, dataKey) => {
 
     // 2. Fallback to local data.json
     try {
-        const localDataUrl = getAssetPath("data.json");
-        const response = await fetch(localDataUrl);
-        if (!response.ok) throw new Error("Local data not found");
+        // Try multiple paths to ensure we find the file (resilience for GitHub Pages vs Localhost)
+        const pathsToTry = [
+            getAssetPath("data.json"),
+            "data.json", // Relative to current
+            "/data.json", // Root
+            "./data.json" // Explicit relative
+        ];
+
+        // Unique paths only
+        const uniquePaths = [...new Set(pathsToTry.filter(p => p))];
+
+        let response = null;
+        let usedPath = "";
+
+        for (const path of uniquePaths) {
+            try {
+                // console.log(`Attempting to fetch local data from: ${path}`);
+                const res = await fetch(path);
+                if (res.ok) {
+                    response = res;
+                    usedPath = path;
+                    break;
+                }
+            } catch (e) {
+                // Ignore failure and try next path
+            }
+        }
+
+        if (!response || !response.ok) {
+            console.error("Critical: All fallback paths for data.json failed");
+            throw new Error("Local data not found");
+        }
 
         const staticData = await response.json();
 

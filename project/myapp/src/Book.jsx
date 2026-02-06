@@ -12,49 +12,28 @@ function Book() {
   const [cardsPerSlide, setCardsPerSlide] = useState(5);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchComponentsData = async () => {
+      setLoading(true);
       try {
-        // Fetch only book & salon data
-        const [bookRes, salonRes] = await Promise.all([
-          fetch(`${API_URL}/api/book`),
-          fetch(`${API_URL}/api/salon`),
-        ]);
+        const bookData = await fetchData("api/book", "book");
+        setCarouselItems(bookData && bookData.book ? bookData.book : []);
 
-        if (!bookRes.ok || !salonRes.ok)
-          throw new Error("Failed to fetch data");
+        const salonData = await fetchData("api/salon", "salon");
+        setSalonItems(salonData && salonData.salon ? salonData.salon : []);
 
-        const bookData = await bookRes.json();
-        const salonData = await salonRes.json();
-
-        setCarouselItems(bookData.book || []);
-        setSalonItems(salonData.salon || []);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to fetch service data, trying fallback");
-        // Fallback to static data
-        try {
-          // Try fetching from public/data.json using getAssetPath
-          const staticRes = await fetch(getAssetPath("data.json"));
-          if (!staticRes.ok) throw new Error("Local data not found");
-          const staticData = await staticRes.json();
-          setCarouselItems(staticData.book || []);
-          setSalonItems(staticData.salon || []);
-          setError(null);
-        } catch (staticError) {
-          console.error("Error fetching static data:", staticError);
-          setCarouselItems([
-            { name: "Intense cleaning (2 bathrooms)", value: "₹1,016", img: "/assets/intenseclean.png" }
-          ]);
-          setSalonItems([
-            { key: "waxing", img: "/assets/waxing.png" }
-          ]);
+        // Fallback for salon items if data is empty (handled by fetchData usually, but just in case)
+        if (!salonData || !salonData.salon) {
+          setSalonItems([{ key: "waxing", img: "/assets/waxing.png" }]);
         }
+      } catch (err) {
+        console.error("Book component error:", err);
+        setError("Failed to load services");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    fetchComponentsData();
 
     const updateCardsPerSlide = () => {
       const width = window.innerWidth;
