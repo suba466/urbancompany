@@ -23,7 +23,12 @@ function Salon() {
         const data = await fetchData("api/subcategories", "subcategories");
 
         const hardcoded = [
-          
+          { _id: 'cleanup', name: 'Cleanup', img: '/assets/cleanup.png', isActive: true },
+          { _id: 'bleach-detan', name: 'Man, bleach & detan', img: '/assets/hairbleach.webp', isActive: true },
+          { _id: 'pedicure-manicure', name: 'Pedicure & manicure', img: '/assets/foot.webp', isActive: true },
+          { _id: 'signature-facials', name: 'Signature facials', img: '/assets/facial.jpg', isActive: true },
+          { _id: 'super-saver', name: 'Super saver package', img: '/assets/super.jpg', isActive: true },
+          { _id: 'waxing-threading', name: 'Waxing & threading', img: '/assets/waxing.png', isActive: true }
         ];
 
         let finalSubcategories = [];
@@ -264,7 +269,7 @@ function Salon() {
                             if (name.includes("super saver") || name.includes("25%")) return getAssetPath("/assets/super.jpg");
                             if (name.includes("pedicure") || name.includes("manicure")) return getAssetPath("/assets/foot.webp");
                             if (name.includes("facial")) return getAssetPath("/assets/facial.jpg");
-                            if (name.includes("bleach")) return getAssetPath("/assets/hairbleach.webp");
+                            if (name.includes("bleach") || name.includes("detan")) return getAssetPath("/assets/hairbleach.webp");
                             if (name.includes("waxing")) return getAssetPath("/assets/waxing.png");
                             if (name.includes("cleanup")) return getAssetPath("/assets/cleanup.png");
 

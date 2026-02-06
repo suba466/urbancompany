@@ -85,63 +85,6 @@
             "option": "₹938",
             "key": "classic",
             "img": "/assets/classic.png"
-        },
-        {
-            "name": "Switch/socket replacement",
-            "title": "4.85 (72M)",
-            "value": "₹49",
-            "key": "socket",
-            "img": "/assets/socket.png"
-        },
-        {
-            "name": "Drill & hang (wall decor)",
-            "title": "4.86 (99K)",
-            "value": "₹49",
-            "key": "wall",
-            "img": "/assets/wall.png"
-        },
-        {
-            "name": "Switchboard/switchbox repair",
-            "title": "4.85 (69K)",
-            "value": "₹79",
-            "key": "switch",
-            "img": "/assets/switch.png"
-        },
-        {
-            "name": "Automatic top load machine checkup",
-            "title": "4.78 (328K)",
-            "value": "₹299",
-            "key": "automatic",
-            "img": "/assets/automatic.png"
-        },
-        {
-            "name": "Tap repair",
-            "title": "4.81 (122K)",
-            "value": "₹49",
-            "key": "tap",
-            "img": "/assets/tap.png"
-        },
-        {
-            "name": "Intense cleaning (3 bathrooms)",
-            "title": "4.79 (3.1M)",
-            "value": "₹1,483",
-            "option": "₹1,647",
-            "key": "intence",
-            "img": "/assets/intense.png"
-        },
-        {
-            "name": "Fan repair (ceiling/exhaust/wall)",
-            "title": "4.81 (95K)",
-            "value": "₹109",
-            "key": "fan",
-            "img": "/assets/fan.png"
-        },
-        {
-            "name": "Bulb/tubelight holder installation",
-            "title": "4.86 (3.3K)",
-            "value": "₹69",
-            "key": "bulb",
-            "img": "/assets/bulb.png"
         }
     ],
     "salon": [
@@ -167,9 +110,9 @@
             "categoryName": "Salon for women"
         },
         {
-            "_id": "facial",
-            "name": "Facial",
-            "img": "/assets/facial.jpg",
+            "_id": "bleach-detan",
+            "name": "Man, bleach & detan",
+            "img": "/assets/hairbleach.webp",
             "isActive": true,
             "categoryName": "Salon for women"
         },
@@ -211,14 +154,6 @@
             "text": "Extra 25% off for new users*",
             "key": "facial",
             "img": "/assets/facial.jpg"
-        },
-        {
-            "pri": "Just launched",
-            "title": "Advanced tools",
-            "tit": "& ingredients",
-            "text": "Facial & clean",
-            "key": "advanced",
-            "img": "/assets/advanced.jpg"
         }
     ],
     "super": [
@@ -231,20 +166,6 @@
             "tex": "facials & more",
             "content": "Extra 25% off for",
             "con": "new users with NEW25*"
-        }
-    ],
-    "smartlock": {
-        "key": "smartlocks",
-        "img": "/assets/smartlocks.png"
-    },
-    "images": {
-        "key": "images",
-        "img": "/assets/images.png"
-    },
-    "cart": [
-        {
-            "key": "cart",
-            "img": "/assets/cart.png"
         }
     ],
     "added": [
@@ -268,7 +189,7 @@
             ]
         },
         {
-            "name": "Skin tightening/glow facial",
+            "name": "Skin lightening glow facial",
             "key": "o3 shine",
             "img": "/assets/o3 shine.webp",
             "price": "1699",
@@ -286,8 +207,8 @@
         },
         {
             "name": "Head massage",
-            "key": "foot",
-            "img": "/assets/foot.webp",
+            "key": "head-massage",
+            "img": "/assets/relax.png",
             "price": "199",
             "subcategory": "Man, bleach & detan",
             "rating": "4.87 (670k reviews)",
@@ -316,8 +237,8 @@
             ]
         },
         {
-            "name": "Standard Waxing",
-            "key": "waxing",
+            "name": "Full arms + half legs waxing",
+            "key": "waxing-pkg",
             "img": "/assets/waxing.png",
             "price": "399",
             "subcategory": "Waxing & threading",
@@ -325,12 +246,9 @@
             "duration": "30 min",
             "items": [
                 {
-                    "description": "Full arms and half legs waxing"
+                    "description": "Quick and smooth hair removal for soft skin"
                 }
             ]
         }
-    ],
-    "upi": "/assets/upi.webp",
-    "card": "/assets/card.webp",
-    "net": "/assets/net.webp"
+    ]
 }
