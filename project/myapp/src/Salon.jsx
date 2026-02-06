@@ -32,6 +32,7 @@ function Salon() {
         });
 
         if (filtered.length > 0) {
+          // Display only the first 3 items (Waxing, Cleanup, Haircare) as per requirements
           setSalonSubcategories(filtered.slice(0, 3));
           setHasSubcategories(true);
         } else {
