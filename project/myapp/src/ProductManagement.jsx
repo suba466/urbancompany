@@ -1216,8 +1216,9 @@ function ProductManagement({ isAdding }) {
                           }}>
                             {product.img ? (
                               <img
-                                src={`http://localhost:5000${product.img}`}
+                                src={`${API_URL}${product.img}`}
                                 alt={product.name}
+
                                 style={{
                                   width: '100%',
                                   height: '100%',

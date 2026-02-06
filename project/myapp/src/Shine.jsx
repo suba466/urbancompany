@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Carousel, Card, Button, Row, Col } from "react-bootstrap";
 import API_URL, { getAssetPath } from "./config";
+import { fetchData } from "./apiService";
 
 function darkenHexColor(hex, amount = 20) {
   let c = hex.slice(0, 7);
@@ -21,31 +22,17 @@ function Shine() {
   // Fetch carousel data from server
   useEffect(() => {
     const fetchCarouselData = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/carousel`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch carousel data');
-        }
-        const data = await response.json();
-        setCarouselItems(data.carousel || []);
-      } catch (error) {
-        console.error("Error fetching carousel:", error);
-        // Fallback: Try local data.json
-        try {
-          const res = await fetch(getAssetPath("data.json"));
-          if (!res.ok) throw new Error("Failed to fetch local data.json");
-          const data = await res.json();
-          setCarouselItems(data.carousel || []);
-        } catch (staticError) {
-          console.error("Error fetching local data:", staticError);
-          // Hardcoded fallback
-          setCarouselItems([
-            { name: "Shine your bathroom deserves", img: "/assets/shine.png" }
-          ]);
-        }
-      } finally {
-        setLoading(false);
+      setLoading(true);
+      const data = await fetchData("api/carousel", "carousel");
+      if (data && data.carousel) {
+        setCarouselItems(data.carousel);
+      } else {
+        // Fallback already handled by fetchData, but just in case
+        setCarouselItems([
+          { name: "Shine your bathroom deserves", img: "/assets/shine.png" }
+        ]);
       }
+      setLoading(false);
     };
 
     fetchCarouselData();

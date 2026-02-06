@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import Salon1 from './Salon1.jsx';
 import { Alert } from "react-bootstrap";
 import API_URL, { getAssetPath } from "./config";
+import { fetchData } from "./apiService";
 
 function Salon() {
   const [salon, setSalon] = useState([]);
@@ -17,187 +18,69 @@ function Salon() {
 
   useEffect(() => {
     const fetchSalonSubcategories = async () => {
-      try {
-        setLoading(true);
-        console.log("Fetching ALL active subcategories from public API...");
+      setLoading(true);
+      const data = await fetchData("api/subcategories", "subcategories");
 
-        // Clear previous data
-        setSalonSubcategories([]);
-        setHasSubcategories(false);
+      if (data && data.subcategories) {
+        const filtered = data.subcategories.filter(sub => {
+          const hasSalonCategory =
+            sub.categoryName?.toLowerCase().includes('salon') ||
+            (sub.categoryId && sub.categoryId.name?.toLowerCase().includes('salon'));
+          const hasSalonName = sub.name?.toLowerCase().includes('salon');
+          const isActive = sub.isActive === true || sub.isActive === undefined;
+          return (hasSalonCategory || hasSalonName) && isActive;
+        });
 
-        // 1. Get ALL active subcategories from PUBLIC API
-        const response = await fetch(`${API_URL}/api/subcategories`);
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch subcategories");
-        }
-
-        const data = await response.json();
-        console.log("All subcategories from public API:", data);
-
-        if (data.success && data.subcategories && Array.isArray(data.subcategories)) {
-
-          // 2. Filter for "Salon for women" subcategories
-          // Find subcategories where categoryName contains "salon"
-          const salonSubcategories = data.subcategories.filter(sub => {
-            // Check if subcategory belongs to salon category
-            const hasSalonCategory =
-              sub.categoryName?.toLowerCase().includes('salon') ||
-              (sub.categoryId && sub.categoryId.name?.toLowerCase().includes('salon'));
-
-            // Also check if subcategory name contains "salon" as backup
-            const hasSalonName = sub.name?.toLowerCase().includes('salon');
-
-            // IMPORTANT: Only show ACTIVE subcategories
-            const isActive = sub.isActive === true || sub.isActive === undefined;
-
-            return (hasSalonCategory || hasSalonName) && isActive;
-          });
-
-          console.log("Filtered salon subcategories:", salonSubcategories);
-
-          if (salonSubcategories.length > 0) {
-            // Limit to 6 items for display
-            setSalonSubcategories(salonSubcategories.slice(0, 6));
-            setHasSubcategories(true);
-          } else {
-            console.log("No active salon subcategories found");
-            setHasSubcategories(false);
-          }
-        } else {
-          throw new Error("No subcategories data received");
-        }
-
-      } catch (error) {
-        console.error("Error fetching salon subcategories: ", error);
-        // Fallback to local data
-        try {
-          const staticRes = await fetch(getAssetPath("data.json"));
-          if (staticRes.ok) {
-            const staticData = await staticRes.json();
-            const salonData = staticData.salon || [
-              { key: "waxing", img: "/assets/waxing.png" },
-              { key: "cleanup", img: "/assets/cleanup.png" },
-              { key: "haircare", img: "/assets/haircare.png" }
-            ];
-            const mapped = salonData.map(s => ({
-              _id: s.key,
-              name: s.key.charAt(0).toUpperCase() + s.key.slice(1),
-              img: s.img,
-              isActive: true,
-              categoryName: "Salon for women"
-            }));
-            setSalonSubcategories(mapped.slice(0, 6));
-            setHasSubcategories(true);
-          } else {
-            throw new Error("Local data not found");
-          }
-        } catch (e) {
-          console.error("Critical fallback failed, using hardcoded subcategories");
-          const hardcoded = [
-            { _id: 'waxing', name: 'Waxing', img: '/assets/waxing.png', isActive: true },
-            { _id: 'cleanup', name: 'Cleanup', img: '/assets/cleanup.png', isActive: true },
-            { _id: 'haircare', name: 'Haircare', img: '/assets/haircare.png', isActive: true }
-          ];
-          setSalonSubcategories(hardcoded);
+        if (filtered.length > 0) {
+          setSalonSubcategories(filtered.slice(0, 6));
           setHasSubcategories(true);
+        } else {
+          setHasSubcategories(false);
         }
-      } finally {
-        setLoading(false);
+      } else {
+        const hardcoded = [
+          { _id: 'waxing', name: 'Waxing', img: '/assets/waxing.png', isActive: true },
+          { _id: 'cleanup', name: 'Cleanup', img: '/assets/cleanup.png', isActive: true },
+          { _id: 'haircare', name: 'Haircare', img: '/assets/haircare.png', isActive: true }
+        ];
+        setSalonSubcategories(hardcoded);
+        setHasSubcategories(true);
       }
+      setLoading(false);
     };
 
     fetchSalonSubcategories();
   }, []);
 
-  // Alternative: Fetch from public API (if admin API requires auth and you want non-auth access)
-  useEffect(() => {
-    const fetchFromPublicAPI = async () => {
-      try {
-        const publicSubcatsResponse = await fetch(`${API_URL}/api/subcategories`);
-
-        if (publicSubcatsResponse.ok) {
-          const publicSubcatsData = await publicSubcatsResponse.json();
-          console.log("Subcategories from public API:", publicSubcatsData);
-
-          if (publicSubcatsData.subcategories && publicSubcatsData.subcategories.length > 0) {
-            // Filter for salon-related AND active subcategories
-            const salonActiveSubcategories = publicSubcatsData.subcategories.filter(sub =>
-              (sub.categoryName?.toLowerCase().includes('salon') ||
-                sub.name?.toLowerCase().includes('salon')) &&
-              (sub.isActive === true || sub.isActive === undefined)
-            );
-
-            console.log("Active salon subcategories from public API:", salonActiveSubcategories);
-
-            if (salonActiveSubcategories.length > 0) {
-              setSalonSubcategories(salonActiveSubcategories.slice(0, 6));
-              setHasSubcategories(true);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error from public API:", error);
-      }
-    };
-
-    // Uncomment if you want to try public API as fallback
-    // fetchFromPublicAPI();
-  }, []);
-
-  // Fetch salon for women data (existing)
+  // Fetch salon for women data
   useEffect(() => {
     const fetchSalonForWomen = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/salonforwomen`);
-        if (!response.ok) throw new Error('Failed to fetch salon for women');
-        const data = await response.json();
-        setSalon(data.salonforwomen || []);
-      } catch (error) {
-        console.error("Error fetching salon: ", error);
-        try {
-          const basePath = import.meta.env.BASE_URL || '/';
-          const staticResponse = await fetch(`${basePath}data.json`);
-          if (!staticResponse.ok) throw new Error("Local data not found");
-          const staticData = await staticResponse.json();
-          setSalon(staticData.salonforwomen || []);
-        } catch (staticError) {
-          console.error("Error fetching local data:", staticError);
-        }
+      const data = await fetchData("api/salonforwomen", "salonforwomen");
+      if (data && data.salonforwomen) {
+        setSalon(data.salonforwomen);
       }
     };
     fetchSalonForWomen();
   }, []);
 
-  // Fetch advanced data (existing)
+  // Fetch advanced data
   useEffect(() => {
     const fetchAdvanced = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/advanced`);
-        if (!response.ok) throw new Error('Failed to fetch advanced');
-        const data = await response.json();
-        setAdvanced(data.advanced || []);
-      } catch (error) {
-        console.error("Error fetching advanced: ", error);
-        try {
-          const staticRes = await fetch(getAssetPath("data.json"));
-          if (!staticRes.ok) throw new Error("Local data not found");
-          const staticData = await staticRes.json();
-          setAdvanced(staticData.advanced || []);
-        } catch (staticError) {
-          console.error("Error fetching local data:", staticError);
-          setAdvanced([
-            {
-              price: "₹799",
-              value: "₹1,098",
-              title: "Roll-on waxing",
-              tit: "Full arms, legs & underarms",
-              text: "Extra 25% off for new users*",
-              key: "facial",
-              img: "/assets/facial.jpg"
-            }
-          ]);
-        }
+      const data = await fetchData("api/advanced", "advanced");
+      if (data && data.advanced) {
+        setAdvanced(data.advanced);
+      } else {
+        setAdvanced([
+          {
+            price: "₹799",
+            value: "₹1,098",
+            title: "Roll-on waxing",
+            tit: "Full arms, legs & underarms",
+            text: "Extra 25% off for new users*",
+            key: "facial",
+            img: "/assets/facial.jpg"
+          }
+        ]);
       }
     };
     fetchAdvanced();
@@ -207,8 +90,6 @@ function Salon() {
     setActiveIndex(selectedIndex);
   };
 
-  // Handle subcategory click
-  // Handle subcategory click
   const handleSubcategoryClick = (subcategory) => {
     const normalizeKey = (str) => str?.toLowerCase()?.trim()?.replace(/\s+/g, "-") || "";
     const sectionId = `section-${normalizeKey(subcategory.name)}`;
@@ -327,7 +208,6 @@ function Salon() {
               </div>
             )}
 
-            {/* Show loading only if actively fetching */}
             {loading ? (
               <div className="text-center py-4">
                 <div className="spinner-border text-primary" role="status" style={{ width: "1rem", height: "1rem" }}>
@@ -338,9 +218,7 @@ function Salon() {
             ) : hasSubcategories && salonSubcategories.length > 0 ? (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "15px", padding: "5px" }}>
                 {salonSubcategories.map((subcategory, index) => {
-                  if (subcategory.isActive === false) {
-                    return null;
-                  }
+                  if (subcategory.isActive === false) return null;
 
                   return (
                     <div
@@ -393,9 +271,7 @@ function Salon() {
                   );
                 })}
               </div>
-            ) : (
-              ""
-            )}
+            ) : null}
           </div>
         </Col>
 

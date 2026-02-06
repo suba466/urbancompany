@@ -9,6 +9,7 @@ import { IoSettingsOutline } from "react-icons/io5";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { useAuth, useCart, useBookings, notifyAuthChange } from "./hooks";
 import API_URL, { getAssetPath } from "./config";
+import { fetchData } from "./apiService";
 
 function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "main" }) {
   const [logo1, setLogo1] = useState("");
@@ -163,19 +164,10 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
   // Fetch logo
   useEffect(() => {
     const fetchLogo = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/static-data`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data && data.logo1) {
-            const logoUrl = data.logo1.startsWith('http')
-              ? data.logo1
-              : `${API_URL}${data.logo1}`;
-            setLogo1(logoUrl);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching logo:", error);
+      const data = await fetchData("api/static-data");
+      if (data && data.logo1) {
+        setLogo1(getAssetPath(data.logo1));
+      } else {
         setLogo1(getAssetPath("/assets/urban.png"));
       }
     };

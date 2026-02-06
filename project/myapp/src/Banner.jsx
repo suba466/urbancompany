@@ -7,6 +7,7 @@ import { CiStar } from "react-icons/ci";
 import { TiGroup } from "react-icons/ti";
 import { Alert, Spinner } from "react-bootstrap";
 import API_URL, { getAssetPath } from "./config";
+import { fetchData } from "./apiService";
 
 function Banner() {
   const [banner, setBanner] = useState(null);
@@ -16,60 +17,25 @@ function Banner() {
   const navigate = useNavigate();
 
   const fetchBanner = async () => {
-    try {
-      setError(null);
-      const res = await fetch(`${API_URL}/api/banner`);
-      if (!res.ok) throw new Error("Failed to fetch banner");
-      const data = await res.json();
+    const data = await fetchData("api/banner", "banner");
+    if (data && data.banner) {
       setBanner(data.banner);
-    } catch (err) {
-      console.warn("API banner fetch failed, falling back to local data");
-      try {
-        const basePath = import.meta.env.BASE_URL || '/';
-        const res = await fetch(`${basePath}data.json`);
-        const data = await res.json();
-        setBanner(data.banner);
-      } catch (fallbackErr) {
-        setError("Failed to load banner");
-      }
+    } else {
+      setError("Failed to load banner");
     }
   };
 
   const fetchCategories = async () => {
-    try {
-      setError(null);
-      setLoading(true);
-
-      let data;
-      try {
-        const response = await fetch(`${API_URL}/api/categories`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        data = await response.json();
-      } catch (apiErr) {
-        console.warn("API categories fetch failed, falling back to local data");
-        try {
-          const basePath = import.meta.env.BASE_URL || '/';
-          const res = await fetch(`${basePath}data.json`);
-          const staticData = await res.json();
-          data = { categories: staticData.categories };
-        } catch (e) {
-          // If fallback fails
-        }
-      }
-
-      if (data && data.categories && Array.isArray(data.categories)) {
-        setCategories(data.categories);
-      } else {
-        setCategories([]);
-        setError("No categories available");
-      }
-    } catch (err) {
-      console.error("Error fetching categories:", err);
-      setError("Failed to load categories");
+    setLoading(true);
+    setError(null);
+    const data = await fetchData("api/categories", "categories");
+    if (data && data.categories) {
+      setCategories(data.categories);
+    } else {
       setCategories([]);
-    } finally {
-      setLoading(false);
+      setError("No categories available");
     }
+    setLoading(false);
   };
 
   useEffect(() => {

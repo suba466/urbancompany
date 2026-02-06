@@ -10,7 +10,8 @@ import Salon1modal from './Salon1modal';
 import { useNavigate } from 'react-router-dom';
 import CartBlock from './CartBlock';
 import { useCart } from "./hooks";
-import API_URL, { getAssetPath } from "./config";
+import API_URL, { getAssetPath, shouldCallApi } from "./config";
+import { fetchData } from "./apiService";
 
 function Salon1() {
   const [savedExtras, setSavedExtras] = useState({});
@@ -20,6 +21,7 @@ function Salon1() {
   const [salon, setSalon] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+
   const addButtonRefs = useRef({});
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const normalizeKey = (str) => str?.toLowerCase()?.trim()?.replace(/\s+/g, "-") || "";
@@ -120,85 +122,55 @@ function Salon1() {
   const fetchPackages = async () => {
     try {
       let packages = [];
-      try {
-        const response1 = await fetch(`${API_URL}/api/active-packages`);
-        if (response1.ok) {
-          const data1 = await response1.json();
-          packages = data1.packages || [];
+
+      // Try active packages first
+      const data1 = await fetchData("api/active-packages", "packages");
+      if (data1 && data1.packages) {
+        packages = data1.packages;
+        packages.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      }
+
+      // Try regular packages if none found
+      if (packages.length === 0) {
+        const data2 = await fetchData("api/packages", "packages");
+        if (data2 && data2.packages) {
+          packages = data2.packages.filter(pkg => pkg.isActive !== false);
           packages.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-        } else {
-          throw new Error('API 1 failed');
         }
-      } catch (error) { console.error(error); }
-
-      if (packages.length === 0) {
-        try {
-          const response2 = await fetch(`${API_URL}/api/packages`);
-          if (response2.ok) {
-            const data2 = await response2.json();
-            packages = (data2.packages || []).filter(pkg => pkg.isActive !== false);
-            packages.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-          } else {
-            throw new Error('API 2 failed');
-          }
-        } catch (error) { console.error(error); }
       }
 
+      // Try salon for women as last API resort
       if (packages.length === 0) {
-        try {
-          const response3 = await fetch(`${API_URL}/api/salonforwomen`);
-          if (response3.ok) {
-            const data3 = await response3.json();
-            packages = data3.salonforwomen || [];
-            if (packages[0] && packages[0].isActive !== undefined) {
-              packages = packages.filter(pkg => pkg.isActive !== false);
-            }
-          } else {
-            throw new Error('API 3 failed');
+        const data3 = await fetchData("api/salonforwomen", "salonforwomen");
+        if (data3 && data3.salonforwomen) {
+          packages = data3.salonforwomen;
+          if (packages[0] && packages[0].isActive !== undefined) {
+            packages = packages.filter(pkg => pkg.isActive !== false);
           }
-        } catch (error) { console.error(error); }
+        }
       }
 
-      // Fallback
+      // Final fallback logic handled inside fetchData(..., key) if we use it, 
+      // but Salon1 has specific custom mapping, so we handle it here if still empty
       if (packages.length === 0) {
-        try {
-          const res = await fetch(getAssetPath("data.json"));
-          if (res.ok) {
-            const data = await res.json();
-            // Map 'book' items or 'added' items as a fallback
-            const sourceItems = data.book || data.added || [];
-            if (sourceItems.length > 0) {
-              packages = sourceItems.map((item, idx) => ({
-                _id: item._id || item.key || `fallback-pkg-${idx}`,
-                name: item.name,
-                title: item.subcategory || "Waxing",
-                subcategory: item.subcategory || "Waxing",
-                price: item.value?.replace('₹', '') || item.price || "499",
-                rating: item.title?.split('(')[0] || "4.8",
-                reviews: item.title?.match(/\(([^)]+)\)/)?.[1] || "1M",
-                img: item.img,
-                isActive: true,
-                items: ["Service included", "Professional technician"]
-              }));
-            }
-          } else {
-            throw new Error("Local data not found");
-          }
-        } catch (e) {
-          console.error("Local packages fallback failed, using hardcoded items:", e);
-          packages = [
-            {
-              _id: 'hardcoded-1',
-              name: 'Roll-on waxing (Full hands)',
-              title: "Waxing",
-              subcategory: "Waxing",
-              price: "499",
-              rating: "4.8",
-              img: "/assets/waxing.png",
+        const data = await fetchData("data.json");
+        if (data) {
+          // Map 'added' items first for Salon page as they are more relevant
+          const sourceItems = data.added || data.book || [];
+          if (sourceItems.length > 0) {
+            packages = sourceItems.map((item, idx) => ({
+              _id: item._id || item.key || `fallback-pkg-${idx}`,
+              name: item.name,
+              title: item.subcategory || item.category || "Salon for women",
+              subcategory: item.subcategory || item.category || "Salon for women",
+              price: (item.value || "").replace('₹', '') || item.price || "499",
+              rating: (item.title || "").split('(')[0] || "4.8",
+              reviews: (item.title || "").match(/\(([^)]+)\)/)?.[1] || "1M",
+              img: item.img,
               isActive: true,
-              items: ["Smooth finish", "Minimal pain"]
-            }
-          ];
+              items: ["Service included", "Professional technician"]
+            }));
+          }
         }
       }
 
@@ -210,6 +182,7 @@ function Salon1() {
             (pkg.title && pkg.title === activeSubCategory)
           );
         } else {
+          // Default filter to exclude the main page title if not selecting a subcategory
           packages = packages.filter(pkg =>
             pkg.subcategory && pkg.subcategory !== "Salon for women" &&
             pkg.title && pkg.title !== "Salon for women"
@@ -225,18 +198,11 @@ function Salon1() {
 
   const fetchSuperPackages = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/super`);
-      if (!response.ok) throw new Error('Failed');
-      const data = await response.json();
-      setSuperPack(data.super ? [data.super[0]] : []);
-    } catch (error) {
-      try {
-        const staticResponse = await fetch(getAssetPath("data.json"));
-        if (!staticResponse.ok) throw new Error("Local data not found");
-        const staticData = await staticResponse.json();
-        setSuperPack(staticData.super ? [staticData.super[0]] : []);
-      } catch (e) {
-        console.error("Local super fallback failed:", e);
+      const data = await fetchData("api/super", "super");
+      if (data && data.super) {
+        setSuperPack([data.super[0]]);
+      } else {
+        // Fallback already handled by fetchData or manual fallback
         setSuperPack([{
           key: "super",
           img: "/assets/super.jpg",
@@ -245,29 +211,27 @@ function Salon1() {
           text: "Facials & more"
         }]);
       }
+    } catch (error) {
+      console.error("Super packages fetch error:", error);
     }
   };
 
   const fetchSalonForWomen = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/salonforwomen`);
-      if (!response.ok) throw new Error('Failed');
-      const data = await response.json();
-      setSalon(data.salonforwomen || []);
-    } catch (error) {
-      try {
-        const staticResponse = await fetch(getAssetPath("data.json"));
-        if (!staticResponse.ok) throw new Error("Local data not found");
-        const staticData = await staticResponse.json();
-        setSalon(staticData.salonforwomen || staticData.added || []);
-      } catch (e) {
-        console.error("Local salon fallback failed:", e);
-        setSalon([
+      const data = await fetchData("api/salonforwomen", "salonforwomen");
+      if (data && data.salonforwomen) {
+        setSalon(data.salonforwomen);
+      } else {
+        const local = await fetchData("data.json");
+        setSalon(local?.salonforwomen || local?.added || [
           { name: "Foot massage", price: "199", img: "/assets/foot.webp" }
         ]);
       }
+    } catch (error) {
+      console.error("Salon for women fetch error:", error);
     }
   };
+
 
   useEffect(() => {
     window.openEditPackageFromCart = handleShowModal;
@@ -407,22 +371,27 @@ function Salon1() {
         updateItem(productId, existing.count + 1);
 
         // Also update in database
-        await fetch(`${API_URL}/api/carts/${existing._id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        if (shouldCallApi()) {
+          await fetch(`${API_URL}/api/carts/${existing._id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        }
       } else {
         // Add new item to Redux
         addItem(payload);
 
         // Also add to database
-        await fetch(`${API_URL}/api/addcarts`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        if (shouldCallApi()) {
+          await fetch(`${API_URL}/api/addcarts`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        }
       }
+
 
       setShowFrequentlyAdded(true);
     } catch (error) { console.error(error); }
@@ -440,12 +409,15 @@ function Salon1() {
       updateItem(cartItem._id || cartItem.productId, (cartItem.count || 1) + 1);
 
       // Update database
-      await fetch(`${API_URL}/api/carts/${cartItem._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ count: (cartItem.count || 1) + 1 })
-      });
+      if (shouldCallApi()) {
+        await fetch(`${API_URL}/api/carts/${cartItem._id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ count: (cartItem.count || 1) + 1 })
+        });
+      }
     } catch (err) { console.error(err); }
+
   };
 
   const handleDecrease = async (cartItem) => {
@@ -455,19 +427,24 @@ function Salon1() {
         removeItem(cartItem._id || cartItem.productId);
 
         // Remove from database
-        await fetch(`${API_URL}/api/carts/${cartItem._id}`, { method: "DELETE" });
+        if (shouldCallApi()) {
+          await fetch(`${API_URL}/api/carts/${cartItem._id}`, { method: "DELETE" });
+        }
       } else {
         // Update in Redux
         updateItem(cartItem._id || cartItem.productId, cartItem.count - 1);
 
         // Update database
-        await fetch(`${API_URL}/api/carts/${cartItem._id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ count: cartItem.count - 1 })
-        });
+        if (shouldCallApi()) {
+          await fetch(`${API_URL}/api/carts/${cartItem._id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ count: cartItem.count - 1 })
+          });
+        }
       }
     } catch (err) { console.error(err); }
+
   };
 
   const formatPrice = (amount) => {
@@ -628,10 +605,11 @@ function Salon1() {
                                       borderRadius: "8px"
                                     }}
                                     onError={(e) => {
-                                      console.error("Failed to load thumbnail in Salon1:", pkg.img);
+                                      console.warn("Failed to load thumbnail in Salon1:", pkg.img);
                                       e.target.onerror = null;
-                                      e.target.src = getAssetPath("/assets/placeholder.png");
+                                      e.target.src = getAssetPath("/assets/Uc.png");
                                     }}
+
                                   />
                                 ) : (
                                   <div className="text-center">

@@ -31,7 +31,8 @@ import {
   updateCustomerLocalState,
   syncCartWithLocalStorage
 } from './store';
-import API_URL from "./config";
+import API_URL, { shouldCallApi } from "./config";
+
 
 // Custom hook to sync auth state with localStorage
 export const useAuthSync = () => {
@@ -233,10 +234,11 @@ export const useCart = () => {
 
 // Helper function to clear cart from database
 export const clearCartFromDatabase = async (userEmail) => {
-  if (!userEmail) {
-    console.log("No user email provided for database cart clearing");
+  if (!shouldCallApi() || !userEmail) {
+    console.log("Skipping database cart clearing (API disabled or no email)");
     return;
   }
+
 
   try {
     // Get cart items for this user from database

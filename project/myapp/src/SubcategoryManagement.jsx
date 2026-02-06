@@ -62,7 +62,8 @@ function SubcategoryManagement({ isAdding, isEditing }) {
       setLoading(true);
       console.log(`Fetching subcategories... Page: ${page}, Search: ${search}, PerPage: ${perPage}`);
 
-      let url = `http://localhost:5000/api/admin/subcategories?page=${page}&limit=${perPage}&sort=-createdAt`;
+      let url = `${API_URL}/api/admin/subcategories?page=${page}&limit=${perPage}&sort=-createdAt`;
+
 
       if (search) {
         url += `&search=${encodeURIComponent(search)}`;

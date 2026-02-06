@@ -1,0 +1,32 @@
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   .github/workflows/deploy.yml
+	modified:   project/myapp/src/AccountModal.jsx
+	modified:   project/myapp/src/Banner.jsx
+	modified:   project/myapp/src/ProductManagement.jsx
+	modified:   project/myapp/src/Salon.jsx
+	modified:   project/myapp/src/Salon1.jsx
+	modified:   project/myapp/src/Salon1modal.jsx
+	modified:   project/myapp/src/Shine.jsx
+	modified:   project/myapp/src/SubcategoryManagement.jsx
+	modified:   project/myapp/src/Urbanav.jsx
+	modified:   project/myapp/src/config.js
+	modified:   project/myapp/src/hooks.js
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	backend/remote_backend.txt
+	backend/status_backend.txt
+	branches.txt
+	git_status_output.txt
+	head_hex.txt
+	log.txt
+	project/myapp/src/apiService.js
+	status_after_ref_fix.txt
+	status_final.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")

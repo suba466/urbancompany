@@ -16,6 +16,7 @@ import AccountModal from "./AccountModal";
 import { useCart, useAuth } from "./hooks"; // Import from hooks
 import "./Urbancom.css";
 import API_URL, { getAssetPath } from "./config";
+import { fetchData } from "./apiService";
 // Leaflet imports
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -113,44 +114,17 @@ function Urbanav() {
   // Fetch logos with fallback
   useEffect(() => {
     const fetchLogos = async () => {
-      try {
-        console.log("Fetching logos...");
-        let data;
-        try {
-          const response = await fetch(`${API_URL}/api/static-data`);
-          if (!response.ok) throw new Error('Failed to fetch static data');
-          data = await response.json();
-        } catch (apiError) {
-          console.warn("API fetch failed, falling back to local data");
-          // Fallback to local data
-          try {
-            const response = await fetch(getAssetPath("data.json"));
-            if (!response.ok) throw new Error("Local data not found");
-            data = await response.json();
-          } catch (e) {
-            console.error("Static data fetch failed:", e);
-            // Provide hardcoded fallback if everything fails
-            data = {
-              logo: "/assets/Uc.png",
-              logo1: "/assets/urban.png"
-            };
-          }
-        }
+      const data = await fetchData("api/static-data");
 
-        if (data && data.logo) {
-          setLogo(getAssetPath(data.logo));
-        } else {
-          setLogo(getAssetPath("/assets/Uc.png"));
-        }
-
-        if (data && data.logo1) {
-          setLogo1(getAssetPath(data.logo1));
-        } else {
-          setLogo1(getAssetPath("/assets/urban.png"));
-        }
-      } catch (error) {
-        console.error("Error fetching logos:", error);
+      if (data && data.logo) {
+        setLogo(getAssetPath(data.logo));
+      } else {
         setLogo(getAssetPath("/assets/Uc.png"));
+      }
+
+      if (data && data.logo1) {
+        setLogo1(getAssetPath(data.logo1));
+      } else {
         setLogo1(getAssetPath("/assets/urban.png"));
       }
     };
