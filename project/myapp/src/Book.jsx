@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Row, Col, Card } from "react-bootstrap";
 import { FaStar } from "react-icons/fa";
 import API_URL, { getAssetPath } from "./config";
+import { fetchData } from "./apiService";
 
 function Book() {
   const [carouselItems, setCarouselItems] = useState([]);
