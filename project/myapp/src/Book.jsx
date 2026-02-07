@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
 import { Row, Col, Card } from "react-bootstrap";
 import { FaStar } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
-import API_URL, { getAssetPath } from "./config";
-import { fetchData } from "./apiService";
 
 function Book() {
   const [carouselItems, setCarouselItems] = useState([]);
@@ -12,31 +9,42 @@ function Book() {
   const [error, setError] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardsPerSlide, setCardsPerSlide] = useState(5);
-  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchComponentsData = async () => {
-      setLoading(true);
+    const fetchData = async () => {
       try {
-        const bookData = await fetchData("api/book", "book");
-        setCarouselItems(bookData && bookData.book ? bookData.book : []);
+        // Fetch only book & salon data
+        const [bookRes, salonRes] = await Promise.all([
+          fetch("http://localhost:5000/api/book"),
+          fetch("http://localhost:5000/api/salon"),
+        ]);
 
-        const salonData = await fetchData("api/salon", "salon");
-        setSalonItems(salonData && salonData.salon ? salonData.salon : []);
+        if (!bookRes.ok || !salonRes.ok)
+          throw new Error("Failed to fetch data");
 
-        // Fallback for salon items if data is empty (handled by fetchData usually, but just in case)
-        if (!salonData || !salonData.salon) {
-          setSalonItems([{ key: "waxing", img: "/assets/waxing.png" }]);
-        }
+        const bookData = await bookRes.json();
+        const salonData = await salonRes.json();
+
+        setCarouselItems(bookData.book || []);
+        setSalonItems(salonData.salon || []);
       } catch (err) {
-        console.error("Book component error:", err);
-        setError("Failed to load services");
+        console.error(err);
+        setError("Failed to fetch service data");
+        // Fallback to static data
+        try {
+          const staticRes = await fetch("http://localhost:5000/api/static-data");
+          const staticData = await staticRes.json();
+          setCarouselItems(staticData.book || []);
+          setSalonItems(staticData.salon || []);
+        } catch (staticError) {
+          console.error("Error fetching static data:", staticError);
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    fetchComponentsData();
+    fetchData();
 
     const updateCardsPerSlide = () => {
       const width = window.innerWidth;
@@ -79,7 +87,7 @@ function Book() {
   return (
     <>
       {/* Most Booked Services Section */}
-      <div className="container mt-4 position-relative px-0">
+      <div className="container mt-4 position-relative">
         <h2 className="fw-semibold mb-4">Most booked services</h2>
         <Row className="justify-content-center">
           {visibleItems.map((item, idx) => (
@@ -94,7 +102,7 @@ function Book() {
               }}
             >
               <img
-                src={getAssetPath(item.img || "/assets/placeholder.png")}
+                src={`http://localhost:5000${item.img}`}
                 alt={item.name}
                 style={{
                   width: "101%",
@@ -103,7 +111,8 @@ function Book() {
                   borderRadius: "8px",
                 }}
                 onError={(e) => {
-                  e.target.src = getAssetPath("/assets/placeholder.png");
+                  // Fallback if image fails to load
+                  e.target.src = "http://localhost:5000/assets/placeholder.png";
                 }}
               />
               <p
@@ -157,25 +166,7 @@ function Book() {
 
       {/* Salon Section */}
       <div className="container mt-5 position-relative">
-        <h2 className="fw-semibold mb-1">Salon for women</h2>
-        <p className="mb-4" style={{ color: "#666", fontSize: "14px" }}>
-          <FaStar className="me-1" style={{ color: "#6e42e5", fontSize: "12px" }} />
-          <span className="fw-bold">4.85 (1.5M+ bookings)</span>
-        </p>
-        <style>
-          {`
-            .saloncard {
-              cursor: pointer;
-              transition: transform 0.2s ease;
-              border: 1px solid #ededed;
-              border-radius: 12px;
-              overflow: hidden;
-            }
-            .saloncard:hover {
-              transform: translateY(-5px);
-            }
-          `}
-        </style>
+        <h2 className="fw-semibold mb-4">Salon for women</h2>
         {cardsPerSlide === 1 ? (
           <Row className="justify-content-center">
             {salonItems
@@ -191,7 +182,7 @@ function Book() {
                     transition: "transform 0.4s ease",
                   }}
                 >
-                  <Card className="saloncard" onClick={() => navigate('/salon')}>
+                  <Card className="saloncard">
                     <Card.Body style={{ flex: 1 }}>
                       <Card.Title className="fw-semibold"
                         style={{
@@ -199,16 +190,17 @@ function Book() {
                           padding: "28px",
                         }}
                       >
-                        {item.name || (item.key?.charAt(0).toUpperCase() + item.key?.slice(1))}
+                        {item.key.charAt(0).toUpperCase() + item.key.slice(1)}
                       </Card.Title>
                     </Card.Body>
                     <Card.Img
                       variant="bottom"
-                      src={getAssetPath(item.img || "/assets/placeholder.png")}
+                      src={`http://localhost:5000${item.img}`}
                       alt={item.key}
                       style={{ height: "200px", objectFit: "cover" }}
                       onError={(e) => {
-                        e.target.src = getAssetPath("/assets/placeholder.png");
+                        // Fallback if image fails to load
+                        e.target.src = "http://localhost:5000/assets/placeholder.png";
                       }}
                     />
                   </Card>
@@ -219,7 +211,7 @@ function Book() {
           <Row className="g-4">
             {salonItems.map((item, idx) => (
               <Col key={idx} xs={12} sm={6} md={4} lg={3}>
-                <Card className="saloncard" onClick={() => navigate('/salon')}>
+                <Card className="saloncard">
                   <Card.Body style={{ flex: 1 }}>
                     <Card.Title className="fw-semibold"
                       style={{
@@ -227,12 +219,12 @@ function Book() {
                         padding: "28px",
                       }}
                     >
-                      {item.name || (item.key?.charAt(0).toUpperCase() + item.key?.slice(1))}
+                      {item.key.charAt(0).toUpperCase() + item.key.slice(1)}
                     </Card.Title>
                   </Card.Body>
                   <Card.Img
                     variant="bottom"
-                    src={getAssetPath(item.img || "/assets/placeholder.png")}
+                    src={`http://localhost:5000${item.img}`}
                     alt={item.key}
                     style={{
                       height: "200px",
@@ -240,7 +232,8 @@ function Book() {
                       borderRadius: "0 0 10px 10px",
                     }}
                     onError={(e) => {
-                      e.target.src = getAssetPath("/assets/placeholder.png");
+                      // Fallback if image fails to load
+                      e.target.src = "http://localhost:5000/assets/placeholder.png";
                     }}
                   />
                 </Card>

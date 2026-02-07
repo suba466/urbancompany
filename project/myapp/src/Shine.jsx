@@ -1,7 +1,5 @@
 import { useEffect, useState, useRef } from "react";
 import { Carousel, Card, Button, Row, Col } from "react-bootstrap";
-import API_URL, { getAssetPath } from "./config";
-import { fetchData } from "./apiService";
 
 function darkenHexColor(hex, amount = 20) {
   let c = hex.slice(0, 7);
@@ -22,17 +20,27 @@ function Shine() {
   // Fetch carousel data from server
   useEffect(() => {
     const fetchCarouselData = async () => {
-      setLoading(true);
-      const data = await fetchData("api/carousel", "carousel");
-      if (data && data.carousel) {
-        setCarouselItems(data.carousel);
-      } else {
-        // Fallback already handled by fetchData, but just in case
-        setCarouselItems([
-          { name: "Shine your bathroom deserves", img: "/assets/shine.png" }
-        ]);
+      try {
+        const response = await fetch("http://localhost:5000/api/carousel");
+        if (!response.ok) {
+          throw new Error('Failed to fetch carousel data');
+        }
+        const data = await response.json();
+        setCarouselItems(data.carousel || []);
+      } catch (error) {
+        console.error("Error fetching carousel:", error);
+        // Fallback: Try static data API
+        try {
+          const staticResponse = await fetch("http://localhost:5000/api/static-data");
+          const staticData = await staticResponse.json();
+          setCarouselItems(staticData.carousel || []);
+        } catch (staticError) {
+          console.error("Error fetching static data:", staticError);
+          setCarouselItems([]);
+        }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchCarouselData();
@@ -66,7 +74,7 @@ function Shine() {
   const handleNext = () => carouselRef.current && carouselRef.current.next();
 
   return (
-    <div className="container mt-4 position-relative d-flex w-100">
+    <div className="container mt-4 position-relative d-flex w-100" style={{ overflow: "hidden" }}>
       <Carousel
         ref={carouselRef}
         interval={null}
@@ -148,13 +156,13 @@ function Shine() {
                       <div style={{ flex: "1 1 50%" }}>
                         <Card.Img
                           className="w-100 h-100"
-                          src={getAssetPath(item.img)}
+                          src={`http://localhost:5000${item.img}`}
                           alt={item.name}
                           style={{ objectFit: "cover" }}
                           onError={(e) => {
                             // Fallback if image fails to load
                             console.error(`Failed to load image: ${item.img}`);
-                            e.target.src = getAssetPath("/assets/placeholder.png"); // Add a placeholder image
+                            e.target.src = "/assets/placeholder.png"; // Add a placeholder image
                           }}
                         />
                       </div>
@@ -168,29 +176,25 @@ function Shine() {
       </Carousel>
 
       {/* Conditional arrows */}
-      {
-        currentIndex > 0 && (
-          <div
-            className="carousel-arrow left"
-            onClick={handlePrev}
-
-          >
-            &#10094;
-          </div>
-        )
-      }
-      {
-        currentIndex < chunkedItems.length - 1 && (
-          <div
-            className="carousel-arrow right"
-            onClick={handleNext}
-
-          >
-            &#10095;
-          </div>
-        )
-      }
-    </div >
+      {currentIndex > 0 && (
+        <div
+          className="carousel-arrow left"
+          onClick={handlePrev}
+          style={{ left: "10px" }}
+        >
+          &#10094;
+        </div>
+      )}
+      {currentIndex < chunkedItems.length - 1 && (
+        <div
+          className="carousel-arrow right"
+          onClick={handleNext}
+          style={{ right: "10px" }}
+        >
+          &#10095;
+        </div>
+      )}
+    </div>
   );
 }
 
