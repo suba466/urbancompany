@@ -204,13 +204,96 @@
     ],
     "packages": [
         {
+            "_id": "pkg-custom",
+            "name": "Make your own package",
+            "title": "Super Saver Package",
+            "subcategory": "Super Saver Package",
+            "category": "Salon for women",
+            "price": "2195",
+            "rating": "4.95",
+            "bookings": "2.5M",
+            "duration": "custom",
+            "img": "/assets/super.jpg",
+            "isActive": true,
+            "items": [
+                {
+                    "name": "Customized",
+                    "description": "Select your services"
+                }
+            ]
+        },
+        {
+            "_id": "pkg-waxing",
+            "name": "Honey Waxing - Full Arms + Full Legs + Underarms",
+            "title": "Waxing & threading",
+            "subcategory": "Waxing & threading",
+            "category": "Salon for women",
+            "price": "799",
+            "originalPrice": "1099",
+            "rating": "4.88",
+            "bookings": "500k",
+            "duration": "55 min",
+            "img": "/assets/waxing.png",
+            "isActive": true,
+            "items": [
+                {
+                    "name": "Full arms + Underarms",
+                    "description": "Honey wax"
+                },
+                {
+                    "name": "Full legs",
+                    "description": "Honey wax"
+                }
+            ]
+        },
+        {
+            "_id": "pkg-cleanup",
+            "name": "Sara Fruit Cleanup",
+            "title": "Cleanup",
+            "subcategory": "Cleanup",
+            "category": "Salon for women",
+            "price": "699",
+            "originalPrice": "999",
+            "rating": "4.75",
+            "bookings": "150k",
+            "duration": "45 min",
+            "img": "/assets/cleanup.png",
+            "isActive": true,
+            "items": [
+                {
+                    "name": "Steps",
+                    "description": "Cleanse, Scrub, Massage, Pack"
+                }
+            ]
+        },
+        {
+            "_id": "pkg-facial",
+            "name": "O3+ Shine & Glow Facial",
+            "title": "Facial",
+            "subcategory": "Facial",
+            "category": "Salon for women",
+            "price": "1699",
+            "originalPrice": "2499",
+            "rating": "4.82",
+            "bookings": "300k",
+            "duration": "60 min",
+            "img": "/assets/facial.jpg",
+            "isActive": true,
+            "items": [
+                {
+                    "name": "Benefits",
+                    "description": "Instant glow and brightness"
+                }
+            ]
+        },
+        {
             "_id": "pkg-british",
             "name": "Elysian British Rose Pedicure",
             "title": "Pedicure & manicure",
             "subcategory": "Pedicure & manicure",
             "category": "Salon for women",
-            "price": "219",
-            "originalPrice": "499",
+            "price": "759",
+            "originalPrice": "999",
             "rating": "4.86",
             "bookings": "101k",
             "duration": "45 min",
