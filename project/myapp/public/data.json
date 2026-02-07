@@ -161,9 +161,9 @@
     ],
     "subcategories": [
         {
-            "_id": "cleanup",
-            "name": "Cleanup",
-            "img": "/assets/cleanup.png",
+            "_id": "supersaver",
+            "name": "Super Saver Packages",
+            "img": "/assets/super.webp",
             "isActive": true,
             "categoryName": "Salon for women"
         },
@@ -175,9 +175,30 @@
             "categoryName": "Salon for women"
         },
         {
+            "_id": "cleanup",
+            "name": "Cleanup",
+            "img": "/assets/cleanup.png",
+            "isActive": true,
+            "categoryName": "Salon for women"
+        },
+        {
+            "_id": "facial",
+            "name": "Facial",
+            "img": "/assets/facial.jpg",
+            "isActive": true,
+            "categoryName": "Salon for women"
+        },
+        {
             "_id": "pedicure",
             "name": "Pedicure & manicure",
             "img": "/assets/foot.webp",
+            "isActive": true,
+            "categoryName": "Salon for women"
+        },
+        {
+            "_id": "haircare",
+            "name": "Haircare",
+            "img": "/assets/haircare.png",
             "isActive": true,
             "categoryName": "Salon for women"
         }
@@ -191,6 +212,15 @@
             "text": "Extra 25% off for new users*",
             "key": "waxing-banner",
             "img": "/assets/waxing.png"
+        },
+        {
+            "price": "₹1,699",
+            "value": "₹2,499",
+            "title": "O3+ Shine Facial",
+            "tit": "Instant Glow & Brightness",
+            "text": "Best seller for weddings",
+            "key": "facial-banner",
+            "img": "/assets/facial.jpg"
         }
     ],
     "added": [
@@ -303,6 +333,46 @@
                 {
                     "name": "Details",
                     "description": "Foot soak, scrub, serum-massage"
+                }
+            ]
+        },
+        {
+            "_id": "pkg-manicure",
+            "name": "Chocolate & Vanilla Manicure",
+            "title": "Pedicure & manicure",
+            "subcategory": "Pedicure & manicure",
+            "category": "Salon for women",
+            "price": "699",
+            "originalPrice": "899",
+            "rating": "4.80",
+            "bookings": "80k",
+            "duration": "40 min",
+            "img": "/assets/british.webp",
+            "isActive": true,
+            "items": [
+                {
+                    "name": "Details",
+                    "description": "Classic manicure with premium products"
+                }
+            ]
+        },
+        {
+            "_id": "pkg-hairspa",
+            "name": "L'Oreal Hair Spa",
+            "title": "Haircare",
+            "subcategory": "Haircare",
+            "category": "Salon for women",
+            "price": "1299",
+            "originalPrice": "1800",
+            "rating": "4.85",
+            "bookings": "200k",
+            "duration": "60 min",
+            "img": "/assets/haircare.png",
+            "isActive": true,
+            "items": [
+                {
+                    "name": "Treatment",
+                    "description": "Deep conditioning for dry hair"
                 }
             ]
         }
