@@ -22,39 +22,15 @@ function Salon() {
       try {
         const data = await fetchData("api/subcategories", "subcategories");
 
-        const hardcoded = [
-          { _id: 'waxing', name: 'Waxing', img: '/assets/waxing.png', isActive: true },
-          { _id: 'cleanup', name: 'Cleanup', img: '/assets/cleanup.png', isActive: true },
-          { _id: 'haircare', name: 'Haircare', img: '/assets/haircare.png', isActive: true },
-          { _id: 'pedicure', name: 'Pedicure', img: '/assets/foot.webp', isActive: true },
-          { _id: 'manicure', name: 'Manicure', img: '/assets/british.webp', isActive: true },
-          { _id: 'facial', name: 'Facial', img: '/assets/facial.jpg', isActive: true }
-        ];
 
         let finalSubcategories = [];
 
         if (data && data.subcategories) {
-          const filtered = data.subcategories.filter(sub => {
-            const categoryName = (sub.categoryName || sub.categoryId?.name || "").toLowerCase();
-            const subName = (sub.name || "").toLowerCase();
-
-            // Match anything in Salon category or explicitly mentioned items
-            const matchesSalon = categoryName.includes('salon');
-            const matchesSuperSaver = subName.includes('super saver') || subName.includes('25%');
-            const isActive = sub.isActive !== false;
-
-            return (matchesSalon || matchesSuperSaver) && isActive;
+          finalSubcategories = data.subcategories.filter(sub => {
+            // Basic active check. User wants full dependency on admin panel so we likely shouldn't
+            // filter too aggressively unless it's just about being 'active'.
+            return sub.isActive !== false;
           });
-
-          if (filtered.length > 0) {
-            // Priority to database subcategories. Fill up to 6.
-            finalSubcategories = filtered.slice(0, 6);
-          }
-        }
-
-        // Only if API returned nothing at all, use hardcoded as a safety net
-        if (finalSubcategories.length === 0) {
-          finalSubcategories = hardcoded;
         }
 
         setSalonSubcategories(finalSubcategories);
