@@ -16,9 +16,9 @@
             "isActive": true
         },
         {
-            "name": "Carpenters",
-            "key": "carpenter",
-            "img": "/assets/brush.png",
+            "name": "Electricians",
+            "key": "electrician",
+            "img": "/assets/electric.webp",
             "isActive": true
         },
         {
