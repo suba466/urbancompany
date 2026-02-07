@@ -1,4 +1,4 @@
-import API_URL from "./config";
+import API_URL, { getAssetPath, shouldCallApi } from "./config";
 
 /**
  * Fetch data with automatic fallback to data.json
@@ -7,20 +7,22 @@ import API_URL from "./config";
  * @returns {Promise<any>}
  */
 export const fetchData = async (endpoint, dataKey) => {
-    // 1. Try API first
-    try {
-        const url = endpoint.startsWith('http') ? endpoint : `${API_URL}/${endpoint.startsWith('/') ? endpoint.substring(1) : endpoint}`;
-        const response = await fetch(url);
-        if (response.ok) {
-            return await response.json();
+    // 1. Try API first if configured and appropriate for env
+    if (shouldCallApi()) {
+        try {
+            const url = endpoint.startsWith('http') ? endpoint : `${API_URL}/${endpoint.startsWith('/') ? endpoint.substring(1) : endpoint}`;
+            const response = await fetch(url);
+            if (response.ok) {
+                return await response.json();
+            }
+        } catch (error) {
+            console.warn(`API ${endpoint} failed, falling back to local data...`);
         }
-    } catch (error) {
-        console.warn(`API ${endpoint} failed, falling back to local data...`);
     }
 
     // 2. Simple fallback to local data.json
     try {
-        const response = await fetch("/data.json");
+        const response = await fetch(getAssetPath("data.json"));
         if (response.ok) {
             const staticData = await response.json();
             return dataKey ? { [dataKey]: staticData[dataKey] } : staticData;
