@@ -3,7 +3,7 @@ import { Container, Row, Col, Card, Form, Button, Spinner, InputGroup } from 're
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 import { useAdminAuth } from './hooks'; // Import from hooks
-import API_URL from './config';
+import API_URL, { getAssetPath } from './config';
 
 function AdminLogin({ onLogin }) {
   const [loginData, setLoginData] = useState({ email: '', password: '' });
@@ -12,7 +12,7 @@ function AdminLogin({ onLogin }) {
   const [errorLocal, setErrorLocal] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const logoUrl = `${API_URL}/assets/Uc.png`;
+  const logoUrl = getAssetPath("/assets/Uc.png");
 
   const { login, token, isAuthenticated, error: authError, loading: authLoading } = useAdminAuth();
 
@@ -114,7 +114,7 @@ function AdminLogin({ onLogin }) {
 
                     <h3 className="text-center mb-1 fw-bold">Urban Company</h3>
                     <p className="text-center mb-0 opacity-75" style={{ fontSize: "1rem" }}>
-                       Administration Portal
+                      Administration Portal
                     </p>
                   </div>
                 </Col>

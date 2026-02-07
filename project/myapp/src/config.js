@@ -1,4 +1,10 @@
-const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+const isLocalhost = Boolean(
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1" ||
+    window.location.hostname === "[::1]"
+);
+
+const isGitHubPages = window.location.hostname.includes("github.io");
 
 const API_URL = import.meta.env.VITE_API_URL || (isLocalhost ? "http://localhost:5000" : "");
 
@@ -14,12 +20,22 @@ export const getAssetPath = (path) => {
     return `${base}${cleanPath}`;
 };
 
-// Simplified API call check - don't hit localhost from a live site
+// Simplified API call check - don't hit localhost from a live site or github.io
 export const shouldCallApi = () => {
+    // Force false on GitHub Pages unless an explicit API URL is provided
+    if (isGitHubPages && !import.meta.env.VITE_API_URL) return false;
+
     if (import.meta.env.VITE_API_URL) return true;
     if (isLocalhost && API_URL) return true;
     return false;
 };
+
+console.log("Environment check:", {
+    isLocalhost,
+    isGitHubPages,
+    API_URL,
+    shouldCallApi: shouldCallApi()
+});
 
 export default API_URL;
 

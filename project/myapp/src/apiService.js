@@ -11,6 +11,7 @@ export const fetchData = async (endpoint, dataKey) => {
     if (shouldCallApi()) {
         try {
             const url = endpoint.startsWith('http') ? endpoint : `${API_URL}/${endpoint.startsWith('/') ? endpoint.substring(1) : endpoint}`;
+            console.log(`Fetching from API: ${url}`);
             const response = await fetch(url);
             if (response.ok) {
                 return await response.json();
@@ -22,16 +23,19 @@ export const fetchData = async (endpoint, dataKey) => {
 
     // 2. Simple fallback to local data.json
     try {
-        const response = await fetch(getAssetPath("data.json"));
+        const fallbackUrl = getAssetPath("data.json");
+        console.log(`Fetching fallback from: ${fallbackUrl}`);
+        const response = await fetch(fallbackUrl);
         if (response.ok) {
             const staticData = await response.json();
             return dataKey ? { [dataKey]: staticData[dataKey] } : staticData;
+        } else {
+            console.error(`Fallback failed with status: ${response.status}`);
         }
     } catch (error) {
         console.error("Critical: Both API and fallback failed:", error);
     }
     return null;
 };
-
 
 export default fetchData;

@@ -14,7 +14,7 @@ import {
   getCSVHeadersFromData,
   generatePDFReportHTML
 } from './downloadUtils';
-import API_URL from "./config";
+import API_URL, { getAssetPath } from "./config";
 
 function Categories({
   categories,
@@ -102,7 +102,7 @@ function Categories({
   // Download functions using utilities
   const handleDownloadPDF = () => {
     const data = filteredCategories.map(cat => ({
-      'Image': cat.img ? `${API_URL}${cat.img}` : null,
+      'Image': cat.img ? getAssetPath(cat.img) : null,
       'Name': cat.name,
       'Description': cat.description || 'No description',
       'Status': cat.isActive !== false ? 'Active' : 'Inactive'
@@ -117,7 +117,7 @@ function Categories({
       'Name': cat.name,
       'Description': cat.description || 'No description',
       'Status': cat.isActive !== false ? 'Active' : 'Inactive',
-      'Image URL': cat.img ? `${API_URL}${cat.img}` : 'No Image',
+      'Image URL': cat.img ? getAssetPath(cat.img) : 'No Image',
       'Key': cat.key || ''
     }));
 
@@ -129,7 +129,7 @@ function Categories({
       'Name': cat.name,
       'Description': cat.description || 'No description',
       'Status': cat.isActive !== false ? 'Active' : 'Inactive',
-      'Image URL': cat.img ? `${API_URL}${cat.img}` : 'No Image',
+      'Image URL': cat.img ? getAssetPath(cat.img) : 'No Image',
       'Key': cat.key || ''
     }));
 
@@ -176,7 +176,7 @@ function Categories({
       const results = {};
       for (const category of categories) {
         if (category.img) {
-          const fullUrl = `${API_URL}${category.img}`;
+          const fullUrl = getAssetPath(category.img);
           const exists = await checkImageExists(fullUrl);
           results[category._id] = exists;
         }
@@ -324,9 +324,7 @@ function Categories({
                       </tr>
                     ) : (
                       filteredCategories.map((category) => {
-                        const imageUrl = category.img
-                          ? `${API_URL}${category.img}`
-                          : `${API_URL}/assets/default-category.png`;
+                        const imageUrl = getAssetPath(category.img || '/assets/default-category.png');
 
                         return (
                           <tr key={category._id} className="align-middle">
@@ -488,7 +486,7 @@ function Categories({
                 <div className="mb-3">
                   {selectedCategory.img ? (
                     <img
-                      src={`${API_URL}${selectedCategory.img}`}
+                      src={getAssetPath(selectedCategory.img)}
                       alt={selectedCategory.name}
                       style={{
                         width: '100px',
@@ -563,7 +561,7 @@ function Categories({
                   <div className="list-group-item px-0 border-bottom-0">
                     <small className="text-muted d-block">Image URL</small>
                     <small className="text-truncate d-block" style={{ maxWidth: '100%' }}>
-                      {`${API_URL}${selectedCategory.img}`}
+                      {getAssetPath(selectedCategory.img)}
                     </small>
                   </div>
                 )}
