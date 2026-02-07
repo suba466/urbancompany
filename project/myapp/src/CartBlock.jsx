@@ -46,15 +46,10 @@ function CartBlock({
 
   // Fixed: Handle view cart navigation
   const handleViewCart = () => {
-    // Check if we're already on /cart page
-    if (window.location.pathname === '/cart') {
-      // If already on cart page, just scroll to top
-      window.scrollTo(0, 0);
-    } else {
-      // Navigate to cart page immediately using window.location
-      // This ensures immediate navigation without waiting for React Router
-      window.location.href = '/cart';
-    }
+    // Navigate to cart page using react-router
+    navigate('/cart');
+    // Scroll to top
+    window.scrollTo(0, 0);
   };
 
   return (

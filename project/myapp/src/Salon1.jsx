@@ -10,10 +10,8 @@ import Salon1modal from './Salon1modal';
 import { useNavigate } from 'react-router-dom';
 import CartBlock from './CartBlock';
 import { useCart } from "./hooks";
-import API_URL, { getAssetPath, shouldCallApi } from "./config";
-import { fetchData } from "./apiService";
 
-function Salon1() {
+function Salon1({ idSuffix = "" }) {
   const [savedExtras, setSavedExtras] = useState({});
   const [superPack, setSuperPack] = useState([]);
   const [packages, setPackages] = useState([]);
@@ -21,10 +19,9 @@ function Salon1() {
   const [salon, setSalon] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-
   const addButtonRefs = useRef({});
   const [showDiscountModal, setShowDiscountModal] = useState(false);
-  const normalizeKey = (str) => str?.toLowerCase()?.trim()?.replace(/\s+/g, "-") || "";
+  const normalizeKey = (str) => str?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || "";
   const roundPrice = (price) => Math.round(Number(price) || 0);
   const [showFrequentlyAdded, setShowFrequentlyAdded] = useState(false);
   const navigate = useNavigate();
@@ -55,12 +52,37 @@ function Salon1() {
     navigate('/cart-summary');
   };
 
+  // Helper to guess and normalize subcategory titles
+  const guessSubcategory = (pkg) => {
+    const name = (pkg.name || "").toLowerCase();
+    const title = (pkg.title || pkg.subcategory || "").toLowerCase();
+
+    // 1. Name-based checks (Highest Priority)
+    if (name.includes("wax") || name.includes("threading")) return "Waxing & threading";
+    if (name.includes("facial")) return "Signature Facial";
+    if (name.includes("cleanup") || name.includes("bleach") || name.includes("detan")) return "Cleanup";
+    if (name.includes("pedicure") || name.includes("manicure")) return "Pedicure & manicure";
+    if (name.includes("hair")) return "Haircare";
+
+    // 2. Title/Category-based checks (Lower Priority)
+    // Only use title if name didn't match specific keywords, to avoid miscategorization
+    if (title.includes("facial")) return "Signature Facial";
+    if (title.includes("cleanup")) return "Cleanup";
+    if (title.includes("pedicure") || title.includes("manicure")) return "Pedicure & manicure";
+    if (title.includes("hair")) return "Haircare";
+    if (title.includes("waxing") || title.includes("threading")) return "Waxing & threading";
+
+    // Default: return original properly capitalized or fallback
+    return pkg.title || pkg.subcategory || pkg.name || "Uncategorized";
+  };
+
   // Group packages by subcategory (title)
   const groupPackagesBySubcategory = () => {
     const groups = {};
 
     packages.forEach(pkg => {
-      const subcategory = pkg.subcategory || pkg.title || pkg.name || "Uncategorized";
+      // Use the helper to get the CORRECT subcategory
+      const subcategory = guessSubcategory(pkg);
 
       if (!groups[subcategory]) {
         groups[subcategory] = {
@@ -80,17 +102,14 @@ function Salon1() {
     const fetchAllData = async () => {
       setIsLoading(true);
       try {
-        console.log("Salon1: Fetching all data...");
-        // Use individual try-catches or a timeout to prevent hanging
-        await Promise.allSettled([
+        await Promise.all([
           fetchSuperPackages(),
           fetchPackages(),
           fetchSalonForWomen()
         ]);
-        console.log("Salon1: Data fetch completed (or settled)");
         updatePageTitle();
       } catch (error) {
-        console.error("Error in Salon1 fetchAllData:", error);
+        console.error("Error fetching data:", error);
       } finally {
         setIsLoading(false);
       }
@@ -122,69 +141,38 @@ function Salon1() {
   const fetchPackages = async () => {
     try {
       let packages = [];
+      try {
+        const response1 = await fetch('http://localhost:5000/api/active-packages');
+        if (response1.ok) {
+          const data1 = await response1.json();
+          packages = data1.packages || [];
+          packages.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        }
+      } catch (error) { console.error(error); }
 
-      // 1. Try active packages
-      const data1 = await fetchData("api/active-packages", "packages");
-      if (data1 && data1.packages) {
-        packages = data1.packages;
-      }
-
-      // 2. Try all packages if needed
       if (packages.length === 0) {
-        const data2 = await fetchData("api/packages", "packages");
-        if (data2 && data2.packages) {
-          packages = data2.packages;
-        }
+        try {
+          const response2 = await fetch('http://localhost:5000/api/packages');
+          if (response2.ok) {
+            const data2 = await response2.json();
+            packages = (data2.packages || []).filter(pkg => pkg.isActive !== false);
+            packages.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+          }
+        } catch (error) { console.error(error); }
       }
 
-      // 3. Try specifically salon for women endpoint
       if (packages.length === 0) {
-        const data3 = await fetchData("api/salonforwomen", "salonforwomen");
-        if (data3 && data3.salonforwomen) {
-          packages = data3.salonforwomen;
-        }
+        try {
+          const response3 = await fetch('http://localhost:5000/api/salonforwomen');
+          if (response3.ok) {
+            const data3 = await response3.json();
+            packages = data3.salonforwomen || [];
+            if (packages[0] && packages[0].isActive !== undefined) {
+              packages = packages.filter(pkg => pkg.isActive !== false);
+            }
+          }
+        } catch (error) { console.error(error); }
       }
-
-      // Ensure we only have active ones
-      if (packages.length > 0) {
-        packages = packages.filter(pkg => pkg.isActive !== false);
-        packages.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-      }
-
-      // 4. Fallback to local data if still empty
-      if (packages.length === 0) {
-        const data = await fetchData("data.json");
-        if (data) {
-          const sourceItems = data.packages || data.added || data.book || [];
-          packages = sourceItems.map((item, idx) => ({
-            _id: item._id || item.key || `fallback-pkg-${idx}`,
-            name: item.name,
-            title: item.subcategory || item.category || "Salon for women",
-            subcategory: item.subcategory || item.category || "Salon for women",
-            price: (item.value || "").replace('₹', '') || item.price || "499",
-            rating: item.rating || (item.title || "").split('(')[0] || "4.8",
-            reviews: item.reviews || (item.title || "").match(/\(([^)]+)\)/)?.[1] || "1M",
-            img: item.img,
-            isActive: true,
-            items: item.items || ["Service included", "Professional technician"]
-          }));
-        }
-      }
-
-      // 5. Final Subcategory Filtering (if applicable)
-      const activeSubCategory = localStorage.getItem('activeSubCategory');
-      if (activeSubCategory && packages.length > 0) {
-        const filtered = packages.filter(pkg =>
-          (pkg.subcategory && pkg.subcategory.toLowerCase() === activeSubCategory.toLowerCase()) ||
-          (pkg.title && pkg.title.toLowerCase() === activeSubCategory.toLowerCase()) ||
-          (pkg.category && pkg.category.toLowerCase() === activeSubCategory.toLowerCase())
-        );
-        // Only override if filtered results exist
-        if (filtered.length > 0) {
-          packages = filtered;
-        }
-      }
-
       setPackages(packages);
     } catch (error) {
       console.error("Error fetching packages:", error);
@@ -194,40 +182,33 @@ function Salon1() {
 
   const fetchSuperPackages = async () => {
     try {
-      const data = await fetchData("api/super", "super");
-      if (data && data.super) {
-        setSuperPack([data.super[0]]);
-      } else {
-        // Fallback already handled by fetchData or manual fallback
-        setSuperPack([{
-          key: "super",
-          img: "/assets/super.jpg",
-          title: "Festive ready package",
-          price: "25% off",
-          text: "Facials & more"
-        }]);
-      }
+      const response = await fetch("http://localhost:5000/api/super");
+      if (!response.ok) throw new Error('Failed');
+      const data = await response.json();
+      setSuperPack(data.super ? [data.super[0]] : []);
     } catch (error) {
-      console.error("Super packages fetch error:", error);
+      try {
+        const staticResponse = await fetch("http://localhost:5000/api/static-data");
+        const staticData = await staticResponse.json();
+        setSuperPack(staticData.super ? [staticData.super[0]] : []);
+      } catch (e) { }
     }
   };
 
   const fetchSalonForWomen = async () => {
     try {
-      const data = await fetchData("api/salonforwomen", "salonforwomen");
-      if (data && data.salonforwomen) {
-        setSalon(data.salonforwomen);
-      } else {
-        const local = await fetchData("data.json");
-        setSalon(local?.salonforwomen || local?.added || [
-          { name: "Foot massage", price: "199", img: "/assets/foot.webp" }
-        ]);
-      }
+      const response = await fetch("http://localhost:5000/api/salonforwomen");
+      if (!response.ok) throw new Error('Failed');
+      const data = await response.json();
+      setSalon(data.salonforwomen || []);
     } catch (error) {
-      console.error("Salon for women fetch error:", error);
+      try {
+        const staticResponse = await fetch("http://localhost:5000/api/static-data");
+        const staticData = await staticResponse.json();
+        setSalon(staticData.salonforwomen || []);
+      } catch (e) { }
     }
   };
-
 
   useEffect(() => {
     window.openEditPackageFromCart = handleShowModal;
@@ -235,17 +216,7 @@ function Salon1() {
 
   useEffect(() => { updatePageTitle(); }, [packages]);
 
-  const isCustomPackage = (item) => {
-    const name = item.name || item.title || "";
-    return name.toLowerCase().includes("make your");
-  };
-
   const handleShowModal = async (item) => {
-    // Only allow modal for "Make Your Package" items
-    if (!isCustomPackage(item)) {
-      return;
-    }
-
     try {
       let matched = item;
       let existingCartItem = carts.find(c =>
@@ -320,32 +291,21 @@ function Salon1() {
       const displayTitle = pkg.title || pkg.subcategory || "Package";
       const productName = pkg.name || "Make Your Package";
 
-      // Determine content based on package items or fallback
-      let baseContentItems = [];
-
-      if (!isExtraOnly) {
-        if (pkg.items && pkg.items.length > 0) {
-          // Use package items (description points) if available to match product description
-          baseContentItems = pkg.items.map(item => ({
-            details: item.name ? (item.description ? `${item.name}: ${item.description}` : item.name) : (item.description || item.title || item.details || "Service"),
-            price: 0
-          }));
-        } else {
-          // Fallback to baseServices (hardcoded) if no items defined
-          baseContentItems = (pkg.baseServices || baseServices).map(s => ({
-            details: s.content && s.content !== s.title ? `${s.title} (${s.content})` : s.title,
-            price: s.price || 0,
-          }));
-        }
-      }
-
-      const content = [
-        ...baseContentItems,
-        ...selectedServices.map(s => ({
+      const content = isExtraOnly
+        ? selectedServices.map(s => ({
           details: s.content && s.content !== s.title ? `${s.title} (${s.content})` : s.title,
           price: s.price || 0,
         }))
-      ];
+        : [
+          ...(pkg.baseServices || baseServices).map(s => ({
+            details: s.content && s.content !== s.title ? `${s.title} (${s.content})` : s.title,
+            price: s.price || 0,
+          })),
+          ...selectedServices.map(s => ({
+            details: s.content && s.content !== s.title ? `${s.title} (${s.content})` : s.title,
+            price: s.price || 0,
+          })),
+        ];
 
       const totalPrice = overridePrice || (pkg.price ? Number(pkg.price) : content.reduce((sum, s) => sum + s.price, 0));
 
@@ -367,27 +327,22 @@ function Salon1() {
         updateItem(productId, existing.count + 1);
 
         // Also update in database
-        if (shouldCallApi()) {
-          await fetch(`${API_URL}/api/carts/${existing._id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-        }
+        await fetch(`http://localhost:5000/api/carts/${existing._id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
       } else {
         // Add new item to Redux
         addItem(payload);
 
         // Also add to database
-        if (shouldCallApi()) {
-          await fetch(`${API_URL}/api/addcarts`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-        }
+        await fetch("http://localhost:5000/api/addcarts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
       }
-
 
       setShowFrequentlyAdded(true);
     } catch (error) { console.error(error); }
@@ -405,15 +360,12 @@ function Salon1() {
       updateItem(cartItem._id || cartItem.productId, (cartItem.count || 1) + 1);
 
       // Update database
-      if (shouldCallApi()) {
-        await fetch(`${API_URL}/api/carts/${cartItem._id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ count: (cartItem.count || 1) + 1 })
-        });
-      }
+      await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count: (cartItem.count || 1) + 1 })
+      });
     } catch (err) { console.error(err); }
-
   };
 
   const handleDecrease = async (cartItem) => {
@@ -423,24 +375,19 @@ function Salon1() {
         removeItem(cartItem._id || cartItem.productId);
 
         // Remove from database
-        if (shouldCallApi()) {
-          await fetch(`${API_URL}/api/carts/${cartItem._id}`, { method: "DELETE" });
-        }
+        await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, { method: "DELETE" });
       } else {
         // Update in Redux
         updateItem(cartItem._id || cartItem.productId, cartItem.count - 1);
 
         // Update database
-        if (shouldCallApi()) {
-          await fetch(`${API_URL}/api/carts/${cartItem._id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ count: cartItem.count - 1 })
-          });
-        }
+        await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ count: cartItem.count - 1 })
+        });
       }
     } catch (err) { console.error(err); }
-
   };
 
   const formatPrice = (amount) => {
@@ -462,16 +409,21 @@ function Salon1() {
   const groupedPackages = groupPackagesBySubcategory();
 
   return (
-    <div className="mt-4 pb-5">
+    <Container className="mt-5">
       <Row>
-        <Col xs={12} md={8} style={{ border: "1px solid rgba(192,192,195,1)", padding: "15px" }} className='suppad'>
+        <Col xs={12} md={7} style={{ border: "1px solid rgba(192,192,195,1)", padding: "15px" }} className='suppad'>
           {pageTitle && <h4 className="fw-semibold mt-4">{pageTitle}</h4>}
 
           {groupedPackages.length === 0 ? (
             <div className="text-center py-5"><p>No packages available</p></div>
           ) : (
             groupedPackages.map((group, groupIndex) => (
-              <div key={groupIndex} className="subcategory-group" id={`section-${normalizeKey(group.title)}`}>
+              <div
+                key={groupIndex}
+                className="subcategory-group"
+                id={`section-${normalizeKey(group.title)}${idSuffix ? `-${idSuffix}` : ""}`}
+                style={{ scrollMarginTop: "120px" }}
+              >
 
                 {groupedPackages.length > 1 && (
                   <h5 className="fw-bold mb-3 mt-4 text-dark pb-2">
@@ -480,7 +432,8 @@ function Salon1() {
                 )}
 
                 {group.packages.map((pkg) => {
-                  const displayTitle = pkg.title || pkg.subcategory || "Unnamed Package";
+                  // Use group.title as the authoritative subcategory
+                  const displayTitle = group.title || pkg.title || pkg.subcategory || "Unnamed Package";
                   const serviceName = pkg.name || "Service";
                   const displayItems = Array.isArray(pkg.items) ? pkg.items : [];
                   const inCart = carts.find(c => c.productId === pkg._id || (c.title === displayTitle && c.serviceName === serviceName));
@@ -492,36 +445,34 @@ function Salon1() {
 
                   const hasImage = pkg.img && pkg.img.trim() !== "";
 
-                  // Check if this is one of the categories that should show a thumbnail image
-                  const targetCategories = ["cleanup", "pedicure", "manicure", "hair bleach", "bleach"];
-                  const checkText = (displayTitle + " " + (group.title || "")).toLowerCase();
-                  const showThumbnailVariant = hasImage && targetCategories.some(t => checkText.includes(t));
+                  const isWaxingGroup = group.title === "Waxing & threading";
 
+                  // Original logic restored for Discount Banner (only for items without images)
                   const shouldShowDiscountBanner = !hasImage && isSuperSaver;
+
+                  // New Logic: Show Small Image Box for non-waxing items with images
+                  const shouldShowSmallImage = hasImage && !isWaxingGroup;
 
                   return (
                     <div key={pkg._id} className=' position-relative package-item' style={{ marginBottom: "40px" }}>
 
-                      {/* --- BANNER IMAGE SECTION - Only show if has image AND not showing thumbnail variant --- */}
-                      {hasImage && !showThumbnailVariant && (
+                      {/* --- BANNER IMAGE SECTION - Only show if has image AND it is a Waxing group (or explicitly requested to show image) --- */}
+                      {hasImage && isWaxingGroup && (
                         <div
                           className="mb-3 position-relative shadow-sm"
-                          onClick={() => {
-                            if (isCustomPackage(pkg)) {
-                              handleShowModal(pkg);
-                            }
-                          }}
+                          onClick={() => handleShowModal(pkg)}
                           style={{
-                            cursor: isCustomPackage(pkg) ? "pointer" : "default",
+                            cursor: "pointer",
                             borderRadius: "16px",
                             overflow: "hidden",
                             height: "150px",
-                            marginTop: "10px",
-                            width: "100%"
+                            marginTop: "10px"
                           }}
                         >
                           <img
-                            src={pkg.img.startsWith("http") ? pkg.img : getAssetPath(pkg.img)}
+                            src={
+                              pkg.img.startsWith("http") ? pkg.img : `http://localhost:5000${pkg.img}`
+                            }
                             alt={pkg.name || "Service"}
                             style={{
                               width: "100%",
@@ -530,9 +481,8 @@ function Salon1() {
                               objectPosition: "center"
                             }}
                             onError={(e) => {
-                              console.error("Failed to load image in Salon1:", pkg.img);
                               e.target.onerror = null;
-                              e.target.src = getAssetPath("/assets/placeholder.png");
+                              e.target.src = "http://localhost:5000/assets/placeholder.png";
                             }}
                           />
                         </div>
@@ -544,11 +494,7 @@ function Salon1() {
                           <p style={{ color: "#095819ff", marginBottom: "5px" }}>
                             <MdBackpack /> <span className='fw-bold' style={{ fontSize: "13px" }}>PACKAGE</span>
                           </p>
-                          <h6 className="fw-semibold" style={{ cursor: isCustomPackage(pkg) ? "pointer" : "default", fontSize: "16px" }} onClick={() => {
-                            if (isCustomPackage(pkg)) {
-                              handleShowModal(pkg);
-                            }
-                          }}>
+                          <h6 className="fw-semibold" style={{ cursor: "pointer", fontSize: "16px" }} onClick={() => handleShowModal(pkg)}>
                             {serviceName}
                           </h6>
                           <p style={{ color: "#5a5959ff", marginBottom: "5px" }}>
@@ -563,16 +509,124 @@ function Salon1() {
                         <Col xs={4} className='position-relative' style={{ minHeight: "100px", display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
                           <div className="d-flex flex-column h-100 w-100 align-items-end">
 
-                            {shouldShowDiscountBanner || showThumbnailVariant ? (
-                              /* --- SUPER SAVER DISCOUNT BOX OR THUMBNAIL IMAGE LAYOUT --- */
+                            {shouldShowSmallImage ? (
+                              /* --- SMALL IMAGE BOX LAYOUT (New Request) --- */
                               <div
-                                onClick={() => {
-                                  if (showThumbnailVariant && isCustomPackage(pkg)) {
-                                    handleShowModal(pkg);
-                                  } else if (shouldShowDiscountBanner) {
-                                    handleShowCarouselModal(pkg);
-                                  }
+                                onClick={() => handleShowModal(pkg)}
+                                className="shadow-sm mt-auto"
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  position: "relative",
+                                  width: "110px",
+                                  height: "110px", // Square box
+                                  marginBottom: "10px",
+                                  overflow: "visible",
+                                  backgroundColor: "white",
+                                  borderRadius: "8px",
+                                  border: "1px solid #ededed"
                                 }}
+                              >
+                                {/* Image filling the box */}
+                                <img
+                                  src={
+                                    pkg.img.startsWith("http") ? pkg.img : `http://localhost:5000${pkg.img}`
+                                  }
+                                  alt={pkg.name}
+                                  style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    objectFit: "cover",
+                                    borderRadius: "8px"
+                                  }}
+                                  onError={(e) => e.target.src = "http://localhost:5000/assets/placeholder.png"}
+                                />
+
+                                {/* Add Button Overlay (Identical to Discount Box) */}
+                                {!inCart ? (
+                                  <Button
+                                    ref={(el) => (addButtonRefs.current[pkg._id] = el)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAddToCart({
+                                        ...pkg,
+                                        name: pkg.name,
+                                        displayTitle: displayTitle,
+                                        serviceName: serviceName,
+                                        productId: pkg._id
+                                      }, []);
+                                    }}
+                                    className="shadow-sm"
+                                    style={{
+                                      position: "absolute",
+                                      bottom: "-12px",
+                                      left: "50%",
+                                      transform: "translateX(-50%)",
+                                      width: "70px",
+                                      color: "rgb(110, 66, 229)",
+                                      backgroundColor: "white",
+                                      border: "1px solid rgb(110, 66, 229)",
+                                      padding: "4px 0",
+                                      fontWeight: "700",
+                                      fontSize: "13px",
+                                      borderRadius: "6px",
+                                      height: "30px",
+                                      lineHeight: "1",
+                                      boxShadow: "0 2px 5px rgba(0,0,0,0.1)"
+                                    }}
+                                  >
+                                    Add
+                                  </Button>
+                                ) : (
+                                  <div
+                                    className="d-flex align-items-center justify-content-between shadow-sm"
+                                    onClick={(e) => e.stopPropagation()}
+                                    style={{
+                                      position: "absolute",
+                                      bottom: "-12px",
+                                      left: "50%",
+                                      transform: "translateX(-50%)",
+                                      width: "70px",
+                                      backgroundColor: "white",
+                                      border: "1px solid rgb(110, 66, 229)",
+                                      borderRadius: "6px",
+                                      height: "30px",
+                                      zIndex: 2,
+                                      padding: "0 2px"
+                                    }}>
+
+                                    <Button
+                                      onClick={() => handleDecrease(inCart)}
+                                      className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent'
+                                      style={{ width: "20px", height: "100%", fontSize: "18px", fontWeight: "bold" }}
+                                    >
+                                      −
+                                    </Button>
+                                    <span className="fw-bold" style={{ fontSize: "13px", color: "rgb(110, 66, 229)" }}>{inCart.count || 1}</span>
+                                    <Button
+                                      onClick={() => handleIncrease(inCart)}
+                                      className='button border-0 p-0 text-dark d-flex align-items-center justify-content-center bg-transparent'
+                                      style={{
+                                        width: "20px",
+                                        height: "100%",
+                                        fontSize: "18px",
+                                        fontWeight: "bold",
+                                        opacity: (inCart.count || 1) >= 3 ? "0.6" : "1",
+                                        cursor: (inCart.count || 1) >= 3 ? "not-allowed" : "pointer"
+                                      }}
+                                      disabled={(inCart.count || 1) >= 3}
+                                    >
+                                      +
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            ) : shouldShowDiscountBanner ? (
+                              /* --- SUPER SAVER DISCOUNT BOX LAYOUT --- */
+                              <div
+                                onClick={() => handleShowCarouselModal(pkg)}
                                 className="shadow-sm mt-auto"
                                 style={{
                                   display: "flex",
@@ -584,35 +638,16 @@ function Salon1() {
                                   height: "110px",
                                   marginBottom: "10px",
                                   overflow: "visible",
-                                  backgroundColor: showThumbnailVariant ? "white" : "#f5f5f5",
+                                  backgroundColor: "#f5f5f5",
                                   borderRadius: "8px",
-                                  border: showThumbnailVariant ? "none" : "1px solid #ededed"
+                                  border: "1px solid #ededed"
                                 }}
                               >
 
-                                {showThumbnailVariant ? (
-                                  <img
-                                    src={pkg.img.startsWith("http") ? pkg.img : getAssetPath(pkg.img)}
-                                    alt={serviceName}
-                                    style={{
-                                      width: "100%",
-                                      height: "100%",
-                                      objectFit: "cover",
-                                      borderRadius: "8px"
-                                    }}
-                                    onError={(e) => {
-                                      console.warn("Failed to load thumbnail in Salon1:", pkg.img);
-                                      e.target.onerror = null;
-                                      e.target.src = getAssetPath("/assets/Uc.png");
-                                    }}
-
-                                  />
-                                ) : (
-                                  <div className="text-center">
-                                    <h2 className="fw-bold m-0" style={{ color: "#0d5924", fontSize: "26px", lineHeight: "0.9" }}>25%</h2>
-                                    <h6 className="fw-bold m-0" style={{ color: "#0d5924", fontSize: "14px", marginTop: "2px" }}>OFF</h6>
-                                  </div>
-                                )}
+                                <div className="text-center">
+                                  <h2 className="fw-bold m-0" style={{ color: "#0d5924", fontSize: "26px", lineHeight: "0.9" }}>25%</h2>
+                                  <h6 className="fw-bold m-0" style={{ color: "#0d5924", fontSize: "14px", marginTop: "2px" }}>OFF</h6>
+                                </div>
 
                                 {!inCart ? (
                                   <Button
@@ -768,24 +803,21 @@ function Salon1() {
                           <p className="text-muted">No service details available</p>
                         )}
                       </div>
-                      <br />
-                      {isCustomPackage(pkg) && (
-                        <div>
-                          <Button
-                            className='edit '
-                            onClick={() => handleShowModal(pkg)}
-                            style={{
-                              backgroundColor: "transparent",
-                              border: "1px solid #ccc",
-                              color: "#333",
-                              padding: "5px 15px",
-                              fontSize: "14px"
-                            }}
-                          >
-                            Edit your package
-                          </Button>
-                        </div>
-                      )} <br />
+                      <br /><div>
+                        <Button
+                          className='edit '
+                          onClick={() => handleShowModal(pkg)}
+                          style={{
+                            backgroundColor: "transparent",
+                            border: "1px solid #ccc",
+                            color: "#333",
+                            padding: "5px 15px",
+                            fontSize: "14px"
+                          }}
+                        >
+                          Edit your package
+                        </Button>
+                      </div> <br />
                       <div className='border-bottom'></div>
                     </div>
 
@@ -795,7 +827,7 @@ function Salon1() {
             ))
           )}
         </Col>
-        <Col xs={12} md={4} className="mt-4 mt-md-0 sticky-cart d-none d-md-block">
+        <Col xs={12} md={5} className="mt-4 mt-md-0 sticky-cart d-none d-md-block">
           <div style={{ flex: 1, height: "1px", backgroundColor: "rgba(192,192,195,1)" }}></div>
           <br />
           {/* CartBlock gets cart from Redux automatically */}
@@ -817,19 +849,6 @@ function Salon1() {
           </Button>
         </div>
       )}
-
-      {/* --- MOBILE BOTTOM NAVIGATION (Visible < 576px) --- */}
-      <style>
-        {`
-          @media (max-width: 575.98px) {
-            .mobile-cart-footer-wrapper {
-              bottom: 60px !important;
-            }
-          }
-        `}
-      </style>
-
-
       <Salon1modal
         showFrequentlyAdded={showFrequentlyAdded}
         setShowFrequentlyAdded={setShowFrequentlyAdded}
@@ -846,11 +865,8 @@ function Salon1() {
         setShowDiscountModal={setShowDiscountModal}
         handleDecrease={handleDecrease}
         handleIncrease={handleIncrease}
-        carts={carts}
-        updateItem={updateItem}
-        removeItem={removeItem}
       />
-    </div>
+    </Container>
   );
 }
 

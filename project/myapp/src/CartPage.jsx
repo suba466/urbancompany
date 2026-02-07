@@ -94,7 +94,11 @@ function CartPage() {
     console.log("=== CART DEBUG INFO ===");
     console.log("Redux cart items:", cartItems);
     console.log("Redux cart count:", cartItems.length);
-    console.log("LocalStorage cart:", JSON.parse(localStorage.getItem('cartItems') || '[]'));
+    try {
+      console.log("LocalStorage cart:", JSON.parse(localStorage.getItem('cartItems') || '[]'));
+    } catch (e) {
+      console.log("LocalStorage cart: [CORRUPTED]", e);
+    }
     console.log("User email:", user?.email);
     console.log("Is authenticated:", isAuthenticated);
     console.log("=========================");

@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Salon1 from './Salon1.jsx';
 import { Alert } from "react-bootstrap";
-import API_URL, { getAssetPath } from "./config";
-import { fetchData } from "./apiService";
 
 function Salon() {
   const [salon, setSalon] = useState([]);
@@ -18,25 +16,62 @@ function Salon() {
 
   useEffect(() => {
     const fetchSalonSubcategories = async () => {
-      setLoading(true);
       try {
-        const data = await fetchData("api/subcategories", "subcategories");
+        setLoading(true);
+        console.log("Fetching ALL active subcategories from public API...");
 
+        // Clear previous data
+        setSalonSubcategories([]);
+        setHasSubcategories(false);
 
-        let finalSubcategories = [];
+        // 1. Get ALL active subcategories from PUBLIC API
+        const response = await fetch("http://localhost:5000/api/subcategories");
 
-        if (data && data.subcategories) {
-          finalSubcategories = data.subcategories.filter(sub => {
-            // Basic active check. User wants full dependency on admin panel so we likely shouldn't
-            // filter too aggressively unless it's just about being 'active'.
-            return sub.isActive !== false;
-          });
+        if (!response.ok) {
+          console.error("Failed to fetch subcategories");
+          setHasSubcategories(false);
+          return;
         }
 
-        setSalonSubcategories(finalSubcategories);
-        setHasSubcategories(finalSubcategories.length > 0);
+        const data = await response.json();
+        console.log("All subcategories from public API:", data);
+
+        if (data.success && data.subcategories && Array.isArray(data.subcategories)) {
+
+          // 2. Filter for "Salon for women" subcategories
+          // Find subcategories where categoryName contains "salon"
+          const salonSubcategories = data.subcategories.filter(sub => {
+            // Check if subcategory belongs to salon category
+            const hasSalonCategory =
+              sub.categoryName?.toLowerCase().includes('salon') ||
+              (sub.categoryId && sub.categoryId.name?.toLowerCase().includes('salon'));
+
+            // Also check if subcategory name contains "salon" as backup
+            const hasSalonName = sub.name?.toLowerCase().includes('salon');
+
+            // IMPORTANT: Only show ACTIVE subcategories
+            const isActive = sub.isActive === true || sub.isActive === undefined;
+
+            return (hasSalonCategory || hasSalonName) && isActive;
+          });
+
+          console.log("Filtered salon subcategories:", salonSubcategories);
+
+          if (salonSubcategories.length > 0) {
+            // Limit to 6 items for display
+            setSalonSubcategories(salonSubcategories.slice(0, 6));
+            setHasSubcategories(true);
+          } else {
+            console.log("No active salon subcategories found");
+            setHasSubcategories(false);
+          }
+        } else {
+          console.log("No subcategories data received");
+          setHasSubcategories(false);
+        }
+
       } catch (error) {
-        console.error("Error fetching subcategories:", error);
+        console.error("Error fetching salon subcategories: ", error);
         setHasSubcategories(false);
       } finally {
         setLoading(false);
@@ -46,35 +81,80 @@ function Salon() {
     fetchSalonSubcategories();
   }, []);
 
-  // Fetch salon for women data
+  // Alternative: Fetch from public API (if admin API requires auth and you want non-auth access)
+  useEffect(() => {
+    const fetchFromPublicAPI = async () => {
+      try {
+        const publicSubcatsResponse = await fetch("http://localhost:5000/api/subcategories");
+
+        if (publicSubcatsResponse.ok) {
+          const publicSubcatsData = await publicSubcatsResponse.json();
+          console.log("Subcategories from public API:", publicSubcatsData);
+
+          if (publicSubcatsData.subcategories && publicSubcatsData.subcategories.length > 0) {
+            // Filter for salon-related AND active subcategories
+            const salonActiveSubcategories = publicSubcatsData.subcategories.filter(sub =>
+              (sub.categoryName?.toLowerCase().includes('salon') ||
+                sub.name?.toLowerCase().includes('salon')) &&
+              (sub.isActive === true || sub.isActive === undefined)
+            );
+
+            console.log("Active salon subcategories from public API:", salonActiveSubcategories);
+
+            if (salonActiveSubcategories.length > 0) {
+              setSalonSubcategories(salonActiveSubcategories.slice(0, 6));
+              setHasSubcategories(true);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error from public API:", error);
+      }
+    };
+
+    // Uncomment if you want to try public API as fallback
+    // fetchFromPublicAPI();
+  }, []);
+
+  // Fetch salon for women data (existing)
   useEffect(() => {
     const fetchSalonForWomen = async () => {
-      const data = await fetchData("api/salonforwomen", "salonforwomen");
-      if (data && data.salonforwomen) {
-        setSalon(data.salonforwomen);
+      try {
+        const response = await fetch("http://localhost:5000/api/salonforwomen");
+        if (!response.ok) throw new Error('Failed to fetch salon for women');
+        const data = await response.json();
+        setSalon(data.salonforwomen || []);
+      } catch (error) {
+        console.error("Error fetching salon: ", error);
+        try {
+          const staticResponse = await fetch("http://localhost:5000/api/static-data");
+          const staticData = await staticResponse.json();
+          setSalon(staticData.salonforwomen || []);
+        } catch (staticError) {
+          console.error("Error fetching static data:", staticError);
+        }
       }
     };
     fetchSalonForWomen();
   }, []);
 
-  // Fetch advanced data
+  // Fetch advanced data (existing)
   useEffect(() => {
     const fetchAdvanced = async () => {
-      const data = await fetchData("api/advanced", "advanced");
-      if (data && data.advanced) {
-        setAdvanced(data.advanced);
-      } else {
-        setAdvanced([
-          {
-            price: "₹799",
-            value: "₹1,098",
-            title: "Roll-on waxing",
-            tit: "Full arms, legs & underarms",
-            text: "Extra 25% off for new users*",
-            key: "facial",
-            img: "/assets/facial.jpg"
-          }
-        ]);
+      try {
+        const response = await fetch("http://localhost:5000/api/advanced");
+        if (!response.ok) throw new Error('Failed to fetch advanced');
+        const data = await response.json();
+        setAdvanced(data.advanced || []);
+      } catch (error) {
+        console.error("Error fetching advanced: ", error);
+        try {
+          const staticResponse = await fetch("http://localhost:5000/api/static-data");
+          const staticData = await staticResponse.json();
+          setAdvanced(staticData.advanced || []);
+        } catch (staticError) {
+          console.error("Error fetching static data:", staticError);
+        }
       }
     };
     fetchAdvanced();
@@ -84,21 +164,49 @@ function Salon() {
     setActiveIndex(selectedIndex);
   };
 
-  const handleSubcategoryClick = (subcategory) => {
-    const normalizeKey = (str) => str?.toLowerCase()?.trim()?.replace(/\s+/g, "-") || "";
-    const sectionId = `section-${normalizeKey(subcategory.name)}`;
-    const element = document.getElementById(sectionId);
+  // Helper to map subcategory names to section titles (must match Salon1.jsx logic)
+  const mapSubcategoryToSection = (name) => {
+    const lowerName = (name || '').toLowerCase();
 
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Prioritize specific service types over generic categories
+    if (lowerName.includes("facial")) return "Signature Facial";
+    if (lowerName.includes("cleanup")) return "Cleanup";
+    if (lowerName.includes("pedicure") || lowerName.includes("manicure")) return "Pedicure & manicure";
+    if (lowerName.includes("hair")) return "Haircare";
+    if (lowerName.includes("waxing") || lowerName.includes("threading")) return "Waxing & threading";
+
+    return name;
+  };
+
+  // Handle subcategory click
+  const handleSubcategoryClick = (subcategory) => {
+    // Robust key normalization matching Salon1.jsx
+    const normalizeKey = (str) => str?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || "";
+    const sectionTitle = mapSubcategoryToSection(subcategory.name);
+    const baseId = `section-${normalizeKey(sectionTitle)}`;
+
+    // Try scrolling to Desktop version first
+    const desktopEl = document.getElementById(`${baseId}-desktop`);
+    if (desktopEl && desktopEl.offsetParent !== null) { // Check if visible
+      setTimeout(() => desktopEl.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+      return;
     }
+
+    // Fallback to Mobile version
+    const mobileEl = document.getElementById(`${baseId}-mobile`);
+    if (mobileEl) {
+      setTimeout(() => mobileEl.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+      return;
+    }
+
+    console.warn(`Section not found: ${baseId}`);
   };
 
   return (
     <div className="p-2 p-md-4 p-lg-5">
       <Row className="g-4">
         {/* Carousel section */}
-        <Col xs={12} lg={9} className="order-1 order-lg-2">
+        <Col xs={12} lg={8} className="order-1 order-lg-2">
           <Carousel
             activeIndex={activeIndex}
             onSelect={handleSelect}
@@ -113,14 +221,14 @@ function Salon() {
                     a.img && typeof a.img === "string"
                       ? a.img.startsWith("http")
                         ? a.img
-                        : getAssetPath(a.img)
-                      : getAssetPath("/assets/placeholder.png")
+                        : `http://localhost:5000${a.img}`
+                      : "http://localhost:5000/assets/placeholder.png"
                   }
                   alt={a.key || "Advanced service"}
                   className="extra w-100"
                   style={{ height: "400px", objectFit: "cover" }}
                   onError={(e) => {
-                    e.target.src = getAssetPath("/assets/placeholder.png");
+                    e.target.src = "http://localhost:5000/assets/placeholder.png";
                   }}
                 />
                 <Carousel.Caption
@@ -167,13 +275,13 @@ function Salon() {
             ))}
           </Carousel>
           <div className="d-none d-lg-block mt-4">
-            <Salon1 />
+            <Salon1 idSuffix="desktop" />
           </div>
         </Col>
 
         {/* Salon subcategories section */}
-        <Col xs={12} lg={3} className="row1 order-2 order-lg-1">
-          <h4 className="fw-semibold" style={{ fontSize: "24px" }}>Salon for women</h4>
+        <Col xs={12} lg={4} className="row1 order-2 order-lg-1">
+          <h4 className="fw-semibold" style={{ fontSize: "30px" }}>Salon for women</h4>
           <p>
             <MdStars style={{ fontSize: "23px", color: "#6800faff" }} />{" "}
             <span
@@ -202,6 +310,7 @@ function Salon() {
               </div>
             )}
 
+            {/* Show loading only if actively fetching */}
             {loading ? (
               <div className="text-center py-4">
                 <div className="spinner-border text-primary" role="status" style={{ width: "1rem", height: "1rem" }}>
@@ -212,7 +321,9 @@ function Salon() {
             ) : hasSubcategories && salonSubcategories.length > 0 ? (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "15px", padding: "5px" }}>
                 {salonSubcategories.map((subcategory, index) => {
-                  if (subcategory.isActive === false) return null;
+                  if (subcategory.isActive === false) {
+                    return null;
+                  }
 
                   return (
                     <div
@@ -240,19 +351,13 @@ function Salon() {
                         }}
                       >
                         <img
-                          src={(() => {
-                            const name = subcategory.name?.toLowerCase() || "";
-                            if (name.includes("pedicure")) return getAssetPath("/assets/foot.webp");
-                            if (name.includes("manicure")) return getAssetPath("/assets/british.webp");
-                            if (name.includes("facial")) return getAssetPath("/assets/facial.jpg");
-                            if (name.includes("bleach")) return getAssetPath("/assets/hairbleach.webp");
-
-                            return subcategory.img && typeof subcategory.img === "string"
+                          src={
+                            subcategory.img && typeof subcategory.img === "string"
                               ? subcategory.img.startsWith("http")
                                 ? subcategory.img
-                                : getAssetPath(subcategory.img)
-                              : getAssetPath("/assets/placeholder.png");
-                          })()}
+                                : `http://localhost:5000${subcategory.img}`
+                              : "http://localhost:5000/assets/placeholder.png"
+                          }
                           alt={subcategory.name}
                           style={{
                             width: "100%",
@@ -260,7 +365,7 @@ function Salon() {
                             objectFit: "cover"
                           }}
                           onError={(e) => {
-                            e.target.src = getAssetPath("/assets/placeholder.png");
+                            e.target.src = "http://localhost:5000/assets/placeholder.png";
                           }}
                         />
                       </div>
@@ -271,12 +376,14 @@ function Salon() {
                   );
                 })}
               </div>
-            ) : null}
+            ) : (
+              ""
+            )}
           </div>
         </Col>
 
         <Col xs={12} className="d-lg-none order-3 mt-4">
-          <Salon1 />
+          <Salon1 idSuffix="mobile" />
         </Col>
       </Row>
     </div>

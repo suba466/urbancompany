@@ -152,12 +152,23 @@ export const logoutAdmin = createAsyncThunk(
   }
 );
 
+// Helper for safe JSON parsing
+const safeJSONParse = (key, fallback) => {
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : fallback;
+  } catch (error) {
+    console.error(`Error parsing ${key} from localStorage:`, error);
+    return fallback;
+  }
+};
+
 // Customer Auth Slice
 const customerAuthSlice = createSlice({
   name: 'customerAuth',
   initialState: {
     token: localStorage.getItem('customerToken') || null,
-    user: JSON.parse(localStorage.getItem('customerInfo') || 'null'),
+    user: safeJSONParse('customerInfo', null),
     role: 'user',
     isAuthenticated: !!localStorage.getItem('customerToken'),
     loading: false,
@@ -183,7 +194,7 @@ const customerAuthSlice = createSlice({
     updateCustomerLocalState: (state) => {
       // Sync with localStorage
       const token = localStorage.getItem('customerToken');
-      const user = JSON.parse(localStorage.getItem('customerInfo') || 'null');
+      const user = safeJSONParse('customerInfo', null);
 
       state.token = token;
       state.user = user;
@@ -275,8 +286,8 @@ const adminAuthSlice = createSlice({
   name: 'adminAuth',
   initialState: (() => {
     const token = localStorage.getItem('adminToken') || null;
-    const admin = JSON.parse(localStorage.getItem('adminInfo') || 'null');
-    const permissions = JSON.parse(localStorage.getItem('adminPermissions') || '{}');
+    const admin = safeJSONParse('adminInfo', null);
+    const permissions = safeJSONParse('adminPermissions', {});
     const isAuthenticated = !!token;
 
     // STRICT ROLE RE-CALCULATION ON RELOAD
@@ -343,7 +354,7 @@ export const { clearAdminAuth, setAdminUser } = adminAuthSlice.actions;
 const cartSlice = createSlice({
   name: 'cart',
   initialState: {
-    items: JSON.parse(localStorage.getItem('cartItems') || '[]'),
+    items: safeJSONParse('cartItems', []),
     customerEmail: null,
     loading: false
   },
@@ -389,7 +400,7 @@ const cartSlice = createSlice({
       state.customerEmail = action.payload;
     },
     syncCartWithLocalStorage: (state) => {
-      const items = JSON.parse(localStorage.getItem('cartItems') || '[]');
+      const items = safeJSONParse('cartItems', []);
       state.items = items;
     },
     // Force clear cart (for debugging)

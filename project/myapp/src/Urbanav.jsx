@@ -104,9 +104,14 @@ function Urbanav() {
 
   // Load saved addresses from localStorage
   const loadSavedAddresses = () => {
-    const saved = localStorage.getItem('savedAddresses');
-    if (saved) {
-      setSavedAddresses(JSON.parse(saved));
+    try {
+      const saved = localStorage.getItem('savedAddresses');
+      if (saved) {
+        setSavedAddresses(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.error("Error parsing savedAddresses:", e);
+      setSavedAddresses([]);
     }
   };
 
@@ -316,7 +321,13 @@ function Urbanav() {
     localStorage.setItem('selectedAddress', JSON.stringify(finalAddress));
 
     if (addressDetails.saveAddress) {
-      const existingAddresses = JSON.parse(localStorage.getItem('savedAddresses') || '[]');
+      let existingAddresses = [];
+      try {
+        existingAddresses = JSON.parse(localStorage.getItem('savedAddresses') || '[]');
+      } catch (e) {
+        console.error("Error parsing savedAddresses for save:", e);
+        existingAddresses = [];
+      }
       const exists = existingAddresses.find(addr =>
         addr.doorNo === finalAddress.doorNo &&
         addr.mainText === finalAddress.mainText

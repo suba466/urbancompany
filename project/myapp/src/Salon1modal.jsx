@@ -6,7 +6,6 @@ import { TbCirclePercentageFilled } from "react-icons/tb";
 import { FaStar, FaTag } from "react-icons/fa";
 import { GoDotFill } from "react-icons/go";
 import FrequentlyAddedCarousel from "./FrequentlyAddedCarousel";
-import API_URL, { getAssetPath, shouldCallApi } from "./config";
 
 function Salon1modal({
   show,
@@ -22,11 +21,7 @@ function Salon1modal({
   baseServices = [],
   roundPrice = v => Math.round(v),
   showDiscountModal = false,
-  setShowDiscountModal = () => { },
-  handleIncrease = async () => { },
-  handleDecrease = async () => { },
-  updateItem = () => { },
-  removeItem = () => { }
+  setShowDiscountModal = () => { }
 }) {
   // ---------- state ----------
   const [loadingDropdownKey, setLoadingDropdownKey] = useState(null);
@@ -104,73 +99,58 @@ function Salon1modal({
 
   // ---------- effects ----------
   useEffect(() => {
-    if (cartCount === 0) setShowFrequentlyAdded(false);
-  }, [cartCount, setShowFrequentlyAdded]);
+    // Break loop: Only update if strictly necessary and different from current state
+    if (cartCount === 0 && showFrequentlyAdded) {
+      setShowFrequentlyAdded(false);
+    }
+  }, [cartCount, showFrequentlyAdded, setShowFrequentlyAdded]);
 
   // Fetch added images from server
   useEffect(() => {
     const fetchAddedImages = async () => {
-      // 1. Try API if appropriate
-      if (shouldCallApi()) {
-        try {
-          const response = await fetch(`${API_URL}/api/added`);
-          if (response.ok) {
-            const data = await response.json();
-            setAddedImgs(data.added || []);
-            return; // Success
-          }
-        } catch (error) {
-          console.warn("API added images fetch failed:", error);
-        }
-      }
-
-      // 2. Fallback: Try local data.json
       try {
-        const staticResponse = await fetch(getAssetPath("data.json"));
-        if (!staticResponse.ok) throw new Error("Local data not found");
-        const staticData = await staticResponse.json();
-        setAddedImgs(staticData.added || []);
-      } catch (staticError) {
-        console.error("Error fetching local data:", staticError);
-        // Last resort: Hardcoded fallback
-        setAddedImgs([
-          { key: "foot", name: "Foot massage", price: "199", img: "/assets/foot.webp" },
-          { key: "sara", name: "Sara fruit cleanup", price: "699", img: "/assets/sara.webp" }
-        ]);
+        const response = await fetch("http://localhost:5000/api/added");
+        if (!response.ok) {
+          throw new Error('Failed to fetch added items');
+        }
+        const data = await response.json();
+        setAddedImgs(data.added || []);
+      } catch (error) {
+        console.error("Failed to load added images:", error);
+        // Fallback: Try static data API
+        try {
+          const staticResponse = await fetch("http://localhost:5000/api/static-data");
+          const staticData = await staticResponse.json();
+          setAddedImgs(staticData.added || []);
+        } catch (staticError) {
+          console.error("Error fetching static data:", staticError);
+          setAddedImgs([]);
+        }
       }
     };
 
     fetchAddedImages();
   }, []);
 
-
   useEffect(() => {
-    if (showDiscountModal && selectedItem) {
+    if (selectedItem) {
       const cartItem = (Array.isArray(carts) ? carts.find(c => c.title === selectedItem.title) : null);
-      setCartCount(cartItem?.count || 0);
-      setHasChange(false);
+      // Only update if changed to avoid loops
+      if (cartItem && cartCount !== cartItem.count) {
+        setCartCount(cartItem.count);
+      } else if (!cartItem && cartCount !== 0) {
+        setCartCount(0);
+      }
     }
-  }, [showDiscountModal, selectedItem]);
+  }, [carts, selectedItem, cartCount]); // Added cartCount to deps to check against it
 
-  const fetchCarts = async () => {
-    if (!shouldCallApi()) return [];
-
-    try {
-      const res = await fetch(`${API_URL}/api/carts`);
-      if (!res.ok) return [];
-      const data = await res.json();
-      setCarts(data.carts || []);
-      return data.carts || [];
-    } catch (err) {
-      console.warn("Error fetching carts:", err);
-      return [];
-    }
-  };
-
+  // Removed fetchCarts() definition and calls as they were redundant with Redux 'carts' prop
+  // and 'setCarts' prop is a no-op from parent.
 
   useEffect(() => {
-    if (show && selectedItem && shouldCallApi()) {
-      fetch(`${API_URL}/api/carts`)
+    if (show && selectedItem) {
+      // Use local fetch just for retrieving saved selections if needed
+      fetch("http://localhost:5000/api/carts")
         .then(res => res.json())
         .then(data => {
           const found = (data?.carts || []).find(c => c.title === selectedItem.title);
@@ -180,22 +160,37 @@ function Salon1modal({
               const key = `restored:${s.title}`;
               restored[key] = { title: s.title, content: s.content, price: Number(s.price), count: 1 };
             });
+            // Deep check before setting to avoid loop? 
+            // Since this runs only when 'show' or 'selectedItem' changes, it should be fine.
             setSelectedServices(prev => ({ ...prev, ...restored }));
           }
         })
-        .catch(err => console.warn("Error syncing cart saved selections:", err));
+        .catch(err => console.error("Error syncing cart saved selections:", err));
     }
-  }, [show, selectedItem]);
-
+  }, [show, selectedItem?.title]); // Depend on title specifically to be safer
 
   useEffect(() => {
+    // Recalculate counts based on cart
+    if (!addedImgs.length) return;
+
     const updatedCounts = {};
+    let hasUpdates = false;
+
     addedImgs.forEach(img => {
       const cartItem = carts.find(c => c.title === img.name);
-      if (cartItem) updatedCounts[img.key] = cartItem.count;
+      if (cartItem) {
+        updatedCounts[img.key] = cartItem.count;
+        if (carouselCounts[img.key] !== cartItem.count) hasUpdates = true;
+      } else if (carouselCounts[img.key]) {
+        hasUpdates = true; // It was there, now it's gone
+      }
     });
-    setCarouselCounts(updatedCounts);
-  }, [carts, addedImgs]);
+
+    // Only set if actually changed
+    if (hasUpdates || Object.keys(updatedCounts).length !== Object.keys(carouselCounts).length) {
+      setCarouselCounts(updatedCounts);
+    }
+  }, [carts, addedImgs, carouselCounts]);
 
   const extraPrice = useMemo(() => {
     return Object.values(selectedServices).reduce((sum, s) => {
@@ -329,14 +324,11 @@ function Salon1modal({
 
                     // Refresh cart from server
                     try {
-                      if (shouldCallApi()) {
-                        const refreshed = await fetch(`${API_URL}/api/carts`).then(r => r.json()).then(d => d.carts || []);
-                        setCarts(refreshed);
-                      }
+                      const refreshed = await fetch("http://localhost:5000/api/carts").then(r => r.json()).then(d => d.carts || []);
+                      setCarts(refreshed);
                     } catch (err) {
-                      console.warn("Failed to refresh cart:", err);
+                      console.error("Failed to refresh cart:", err);
                     }
-
 
                     if (typeof window.updateCartInstantly === "function") window.updateCartInstantly(selectedItem.title);
 
@@ -484,22 +476,18 @@ function Salon1modal({
                     // Add to cart logic
                     const itemToAdd = {
                       title: item.name,
-                      name: item.name,
                       price: item.price,
                       count: 1,
                       savedSelections: []
                     };
 
-                    await handleAddToCart(itemToAdd, [], item.price, true);
+                    await handleAddToCart(itemToAdd, [], item.price, 0);
 
                     // Refresh cart from server
-                    if (shouldCallApi()) {
-                      const refreshed = await fetch(`${API_URL}/api/carts`)
-                        .then(res => res.json())
-                        .then(data => data.carts || []);
-                      setCarts(refreshed);
-                    }
-
+                    const refreshed = await fetch("http://localhost:5000/api/carts")
+                      .then(res => res.json())
+                      .then(data => data.carts || []);
+                    setCarts(refreshed);
 
                     // Update carousel counts
                     setCarouselCounts(prev => ({
@@ -516,21 +504,16 @@ function Salon1modal({
                     const cartItem = carts.find(c => c.title === item.name);
                     if (cartItem) {
                       if (cartItem.count > 1) {
-                        if (shouldCallApi()) {
-                          await fetch(`${API_URL}/api/carts/${cartItem._id}`, {
-                            method: "PUT",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ count: cartItem.count - 1 })
-                          });
-                        }
+                        await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ count: cartItem.count - 1 })
+                        });
                       } else {
-                        if (shouldCallApi()) {
-                          await fetch(`${API_URL}/api/carts/${cartItem._id}`, {
-                            method: "DELETE"
-                          });
-                        }
+                        await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
+                          method: "DELETE"
+                        });
                       }
-
 
                       // Refresh carts
                       const refreshed = await fetchCarts();
@@ -585,105 +568,92 @@ function Salon1modal({
               </div>
             )}
           </div>
-        </ModalBody>
-        {hasChange && (
-          <Modal.Footer className="border-0 p-3 pt-0">
-            <Button
-              variant="success"
-              className="butn w-100 fw-bold"
-              onClick={async () => {
-                // Handle main product count changes
-                const cartItem = carts.find(c => c.title === selectedItem.title);
 
-                if (cartCount > 0) {
-                  if (cartItem) {
-                    // Update existing item
-                    if (updateItem) updateItem(cartItem.productId || cartItem._id, cartCount);
-                    if (shouldCallApi()) {
-                      await fetch(`${API_URL}/api/carts/${cartItem._id}`, {
+          {/* DONE BUTTON - Only show when there are changes */}
+          {hasChange && (
+            <div className="p-3 pt-0">
+              <Button
+                variant="success"
+                className="butn w-100 fw-bold"
+                onClick={async () => {
+                  // Handle main product count changes
+                  const cartItem = carts.find(c => c.title === selectedItem.title);
+
+                  if (cartCount > 0) {
+                    if (cartItem) {
+                      // Update existing item
+                      await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
                         method: "PUT",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ count: cartCount })
                       });
+                    } else {
+                      // Add new item
+                      await handleAddToCart(selectedItem, [], discountedPrice || totalPrice);
                     }
-                  } else {
-                    // Add new item
-                    await handleAddToCart(selectedItem, [], discountedPrice || totalPrice);
-                  }
-                } else if (cartCount === 0 && cartItem) {
-                  // Remove item if count is 0
-                  if (removeItem) removeItem(cartItem.productId || cartItem._id);
-                  if (shouldCallApi()) {
-                    await fetch(`${API_URL}/api/carts/${cartItem._id}`, {
+                  } else if (cartCount === 0 && cartItem) {
+                    // Remove item if count is 0
+                    await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
                       method: "DELETE"
                     });
                   }
-                }
 
+                  // Handle carousel items
+                  for (const [key, count] of Object.entries(carouselCounts)) {
+                    const img = addedImgs.find(img => img.key === key);
+                    if (img && count > 0) {
+                      const cartPayload = {
+                        productId: img.key,
+                        title: img.name,
+                        price: img.price,
+                        count: count,
+                        content: [{ details: img.name, price: img.price }],
+                        savedSelections: [],
+                        isFrequentlyAdded: true
+                      };
 
-                // Handle carousel items
-                for (const [key, count] of Object.entries(carouselCounts)) {
-                  const img = addedImgs.find(img => img.key === key);
-                  if (img && count > 0) {
-                    const cartPayload = {
-                      productId: img.key,
-                      title: img.name,
-                      price: img.price,
-                      count: count,
-                      content: [{ details: img.name, price: img.price }],
-                      savedSelections: [],
-                      isFrequentlyAdded: true
-                    };
+                      const existingCarouselItem = carts.find(c => c.title === img.name);
 
-                    const existingCarouselItem = carts.find(c => c.title === img.name);
-
-                    if (existingCarouselItem) {
-                      if (shouldCallApi()) {
-                        await fetch(`${API_URL}/api/carts/${existingCarouselItem._id}`, {
+                      if (existingCarouselItem) {
+                        await fetch(`http://localhost:5000/api/carts/${existingCarouselItem._id}`, {
                           method: "PUT",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ ...cartPayload, count: count })
                         });
-                      }
-                    } else {
-                      if (shouldCallApi()) {
-                        await fetch(`${API_URL}/api/addcarts`, {
+                      } else {
+                        await fetch("http://localhost:5000/api/addcarts", {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify(cartPayload)
                         });
                       }
-                    }
-                  } else if (img && count === 0) {
-                    // Remove carousel item if count is 0
-                    const existingCarouselItem = carts.find(c => c.title === img.name);
-
-                    if (existingCarouselItem) {
-                      if (shouldCallApi()) {
-                        await fetch(`${API_URL}/api/carts/${existingCarouselItem._id}`, {
+                    } else if (img && count === 0) {
+                      // Remove carousel item if count is 0
+                      const existingCarouselItem = carts.find(c => c.title === img.name);
+                      if (existingCarouselItem) {
+                        await fetch(`http://localhost:5000/api/carts/${existingCarouselItem._id}`, {
                           method: "DELETE"
                         });
                       }
                     }
                   }
 
-                }
+                  // Refresh carts and close modal
+                  await fetchCarts();
+                  if (typeof window.updateCartInstantly === "function") {
+                    window.updateCartInstantly(selectedItem.title);
+                  }
 
-                // Refresh carts and close modal
-                await fetchCarts();
-                if (typeof window.updateCartInstantly === "function") {
-                  window.updateCartInstantly(selectedItem.title);
-                }
-
-                setShowDiscountModal(false);
-                setHasChange(false);
-                setShowFrequentlyAdded(true);
-              }}
-            >
-              Done
-            </Button>
-          </Modal.Footer>
-        )}
+                  setShowDiscountModal(false);
+                  setHasChange(false);
+                  setShowFrequentlyAdded(true);
+                }}
+              >
+                Done
+              </Button>
+            </div>
+          )}
+        </ModalBody>
       </Modal>
     </>
   );
