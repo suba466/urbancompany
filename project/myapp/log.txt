@@ -1,0 +1,5 @@
+commit 41ed6d134bd3ad19feda47755a9e318f13a36d2f
+Author: Suba Shree <subashreethavaselvan@gmail.com>
+Date:   Sat Feb 7 19:31:26 2026 +0530
+
+    Configure GitHub Actions deployment and set base path
