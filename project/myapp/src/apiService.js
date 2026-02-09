@@ -23,7 +23,8 @@ export const fetchData = async (endpoint, dataKey) => {
 
     // 2. Simple fallback to local data.json
     try {
-        const fallbackUrl = "/data.json";
+        const baseUrl = import.meta.env.BASE_URL || "/";
+        const fallbackUrl = `${baseUrl}data.json`;
         console.log(`Fetching fallback from: ${fallbackUrl}`);
         const response = await fetch(fallbackUrl);
         if (response.ok) {

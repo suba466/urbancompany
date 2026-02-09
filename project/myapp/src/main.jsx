@@ -6,7 +6,7 @@ import Urban from './Urban.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <BrowserRouter basename="/urbancompany">
       <Urban />
     </BrowserRouter>
   </StrictMode>
