@@ -535,6 +535,13 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
   };
 
   const handleLogout = () => {
+    // Clear saved address for this user
+    if (user?.email) {
+      const savedAddressKey = `selectedAddress_${user.email}`;
+      localStorage.removeItem(savedAddressKey);
+      console.log("✅ Cleared saved address on logout for:", user.email);
+    }
+
     logout();
     clearCart();
     setCurrentView("main");
@@ -543,6 +550,93 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
     setPlans([]);
     onHide();
   };
+
+  // Calculate booking total - use servicePrice which includes all taxes and charges
+  const calculateBookingTotal = (booking) => {
+    console.log("📊 Calculating total for booking:", {
+      id: booking._id,
+      servicePrice: booking.servicePrice,
+      originalPrice: booking.originalPrice,
+      taxAmount: booking.taxAmount,
+      tipAmount: booking.tipAmount,
+      slotExtraCharge: booking.slotExtraCharge
+    });
+
+    // servicePrice already includes itemTotal + tax + tip + slotExtraCharge
+    if (booking.servicePrice) {
+      const price = typeof booking.servicePrice === 'string'
+        ? Number(booking.servicePrice.replace(/[^0-9.-]+/g, ""))
+        : Number(booking.servicePrice);
+
+      const originalPrice = booking.originalPrice
+        ? (typeof booking.originalPrice === 'string'
+          ? Number(booking.originalPrice.replace(/[^0-9.-]+/g, ""))
+          : Number(booking.originalPrice))
+        : 0;
+
+      // Only use servicePrice if it's greater than 0 AND greater than originalPrice
+      // If servicePrice equals originalPrice, tax wasn't included, so recalculate
+      if (price > 0 && (originalPrice === 0 || price > originalPrice)) {
+        console.log("✅ Using servicePrice:", price);
+        return price;
+      } else if (price > 0 && price === originalPrice) {
+        console.log("⚠️ ServicePrice equals originalPrice - tax not included, will recalculate");
+        // Fall through to recalculation
+      }
+    }
+
+    // Fallback: calculate from items + tax + tip + slot charges
+    console.log("⚠️ ServicePrice not available or invalid, calculating from items...");
+    let total = 0;
+
+    // Calculate items total
+    if (booking.cartItems && booking.cartItems.length > 0) {
+      booking.cartItems.forEach(item => {
+        const itemPrice = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
+        const count = item.count || item.quantity || 1;
+        total += itemPrice * count;
+      });
+    } else if (booking.items && booking.items.length > 0) {
+      booking.items.forEach(item => {
+        const itemPrice = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
+        const quantity = item.quantity || 1;
+        total += itemPrice * quantity;
+      });
+    } else if (booking.originalPrice) {
+      // If no cart items, use originalPrice as the base
+      total = typeof booking.originalPrice === 'string'
+        ? Number(booking.originalPrice.replace(/[^0-9.-]+/g, ""))
+        : Number(booking.originalPrice);
+      console.log("Using originalPrice as base:", total);
+    }
+
+    console.log("Items total:", total);
+
+    // Add tax (IMPORTANT: This should always be added)
+    if (booking.taxAmount) {
+      const tax = Number(booking.taxAmount) || 0;
+      total += tax;
+      console.log("Added tax:", tax, "New total:", total);
+    }
+
+    // Add tip
+    if (booking.tipAmount) {
+      const tip = Number(booking.tipAmount) || 0;
+      total += tip;
+      console.log("Added tip:", tip, "New total:", total);
+    }
+
+    // Add slot extra charge (IMPORTANT: This should always be added)
+    if (booking.slotExtraCharge) {
+      const slotCharge = Number(booking.slotExtraCharge) || 0;
+      total += slotCharge;
+      console.log("Added slot charge:", slotCharge, "New total:", total);
+    }
+
+    console.log("✅ Final calculated total:", total);
+    return total;
+  };
+
 
   // Render profile picture component
   const renderProfilePicture = (pictureUrl, size = 80, editable = false, onEditClick = null) => {
@@ -1236,11 +1330,11 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
                       </div>
                     ) : null}
 
-                    {/* Total Amount */}
+                    {/* Total Amount - Final amount paid */}
                     <div className="pt-2">
                       <div className="d-flex justify-content-between mt-2 pt-2 border-top">
                         <span className="fw-semibold">Total Amount:</span>
-                        <span className="fw-semibold">
+                        <span className="fw-semibold text-success">
                           ₹{bookingTotal.toLocaleString('en-IN')}
                         </span>
                       </div>
@@ -1261,12 +1355,12 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
                     )}
 
                     {/* Action buttons */}
-                    <div style={{float:"right"}}>
-                      
+                    <div style={{ float: "right" }}>
+
                       {/* DELETE BUTTON */}
                       <Button
                         variant="outline-danger"
-                        size="sm"  
+                        size="sm"
                         onClick={async () => {
                           if (window.confirm("Are you sure you want to delete this booking record?")) {
                             try {

@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import SubcategoryForm from './SubcategoryForm';
 import Subcategories from './Subcategories';
 import { Button, Modal, Form } from 'react-bootstrap';
-import API_URL, { getAssetPath } from "./config";
 
 function SubcategoryManagement({ isAdding, isEditing }) {
   const { id } = useParams();
@@ -44,7 +43,7 @@ function SubcategoryManagement({ isAdding, isEditing }) {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/admin/categories?limit=1000&isActive=true`, {
+      const response = await fetch('http://localhost:5000/api/admin/categories?limit=1000&isActive=true', {
         headers: getAuthHeaders()
       });
 
@@ -62,8 +61,7 @@ function SubcategoryManagement({ isAdding, isEditing }) {
       setLoading(true);
       console.log(`Fetching subcategories... Page: ${page}, Search: ${search}, PerPage: ${perPage}`);
 
-      let url = `${API_URL}/api/admin/subcategories?page=${page}&limit=${perPage}&sort=-createdAt`;
-
+      let url = `http://localhost:5000/api/admin/subcategories?page=${page}&limit=${perPage}&sort=-createdAt`;
 
       if (search) {
         url += `&search=${encodeURIComponent(search)}`;
@@ -204,7 +202,7 @@ function SubcategoryManagement({ isAdding, isEditing }) {
       localStorage.setItem('subcategoriesCache', JSON.stringify(updatedCache));
 
       // Make API call in background
-      const response = await fetch(`${API_URL}/api/admin/subcategories/${subcategoryId}/toggle-status`, {
+      const response = await fetch(`http://localhost:5000/api/admin/subcategories/${subcategoryId}/toggle-status`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ isActive })
@@ -248,7 +246,7 @@ function SubcategoryManagement({ isAdding, isEditing }) {
   const deleteSubcategory = async (subcategoryId) => {
     if (window.confirm('Are you sure you want to delete this subcategory?')) {
       try {
-        const response = await fetch(`${API_URL}/api/admin/subcategories/${subcategoryId}`, {
+        const response = await fetch(`http://localhost:5000/api/admin/subcategories/${subcategoryId}`, {
           method: 'DELETE',
           headers: getAuthHeaders()
         });
@@ -280,7 +278,7 @@ function SubcategoryManagement({ isAdding, isEditing }) {
 
     if (window.confirm(`Are you sure you want to delete ${selectedIds.length} subcategory(ies)?`)) {
       try {
-        const response = await fetch(`${API_URL}/api/admin/subcategories/bulk-delete`, {
+        const response = await fetch('http://localhost:5000/api/admin/subcategories/bulk-delete', {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({ ids: selectedIds })
@@ -335,10 +333,10 @@ function SubcategoryManagement({ isAdding, isEditing }) {
         if (!subcategoryId) {
           throw new Error("Subcategory ID not found for editing");
         }
-        url = `${API_URL}/api/admin/subcategories/${subcategoryId}`;
+        url = `http://localhost:5000/api/admin/subcategories/${subcategoryId}`;
         console.log("Editing subcategory with ID:", subcategoryId);
       } else {
-        url = `${API_URL}/api/admin/subcategories`;
+        url = 'http://localhost:5000/api/admin/subcategories';
         console.log("Adding new subcategory");
       }
 
@@ -372,10 +370,8 @@ function SubcategoryManagement({ isAdding, isEditing }) {
         // Clear cache
         localStorage.removeItem('subcategoriesCache');
         localStorage.removeItem('editingSubcategory');
-        // Navigate back to list only if editing
-        if (isEditing) {
-          navigate('/admin/subcategories');
-        }
+        // Navigate back to list
+        navigate('/admin/subcategories');
       } else {
         throw new Error(data.error || data.message || `Failed to ${isEditing ? 'update' : 'add'} subcategory`);
       }
@@ -524,7 +520,7 @@ function SubcategoryManagement({ isAdding, isEditing }) {
                 <div className="mb-3">
                   {viewingSubcategory.img && viewingSubcategory.img !== '/assets/default-subcategory.png' ? (
                     <img
-                      src={`${API_URL}${viewingSubcategory.img}`}
+                      src={`http://localhost:5000${viewingSubcategory.img}`}
                       alt={viewingSubcategory.name}
                       style={{
                         width: '150px',
@@ -578,7 +574,7 @@ function SubcategoryManagement({ isAdding, isEditing }) {
                   <div className="list-group-item px-0 border-bottom-0">
                     <small className="text-muted d-block">Image URL</small>
                     <small className="text-truncate d-block" style={{ maxWidth: '100%' }}>
-                      {`${API_URL}${viewingSubcategory.img}`}
+                      {`http://localhost:5000${viewingSubcategory.img}`}
                     </small>
                   </div>
                 )}

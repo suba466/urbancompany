@@ -6,7 +6,7 @@ import { FaCheckCircle } from 'react-icons/fa';
 function OrderSuccess() {
     const location = useLocation();
     const navigate = useNavigate();
-    const { orderId, amount, serviceName } = location.state || {}; // Get data passed from navigate
+    const { orderId, amount, serviceName, paymentId } = location.state || {}; // Get data passed from navigate
 
     if (!orderId) {
         // Fallback if accessed directly without state
@@ -33,6 +33,12 @@ function OrderSuccess() {
                         <span className="text-muted">Order ID:</span>
                         <span className="fw-bold">{orderId}</span>
                     </div>
+                    {paymentId && (
+                        <div className="d-flex justify-content-between mb-2">
+                            <span className="text-muted">Payment ID:</span>
+                            <span className="fw-bold" style={{ fontSize: '12px' }}>{paymentId}</span>
+                        </div>
+                    )}
                     <div className="d-flex justify-content-between mb-2">
                         <span className="text-muted">Services:</span>
                         <span className="fw-bold text-end" style={{ maxWidth: '200px' }}>{serviceName || 'Multiple Services'}</span>

@@ -164,42 +164,16 @@ function Salon() {
     setActiveIndex(selectedIndex);
   };
 
-  // Helper to map subcategory names to section titles (must match Salon1.jsx logic)
-  const mapSubcategoryToSection = (name) => {
-    const lowerName = (name || '').toLowerCase();
-
-    // Prioritize specific service types over generic categories
-    if (lowerName.includes("facial")) return "Signature Facial";
-    if (lowerName.includes("cleanup")) return "Cleanup";
-    if (lowerName.includes("pedicure") || lowerName.includes("manicure")) return "Pedicure & manicure";
-    if (lowerName.includes("hair")) return "Haircare";
-    if (lowerName.includes("waxing") || lowerName.includes("threading")) return "Waxing & threading";
-
-    return name;
-  };
-
+  // Handle subcategory click
   // Handle subcategory click
   const handleSubcategoryClick = (subcategory) => {
-    // Robust key normalization matching Salon1.jsx
-    const normalizeKey = (str) => str?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || "";
-    const sectionTitle = mapSubcategoryToSection(subcategory.name);
-    const baseId = `section-${normalizeKey(sectionTitle)}`;
+    const normalizeKey = (str) => str?.toLowerCase()?.trim()?.replace(/\s+/g, "-") || "";
+    const sectionId = `section-${normalizeKey(subcategory.name)}`;
+    const element = document.getElementById(sectionId);
 
-    // Try scrolling to Desktop version first
-    const desktopEl = document.getElementById(`${baseId}-desktop`);
-    if (desktopEl && desktopEl.offsetParent !== null) { // Check if visible
-      setTimeout(() => desktopEl.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-      return;
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-
-    // Fallback to Mobile version
-    const mobileEl = document.getElementById(`${baseId}-mobile`);
-    if (mobileEl) {
-      setTimeout(() => mobileEl.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-      return;
-    }
-
-    console.warn(`Section not found: ${baseId}`);
   };
 
   return (
@@ -275,7 +249,7 @@ function Salon() {
             ))}
           </Carousel>
           <div className="d-none d-lg-block mt-4">
-            <Salon1 idSuffix="desktop" />
+            <Salon1 />
           </div>
         </Col>
 
@@ -383,7 +357,7 @@ function Salon() {
         </Col>
 
         <Col xs={12} className="d-lg-none order-3 mt-4">
-          <Salon1 idSuffix="mobile" />
+          <Salon1 />
         </Col>
       </Row>
     </div>

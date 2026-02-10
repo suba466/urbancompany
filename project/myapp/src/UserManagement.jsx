@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Card, Row, Col, Form, Button, Alert,
   Table, Badge, Modal, InputGroup
@@ -9,13 +8,12 @@ import { IoEyeSharp } from "react-icons/io5";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import TableControls from './TableControls';
 import {
+  prepareUserDataForExport,
+  getCSVHeadersFromData,
   exportAsPDF,
   exportAsExcel,
-  exportAsCSV,
-  generatePDFReportHTML,
-  prepareUserDataForExport
+  exportAsCSV
 } from './downloadUtils';
-import API_URL from './config';
 
 function UserManagement({ isAdding, isEditing, userId }) {
   const [users, setUsers] = useState([]);
@@ -24,7 +22,6 @@ function UserManagement({ isAdding, isEditing, userId }) {
   const [userTotalPages, setUserTotalPages] = useState(1);
   const [userPerPage, setUserPerPage] = useState(10);
   const [userTotalItems, setUserTotalItems] = useState(0);
-  const navigate = useNavigate();
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
@@ -32,7 +29,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
     designation: '',
     password: '',
     permissions: {
-      Dashboard: true,
+      Dashboard: false,
       Users: false,
       Customer: false,
       Catalog: false,
@@ -82,7 +79,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
 
   const fetchUsers = async (page = 1, search = '', perPage = userPerPage) => {
     try {
-      let url = `${API_URL}/api/admin/users?page=${page}&limit=${perPage}&search=${search}`;
+      let url = `http://localhost:5000/api/admin/users?page=${page}&limit=${perPage}&search=${search}`;
 
       const response = await fetch(url, {
         headers: getAuthHeaders()
@@ -115,7 +112,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
 
   const fetchUserDetails = async (id) => {
     try {
-      const response = await fetch(`${API_URL}/api/admin/users/${id}`, {
+      const response = await fetch(`http://localhost:5000/api/admin/users/${id}`, {
         headers: getAuthHeaders()
       });
       const data = await response.json();
@@ -367,8 +364,8 @@ function UserManagement({ isAdding, isEditing, userId }) {
       }
 
       const url = isEditingUser
-        ? `${API_URL}/api/admin/users/${editUserId}`
-        : `${API_URL}/api/admin/users`;
+        ? `http://localhost:5000/api/admin/users/${editUserId}`
+        : 'http://localhost:5000/api/admin/users';
 
       const method = isEditingUser ? 'PUT' : 'POST';
 
@@ -383,18 +380,12 @@ function UserManagement({ isAdding, isEditing, userId }) {
       const data = await response.json();
 
       if (data.success) {
-        // Show success message (optional, or rely on fast transition)
-        // alert(isEditingUser ? 'User updated successfully' : 'User added successfully'); 
-
         setFormSuccess(true);
-        resetForm();
+        if (!isEditingUser) {
+          resetForm();
+        }
         setFormErrors({});
         setTouchedFields({});
-
-        // Navigate to list view (handles removing isAdding/isEditing props if navigating from route)
-        navigate('/admin/users');
-        // Refresh list
-        fetchUsers();
       } else {
         setFormError(data.error || (isEditingUser ? 'Failed to update user' : 'Failed to add user'));
       }
@@ -452,7 +443,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
     });
 
     if (userMember.profileImage) {
-      setProfileImagePreview(`${API_URL}${userMember.profileImage}`);
+      setProfileImagePreview(`http://localhost:5000${userMember.profileImage}`);
     } else {
       setProfileImagePreview("");
     }
@@ -470,7 +461,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
   const deleteUser = async (userId) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
-        const response = await fetch(`${API_URL}/api/admin/users/${userId}`, {
+        const response = await fetch(`http://localhost:5000/api/admin/users/${userId}`, {
           method: 'DELETE',
           headers: getAuthHeaders()
         });
@@ -493,7 +484,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
 
     if (window.confirm(`Are you sure you want to delete ${selectedIds.length} user(s)?`)) {
       try {
-        const response = await fetch(`${API_URL}/api/admin/bulk-delete`, {
+        const response = await fetch('http://localhost:5000/api/admin/bulk-delete', {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({
@@ -557,7 +548,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
         setSelectedUserDetails(prev => ({ ...prev, isActive }));
       }
 
-      const response = await fetch(`${API_URL}/api/admin/users/${userId}/toggle-status`, {
+      const response = await fetch(`http://localhost:5000/api/admin/users/${userId}/toggle-status`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ isActive })
@@ -599,12 +590,13 @@ function UserManagement({ isAdding, isEditing, userId }) {
     if (!permissions) return <Badge bg="dark" className="me-1 px-3 py-2">None</Badge>;
 
     const activePermissions = Object.entries(permissions)
-      .filter(([key, value]) => value && key !== 'Dashboard')
+      .filter(([key, value]) => value)
       .map(([key]) => key);
 
     if (activePermissions.length === 0) return <Badge bg="dark" className="me-1 px-3 py-2">None</Badge>;
 
     const permissionGradients = {
+      'Dashboard': 'linear-gradient(135deg, #141E30 0%, #243B55 100%)',
       'Users': 'linear-gradient(135deg, #0F2027 0%, #203A43 100%)',
       'Customer': 'linear-gradient(135deg, #1A2980 0%, #26D0CE 100%)',
       'Catalog': 'linear-gradient(135deg, #232526 0%, #61809fff 100%)',
@@ -923,6 +915,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
                 <div className="px-1">
                   <Row className="gy-2 gx-5">
                     {[
+                      'Dashboard',
                       'Users',
                       'Customer',
                       'Catalog',
@@ -1044,17 +1037,8 @@ function UserManagement({ isAdding, isEditing, userId }) {
                 }}
                 searchPlaceholder="Search users..."
                 onDownloadPDF={() => {
-                  const userDataForPDF = users.map(user => ({
-                    'Profile': user.profileImage ? `${API_URL}${user.profileImage}` : null,
-                    'Name': user.name,
-                    'Email': user.email,
-                    'Contact': user.phone,
-                    'Designation': user.designation,
-                    'Status': user.isActive ? 'Active' : 'Inactive'
-                  }));
-                  const headers = ['Profile', 'Name', 'Email', 'Contact', 'Designation', 'Status'];
-                  const element = generatePDFReportHTML('User Report', headers, userDataForPDF);
-                  exportAsPDF(element, 'users');
+                  const tableElement = document.querySelector('.table');
+                  exportAsPDF(tableElement, 'users');
                 }}
                 onDownloadExcel={() => {
                   const userData = prepareUserDataForExport(users);
@@ -1134,7 +1118,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
                       }}>
                         {user.profileImage ? (
                           <img
-                            src={`${API_URL}${user.profileImage}`}
+                            src={`http://localhost:5000${user.profileImage}`}
                             alt={user.name}
                             style={{
                               width: '100%',
@@ -1228,7 +1212,7 @@ function UserManagement({ isAdding, isEditing, userId }) {
                 <div className="mb-3">
                   {selectedUserDetails.profileImage ? (
                     <img
-                      src={`${API_URL}${selectedUserDetails.profileImage}`}
+                      src={`http://localhost:5000${selectedUserDetails.profileImage}`}
                       alt={selectedUserDetails.name}
                       style={{
                         width: '100px',

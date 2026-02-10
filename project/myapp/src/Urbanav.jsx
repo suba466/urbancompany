@@ -15,13 +15,15 @@ import { MdAccountCircle, MdHome, MdApartment, MdBusinessCenter, MdDelete, MdMor
 import AccountModal from "./AccountModal";
 import { useCart, useAuth } from "./hooks"; // Import from hooks
 import "./Urbancom.css";
-import API_URL, { getAssetPath } from "./config";
-import { fetchData } from "./apiService";
 // Leaflet imports
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
+// Fix for default marker icon in Leaflet with React
+// Note: In some build setups, you might need to import images explicitly.
+// For a simple Vite setup, we try to use the CDN or local node_modules referencing if possible,
+// but often explicit imports work best.
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
@@ -36,8 +38,8 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 function Urbanav() {
   const navigate = useNavigate();
-  const [logo, setLogo] = useState(getAssetPath("/assets/Uc.png"));
-  const [logo1, setLogo1] = useState(getAssetPath("/assets/urban.png"));
+  const [logo, setLogo] = useState("http://localhost:5000/assets/Uc.png");
+  const [logo1, setLogo1] = useState("http://localhost:5000/assets/urban.png");
   const [searchValue, setSearchValue] = useState("");
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
@@ -104,33 +106,43 @@ function Urbanav() {
 
   // Load saved addresses from localStorage
   const loadSavedAddresses = () => {
-    try {
-      const saved = localStorage.getItem('savedAddresses');
-      if (saved) {
-        setSavedAddresses(JSON.parse(saved));
-      }
-    } catch (e) {
-      console.error("Error parsing savedAddresses:", e);
-      setSavedAddresses([]);
+    const saved = localStorage.getItem('savedAddresses');
+    if (saved) {
+      setSavedAddresses(JSON.parse(saved));
     }
   };
 
   // Fetch logos from backend
-  // Fetch logos with fallback
   useEffect(() => {
     const fetchLogos = async () => {
-      const data = await fetchData("api/static-data");
+      try {
+        console.log("Fetching logos from backend...");
+        const response = await fetch("http://localhost:5000/api/static-data");
+        if (!response.ok) {
+          throw new Error('Failed to fetch static data');
+        }
+        const data = await response.json();
+        console.log("Static data received:", data);
 
-      if (data && data.logo) {
-        setLogo(getAssetPath(data.logo));
-      } else {
-        setLogo(getAssetPath("/assets/Uc.png"));
-      }
+        if (data && data.logo) {
+          const logoUrl = data.logo.startsWith('http')
+            ? data.logo
+            : `http://localhost:5000${data.logo}`;
+          setLogo(logoUrl);
+        } else {
+          setLogo("http://localhost:5000/assets/Uc.png");
+        }
 
-      if (data && data.logo1) {
-        setLogo1(getAssetPath(data.logo1));
-      } else {
-        setLogo1(getAssetPath("/assets/urban.png"));
+        if (data && data.logo1) {
+          const logo1Url = data.logo1.startsWith('http')
+            ? data.logo1
+            : `http://localhost:5000${data.logo1}`;
+          setLogo1(logo1Url);
+        }
+      } catch (error) {
+        console.error("Error fetching logos:", error);
+        setLogo("http://localhost:5000/assets/Uc.png");
+        setLogo1("http://localhost:5000/assets/urban.png");
       }
     };
 
@@ -218,6 +230,14 @@ function Urbanav() {
     };
   }, []);
 
+  // Auto-fetch location when modal opens
+  useEffect(() => {
+    if (showLocationPopup && !selectedLocation && savedAddresses.length === 0) {
+      // Automatically trigger location fetch when modal opens for the first time
+      handleUseCurrentLocation();
+    }
+  }, [showLocationPopup]);
+
   // Listen for cart updates
   useEffect(() => {
     const handleCartUpdate = () => {
@@ -246,58 +266,83 @@ function Urbanav() {
   };
 
   const handleUseCurrentLocation = () => {
-    // 1. Immediately show the map with a default location (e.g., Coimbatore)
-    const defaultLocation = {
-      id: 7,
-      mainText: "Your Current Location",
-      subText: "Coimbatore, Tamil Nadu",
-      fullAddress: "Your current location in Coimbatore",
-      coordinates: { lat: 11.0168, lng: 76.9558 }
-    };
-    setSelectedLocation(defaultLocation);
-    setShowAddressMap(true);
-    setAddressDetails(prev => ({
-      ...prev,
-      landmark: "Current Location"
-    }));
+    setCurrentLocationStatus("fetching");
+    setIsGettingLocation(true);
+    setLocationSearch("");
+    setSuggestedLocations([]);
 
-    // 2. Try to fetch real location in the background and update the map (flyTo)
-    if ("geolocation" in navigator) {
+    if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
-          const { latitude, longitude } = position.coords;
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
 
-          let locationData = {
+          // Set coordinates immediately and show map
+          const tempLocation = {
             id: Date.now(),
-            mainText: "Current Location",
-            subText: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
-            fullAddress: `Lat: ${latitude}, Lng: ${longitude}`,
-            coordinates: { lat: latitude, lng: longitude }
+            mainText: "Fetching address...",
+            subText: "Please wait...",
+            fullAddress: "Locating your address...",
+            coordinates: { lat, lng }
           };
+          setSelectedLocation(tempLocation);
+          setShowAddressMap(true);
 
+          // Reverse geocode to get address
           try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
-            const data = await res.json();
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+            );
+            const data = await response.json();
+
             if (data && data.display_name) {
-              const nameParts = data.display_name.split(',');
-              locationData.mainText = nameParts[0];
-              locationData.subText = nameParts.slice(1).join(', ').trim();
-              locationData.fullAddress = data.display_name;
+              const parts = data.display_name.split(', ');
+              const mainText = parts.length > 0 ? parts[0] : "Your Current Location";
+              const subText = parts.slice(1, 3).join(', ');
+
+              setSelectedLocation({
+                id: Date.now(),
+                mainText: mainText,
+                subText: subText,
+                fullAddress: data.display_name,
+                coordinates: { lat, lng }
+              });
+
+              setAddressDetails(prev => ({
+                ...prev,
+                landmark: mainText
+              }));
             }
-          } catch (e) {
-            console.log("Geo fetch failed, using coords");
+          } catch (error) {
+            console.error("Reverse geocoding failed:", error);
+            setSelectedLocation({
+              id: Date.now(),
+              mainText: "Your Current Location",
+              subText: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`,
+              fullAddress: `Current location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+              coordinates: { lat, lng }
+            });
           }
 
-          // Update the location - MapController will automatically flyTo these new coords
-          setSelectedLocation(locationData);
-          setAddressDetails(prev => ({ ...prev, landmark: locationData.mainText }));
+          setCurrentLocationStatus("fetched");
+          setIsGettingLocation(false);
         },
         (error) => {
-          console.warn("Background geo-fetch failed or denied:", error);
-          // No action needed, user is already on the map with default location
+          console.error("Geolocation error:", error);
+          alert("Unable to get your location. Please check your browser permissions or search for your address manually.");
+          setCurrentLocationStatus("idle");
+          setIsGettingLocation(false);
         },
-        { timeout: 10000 }
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
       );
+    } else {
+      alert("Geolocation is not supported by your browser. Please search for your address manually.");
+      setCurrentLocationStatus("idle");
+      setIsGettingLocation(false);
     }
   };
 
@@ -321,13 +366,7 @@ function Urbanav() {
     localStorage.setItem('selectedAddress', JSON.stringify(finalAddress));
 
     if (addressDetails.saveAddress) {
-      let existingAddresses = [];
-      try {
-        existingAddresses = JSON.parse(localStorage.getItem('savedAddresses') || '[]');
-      } catch (e) {
-        console.error("Error parsing savedAddresses for save:", e);
-        existingAddresses = [];
-      }
+      const existingAddresses = JSON.parse(localStorage.getItem('savedAddresses') || '[]');
       const exists = existingAddresses.find(addr =>
         addr.doorNo === finalAddress.doorNo &&
         addr.mainText === finalAddress.mainText
@@ -443,7 +482,7 @@ function Urbanav() {
                   style={{ height: "34px", marginLeft: "10px" }}
                   onError={(e) => {
                     console.error("Failed to load logo:", logo1);
-                    e.target.src = getAssetPath("/assets/urban.png");
+                    e.target.src = "http://localhost:5000/assets/urban.png";
                   }}
                 />
               </Col>
@@ -463,7 +502,7 @@ function Urbanav() {
                 style={{ maxHeight: "40px", objectFit: "contain" }}
                 onError={(e) => {
                   console.error("Failed to load main logo:", logo);
-                  e.target.src = getAssetPath("/assets/Uc.png");
+                  e.target.src = "http://localhost:5000/assets/Uc.png";
                 }}
               />
               {!location.pathname.startsWith("/salon") && (
@@ -608,7 +647,7 @@ function Urbanav() {
             <div className="container-fluid">
               <div className="row text-center">
                 <div className="col-3">
-                  <div className="nav-item" onClick={() => navigate('/uc')} style={{ cursor: "pointer" }}>
+                  <div className="nav-item">
                     <img
                       src={logo1}
                       alt="UC Logo"
@@ -620,14 +659,14 @@ function Urbanav() {
                       }}
                       onError={(e) => {
                         console.error("Failed to load logo1:", logo1);
-                        e.target.src = getAssetPath("/assets/urban.png");
+                        e.target.src = "http://localhost:5000/assets/uc.png";
                       }}
                     />
                     <div className="nav-label" style={{ fontSize: "12px" }}>UC</div>
                   </div>
                 </div>
                 <div className="col-3">
-                  <div className="nav-item" onClick={() => navigate('/help')} style={{ cursor: "pointer" }}>
+                  <div className="nav-item">
                     <IoMdHelpCircleOutline size={18} className="mb-1" style={{ color: "#8b8b8bff" }} />
                     <div className="nav-label" style={{ fontSize: "12px" }}>help</div>
                   </div>
@@ -672,7 +711,7 @@ function Urbanav() {
         show={showLocationPopup}
         onHide={resetLocationModal}
         centered
-        size={showAddressMap ? "lg" : "md"}
+        size={showAddressMap ? "xl" : "lg"}
         dialogClassName="location-modal"
       >
         <Modal.Header className="border-bottom-0 position-relative">
@@ -856,8 +895,8 @@ function Urbanav() {
                     style={{ height: "100%", width: "100%" }}
                   >
                     <TileLayer
-                      attribution='&copy; Google Maps'
-                      url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+                      attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                      url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                     />
                     <MapController selectedLocation={selectedLocation} />
                     <DraggableMarker

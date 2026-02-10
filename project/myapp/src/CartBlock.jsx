@@ -2,7 +2,6 @@ import { Row, Col, Button } from "react-bootstrap";
 import { GoDotFill } from "react-icons/go";
 import { useCart } from "./hooks";
 import { useNavigate } from "react-router-dom";
-import API_URL, { getAssetPath } from "./config";
 
 function CartBlock({
   formatPrice = (x) => x,
@@ -33,6 +32,7 @@ function CartBlock({
   const totalPrice = calculateTotalPrice();
 
   const handleIncrease = (item) => {
+    if (item.isFrequentlyAdded) return; // Prevent increase for frequently added items
     updateItem(item._id || item.productId, (item.count || 1) + 1);
   };
 
@@ -46,10 +46,15 @@ function CartBlock({
 
   // Fixed: Handle view cart navigation
   const handleViewCart = () => {
-    // Navigate to cart page using react-router
-    navigate('/cart');
-    // Scroll to top
-    window.scrollTo(0, 0);
+    // Check if we're already on /cart page
+    if (window.location.pathname === '/cart') {
+      // If already on cart page, just scroll to top
+      window.scrollTo(0, 0);
+    } else {
+      // Navigate to cart page immediately using window.location
+      // This ensures immediate navigation without waiting for React Router
+      window.location.href = '/cart';
+    }
   };
 
   return (
@@ -63,7 +68,7 @@ function CartBlock({
       {carts.length === 0 ? (
         <div className="text-center py-4">
           <img
-            src={getAssetPath("/assets/cart.jpg")}
+            src="http://localhost:5000/assets/cart.jpg"
             alt="cart-empty"
             className="w-50 mb-3"
             style={{ maxWidth: "120px", objectFit: "contain" }}
@@ -122,10 +127,10 @@ function CartBlock({
                           color: "#000",
                           fontSize: "18px",
                           fontWeight: "bold",
-                          opacity: (c.count || 1) >= 3 ? "0.5" : "1",
-                          cursor: (c.count || 1) >= 3 ? "not-allowed" : "pointer"
+                          opacity: c.isFrequentlyAdded || (c.count || 1) >= 3 ? "0.5" : "1",
+                          cursor: c.isFrequentlyAdded || (c.count || 1) >= 3 ? "not-allowed" : "pointer"
                         }}
-                        disabled={(c.count || 1) >= 3}
+                        disabled={c.isFrequentlyAdded || (c.count || 1) >= 3}
                       >
                         +
                       </Button>

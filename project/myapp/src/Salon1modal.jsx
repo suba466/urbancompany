@@ -21,7 +21,10 @@ function Salon1modal({
   baseServices = [],
   roundPrice = v => Math.round(v),
   showDiscountModal = false,
-  setShowDiscountModal = () => { }
+  setShowDiscountModal = () => { },
+  updateItem = () => { },
+  removeItem = () => { },
+  addItem = () => { }
 }) {
   // ---------- state ----------
   const [loadingDropdownKey, setLoadingDropdownKey] = useState(null);
@@ -45,9 +48,33 @@ function Salon1modal({
   const [selectedServices, setSelectedServices] = useState(initialServices);
   const [addedImgs, setAddedImgs] = useState([]);
 
+  // Compute effective carts for carousel display (merging real cart with pending changes)
+  const effectiveCarts = useMemo(() => {
+    // Create a map of current cart items for easy lookup
+    const cartMap = new Map(carts.map(c => [c.title, c]));
+
+    // Apply local carousel changes
+    Object.entries(carouselCounts).forEach(([key, count]) => {
+      const img = addedImgs.find(i => i.key === key);
+      if (img) {
+        if (count > 0) {
+          // If item exists in cart, update count. If not, mock it.
+          const existing = cartMap.get(img.name);
+          cartMap.set(img.name, existing ? { ...existing, count } : { title: img.name, count, price: img.price, productId: img.key, isFrequentlyAdded: true });
+        } else {
+          // If count is 0, remove from view
+          cartMap.delete(img.name);
+        }
+      }
+    });
+
+    return Array.from(cartMap.values());
+  }, [carts, carouselCounts, addedImgs]);
+
   // Filter out items that are already in cart
+  // Filter out items that are already in effectiveCarts for carousel display
   const visibleCarouselItems = addedImgs.filter(img => {
-    const inCart = carts.some(c => c.title === img.name);
+    const inCart = effectiveCarts.some(c => c.title === img.name);
     return !inCart;
   });
 
@@ -99,11 +126,8 @@ function Salon1modal({
 
   // ---------- effects ----------
   useEffect(() => {
-    // Break loop: Only update if strictly necessary and different from current state
-    if (cartCount === 0 && showFrequentlyAdded) {
-      setShowFrequentlyAdded(false);
-    }
-  }, [cartCount, showFrequentlyAdded, setShowFrequentlyAdded]);
+    if (cartCount === 0) setShowFrequentlyAdded(false);
+  }, [cartCount, setShowFrequentlyAdded]);
 
   // Fetch added images from server
   useEffect(() => {
@@ -132,24 +156,40 @@ function Salon1modal({
     fetchAddedImages();
   }, []);
 
+  // Initialize cartCount from props/cart
   useEffect(() => {
     if (selectedItem) {
       const cartItem = (Array.isArray(carts) ? carts.find(c => c.title === selectedItem.title) : null);
-      // Only update if changed to avoid loops
-      if (cartItem && cartCount !== cartItem.count) {
-        setCartCount(cartItem.count);
-      } else if (!cartItem && cartCount !== 0) {
-        setCartCount(0);
-      }
+      setCartCount(cartItem?.count || 0);
     }
-  }, [carts, selectedItem, cartCount]); // Added cartCount to deps to check against it
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedItem, showDiscountModal]); // Initialize only when item changes or modal opens
 
-  // Removed fetchCarts() definition and calls as they were redundant with Redux 'carts' prop
-  // and 'setCarts' prop is a no-op from parent.
+  // Initialize carouselCounts from props/cart
+  useEffect(() => {
+    const updatedCounts = {};
+    addedImgs.forEach(img => {
+      const cartItem = carts.find(c => c.title === img.name);
+      updatedCounts[img.key] = cartItem ? cartItem.count : 0;
+    });
+    setCarouselCounts(updatedCounts);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedItem, addedImgs, showDiscountModal]); // Initialize when item changes, not on every cart update (to keep local state pending)
+
+
+
+  const fetchCarts = () => {
+    return fetch("http://localhost:5000/api/carts")
+      .then(res => res.json())
+      .then(data => {
+        if (typeof setCarts === 'function') setCarts(data.carts || []);
+        return data.carts || [];
+      })
+      .catch(err => console.error("Error fetching carts:", err));
+  };
 
   useEffect(() => {
     if (show && selectedItem) {
-      // Use local fetch just for retrieving saved selections if needed
       fetch("http://localhost:5000/api/carts")
         .then(res => res.json())
         .then(data => {
@@ -160,37 +200,15 @@ function Salon1modal({
               const key = `restored:${s.title}`;
               restored[key] = { title: s.title, content: s.content, price: Number(s.price), count: 1 };
             });
-            // Deep check before setting to avoid loop? 
-            // Since this runs only when 'show' or 'selectedItem' changes, it should be fine.
             setSelectedServices(prev => ({ ...prev, ...restored }));
           }
         })
         .catch(err => console.error("Error syncing cart saved selections:", err));
     }
-  }, [show, selectedItem?.title]); // Depend on title specifically to be safer
+  }, [show, selectedItem]);
 
-  useEffect(() => {
-    // Recalculate counts based on cart
-    if (!addedImgs.length) return;
+  // No filtering - show all added items so user can edit qty
 
-    const updatedCounts = {};
-    let hasUpdates = false;
-
-    addedImgs.forEach(img => {
-      const cartItem = carts.find(c => c.title === img.name);
-      if (cartItem) {
-        updatedCounts[img.key] = cartItem.count;
-        if (carouselCounts[img.key] !== cartItem.count) hasUpdates = true;
-      } else if (carouselCounts[img.key]) {
-        hasUpdates = true; // It was there, now it's gone
-      }
-    });
-
-    // Only set if actually changed
-    if (hasUpdates || Object.keys(updatedCounts).length !== Object.keys(carouselCounts).length) {
-      setCarouselCounts(updatedCounts);
-    }
-  }, [carts, addedImgs, carouselCounts]);
 
   const extraPrice = useMemo(() => {
     return Object.values(selectedServices).reduce((sum, s) => {
@@ -266,6 +284,25 @@ function Salon1modal({
     </>
   );
 
+  // Check if anything changed to enable Done button
+  const hasPendingChanges = useMemo(() => {
+    // Check main item changes
+    const originalCartItem = carts.find(c => c.title === selectedItem?.title);
+    const originalCount = originalCartItem?.count || 0;
+    if (cartCount !== originalCount) return true;
+
+    // Check carousel changes
+    for (const [key, count] of Object.entries(carouselCounts)) {
+      const img = addedImgs.find(i => i.key === key);
+      if (img) {
+        const originalCarouselItem = carts.find(c => c.title === img.name);
+        const originalCarouselCount = originalCarouselItem?.count || 0;
+        if (count !== originalCarouselCount) return true;
+      }
+    }
+    return false;
+  }, [cartCount, carouselCounts, carts, selectedItem, addedImgs]);
+
   // ---------- render ----------
   return (
     <>
@@ -325,7 +362,7 @@ function Salon1modal({
                     // Refresh cart from server
                     try {
                       const refreshed = await fetch("http://localhost:5000/api/carts").then(r => r.json()).then(d => d.carts || []);
-                      setCarts(refreshed);
+                      if (typeof setCarts === 'function') setCarts(refreshed);
                     } catch (err) {
                       console.error("Failed to refresh cart:", err);
                     }
@@ -333,7 +370,8 @@ function Salon1modal({
                     if (typeof window.updateCartInstantly === "function") window.updateCartInstantly(selectedItem.title);
 
                     onHide();
-                    setShowFrequentlyAdded(true);
+                    // Don't modify showFrequentlyAdded here, it should be controlled by caller or specific logic
+                    if (setShowFrequentlyAdded) setShowFrequentlyAdded(true);
                   }}
                 >Add to Cart</Button>
               </Col>
@@ -389,271 +427,276 @@ function Salon1modal({
       </Modal>
 
       {/* DISCOUNT / CART CHANGE MODAL */}
-      <Modal show={showDiscountModal} onHide={() => { setShowDiscountModal(false); setShowFrequentlyAdded(false); }} centered contentClassName="custom-modal">
+      <Modal show={showDiscountModal} onHide={() => { setShowDiscountModal(false); setShowFrequentlyAdded(false); }} centered contentClassName="custom-modal" dialogClassName="modal-bottom-fixed">
         <Button type="button" onClick={() => setShowDiscountModal(false)} className="position-absolute border-0 justify-content-center closebtn p-0" >X</Button>
-        <ModalBody
-          tabIndex={0}
-          style={{
-            maxHeight: '400px',
-            overflowY: 'auto'
-          }}
-        >
+        {selectedItem && (
+          <div className="d-flex flex-column" style={{ height: "100%" }}>
 
-          <div className="p-3 position-relative">
-            <Row>
-              {selectedItem && (
-                <Col xs={9}>
-                  <h5 className="fw-semibold">{selectedItem.title}</h5>
-                  <p style={{ color: "#676767ff", fontSize: "14px", marginBottom: "4px" }}><FaStar /> {selectedItem.rating}</p>
+            <ModalBody
+              tabIndex={0}
+              style={{
+                maxHeight: 'calc(100vh - 150px)', // Adjust based on fixed footer height
+                overflowY: 'auto',
+                paddingBottom: "80px" // Padding for fixed footer
+              }}
+            >
 
-                  <p style={{ fontSize: "13px", marginBottom: "4px" }}>
-                    <span className="fw-semibold">{formatPrice(discountedPrice || totalPrice)}</span>
-                    {discountedPrice && <span className="text-decoration-line-through" style={{ color: "#888", fontSize: "14px", marginLeft: "8px" }}>{formatPrice(totalPrice)}</span>}
-                    <span style={{ fontSize: "13px", color: "#676767ff" }}><GoDotFill style={{ fontSize: "10px" }} />{selectedItem.duration}</span>
-                  </p>
+              <div className="p-3 position-relative">
+                <Row>
+                  <Col xs={9}>
+                    <h5 className="fw-semibold">{selectedItem.title}</h5>
+                    <p style={{ color: "#676767ff", fontSize: "14px", marginBottom: "4px" }}><FaStar /> {selectedItem.rating}</p>
 
-                  {discountedPrice ? (
-                    <div style={{ color: "rgb(7, 121, 76)", fontSize: "13px" }}><FaTag /> {formatPrice(totalPrice - discountedPrice)} off applied!</div>
-                  ) : (
-                    <div style={{ color: "rgb(7, 121, 76)" }}><p style={{ fontSize: "14px" }}><FaTag style={{ marginRight: "4px" }} /> Add {formatPrice(Math.max(0, 3100 - totalPrice))} more</p></div>
-                  )}
-                </Col>
-              )}
+                    <p style={{ fontSize: "13px", marginBottom: "4px" }}>
+                      <span className="fw-semibold">{formatPrice(discountedPrice || totalPrice)}</span>
+                      {discountedPrice && <span className="text-decoration-line-through" style={{ color: "#888", fontSize: "14px", marginLeft: "8px" }}>{formatPrice(totalPrice)}</span>}
+                      <span style={{ fontSize: "13px", color: "#676767ff" }}><GoDotFill style={{ fontSize: "10px" }} />{selectedItem.duration}</span>
+                    </p>
 
-              <Col xs={3} className="d-flex align-items-center justify-content-end">
-                {cartCount === 0 ? (
-                  <Button
-                    type="button"
-                    disabled={totalItems >= 3}
-                    style={{ color: "rgb(110, 66, 229)", backgroundColor: "rgb(245, 241, 255)", border: "1px solid rgb(110, 66, 229)", padding: "5px 18px", zIndex: "2" }}
-                    onClick={() => {
-                      if (totalItems >= 3) {
-                        alert("You can only add up to 3 products.");
-                        return;
-                      }
-                      setCartCount(1);
-                      setHasChange(true);
-                    }}
-                  >Add</Button>
-                ) : (
-                  <div className='d-flex align-items-center gap-1 bn' style={{ border: "1px solid rgb(110, 66, 229)", backgroundColor: "rgb(245, 241, 255)", borderRadius: "6px" }}>
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        setCartCount(prev => Math.max(0, prev - 1));
-                        setHasChange(true);
+                    {discountedPrice ? (
+                      <div style={{ color: "rgb(7, 121, 76)", fontSize: "13px" }}><FaTag /> {formatPrice(totalPrice - discountedPrice)} off applied!</div>
+                    ) : (
+                      <div style={{ color: "rgb(7, 121, 76)" }}><p style={{ fontSize: "14px" }}><FaTag style={{ marginRight: "4px" }} /> Add {formatPrice(Math.max(0, 3100 - totalPrice))} more</p></div>
+                    )}
+                  </Col>
+
+                  <Col xs={3} className="d-flex align-items-center justify-content-end">
+                    {cartCount === 0 ? (
+                      <Button
+                        type="button"
+                        disabled={totalItems >= 3}
+                        style={{ color: "rgb(110, 66, 229)", backgroundColor: "rgb(245, 241, 255)", border: "1px solid rgb(110, 66, 229)", padding: "5px 18px", zIndex: "2" }}
+                        onClick={() => {
+                          if (totalItems >= 3) {
+                            alert("You can only add up to 3 products.");
+                            return;
+                          }
+                          setCartCount(1);
+                        }}
+                      >Add</Button>
+                    ) : (
+                      <div className='d-flex align-items-center gap-1 bn' style={{ border: "1px solid rgb(110, 66, 229)", backgroundColor: "rgb(245, 241, 255)", borderRadius: "6px" }}>
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            setCartCount(prev => Math.max(0, prev - 1));
+                          }}
+                          className='button border-0 d-flex align-items-center justify-content-center'>−</Button>
+                        <span className="count-box fw-bold">{cartCount}</span>
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            if (cartCount >= 3) {
+                              alert("You can't add more than 3 products.");
+                              return;
+                            }
+                            setCartCount(prev => prev + 1);
+                          }}
+                          className='button border-0 d-flex align-items-center justify-content-center'
+                          style={{ opacity: cartCount >= 3 ? "0.6" : "1" }}
+                        >+</Button>
+                      </div>
+                    )}
+                  </Col>
+                </Row>
+
+                {showFrequentlyAdded && (
+                  <div className="mt-4">
+                    <hr style={{ border: "3px solid #676767ff" }} />
+                    <h4 className="fw-bold mb-3">Frequently added together</h4>
+
+                    {/* Use your FrequentlyAddedCarousel component */}
+                    <FrequentlyAddedCarousel
+                      items={visibleCarouselItems}
+                      carts={effectiveCarts} // Use effectiveCarts here
+                      onAdd={async (item) => {
+                        setCarouselCounts(prev => ({
+                          ...prev,
+                          [item.key]: (prev[item.key] || 0) + 1
+                        }));
                       }}
-                      className='button border-0 d-flex align-items-center justify-content-center'>−</Button>
-                    <span className="count-box fw-bold">{cartCount}</span>
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        if (cartCount >= 3) {
-                          alert("You can't add more than 3 products.");
-                          return;
-                        }
-                        setCartCount(prev => prev + 1);
-                        setHasChange(true);
+                      onRemove={async (item) => {
+                        setCarouselCounts(prev => ({
+                          ...prev,
+                          [item.key]: Math.max(0, (prev[item.key] || 0) - 1)
+                        }));
                       }}
-                      className='button border-0 d-flex align-items-center justify-content-center'
-                      style={{ opacity: cartCount >= 3 ? "0.6" : "1" }}
-                    >+</Button>
+                    />
                   </div>
                 )}
-              </Col>
-            </Row>
 
-            {showFrequentlyAdded && (
-              <div className="mt-4">
                 <hr style={{ border: "3px solid #676767ff" }} />
-                <h4 className="fw-bold mb-3">Frequently added together</h4>
 
-                {/* Use your FrequentlyAddedCarousel component */}
-                <FrequentlyAddedCarousel
-                  items={visibleCarouselItems}
-                  carts={carts}
-                  onAdd={async (item) => {
-                    // Add to cart logic
-                    const itemToAdd = {
-                      title: item.name,
-                      price: item.price,
-                      count: 1,
-                      savedSelections: []
-                    };
-
-                    await handleAddToCart(itemToAdd, [], item.price, 0);
-
-                    // Refresh cart from server
-                    const refreshed = await fetch("http://localhost:5000/api/carts")
-                      .then(res => res.json())
-                      .then(data => data.carts || []);
-                    setCarts(refreshed);
-
-                    // Update carousel counts
-                    setCarouselCounts(prev => ({
-                      ...prev,
-                      [item.key]: (prev[item.key] || 0) + 1
-                    }));
-
-                    if (typeof window.updateCartInstantly === "function") {
-                      window.updateCartInstantly(item.name);
-                    }
-                  }}
-                  onRemove={async (item) => {
-                    // Remove from cart logic
-                    const cartItem = carts.find(c => c.title === item.name);
-                    if (cartItem) {
-                      if (cartItem.count > 1) {
-                        await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
-                          method: "PUT",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ count: cartItem.count - 1 })
-                        });
-                      } else {
-                        await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
-                          method: "DELETE"
-                        });
-                      }
-
-                      // Refresh carts
-                      const refreshed = await fetchCarts();
-                      setCarts(refreshed);
-                      setHasChange(true);
-                    }
-                  }}
-                />
-              </div>
-            )}
-
-            <hr style={{ border: "3px solid #676767ff" }} />
-
-            {/* Rating section remains the same */}
-            {Array.isArray(selectedItem?.ratingBreak) && selectedItem.ratingBreak.length > 0 && (
-              <div className="mt-5">
-                <h3><FaStar style={{ marginBottom: "10px" }} /> <span className="fw-semibold" style={{ fontSize: "37px" }}>4.85</span></h3>
-                <p style={{ color: "#4c4c4cff", marginTop: "-5px" }}>  7.3M reviews</p>
-                {selectedItem.ratingBreak.map((rb, i) => (
-                  <div className="d-flex align-items-center"
-                    key={i}
-                    style={{
-                      fontSize: "13px",
-                      marginBottom: "6px",
-                    }}>
-                    <div className="d-flex align-items-center" style={{ width: "45px" }}>
-                      <FaStar style={{ fontSize: "12px", marginRight: "3px" }} />
-                      <span className="fw-semibold" style={{ fontSize: "16px" }}>{rb.stars}</span>
-                    </div>
-                    <div
-                      style={{
-                        flexGrow: 1,
-                        height: "8px",
-                        background: "#e6e6e6",
-                        borderRadius: "3px",
-                        overflow: "hidden",
-                        margin: "0 12px",
-                      }}>
-                      <div
+                {/* Rating section remains the same */}
+                {Array.isArray(selectedItem?.ratingBreak) && selectedItem.ratingBreak.length > 0 && (
+                  <div className="mt-5">
+                    <h3><FaStar style={{ marginBottom: "10px" }} /> <span className="fw-semibold" style={{ fontSize: "37px" }}>4.85</span></h3>
+                    <p style={{ color: "#4c4c4cff", marginTop: "-5px" }}>  7.3M reviews</p>
+                    {selectedItem.ratingBreak.map((rb, i) => (
+                      <div className="d-flex align-items-center"
+                        key={i}
                         style={{
-                          width: `${Math.min(100, Number(rb.value) || 0)}%`,
-                          height: "100%",
-                          background: "#000",
-                        }}
-                      ></div>
-                    </div>
-                    <div className="text-end w-50" >
-                      {rb.count}
-                    </div>
+                          fontSize: "13px",
+                          marginBottom: "6px",
+                        }}>
+                        <div className="d-flex align-items-center" style={{ width: "45px" }}>
+                          <FaStar style={{ fontSize: "12px", marginRight: "3px" }} />
+                          <span className="fw-semibold" style={{ fontSize: "16px" }}>{rb.stars}</span>
+                        </div>
+                        <div
+                          style={{
+                            flexGrow: 1,
+                            height: "8px",
+                            background: "#e6e6e6",
+                            borderRadius: "3px",
+                            overflow: "hidden",
+                            margin: "0 12px",
+                          }}>
+                          <div
+                            style={{
+                              width: `${Math.min(100, Number(rb.value) || 0)}%`,
+                              height: "100%",
+                              background: "#000",
+                            }}
+                          ></div>
+                        </div>
+                        <div className="text-end w-50" >
+                          {rb.count}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            )}
-          </div>
+            </ModalBody>
 
-          {/* DONE BUTTON - Only show when there are changes */}
-          {hasChange && (
-            <div className="p-3 pt-0">
-              <Button
-                variant="success"
-                className="butn w-100 fw-bold"
-                onClick={async () => {
-                  // Handle main product count changes
-                  const cartItem = carts.find(c => c.title === selectedItem.title);
+            {/* FIXED FOOTER */}
+            <div
+              className="position-absolute bottom-0 w-100 bg-white shadow-lg"
+              style={{
+                zIndex: 1050,
+                borderTop: "1px solid #e0e0e0",
+                paddingBottom: "10px"
+              }}
+            >
+              <div className="p-3">
+                <Row className="align-items-center mb-3">
+                  <Col xs={12}>
+                    <h5 className="fw-semibold mb-1">{selectedItem.title}</h5>
+                    <p style={{ color: "#676767ff", fontSize: "14px", marginBottom: "0" }}>
+                      <FaStar className="me-1" /> {selectedItem.rating}
+                    </p>
+                    <p style={{ fontSize: "13px", marginBottom: "0" }}>
+                      <span className="fw-semibold">{formatPrice(discountedPrice || totalPrice)}</span>
+                      {discountedPrice && <span className="text-decoration-line-through text-muted ms-2">{formatPrice(totalPrice)}</span>}
+                    </p>
+                  </Col>
+                </Row>
 
-                  if (cartCount > 0) {
-                    if (cartItem) {
-                      // Update existing item
-                      await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ count: cartCount })
-                      });
-                    } else {
-                      // Add new item
-                      await handleAddToCart(selectedItem, [], discountedPrice || totalPrice);
-                    }
-                  } else if (cartCount === 0 && cartItem) {
-                    // Remove item if count is 0
-                    await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
-                      method: "DELETE"
-                    });
-                  }
+                {/* DONE BUTTON */}
+                {hasPendingChanges && (
+                  <Button
+                    variant="success"
+                    className="w-100 fw-bold py-2"
+                    onClick={async () => {
+                      // 1. Commit Main Item Changes
+                      const originalCartItem = carts.find(c => c.title === selectedItem.title);
+                      const originalCount = originalCartItem?.count || 0;
 
-                  // Handle carousel items
-                  for (const [key, count] of Object.entries(carouselCounts)) {
-                    const img = addedImgs.find(img => img.key === key);
-                    if (img && count > 0) {
-                      const cartPayload = {
-                        productId: img.key,
-                        title: img.name,
-                        price: img.price,
-                        count: count,
-                        content: [{ details: img.name, price: img.price }],
-                        savedSelections: [],
-                        isFrequentlyAdded: true
-                      };
-
-                      const existingCarouselItem = carts.find(c => c.title === img.name);
-
-                      if (existingCarouselItem) {
-                        await fetch(`http://localhost:5000/api/carts/${existingCarouselItem._id}`, {
-                          method: "PUT",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ ...cartPayload, count: count })
-                        });
-                      } else {
-                        await fetch("http://localhost:5000/api/addcarts", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify(cartPayload)
-                        });
+                      if (cartCount > 0 && cartCount !== originalCount) {
+                        if (originalCartItem) {
+                          // Update existing
+                          try {
+                            await fetch(`http://localhost:5000/api/carts/${originalCartItem._id}`, {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ count: cartCount })
+                            });
+                            if (updateItem) updateItem(originalCartItem._id || originalCartItem.productId, cartCount);
+                          } catch (e) { console.error(e); }
+                        } else {
+                          // Add new
+                          const extraSelected = Object.values(selectedServices).filter(s => !Array.isArray(baseServices) || !baseServices.some(bs => bs.title === s.title && bs.content === s.content));
+                          await handleAddToCart(selectedItem, extraSelected, discountedPrice || totalPrice, false, cartCount);
+                        }
+                      } else if (cartCount === 0 && originalCount > 0) {
+                        // Remove
+                        if (originalCartItem) {
+                          try {
+                            await fetch(`http://localhost:5000/api/carts/${originalCartItem._id}`, {
+                              method: "DELETE"
+                            });
+                            if (removeItem) removeItem(originalCartItem._id || originalCartItem.productId);
+                          } catch (e) { console.error(e); }
+                        }
                       }
-                    } else if (img && count === 0) {
-                      // Remove carousel item if count is 0
-                      const existingCarouselItem = carts.find(c => c.title === img.name);
-                      if (existingCarouselItem) {
-                        await fetch(`http://localhost:5000/api/carts/${existingCarouselItem._id}`, {
-                          method: "DELETE"
-                        });
+
+                      // 2. Commit Carousel Changes
+                      for (const [key, count] of Object.entries(carouselCounts)) {
+                        const img = addedImgs.find(img => img.key === key);
+                        if (img) {
+                          const existingCarouselItem = carts.find(c => c.title === img.name);
+                          const originalCarouselCount = existingCarouselItem?.count || 0;
+
+                          if (count !== originalCarouselCount) {
+                            if (count > 0) {
+                              const cartPayload = {
+                                productId: img.key,
+                                title: img.name,
+                                price: img.price,
+                                count: count,
+                                content: [{ details: img.name, price: img.price }],
+                                savedSelections: [],
+                                isFrequentlyAdded: true
+                              };
+
+                              if (existingCarouselItem) {
+                                // Update
+                                await fetch(`http://localhost:5000/api/carts/${existingCarouselItem._id}`, {
+                                  method: "PUT",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ ...cartPayload, count: count })
+                                });
+                                if (updateItem) updateItem(existingCarouselItem._id || existingCarouselItem.productId, count);
+                              } else {
+                                // Add
+                                await fetch("http://localhost:5000/api/addcarts", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify(cartPayload)
+                                });
+                                if (addItem) addItem(cartPayload);
+                              }
+                            } else {
+                              // Remove
+                              if (existingCarouselItem) {
+                                await fetch(`http://localhost:5000/api/carts/${existingCarouselItem._id}`, {
+                                  method: "DELETE"
+                                });
+                                if (removeItem) removeItem(existingCarouselItem._id || existingCarouselItem.productId);
+                              }
+                            }
+                          }
+                        }
                       }
-                    }
-                  }
 
-                  // Refresh carts and close modal
-                  await fetchCarts();
-                  if (typeof window.updateCartInstantly === "function") {
-                    window.updateCartInstantly(selectedItem.title);
-                  }
+                      // Refresh carts and close modal
+                      await fetchCarts();
+                      if (typeof window.updateCartInstantly === "function") {
+                        window.updateCartInstantly(selectedItem.title);
+                      }
 
-                  setShowDiscountModal(false);
-                  setHasChange(false);
-                  setShowFrequentlyAdded(true);
-                }}
-              >
-                Done
-              </Button>
+                      setShowDiscountModal(false);
+                      setShowFrequentlyAdded(true);
+                    }}
+                  >
+                    Done
+                  </Button>
+                )}
+              </div>
             </div>
-          )}
-        </ModalBody>
+          </div>
+        )}
       </Modal>
     </>
   );

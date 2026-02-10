@@ -1,13 +1,12 @@
 import { configureStore, createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
-import API_URL from './config';
 
 // Async thunks for Customer Authentication
 export const loginCustomer = createAsyncThunk(
   'customerAuth/login',
   async ({ email, password }, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/api/login`, { email, password });
+      const response = await axios.post('http://localhost:5000/api/login', { email, password });
 
       if (response.data.success) {
         const token = response.data.token;
@@ -35,7 +34,7 @@ export const registerCustomer = createAsyncThunk(
         if (userData[key]) formData.append(key, userData[key]);
       });
 
-      const response = await axios.post(`${API_URL}/api/register`, formData);
+      const response = await axios.post('http://localhost:5000/api/register', formData);
 
       if (response.data.success) {
         const token = response.data.token;
@@ -76,7 +75,7 @@ export const updateCustomerProfile = createAsyncThunk(
         if (profileData[key]) formData.append(key, profileData[key]);
       });
 
-      const response = await axios.post(`${API_URL}/api/update-profile`, formData);
+      const response = await axios.post('http://localhost:5000/api/update-profile', formData);
 
       if (response.data.success) {
         const updatedUser = response.data.customer;
@@ -97,7 +96,7 @@ export const fetchCustomerProfile = createAsyncThunk(
       const token = localStorage.getItem('customerToken');
       if (!token) return rejectWithValue('No token found');
 
-      const response = await axios.get(`${API_URL}/api/customer/profile`, {
+      const response = await axios.get('http://localhost:5000/api/customer/profile', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -117,7 +116,7 @@ export const loginAdmin = createAsyncThunk(
   'adminAuth/login',
   async ({ email, password }, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/api/admin/login`, { email, password });
+      const response = await axios.post('http://localhost:5000/api/admin/login', { email, password });
 
       if (response.data.success) {
         const token = response.data.token;
@@ -152,23 +151,12 @@ export const logoutAdmin = createAsyncThunk(
   }
 );
 
-// Helper for safe JSON parsing
-const safeJSONParse = (key, fallback) => {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : fallback;
-  } catch (error) {
-    console.error(`Error parsing ${key} from localStorage:`, error);
-    return fallback;
-  }
-};
-
 // Customer Auth Slice
 const customerAuthSlice = createSlice({
   name: 'customerAuth',
   initialState: {
     token: localStorage.getItem('customerToken') || null,
-    user: safeJSONParse('customerInfo', null),
+    user: JSON.parse(localStorage.getItem('customerInfo') || 'null'),
     role: 'user',
     isAuthenticated: !!localStorage.getItem('customerToken'),
     loading: false,
@@ -194,7 +182,7 @@ const customerAuthSlice = createSlice({
     updateCustomerLocalState: (state) => {
       // Sync with localStorage
       const token = localStorage.getItem('customerToken');
-      const user = safeJSONParse('customerInfo', null);
+      const user = JSON.parse(localStorage.getItem('customerInfo') || 'null');
 
       state.token = token;
       state.user = user;
@@ -286,8 +274,8 @@ const adminAuthSlice = createSlice({
   name: 'adminAuth',
   initialState: (() => {
     const token = localStorage.getItem('adminToken') || null;
-    const admin = safeJSONParse('adminInfo', null);
-    const permissions = safeJSONParse('adminPermissions', {});
+    const admin = JSON.parse(localStorage.getItem('adminInfo') || 'null');
+    const permissions = JSON.parse(localStorage.getItem('adminPermissions') || '{}');
     const isAuthenticated = !!token;
 
     // STRICT ROLE RE-CALCULATION ON RELOAD
@@ -354,7 +342,7 @@ export const { clearAdminAuth, setAdminUser } = adminAuthSlice.actions;
 const cartSlice = createSlice({
   name: 'cart',
   initialState: {
-    items: safeJSONParse('cartItems', []),
+    items: JSON.parse(localStorage.getItem('cartItems') || '[]'),
     customerEmail: null,
     loading: false
   },
@@ -400,7 +388,7 @@ const cartSlice = createSlice({
       state.customerEmail = action.payload;
     },
     syncCartWithLocalStorage: (state) => {
-      const items = safeJSONParse('cartItems', []);
+      const items = JSON.parse(localStorage.getItem('cartItems') || '[]');
       state.items = items;
     },
     // Force clear cart (for debugging)

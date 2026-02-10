@@ -6,14 +6,6 @@ import {
 import { MdModeEdit, MdOutlineDelete } from "react-icons/md";
 import { IoEyeSharp } from "react-icons/io5";
 import TableControls from './TableControls';
-import {
-  exportAsPDF,
-  generatePDFReportHTML,
-  exportAsCSV,
-  exportAsExcel,
-  getCSVHeadersFromData
-} from './downloadUtils';
-import API_URL from './config';
 
 const Subcategories = ({
   subcategories = [],
@@ -25,7 +17,7 @@ const Subcategories = ({
   onDelete,
   onBulkDelete,
   onToggleStatus,
-  onView,
+  onView,                
   currentPage = 1,
   totalPages = 1,
   totalItems = 0,
@@ -57,12 +49,12 @@ const Subcategories = ({
     if (!localSearch || typeof localSearch !== 'string' || !localSearch.trim()) {
       return localSubcategories;
     }
-
+    
     const searchTerm = localSearch.toLowerCase().trim();
     return localSubcategories.filter(sub => {
       return (
         (sub.name && sub.name.toLowerCase().includes(searchTerm)) ||
-        (sub.categoryName && sub.categoryName.toLowerCase().includes(searchTerm))
+        (sub.categoryName && sub.categoryName.toLowerCase().includes(searchTerm)) 
       );
     });
   }, [localSubcategories, localSearch]);
@@ -79,51 +71,45 @@ const Subcategories = ({
   // Handle status toggle
   const handleStatusToggle = (subcategoryId, isActive) => {
     // Update local state immediately
-    setLocalSubcategories(prevSubcategories =>
-      prevSubcategories.map(subcategory =>
-        subcategory._id === subcategoryId
-          ? { ...subcategory, isActive }
+    setLocalSubcategories(prevSubcategories => 
+      prevSubcategories.map(subcategory => 
+        subcategory._id === subcategoryId 
+          ? { ...subcategory, isActive } 
           : subcategory
       )
     );
-
+    
     // Call the parent function to update on server
     if (onToggleStatus) {
       onToggleStatus(subcategoryId, isActive);
     }
   };
 
-  const prepareDataForExport = () => {
-    return filteredSubcategories.map(sub => ({
+  const handleExport = (format) => {
+    const data = filteredSubcategories.map(sub => ({
       'Subcategory ID': sub._id,
       'Name': sub.name,
       'Parent Category': sub.categoryName,
       'Status': sub.isActive ? 'Active' : 'Inactive',
       'Created': new Date(sub.createdAt).toLocaleDateString()
     }));
-  };
 
-  const handleExportCSV = () => {
-    const data = prepareDataForExport();
-    const headers = getCSVHeadersFromData(data);
-    exportAsCSV(data, headers, 'subcategories');
-  };
+    if (format !== 'csv') {
+      alert(`${format.toUpperCase()} export requires extra library`);
+      return;
+    }
 
-  const handleExportExcel = () => {
-    const data = prepareDataForExport();
-    exportAsExcel(data, 'subcategories');
-  };
+    const headers = Object.keys(data[0] || {}).join(',');
+    const rows = data.map(row => Object.values(row).join(',')).join('\n');
+    const content = `${headers}\n${rows}`;
 
-  const handleDownloadPDF = () => {
-    const data = filteredSubcategories.map(sub => ({
-      'Image': sub.img ? `${API_URL}${sub.img}` : null,
-      'Name': sub.name,
-      'Category': sub.categoryName || 'Unknown',
-      'Status': sub.isActive ? 'Active' : 'Inactive'
-    }));
-    const headers = ['Image', 'Name', 'Category', 'Status'];
-    const element = generatePDFReportHTML('Subcategory Report', headers, data);
-    exportAsPDF(element, 'subcategories');
+    const blob = new Blob([content], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'subcategories.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   // Handle search change - FIXED: Accept event object
@@ -178,9 +164,7 @@ const Subcategories = ({
                 searchValue={localSearch}
                 onSearchChange={handleSearchChange}
                 searchPlaceholder="Search subcategories..."
-                onDownloadCSV={handleExportCSV}
-                onDownloadExcel={handleExportExcel}
-                onDownloadPDF={handleDownloadPDF}
+                onDownloadCSV={() => handleExport('csv')}
                 selectedCount={selectedSubcategories.length}
                 onBulkDelete={() => onBulkDelete(selectedSubcategories)}
                 showBulkActions
@@ -205,16 +189,16 @@ const Subcategories = ({
           )}
 
           <div className="table-responsive">
-            <Table striped bordered hover style={{ border: "2px solid" }}>
+            <Table striped bordered hover style={{border:"2px solid"}}>
               <thead>
                 <tr>
                   <th>
                     <Form.Check
                       checked={selectAllSubcategories}
-                      onChange={onSelectAll} className='check'
+                      onChange={onSelectAll}  className='check'
                     />
                   </th>
-                  <th style={{ width: "80px" }}>Image</th>
+                  <th style={{width:"80px"}}>Image</th>
                   <th>Name</th>
                   <th>Category</th>
                   <th>Status</th>
@@ -254,7 +238,7 @@ const Subcategories = ({
                       <td>
                         <img
                           src={sub.img
-                            ? `${API_URL}${sub.img}`
+                            ? `http://localhost:5000${sub.img}`
                             : 'https://via.placeholder.com/40'}
                           alt={sub.name}
                           width="40"

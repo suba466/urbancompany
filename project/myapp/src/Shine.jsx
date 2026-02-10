@@ -74,16 +74,16 @@ function Shine() {
   const handleNext = () => carouselRef.current && carouselRef.current.next();
 
   return (
-    <div className="container mt-4 position-relative d-flex w-100" style={{ overflow: "hidden" }}>
-      <Carousel
-        ref={carouselRef}
+    <div className="container mt-4 position-relative d-flex w-100" style={{overflow:"hidden"}}>
+      <Carousel 
+        ref={carouselRef} 
         interval={null}
-        indicators={false}
+        indicators={false} 
         nextIcon={null}
         prevIcon={null}
         activeIndex={currentIndex}
         onSelect={handleSelect}
-        touch={true}
+        touch={true} 
       >
         {chunkedItems.map((group, groupIndex) => (
           <Carousel.Item key={groupIndex}>
@@ -98,48 +98,48 @@ function Shine() {
                     : darkenHexColor(bgColor, 40);
 
                 return (
-                  <Col
-                    key={idx}
-                    md={12 / cardsPerSlide}
-                    className="d-flex justify-content-center mb-3"
+                  <Col 
+                    key={idx} 
+                    md={12 / cardsPerSlide} 
+                    className="d-flex justify-content-center mb-3" 
                     style={{
-                      flex: `0 0 ${100 / cardsPerSlide}%`,
+                      flex: `0 0 ${100 / cardsPerSlide}%`, 
                       maxWidth: `${100 / cardsPerSlide}%`
                     }}
                   >
                     <Card
                       className="shine d-flex flex-row w-100 align-items-stretch"
-                      style={{
-                        backgroundColor: bgColor,
-                        color: textColor,
-                        height: "200px"
+                      style={{ 
+                        backgroundColor: bgColor, 
+                        color: textColor, 
+                        height: "200px" 
                       }}
                     >
                       {/* Text section */}
-                      <div className="d-flex flex-column" style={{ flex: "1 1 50%" }}>
+                      <div className="d-flex flex-column" style={{ flex: "1 1 50%"}}>
                         <Card.Body className="d-flex flex-column p-3" style={{ flex: 1 }}>
                           <Card.Title>
-                            <h5
-                              className="fw-semibold mb-2"
-                              style={{
+                            <h5 
+                              className="fw-semibold mb-2" 
+                              style={{ 
                                 fontSize: overallIndex === 0 ? "25px" : "20px",
-                                color: textColor
+                                color: textColor 
                               }}
                             >
                               {item.name}
                             </h5>
                           </Card.Title>
-                          <p
-                            className="mb-2"
-                            style={{
+                          <p 
+                            className="mb-2" 
+                            style={{ 
                               fontSize: "11px",
-                              color: textColor
+                              color: textColor 
                             }}
                           >
                             {item.descriptions || " "}
                           </p>
-                          <Button
-                            className="w-100 mt-auto border-0"
+                          <Button 
+                            className="w-100 mt-auto border-0" 
                             style={{
                               backgroundColor: buttonColor,
                               color: buttonColor === "white" ? "black" : "white",
@@ -154,8 +154,8 @@ function Shine() {
 
                       {/* Image section */}
                       <div style={{ flex: "1 1 50%" }}>
-                        <Card.Img
-                          className="w-100 h-100"
+                        <Card.Img 
+                          className="w-100 h-100" 
                           src={`http://localhost:5000${item.img}`}
                           alt={item.name}
                           style={{ objectFit: "cover" }}
@@ -177,19 +177,19 @@ function Shine() {
 
       {/* Conditional arrows */}
       {currentIndex > 0 && (
-        <div
-          className="carousel-arrow left"
+        <div 
+          className="carousel-arrow left" 
           onClick={handlePrev}
-          style={{ left: "10px" }}
+         
         >
           &#10094;
         </div>
       )}
       {currentIndex < chunkedItems.length - 1 && (
-        <div
-          className="carousel-arrow right"
+        <div 
+          className="carousel-arrow right" 
           onClick={handleNext}
-          style={{ right: "10px" }}
+         
         >
           &#10095;
         </div>

@@ -8,24 +8,13 @@ import fs from "fs";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import adminRoutes from "./adminRoutes.js";
-import Razorpay from "razorpay";
-import crypto from "crypto";
 
 const app = express();
 const PORT = 5000;
 const JWT_SECRET = "your-jwt-secret-key-change-this";
 
-// Initialize Razorpay
-const razorpay = new Razorpay({
-  key_id: "rzp_test_S9N5uYU87mhzcY",
-  key_secret: "fcXZxv9dQDIG7E5fuihYYv9Y"
-});
-
 // Middleware
-app.use(cors({
-  origin: ["http://localhost:5173", "https://suba466.github.io"],
-  credentials: true
-}));
+app.use(cors());
 app.use(express.json());
 
 // __dirname for ES modules
@@ -318,18 +307,16 @@ app.post("/api/bookings", async (req, res) => {
       }));
 
       // Calculate total price from cart
-      const itemTotalRaw = cartItems.reduce((sum, item) => {
+      const totalPrice = cartItems.reduce((sum, item) => {
         const price = parseFloat(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
         const count = item.count || 1;
         return sum + (price * count);
       }, 0);
 
-      const grandTotal = itemTotalRaw + (parseFloat(slotExtraCharge) || 0) + (parseFloat(tipAmount) || 0) + (parseFloat(taxAmount) || 0);
-
       finalServiceName = cartItems.map(item => item.name || item.title || "Service").join(", ");
-      finalServicePrice = grandTotal.toString();
+      finalServicePrice = totalPrice.toString();
 
-      console.log(`Total calculated from cart: ₹${grandTotal}`);
+      console.log(`Total calculated from cart: ₹${totalPrice}`);
 
     } else if (items && items.length > 0) {
       // Use the existing items format
@@ -549,70 +536,12 @@ app.delete("/api/cart/clear/:email", async (req, res) => {
     });
 
   } catch (error) {
-    console.error(" Error clearing cart:", error);
+    console.error("❌ Error clearing cart:", error);
     res.status(500).json({ error: "Failed to clear cart" });
   }
 });
 
 // ==================== OTHER ROUTES ====================
-
-// ==================== PAYMENT ROUTES ====================
-
-// Create Razorpay Order
-app.post("/api/create-order", async (req, res) => {
-  try {
-    const { amount, currency = "INR", receipt } = req.body;
-
-    // Amount must be in paisa (multiply by 100)
-    // ensure amount is an integer
-    const amountInPaisa = Math.round(parseFloat(amount) * 100);
-
-    const options = {
-      amount: amountInPaisa,
-      currency,
-      receipt,
-      payment_capture: 1
-    };
-
-    console.log("Creating Razorpay order:", options);
-
-    const order = await razorpay.orders.create(options);
-
-    console.log("Razorpay order created:", order);
-
-    res.json({
-      success: true,
-      order
-    });
-  } catch (error) {
-    console.error("Error creating Razorpay order:", error);
-    res.status(500).json({ error: "Failed to create payment order" });
-  }
-});
-
-// Verify Payment
-app.post("/api/verify-payment", async (req, res) => {
-  try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-
-    const sign = razorpay_order_id + "|" + razorpay_payment_id;
-    const expectedSign = crypto
-      .createHmac("sha256", "fcXZxv9dQDIG7E5fuihYYv9Y") // Using the key_secret
-      .update(sign.toString())
-      .digest("hex");
-
-    if (razorpay_signature === expectedSign) {
-      console.log("Payment verification successful");
-      res.json({ success: true, message: "Payment verified successfully" });
-    } else {
-      console.error("Payment verification failed: Invalid signature");
-      res.status(400).json({ error: "Invalid payment signature" });
-    }
-  } catch (error) {
-    console.error("Error verifying payment:", error);
-    res.status(500).json({ error: "Payment verification failed" });
-  }
-});
 
 app.get("/api/debug-categories", async (req, res) => {
   try {
@@ -845,7 +774,7 @@ app.post("/api/login", async (req, res) => {
         isActive: customer.isActive // Include status in token
       },
       JWT_SECRET,
-      { expiresIn: '365d' }
+      { expiresIn: '24h' }
     );
 
     console.log(` Customer logged in: ${email}`);
@@ -1210,7 +1139,7 @@ app.get("/api/categories", async (req, res) => {
 
     // FIRST: Try to get from MongoDB (your dynamic database)
     let categories = await Category.find({ isActive: true })
-      .sort({ createdAt: 1 });
+      .sort({ order: 1, name: 1 });
 
     // SECOND: If MongoDB has no categories, use static JSON file
     if (categories.length === 0) {
@@ -1253,7 +1182,7 @@ app.get("/api/categories", async (req, res) => {
 app.get("/api/all-categories", async (req, res) => {
   try {
     const categories = await Category.find()
-      .sort({ createdAt: 1 });
+      .sort({ order: 1, name: 1 });
     res.json({
       categories,
       count: categories.length

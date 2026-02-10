@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Card, Form, Button, Row, Col } from 'react-bootstrap';
-import API_URL from './config';
 
 function Settings() {
   const [settings, setSettings] = useState({
@@ -14,7 +13,7 @@ function Settings() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${API_URL}/api/admin/settings`, {
+      const response = await fetch('http://localhost:5000/api/admin/settings', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

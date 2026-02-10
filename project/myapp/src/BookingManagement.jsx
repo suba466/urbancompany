@@ -7,10 +7,8 @@ import {
   getCSVHeadersFromData,
   exportAsPDF,
   exportAsExcel,
-  exportAsCSV,
-  generatePDFReportHTML
+  exportAsCSV
 } from './downloadUtils';
-import API_URL from './config';
 
 function BookingManagement() {
   const [bookings, setBookings] = useState([]);
@@ -37,7 +35,7 @@ function BookingManagement() {
 
   const fetchBookings = async (page = 1, search = '', status = '', perPage = bookingPerPage) => {
     try {
-      let url = `${API_URL}/api/admin/bookings?page=${page}&limit=${perPage}`;
+      let url = `http://localhost:5000/api/admin/bookings?page=${page}&limit=${perPage}`;
 
       // Build query params
       const params = new URLSearchParams();
@@ -60,7 +58,7 @@ function BookingManagement() {
         const customerEmails = [...new Set(data.bookings.map(b => b.customerEmail).filter(email => email && email.trim() !== ''))];
 
         // Fetch customer profile images
-        const customersResponse = await fetch(`${API_URL}/api/admin/customers-by-emails`, {
+        const customersResponse = await fetch(`http://localhost:5000/api/admin/customers-by-emails`, {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({ emails: customerEmails })
@@ -93,7 +91,7 @@ function BookingManagement() {
             if (customerDetails.profileImage.startsWith('http')) {
               validProfileImage = customerDetails.profileImage;
             } else {
-              validProfileImage = `${API_URL}${customerDetails.profileImage}`;
+              validProfileImage = `http://localhost:5000${customerDetails.profileImage}`;
             }
           }
 
@@ -123,7 +121,7 @@ function BookingManagement() {
   const deleteBooking = async (bookingId) => {
     if (window.confirm('Are you sure you want to delete this booking?')) {
       try {
-        const response = await fetch(`${API_URL}/api/admin/bookings/${bookingId}`, {
+        const response = await fetch(`http://localhost:5000/api/admin/bookings/${bookingId}`, {
           method: 'DELETE',
           headers: getAuthHeaders()
         });
@@ -143,18 +141,18 @@ function BookingManagement() {
 
   const updateBookingStatus = async (bookingId, newStatus) => {
     try {
-      const response = await fetch(`${API_URL}/api/admin/bookings/${bookingId}/status`, {
+      const response = await fetch(`http://localhost:5000/api/admin/bookings/${bookingId}/status`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ status: newStatus })
       });
-
+      
       const data = await response.json();
       if (data.success) {
         // Update the local state immediately
-        setBookings(prevBookings =>
-          prevBookings.map(booking =>
-            booking._id === bookingId
+        setBookings(prevBookings => 
+          prevBookings.map(booking => 
+            booking._id === bookingId 
               ? { ...booking, status: newStatus }
               : booking
           )
@@ -174,7 +172,7 @@ function BookingManagement() {
 
     if (window.confirm(`Are you sure you want to delete ${selectedIds.length} booking(s)?`)) {
       try {
-        const response = await fetch(`${API_URL}/api/admin/bulk-delete`, {
+        const response = await fetch('http://localhost:5000/api/admin/bulk-delete', {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({
@@ -241,29 +239,13 @@ function BookingManagement() {
   };
 
   const getStatusBadgeColor = (status) => {
-    switch (status) {
+    switch(status) {
       case 'Completed': return 'success';
       case 'Confirmed': return 'primary';
       case 'Pending': return 'warning';
       case 'Cancelled': return 'danger';
       default: return 'secondary';
     }
-  };
-
-  const handleDownloadPDF = () => {
-    const data = bookings.map(booking => ({
-      'Profile': booking.customerProfileImage || null,
-      'Booking ID': booking._id?.substring(0, 8).toUpperCase() || 'N/A',
-      'Customer Name': booking.customerName || 'N/A',
-      'Customer Email': booking.customerEmail || 'N/A',
-      'Service': booking.serviceName || 'N/A',
-      'Price': `₹${booking.servicePrice}`,
-      'Status': booking.status || 'N/A',
-      'Date': new Date(booking.createdAt).toLocaleDateString()
-    }));
-    const headers = ['Profile', 'Booking ID', 'Customer Name', 'Customer Email', 'Service', 'Price', 'Status', 'Date'];
-    const element = generatePDFReportHTML('Booking Report', headers, data);
-    exportAsPDF(element, 'bookings');
   };
 
   return (
@@ -296,7 +278,10 @@ function BookingManagement() {
                 searchValue={bookingSearch}
                 onSearchChange={handleSearchChange}
                 searchPlaceholder="Search bookings..."
-                onDownloadPDF={handleDownloadPDF}
+                onDownloadPDF={() => {
+                  const tableElement = document.querySelector('.table');
+                  exportAsPDF(tableElement, 'bookings');
+                }}
                 onDownloadExcel={() => {
                   const bookingData = prepareBookingDataForExport(bookings);
                   exportAsExcel(bookingData, 'bookings');
@@ -442,7 +427,7 @@ function BookingManagement() {
                       <td><strong>₹{booking.servicePrice}</strong></td>
                       <td>
                         <Dropdown>
-                          <Dropdown.Toggle
+                          <Dropdown.Toggle 
                             as={Badge}
                             bg={getStatusBadgeColor(booking.status)}
                             className="cursor-pointer"
@@ -452,28 +437,28 @@ function BookingManagement() {
                           </Dropdown.Toggle>
 
                           <Dropdown.Menu>
-                            <Dropdown.Item
+                            <Dropdown.Item 
                               onClick={() => updateBookingStatus(booking._id, 'Pending')}
                               className={booking.status === 'Pending' ? 'active fw-bold' : ''}
                             >
                               <Badge bg="warning" className="me-2">Pending</Badge>
                               {booking.status === 'Pending' && '✓'}
                             </Dropdown.Item>
-                            <Dropdown.Item
+                            <Dropdown.Item 
                               onClick={() => updateBookingStatus(booking._id, 'Confirmed')}
                               className={booking.status === 'Confirmed' ? 'active fw-bold' : ''}
                             >
                               <Badge bg="primary" className="me-2">Confirmed</Badge>
                               {booking.status === 'Confirmed' && '✓'}
                             </Dropdown.Item>
-                            <Dropdown.Item
+                            <Dropdown.Item 
                               onClick={() => updateBookingStatus(booking._id, 'Completed')}
                               className={booking.status === 'Completed' ? 'active fw-bold' : ''}
                             >
                               <Badge bg="success" className="me-2">Completed</Badge>
                               {booking.status === 'Completed' && '✓'}
                             </Dropdown.Item>
-                            <Dropdown.Item
+                            <Dropdown.Item 
                               onClick={() => updateBookingStatus(booking._id, 'Cancelled')}
                               className={booking.status === 'Cancelled' ? 'active fw-bold' : ''}
                             >

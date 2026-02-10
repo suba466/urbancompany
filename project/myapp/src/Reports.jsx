@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { Card, Form, Button, Row, Col, Alert, Spinner, Table, Pagination } from 'react-bootstrap';
-import { exportAsExcel, exportAsCSV, exportAsPDF, generatePDFReportHTML } from './downloadUtils';
+import { Card, Form, Button, Row, Col, Alert, Spinner, Table } from 'react-bootstrap';
+import { exportAsExcel, exportAsCSV, exportAsPDF } from './downloadUtils';
 import { FaEye, FaFilePdf, FaFileExcel, FaFileCsv } from "react-icons/fa";
-import API_URL from './config';
 
 function Reports() {
   const [reportType, setReportType] = useState('Category');
@@ -13,8 +12,6 @@ function Reports() {
   const [reportData, setReportData] = useState([]);
   const [headers, setHeaders] = useState([]);
   const [showTable, setShowTable] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
 
   const getAuthToken = () => {
     return localStorage.getItem('adminToken');
@@ -32,7 +29,7 @@ function Reports() {
   const getImageUrl = (imgPath) => {
     if (!imgPath) return '';
     if (imgPath.startsWith('http')) return imgPath;
-    return `${API_URL}${imgPath}`;
+    return `http://localhost:5000${imgPath}`;
   };
 
   // Helper function to get initials
@@ -63,35 +60,35 @@ function Reports() {
       let reportHeaders = [];
 
       if (reportType === 'Category') {
-        const response = await fetch(`${API_URL}/api/admin/categories?limit=1000`, { headers: getAuthHeaders() });
+        const response = await fetch('http://localhost:5000/api/admin/categories?limit=1000', { headers: getAuthHeaders() });
         const data = await response.json();
         const categories = data.categories || [];
 
         dataToExport = categories.map(cat => ({
-          'Image': cat.img,
-          'Name': cat.name,
+          'Category Image': cat.img,
+          'Category Name': cat.name,
           'Description': cat.description,
           'Status': cat.isActive ? 'Active' : 'Inactive',
         }));
 
-        reportHeaders = ['Image', 'Name', 'Description', 'Status'];
+        reportHeaders = ['Category Image', 'Category Name', 'Status', 'Description'];
 
       } else if (reportType === 'Subcategory') {
-        const response = await fetch(`${API_URL}/api/admin/subcategories?limit=1000`, { headers: getAuthHeaders() });
+        const response = await fetch('http://localhost:5000/api/admin/subcategories?limit=1000', { headers: getAuthHeaders() });
         const data = await response.json();
         const subcategories = data.subcategories || [];
 
         dataToExport = subcategories.map(sub => ({
-          'Image': sub.img,
-          'Name': sub.name,
+          'Subcategory Image': sub.img,
+          'Subcategory Name': sub.name,
           'Category Name': sub.categoryId?.name || sub.categoryName || 'Unassigned',
           'Status': sub.isActive ? 'Active' : 'Inactive',
         }));
 
-        reportHeaders = ['Image', 'Name', 'Category Name', 'Status'];
+        reportHeaders = ['Subcategory Image', 'Subcategory Name', 'Category Name', 'Status'];
 
       } else if (reportType === 'Products') {
-        const response = await fetch(`${API_URL}/api/admin/packages?limit=1000`, { headers: getAuthHeaders() });
+        const response = await fetch('http://localhost:5000/api/admin/packages?limit=1000', { headers: getAuthHeaders() });
         const data = await response.json();
         const products = data.packages || [];
 
@@ -108,18 +105,18 @@ function Reports() {
         }
 
         dataToExport = filteredProducts.map(p => ({
-          'Image': p.img,
-          'Name': p.name,
+          'Product Image': p.img,
+          'Product Name': p.name,
           'Category': p.category?.name || p.category || 'N/A',
           'Subcategory': p.subcategory?.name || p.subcategory || 'N/A',
           'Price': `₹${p.price || 0}`,
           'Status': p.isActive ? 'Active' : 'Inactive'
         }));
 
-        reportHeaders = ['Image', 'Name', 'Category', 'Subcategory', 'Price', 'Status'];
+        reportHeaders = ['Product Image', 'Product Name', 'Category', 'Subcategory', 'Price', 'Status'];
 
       } else if (reportType === 'Bookings') {
-        let url = `${API_URL}/api/admin/bookings?limit=1000`;
+        let url = 'http://localhost:5000/api/admin/bookings?limit=1000';
 
         const response = await fetch(url, { headers: getAuthHeaders() });
         const data = await response.json();
@@ -145,32 +142,32 @@ function Reports() {
 
         // Create a map to store customer profiles
         const customerMap = {};
-
+        
         // Fetch customer profiles in bulk (similar to BookingManagement)
         if (customerEmails.length > 0) {
           try {
-            const customersResponse = await fetch(`${API_URL}/api/admin/customers-by-emails`, {
+            const customersResponse = await fetch('http://localhost:5000/api/admin/customers-by-emails', {
               method: 'POST',
               headers: getAuthHeaders(),
               body: JSON.stringify({ emails: customerEmails })
             });
-
+            
             const customersData = await customersResponse.json();
-
+            
             if (customersData.success && customersData.customers) {
               customersData.customers.forEach(customer => {
                 const normalizedEmail = customer.email.toLowerCase().trim();
                 let validProfileImage = '';
-
+                
                 if (customer.profileImage) {
                   // Check if it's already an absolute URL (e.g. Google Auth) or relative
                   if (customer.profileImage.startsWith('http')) {
                     validProfileImage = customer.profileImage;
                   } else {
-                    validProfileImage = `${API_URL}${customer.profileImage}`;
+                    validProfileImage = `http://localhost:5000${customer.profileImage}`;
                   }
                 }
-
+                
                 customerMap[normalizedEmail] = {
                   name: customer.name,
                   profileImage: validProfileImage
@@ -214,23 +211,22 @@ function Reports() {
           // Get customer info - EXACTLY LIKE BOOKING MANAGEMENT
           const emailKey = (b.customerEmail || b.customer?.email || '').toLowerCase().trim();
           const customerDetails = customerMap[emailKey];
-
+          
           const customerName = customerDetails?.name || b.customerName || b.customer?.name || 'N/A';
           const profileImage = customerDetails?.profileImage || '';
 
           return {
             'Profile': profileImage, // Store full URL or empty string
-            'Booking ID': b._id ? b._id.substring(0, 8).toUpperCase() : 'N/A',
             'Customer Name': customerName,
             'Customer Email': b.customerEmail || b.customer?.email || 'N/A',
             'Service': serviceName,
-            'Price': `₹${totalAmount}`,
+            'Total Amount': `₹${totalAmount}`,
             'Status': b.status || 'N/A',
-            'Date': b.createdAt ? new Date(b.createdAt).toLocaleDateString() : 'N/A',
+            'Booking Date': b.createdAt ? new Date(b.createdAt).toLocaleDateString() : 'N/A',
           };
         });
 
-        reportHeaders = ['Profile', 'Booking ID', 'Customer Name', 'Customer Email', 'Service', 'Price', 'Status', 'Date'];
+        reportHeaders = ['Profile', 'Customer Name', 'Customer Email', 'Service', 'Total Amount', 'Status', 'Booking Date'];
       }
 
       if (dataToExport.length === 0) {
@@ -240,7 +236,6 @@ function Reports() {
         setReportData(dataToExport);
         setHeaders(reportHeaders);
         setShowTable(true);
-        setCurrentPage(1);
       }
 
     } catch (err) {
@@ -258,19 +253,62 @@ function Reports() {
       return;
     }
 
-    const pdfData = reportData.map(row => {
-      const newRow = { ...row };
+    const timestamp = new Date().toISOString().split('T')[0];
+    const finalFilename = `${reportType}_Report_${timestamp}`;
+
+    let html = `<h2 style="text-align: center; margin-bottom: 20px;">${reportType} Report</h2>`;
+    if (reportType !== 'Category' && reportType !== 'Subcategory') {
+      html += `<p style="text-align: center; margin-bottom: 20px;">Date Range: ${startDate} to ${endDate}</p>`;
+    }
+    html += `<p style="text-align: center; margin-bottom: 20px;">Generated on: ${new Date().toLocaleDateString()}</p>`;
+    html += '<table style="width:100%; border-collapse: collapse; font-size: 10px;">';
+    html += '<thead><tr>';
+    headers.forEach(h => {
+      if (h.includes('Image') || h.includes('Profile')) {
+        html += `<th style="border:1px solid #ddd; padding: 6px; background-color: #f2f2f2; text-align: center;">${h}</th>`;
+      } else {
+        html += `<th style="border:1px solid #ddd; padding: 6px; background-color: #f2f2f2; text-align: left;">${h}</th>`;
+      }
+    });
+    html += '</tr></thead><tbody>';
+    
+    reportData.forEach(row => {
+      html += '<tr>';
       headers.forEach(h => {
-        if ((h.includes('Image') || h.includes('Profile')) && newRow[h] && typeof newRow[h] === 'string' && !newRow[h].startsWith('http')) {
-          newRow[h] = `${API_URL}${newRow[h]}`;
+        if (h.includes('Profile') && row[h]) {
+          const customerName = row['Customer Name'] || 'Customer';
+          html += `<td style="border:1px solid #ddd; padding: 6px; text-align: center;">
+            <div style="width: 45px; height: 45px; border-radius: 50%; overflow: hidden; border: 2px solid #dee2e6; margin: 0 auto;">
+              <img src="${row[h]}" alt="${customerName}" style="width: 100%; height: 100%; object-fit: cover;"
+                   onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(customerName)}&background=random&color=fff&size=128'" />
+            </div>
+          </td>`;
+        } else if (h.includes('Profile') && !row[h]) {
+          const customerName = row['Customer Name'] || 'Customer';
+          html += `<td style="border:1px solid #ddd; padding: 6px; text-align: center;">
+            <div style="width: 45px; height: 45px; border-radius: 50%; overflow: hidden; border: 2px solid #dee2e6; margin: 0 auto;">
+              <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(customerName)}&background=random&color=fff&size=128" 
+                   alt="${customerName}" style="width: 100%; height: 100%; object-fit: cover;" />
+            </div>
+          </td>`;
+        } else if ((h.includes('Image') && !h.includes('Profile')) && row[h]) {
+          const imageUrl = getImageUrl(row[h]);
+          html += `<td style="border:1px solid #ddd; padding: 6px; text-align: center;">
+            <img src="${imageUrl}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" 
+                 onerror="this.style.display='none'; this.parentNode.innerHTML='No Image';" />
+          </td>`;
+        } else {
+          html += `<td style="border:1px solid #ddd; padding: 6px;">${row[h] || 'N/A'}</td>`;
         }
       });
-      return newRow;
+      html += '</tr>';
     });
+    
+    html += '</tbody></table>';
 
-    const title = `${reportType} Report`;
-    const element = generatePDFReportHTML(title, headers, pdfData);
-    exportAsPDF(element, reportType);
+    const element = document.createElement('div');
+    element.innerHTML = html;
+    exportAsPDF(element, finalFilename);
   };
 
   const handleDownloadExcel = () => {
@@ -281,7 +319,7 @@ function Reports() {
 
     const timestamp = new Date().toISOString().split('T')[0];
     const finalFilename = `${reportType}_Report_${timestamp}`;
-
+    
     exportAsExcel(reportData, finalFilename);
   };
 
@@ -293,7 +331,7 @@ function Reports() {
 
     const timestamp = new Date().toISOString().split('T')[0];
     const finalFilename = `${reportType}_Report_${timestamp}`;
-
+    
     exportAsCSV(reportData, headers, finalFilename);
   };
 
@@ -340,7 +378,7 @@ function Reports() {
   // Direct render function for product/category images
   const renderProductImage = (imgPath, altName) => {
     if (!imgPath) return 'No Image';
-
+    
     const imageUrl = getImageUrl(imgPath);
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -390,7 +428,6 @@ function Reports() {
                 onChange={(e) => {
                   setReportType(e.target.value);
                   setShowTable(false);
-                  setCurrentPage(1);
                 }}
                 className="cate shadow-sm py-2"
               >
@@ -411,17 +448,7 @@ function Reports() {
                   <Form.Control
                     type="date"
                     value={startDate}
-                    max={new Date().toISOString().split('T')[0]} // Restricted to current date
                     onChange={(e) => {
-                      const selectedDate = new Date(e.target.value);
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0); // Reset time for accurate comparison
-
-                      if (selectedDate > new Date()) {
-                        alert("Future dates cannot be selected.");
-                        return;
-                      }
-
                       setStartDate(e.target.value);
                       setShowTable(false);
                     }}
@@ -434,17 +461,7 @@ function Reports() {
                   <Form.Control
                     type="date"
                     value={endDate}
-                    max={new Date().toISOString().split('T')[0]} // Restricted to current date
                     onChange={(e) => {
-                      const selectedDate = new Date(e.target.value);
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-
-                      if (selectedDate > new Date()) {
-                        alert("Future dates cannot be selected.");
-                        return;
-                      }
-
                       setEndDate(e.target.value);
                       setShowTable(false);
                     }}
@@ -492,120 +509,67 @@ function Reports() {
                   {` | Generated on: ${new Date().toLocaleDateString()}`}
                 </p>
               </div>
-              <div className="d-flex gap-2">
-                <Button
-                  variant="outline-light"
-                  style={{ border: "1px solid #000000" }}
-                  onClick={handleDownloadPDF}
-                  title="Download as PDF"
-                >
-                  <FaFilePdf className="text-danger" />
-                </Button>
-                <Button
-                  variant="outline-light"
-                  style={{ border: "1px solid #000000" }}
-                  onClick={handleDownloadExcel}
-                  title="Download as Excel"
-                >
-                  <FaFileExcel className="text-success" />
-                </Button>
-                <Button
-                  variant="outline-light"
-                  style={{ border: "1px solid #000000" }}
-                  onClick={handleDownloadCSV}
-                  title="Download as CSV"
-                >
-                  <FaFileCsv className="text-primary" />
-                </Button>
-              </div>
             </div>
           </Card.Header>
           <Card.Body style={{ marginLeft: '25px', marginRight: '25px' }} className="p-4">
             {/* Download Buttons */}
-
+            <div className="d-flex justify-content-end gap-2 mb-4">
+              <Button
+                variant="outline-light"
+                style={{ border: "1px solid #000000" }}
+                onClick={handleDownloadPDF}
+                title="Download as PDF"
+              >
+                <FaFilePdf className="text-danger" /> 
+              </Button>
+              <Button
+                variant="outline-light"
+                style={{ border: "1px solid #000000" }}
+                onClick={handleDownloadExcel}
+                title="Download as Excel"
+              >
+                <FaFileExcel className="text-success" /> 
+              </Button>
+              <Button
+                variant="outline-light"
+                style={{ border: "1px solid #000000" }}
+                onClick={handleDownloadCSV}
+                title="Download as CSV"
+              >
+                <FaFileCsv className="text-primary" /> 
+              </Button>
+            </div>
 
             {/* Data Table */}
-            <div className="table-responsive">
+            <div className="table-responsive" style={{ maxHeight: '500px', overflowY: 'auto' }}>
               <Table striped bordered hover style={{ border: "2px solid #000000" }}>
-                <thead>
+                <thead style={{ position: 'sticky', top: 0, backgroundColor: 'white', zIndex: 1 }}>
                   <tr>
                     {headers.map((header, index) => (
-                      <th key={index} className="fw-semibold" style={{
-                        textAlign: header.includes('Image') || header.includes('Profile') ? 'center' : 'left',
-                        verticalAlign: 'middle',
-                        border: '2px solid #000000'
-                      }}>
+                      <th key={index} className="fw-semibold" style={{ textAlign: header.includes('Image') || header.includes('Profile') ? 'center' : 'left' }}>
                         {header}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {reportData
-                    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-                    .map((row, rowIndex) => (
-                      <tr key={rowIndex}>
-                        {headers.map((header, colIndex) => (
-                          <td key={colIndex} style={{
-                            textAlign: header.includes('Image') || header.includes('Profile') ? 'center' : 'left',
-                            verticalAlign: 'middle',
-                            border: '2px solid #000000'
-                          }}>
-                            {header.includes('Profile') ?
-                              renderProfileImage(row[header], row['Customer Name'] || 'Customer') :
-                              header.includes('Image') && !header.includes('Profile') ?
-                                renderProductImage(row[header], row['Name'] || '') :
-                                row[header] || 'N/A'
-                            }
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
+                  {reportData.map((row, rowIndex) => (
+                    <tr key={rowIndex}>
+                      {headers.map((header, colIndex) => (
+                        <td key={colIndex} style={{ textAlign: header.includes('Image') || header.includes('Profile') ? 'center' : 'left', verticalAlign: 'middle' }}>
+                          {header.includes('Profile') ? 
+                            renderProfileImage(row[header], row['Customer Name'] || 'Customer') : 
+                            header.includes('Image') && !header.includes('Profile') ? 
+                            renderProductImage(row[header], row[`${reportType} Name`] || '') : 
+                            row[header] || 'N/A'
+                          }
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
                 </tbody>
               </Table>
             </div>
-
-            {/* Pagination Controls */}
-            {reportData.length > itemsPerPage && (
-              <div className="d-flex justify-content-between align-items-center mt-3">
-                <div className="text-muted small">
-                  Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, reportData.length)} of {reportData.length} entries
-                </div>
-                <Pagination className="mb-0">
-                  <Pagination.First onClick={() => setCurrentPage(1)} disabled={currentPage === 1} />
-                  <Pagination.Prev onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} />
-
-                  {[...Array(Math.ceil(reportData.length / itemsPerPage))].map((_, idx) => {
-                    const pageNumber = idx + 1;
-                    // Show current page, first, last, and neighbors
-                    if (
-                      pageNumber === 1 ||
-                      pageNumber === Math.ceil(reportData.length / itemsPerPage) ||
-                      (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
-                    ) {
-                      return (
-                        <Pagination.Item
-                          key={pageNumber}
-                          active={pageNumber === currentPage}
-                          onClick={() => setCurrentPage(pageNumber)}
-                        >
-                          {pageNumber}
-                        </Pagination.Item>
-                      );
-                    } else if (
-                      pageNumber === currentPage - 2 ||
-                      pageNumber === currentPage + 2
-                    ) {
-                      return <Pagination.Ellipsis key={pageNumber} disabled />;
-                    }
-                    return null;
-                  })}
-
-                  <Pagination.Next onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(reportData.length / itemsPerPage)))} disabled={currentPage === Math.ceil(reportData.length / itemsPerPage)} />
-                  <Pagination.Last onClick={() => setCurrentPage(Math.ceil(reportData.length / itemsPerPage))} disabled={currentPage === Math.ceil(reportData.length / itemsPerPage)} />
-                </Pagination>
-              </div>
-            )}
           </Card.Body>
         </Card>
       )}

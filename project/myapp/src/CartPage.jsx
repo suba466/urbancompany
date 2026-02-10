@@ -17,7 +17,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth, useCart } from "./hooks";
 import { useDispatch } from 'react-redux';
 import { syncCartWithLocalStorage } from './store';
-import API_URL, { getAssetPath } from "./config";
 
 function CartPage() {
   const dispatch = useDispatch();
@@ -39,12 +38,50 @@ function CartPage() {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [showBookingsModal, setShowBookingsModal] = useState(false);
-  const [showConfirmAddressModal, setShowConfirmAddressModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showOrderConfirmation, setShowOrderConfirmation] = useState(false);
+  const [orderDetails, setOrderDetails] = useState(null);
 
   const handleViewBookings = () => {
     setShowBookingsModal(true);
   };
+
+  // Load saved address when user logs in or component mounts
+  useEffect(() => {
+    if (isAuthenticated && user?.email) {
+      const savedAddressKey = `selectedAddress_${user.email}`;
+      const savedAddress = localStorage.getItem(savedAddressKey);
+
+      if (savedAddress) {
+        try {
+          const parsedAddress = JSON.parse(savedAddress);
+          setSelectedAddress(parsedAddress);
+          console.log("✅ Loaded saved address for user:", user.email);
+        } catch (error) {
+          console.error("Error parsing saved address:", error);
+        }
+      }
+    }
+  }, [isAuthenticated, user?.email]);
+
+  // Save address to localStorage whenever it changes
+  useEffect(() => {
+    if (selectedAddress && isAuthenticated && user?.email) {
+      const savedAddressKey = `selectedAddress_${user.email}`;
+      localStorage.setItem(savedAddressKey, JSON.stringify(selectedAddress));
+      console.log("✅ Saved address for user:", user.email);
+    }
+  }, [selectedAddress, isAuthenticated, user?.email]);
+
+  // Clear saved address on logout
+  useEffect(() => {
+    if (!isAuthenticated && user?.email) {
+      const savedAddressKey = `selectedAddress_${user.email}`;
+      localStorage.removeItem(savedAddressKey);
+      setSelectedAddress(null);
+      console.log("✅ Cleared saved address on logout");
+    }
+  }, [isAuthenticated, user?.email]);
 
   // Enhanced clearCartFromDatabase function
   const clearCartFromDatabase = async () => {
@@ -58,7 +95,7 @@ function CartPage() {
       const customerEmail = user.email;
 
       // First, get all cart items for this user
-      const response = await fetch(`${API_URL}/api/cart/${customerEmail}`);
+      const response = await fetch(`http://localhost:5000/api/cart/${customerEmail}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -69,7 +106,7 @@ function CartPage() {
         // Delete each cart item
         const deletePromises = userCartItems.map(async (item) => {
           try {
-            await fetch(`${API_URL}/api/carts/${item._id}`, {
+            await fetch(`http://localhost:5000/api/carts/${item._id}`, {
               method: "DELETE"
             });
             console.log(`Deleted cart item: ${item._id}`);
@@ -94,28 +131,13 @@ function CartPage() {
     console.log("=== CART DEBUG INFO ===");
     console.log("Redux cart items:", cartItems);
     console.log("Redux cart count:", cartItems.length);
-    try {
-      console.log("LocalStorage cart:", JSON.parse(localStorage.getItem('cartItems') || '[]'));
-    } catch (e) {
-      console.log("LocalStorage cart: [CORRUPTED]", e);
-    }
+    console.log("LocalStorage cart:", JSON.parse(localStorage.getItem('cartItems') || '[]'));
     console.log("User email:", user?.email);
     console.log("Is authenticated:", isAuthenticated);
     console.log("=========================");
   };
 
-  const loadRazorpay = () => {
-    return new Promise((resolve) => {
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  };
-
   const processPayment = async () => {
-
     // First check if all required fields are filled
     if (!selectedAddress) {
       alert("Please select an address first");
@@ -162,209 +184,187 @@ function CartPage() {
       const slotExtraCharge = calculateSlotExtraCharge();
       const totalPrice = itemTotal + tax + tip + slotExtraCharge;
 
-      // 1. Load Razorpay SDK
-      const res = await loadRazorpay();
-      if (!res) {
-        alert("Razorpay SDK failed to load. Please check your internet connection.");
-        setIsProcessing(false);
-        return;
-      }
-
-      // 2. Create Order on Backend
-      const orderResponse = await fetch(`${API_URL}/api/create-order`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: totalPrice, // Amount in numeric rupees
-          currency: "INR",
-          receipt: `receipt_${Date.now()}`
-        })
-      });
-
-      const orderData = await orderResponse.json();
-      if (!orderData.success) {
-        throw new Error(orderData.error || "Failed to create payment order");
-      }
-
-      // 3. Initialize Razorpay options
+      // Razorpay options
       const options = {
-        key: "rzp_test_S9N5uYU87mhzcY", // Enter the Key ID generated from the Dashboard
-        amount: orderData.order.amount,
-        currency: orderData.order.currency,
+        key: "rzp_test_S9N5uYU87mhzcY", // Your Razorpay key_id
+        amount: totalPrice * 100, // Amount in paise (multiply by 100)
+        currency: "INR",
         name: "Urban Company",
-        description: "Beauty Service Payment",
-        image: getAssetPath("/assets/urban.png"), // Or any logo you have
-        order_id: orderData.order.id,
+        description: cartItems.length > 0 ? cartItems.map(item => item.title).join(', ') : "Beauty Services",
+        image: "http://localhost:5000/assets/urban.png", // Your logo
         handler: async function (response) {
+          console.log("✅ Payment successful:", response);
+
+          // Prepare booking data after successful payment
+          const bookingData = {
+            customerId: user.id || user.customerId || `customer_${user.email}`,
+            customerEmail: user.email,
+            customerName: user.name || "Customer",
+            customerPhone: user.phone || "9787081119",
+            customerCity: user.city || "",
+            serviceName: cartItems.length > 0 ? cartItems.map(item => item.title).join(', ') : "Beauty Services",
+            servicePrice: totalPrice.toString(),
+            originalPrice: itemTotal.toString(),
+            address: selectedAddress,
+            scheduledDate: selectedDate ? selectedDate.toISOString() : new Date().toISOString(),
+            scheduledTime: selectedSlot.time,
+            cartItems: cartItems.map(item => ({
+              productId: item.productId || item._id,
+              name: item.title || item.name,
+              price: typeof item.price === 'string'
+                ? item.price
+                : `₹${item.price}`,
+              count: item.count || 1,
+              quantity: item.count || 1
+            })),
+            slotExtraCharge: slotExtraCharge,
+            tipAmount: tip,
+            taxAmount: tax,
+            paymentMethod: "Razorpay",
+            paymentId: response.razorpay_payment_id,
+            status: "Confirmed",
+            paymentStatus: "Paid"
+          };
+
+          console.log("📤 Sending booking data to server:", bookingData);
+
+          // Send booking to server
+          const bookingResponse = await fetch("http://localhost:5000/api/bookings", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(bookingData),
+          });
+
+          const result = await bookingResponse.json();
+          console.log("📥 Server response:", result);
+
+          if (!bookingResponse.ok) {
+            throw new Error(result.error || "Failed to create booking");
+          }
+
+          // Clear cart after successful booking
           try {
-            // 4. Verify Payment on Backend
-            const verifyResponse = await fetch(`${API_URL}/api/verify-payment`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              })
-            });
+            console.log("Starting cart clearing process...");
 
-            const verifyData = await verifyResponse.json();
+            // 1. Clear from Redux store first (this also clears localStorage)
+            clearCart();
+            console.log("✅ Cart cleared from Redux store and localStorage");
 
-            if (verifyData.success) {
-              // 5. Create Booking after successful payment
-              await createBooking(totalPrice, itemTotal, tax, tip, slotExtraCharge, response.razorpay_payment_id);
-            } else {
-              alert("Payment verification failed! Please contact support.");
-              setIsProcessing(false);
-            }
-          } catch (error) {
-            console.error("Payment verification error:", error);
-            alert("An error occurred during payment verification.");
-            setIsProcessing(false);
+            // 2. Clear from database
+            await clearCartFromDatabase();
+            console.log("✅ Cart cleared from database");
+
+            // 3. Clear address from localStorage
+            localStorage.removeItem('selectedAddress');
+
+            // 4. Force a cart sync with localStorage
+            window.dispatchEvent(new CustomEvent('cartCleared'));
+            window.dispatchEvent(new CustomEvent('cartUpdated'));
+
+            // 5. Dispatch action to sync cart state
+            dispatch(syncCartWithLocalStorage());
+
+            // 6. Force update localStorage
+            localStorage.setItem('cartItems', JSON.stringify([]));
+
+            console.log("✅ All cart clearing operations completed");
+
+            // Debug cart state after clearing
+            debugCartState();
+
+            // Reset form state (keep address for next order)
+            // setSelectedAddress(null); // Don't reset - keep for next order
+            setSelectedSlot(null);
+            setSelectedDate(new Date());
+            setSelectedTip(0);
+            setCustomTip("");
+
+            // Show success alert
+            alert(`✅ Order Confirmed!\n\nOrder ID: ${result.booking?._id || result._id || result.bookingId}\nPayment ID: ${response.razorpay_payment_id}\nAmount Paid: ₹${totalPrice}\n\nThank you for your booking!`);
+
+            // Redirect to home page (Banner)
+            navigate('/');
+
+          } catch (clearError) {
+            console.error("Error clearing cart:", clearError);
+            // Even if cart clearing fails, still show confirmation and redirect
+            alert(`✅ Order Confirmed!\n\nOrder ID: ${result.booking?._id || result._id || result.bookingId}\nPayment ID: ${response.razorpay_payment_id}\nAmount Paid: ₹${totalPrice}\n\nThank you for your booking!`);
+            navigate('/');
           }
         },
         prefill: {
-          name: user.name,
-          email: user.email,
-          contact: user.phone || "9999999999",
+          name: user.name || "",
+          email: user.email || "",
+          contact: user.phone || ""
+        },
+        notes: {
+          address: selectedAddress?.completeAddress || selectedAddress?.fullAddress || ""
         },
         theme: {
-          color: "#843ff5",
+          color: "#6e42e5"
+        },
+        config: {
+          display: {
+            blocks: {
+              banks: {
+                name: 'All payment methods',
+                instruments: [
+                  {
+                    method: 'card'
+                  },
+                  {
+                    method: 'upi'
+                  },
+                  {
+                    method: 'netbanking'
+                  },
+                  {
+                    method: 'wallet'
+                  }
+                ]
+              }
+            },
+            sequence: ['block.banks'],
+            preferences: {
+              show_default_blocks: true
+            }
+          }
+        },
+        method: {
+          card: true,
+          netbanking: true,
+          wallet: true,
+          upi: true,
+          emi: false
         },
         modal: {
           ondismiss: function () {
+            console.log("Payment cancelled by user");
             setIsProcessing(false);
-            console.log("Payment modal closed");
           }
         }
       };
 
-      const paymentObject = new window.Razorpay(options);
-      paymentObject.open();
+      const rzp = new window.Razorpay(options);
 
-    } catch (error) {
-      console.error("❌ Error initiating payment:", error);
-      alert(`❌ Payment failed: ${error.message}\n\nPlease try again.`);
-      setIsProcessing(false);
-    }
-  };
-
-  const createBooking = async (totalPrice, itemTotal, tax, tip, slotExtraCharge, paymentId) => {
-    try {
-      // Prepare booking data
-      const bookingData = {
-        customerId: user.id || user.customerId || `customer_${user.email}`,
-        customerEmail: user.email,
-        customerName: user.name || "Customer",
-        customerPhone: user.phone || "9787081119",
-        customerCity: user.city || "",
-        serviceName: cartItems.length > 0 ? cartItems.map(item => item.title).join(', ') : "Beauty Services",
-        servicePrice: totalPrice.toString(),
-        originalPrice: itemTotal.toString(),
-        address: selectedAddress,
-        scheduledDate: selectedDate ? selectedDate.toISOString() : new Date().toISOString(),
-        scheduledTime: selectedSlot.time,
-        // Use cartItems instead of mapping to items for consistency
-        cartItems: cartItems.map(item => ({
-          productId: item.productId || item._id,
-          name: item.title || item.name,
-          price: typeof item.price === 'string'
-            ? item.price
-            : `₹${item.price}`,
-          count: item.count || 1,
-          quantity: item.count || 1
-        })),
-        slotExtraCharge: slotExtraCharge,
-        tipAmount: tip,
-        taxAmount: tax,
-        paymentMethod: "Razorpay",
-        transactionId: paymentId,
-        status: "Confirmed",
-        paymentStatus: "Paid"
-      };
-
-      console.log("📤 Sending booking data to server:", bookingData);
-
-      // Send booking to server
-      const response = await fetch(`${API_URL}/api/bookings`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(bookingData),
+      rzp.on('payment.failed', function (response) {
+        console.error("Payment failed:", response.error);
+        alert(`Payment failed: ${response.error.description}`);
+        setIsProcessing(false);
       });
 
-      const result = await response.json();
-      console.log("📥 Server response:", result);
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to create booking");
-      }
-
-      // Clear cart after successful booking
-      try {
-        const successMessage = `✅ Order placed successfully!\nTransaction ID: ${paymentId}`;
-        alert(successMessage);
-
-        console.log("Starting cart clearing process...");
-
-        // 1. Clear from Redux store first
-        clearCart();
-        console.log("✅ Cart cleared from Redux store and localStorage");
-
-        // 2. Clear from database
-        await clearCartFromDatabase();
-        console.log("✅ Cart cleared from database");
-
-        // 3. Clear address from localStorage
-        localStorage.removeItem('selectedAddress');
-
-        // 4. Force a cart sync with localStorage
-        window.dispatchEvent(new CustomEvent('cartCleared'));
-        window.dispatchEvent(new CustomEvent('cartUpdated'));
-
-        // 5. Dispatch action to sync cart state
-        dispatch(syncCartWithLocalStorage());
-
-        // 6. Force update localStorage
-        localStorage.setItem('cartItems', JSON.stringify([]));
-
-        console.log("✅ All cart clearing operations completed");
-
-        // Debug cart state after clearing
-        debugCartState();
-
-        // Reset form state
-        setSelectedAddress(null);
-        setSelectedSlot(null);
-        setSelectedDate(new Date());
-        setSelectedTip(0);
-        setCustomTip("");
-
-        setTimeout(() => {
-          navigate('/');
-        }, 100);
-
-      } catch (clearError) {
-        console.error("Error clearing cart:", clearError);
-        const fallbackMessage = `✅ Order placed successfully!\n
-Your Order ID: ${result.booking?._id || result._id || result.bookingId}\n
-Transaction ID: ${paymentId}\n
-Note: There was an issue clearing your cart. Please refresh the page manually.`;
-
-        alert(fallbackMessage);
-
-        localStorage.setItem('cartItems', JSON.stringify([]));
-        navigate('/');
-      }
+      rzp.open();
+      setIsProcessing(false); // Reset processing state after opening Razorpay
 
     } catch (error) {
-      console.error("❌ Error processing booking:", error);
-      alert(`❌ Booking creation failed: ${error.message}\nHowever, your payment of ₹${totalPrice} was successful.\nTransaction ID: ${paymentId}\nPlease contact support.`);
-    } finally {
+      console.error("Error processing payment:", error);
+      alert("Failed to process payment: " + (error.message || error));
       setIsProcessing(false);
     }
   };
+
 
   // Test function for debugging
   const testBookingCreation = async () => {
@@ -402,7 +402,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
     try {
       console.log("📤 Sending test data:", testData);
 
-      const response = await fetch(`${API_URL}/api/bookings`, {
+      const response = await fetch("http://localhost:5000/api/bookings", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -457,28 +457,11 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
     ]
   };
 
-  const fetchAddedItems = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/added`);
-      if (!res.ok) throw new Error("API fail");
-      const data = await res.json();
-      setAddedImgs(data.added || []);
-    } catch (err) {
-      console.warn("Failed to load added images from API, trying fallback:", err);
-      try {
-        const staticRes = await fetch(getAssetPath("data.json"));
-        if (!staticRes.ok) throw new Error("Local data not found");
-        const staticData = await staticRes.json();
-        setAddedImgs(staticData.added || []);
-      } catch (staticError) {
-        console.error("Error fetching static data:", staticError);
-        // Fail-safe hardcoded data
-        setAddedImgs([
-          { name: "Foot massage", price: "199", img: "/assets/foot.webp" },
-          { name: "Sara fruit cleanup", price: "699", img: "/assets/sara.webp" }
-        ]);
-      }
-    }
+  const fetchAddedItems = () => {
+    fetch("http://localhost:5000/api/added")
+      .then(res => res.json())
+      .then(data => setAddedImgs(data.added || []))
+      .catch(err => console.error("Failed to load added images:", err));
   };
 
   useEffect(() => {
@@ -556,7 +539,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
     return isNaN(num) ? 0 : num;
   };
 
-  const formatPrice = (amount) => `₹${amount.toLocaleString("en-IN")}`;
+  const formatPrice = (amount) => `₹${amount.toLocaleString("en-IN")} `;
 
   const calculateItemTotal = () => {
     return cartItems.reduce((total, item) => {
@@ -590,14 +573,10 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
   };
 
   const handleAddToCart = async (item, extraSelected = [], price, discount = 0, action = "add") => {
-    console.log("handleAddToCart called:", { item, action });
     try {
       if (action === "add") {
-        // Use _id if available, otherwise key, otherwise name
-        const productId = item._id || item.key || item.name;
-
         const cartPayload = {
-          productId: productId,
+          productId: item.key || item.name || item._id, // Ensure productId is set
           title: item.name,
           price: item.price,
           count: 1,
@@ -612,7 +591,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
         const existingItem = cartItems.find(cart => cart.title === item.name);
 
         if (existingItem) {
-          const response = await fetch(`${API_URL}/api/carts/${existingItem._id}`, {
+          await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -620,77 +599,49 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
               count: existingItem.count + 1
             })
           });
-
-          if (!response.ok) {
-            throw new Error(`Failed to update cart: ${response.statusText}`);
-          }
-
           updateItem(existingItem._id || existingItem.productId, existingItem.count + 1);
         } else {
-          const response = await fetch(`${API_URL}/api/addcarts`, {
+          await fetch("http://localhost:5000/api/addcarts", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(cartPayload)
           });
-
-          if (!response.ok) {
-            const errData = await response.json();
-            throw new Error(errData.error || "Failed to add to cart");
-          }
-
-          const data = await response.json();
-          // Backend returns: { message: "Cart added", cart: newCart }
-          if (data.cart) {
-            // Add to local state
-            addItem(data.cart);
-          } else {
-            // Fallback if backend structure differs
-            addItem(cartPayload);
-          }
+          addItem(cartPayload);
         }
       } else if (action === "remove") {
         const existingItem = cartItems.find(cart => cart.title === item.name);
         if (existingItem) {
           if (existingItem.count > 1) {
-            const response = await fetch(`${API_URL}/api/carts/${existingItem._id}`, {
+            await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ count: existingItem.count - 1 })
             });
-            if (response.ok) {
-              updateItem(existingItem._id || existingItem.productId, existingItem.count - 1);
-            }
+            updateItem(existingItem._id || existingItem.productId, existingItem.count - 1);
           } else {
-            const response = await fetch(`${API_URL}/api/carts/${existingItem._id}`, {
+            await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
               method: "DELETE"
             });
-            if (response.ok) {
-              removeItem(existingItem._id || existingItem.productId);
-            }
+            removeItem(existingItem._id || existingItem.productId);
           }
         }
       }
+
+      // Force refresh of cart items
       window.dispatchEvent(new Event('cartUpdated'));
+      // Also potentially reload page or trigger a re-fetch of cart items
+      // For now, the event listener in other components (if any) should handle it
+      // But CartPage uses useCart which polls or uses context
+      // We might need to manually trigger a refetch or rely on useCart's internal mechanism
+
     } catch (error) {
       console.error("Error handling cart:", error);
-      alert(`Failed to update cart: ${error.message}`);
     }
   };
 
-  // Check if cart contains any "Super Saver Package" items
-  const hasSuperSaverItem = cartItems.some(item => {
-    const termsToCheck = [item.subcategory, item.title, item.name, item.category];
-    return termsToCheck.some(term =>
-      term && (
-        term.toLowerCase().includes("super saver") ||
-        term.toLowerCase().includes("2uper saver")
-      )
-    );
+  const visibleCarouselItems = addedImgs.filter(img => {
+    const inCart = cartItems.some(c => c.title === img.name);
+    return !inCart;
   });
-
-  const visibleCarouselItems = hasSuperSaverItem
-    ? addedImgs.filter(img => !cartItems.some(c => c.title === img.name))
-    : [];
 
   const openEditModal = (item) => {
     setSelectedPkg(item);
@@ -738,6 +689,11 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
     setShowLoginView(true);
   };
 
+  const handleAccountModalClose = () => {
+    setShowAccountModal(false);
+    setShowLoginView(false);
+  };
+
   const handleSlotSelect = (slot) => {
     setSelectedSlot(slot);
   };
@@ -775,22 +731,39 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
 
   const formatFullAddress = (address) => {
     if (!address) return "";
+
     const parts = [];
-    if (address.doorNo && address.doorNo.trim() !== "") parts.push(address.doorNo.trim());
-    if (address.mainText && address.mainText.trim() !== "") parts.push(address.mainText.trim());
-    if (address.subText && address.subText.trim() !== "") parts.push(address.subText.trim());
+
+    if (address.doorNo && address.doorNo.trim() !== "") {
+      parts.push(address.doorNo.trim());
+    }
+
+    if (address.mainText && address.mainText.trim() !== "") {
+      parts.push(address.mainText.trim());
+    }
+
+    if (address.subText && address.subText.trim() !== "") {
+      parts.push(address.subText.trim());
+    }
+
     return parts.join(", ");
   };
 
   const formatMobileAddress = (address) => {
     if (!address) return "";
+
     const fullAddress = formatFullAddress(address);
-    if (fullAddress.length > 50) return fullAddress.substring(0, 47) + "...";
+
+    if (fullAddress.length > 50) {
+      return fullAddress.substring(0, 47) + "...";
+    }
+
     return fullAddress;
   };
 
   const formatDateForMobile = (date) => {
     if (!date) return "";
+
     const options = { weekday: 'short', month: 'short', day: 'numeric' };
     return date.toLocaleDateString('en-US', options);
   };
@@ -829,11 +802,21 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
   };
 
   const canPlaceOrder = () => {
-    if (!isAuthenticated) return false;
-    if (!selectedAddress) return false;
-    if (!selectedSlot) return false;
-    if (cartItems.length === 0) return false;
-    if (!user?.email) return false;
+    if (!isAuthenticated) {
+      return false;
+    }
+    if (!selectedAddress) {
+      return false;
+    }
+    if (!selectedSlot) {
+      return false;
+    }
+    if (cartItems.length === 0) {
+      return false;
+    }
+    if (!user?.email) {
+      return false;
+    }
     return true;
   };
 
@@ -849,7 +832,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
         <div className="text-center mt-5">
           <div>
             <img
-              src={getAssetPath("/assets/cart.png")}
+              src="http://localhost:5000/assets/cart.png"
               alt="cart-placeholder"
               style={{ padding: "10px", width: "33%" }}
             />
@@ -877,7 +860,6 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
     );
   }
 
-  // ... (lines in between)
   return (
     <div className="container mt-4">
       <Row>
@@ -1002,10 +984,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
                     <Button
                       className="butn fw-bold w-100 p-3"
                       disabled={!canPlaceOrder() || isProcessing}
-                      onClick={() => {
-                        setShowConfirmAddressModal(false);
-                        processPayment();
-                      }}
+                      onClick={processPayment}
                     >
                       {isProcessing ? "Processing..." :
                         !isAuthenticated ? "Login to Continue" :
@@ -1041,7 +1020,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
             onEdit={openEditModal}
           />
 
-          {visibleCarouselItems.length > 0 && (
+          {visibleCarouselItems.length > 0 && cartItems.some(item => item.title === "Make your own package" || item.name === "Make your own package") && (
             <div className="mt-3 p-2" style={{ border: "1px solid #e0e0e0", borderRadius: "10px", backgroundColor: "#fafafa" }}>
               <h5 className="fw-bold mb-2" style={{ fontSize: "15px" }}>Frequently added together</h5>
               <FrequentlyAddedCarousel
@@ -1049,7 +1028,6 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
                 carts={cartItems}
                 onAdd={(item) => handleAddToCart(item, [], item.price, 0, "add")}
                 onRemove={(item) => handleAddToCart(item, [], item.price, 0, "remove")}
-                onViewProduct={openEditModal}
               />
               <div className="mt-4 pt-3 border-top">
                 <Form.Check
@@ -1062,11 +1040,9 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
                 />
               </div>
             </div>
-          )
-          }
+          )}
 
-          < div style={{ border: "1px solid #d9d9d9", borderRadius: "8px", marginTop: "15px" }
-          }>
+          <div style={{ border: "1px solid #d9d9d9", borderRadius: "8px", marginTop: "15px" }}>
             <div style={{ padding: "12px" }}>
               <Row className="align-items-center">
                 <Col xs={8}>
@@ -1085,7 +1061,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
                 </Col>
               </Row>
             </div>
-          </div >
+          </div>
 
           <div style={{ border: "1px solid #d9d9d9", borderRadius: "8px", marginTop: "15px" }}>
             <div style={{ padding: "12px" }}>
@@ -1132,15 +1108,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
                       key={amount}
                       onClick={() => handleTipSelect(amount)}
                       className="edit fw-semibold"
-                      style={{
-                        backgroundColor: selectedTip === amount ? "#f0ebff" : "white",
-                        borderColor: selectedTip === amount ? "#6e42e5" : "#e0e0e0",
-                        color: selectedTip === amount ? "#6e42e5" : "black",
-                        borderRadius: "6px",
-                        padding: "6px 12px",
-                        fontSize: "13px",
-                        border: `1px solid ${selectedTip === amount ? "#6e42e5" : "#e0e0e0"}`
-                      }}
+                      style={{ color: selectedTip === amount ? "black" : "", borderRadius: "6px", padding: "6px 12px", fontSize: "13px" }}
                     >
                       ₹{amount}
                     </Button>
@@ -1160,7 +1128,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
                       <Button
                         variant="primary"
                         onClick={handleCustomTipSubmit}
-                        style={{ borderRadius: "6px", padding: "6px 12px", fontSize: "13px", backgroundColor: "#6e42e5", borderColor: "#6e42e5" }}
+                        style={{ borderRadius: "6px", padding: "6px 12px", fontSize: "13px" }}
                       >
                         Add
                       </Button>
@@ -1169,22 +1137,14 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
                     <Button
                       onClick={handleCustomTipClick}
                       className="edit fw-semibold"
-                      style={{
-                        backgroundColor: customTip ? "#f0ebff" : "white",
-                        borderColor: customTip ? "#6e42e5" : "#e0e0e0",
-                        color: customTip ? "#6e42e5" : "black",
-                        borderRadius: "6px",
-                        padding: "6px 12px",
-                        fontSize: "13px",
-                        border: `1px solid ${customTip ? "#6e42e5" : "#e0e0e0"}`
-                      }}
+                      style={{ color: customTip ? "white" : "black", borderRadius: "6px", padding: "6px 12px", fontSize: "13px" }}
                     >
-                      {customTip ? `₹${customTip}` : "Custom"}
+                      Custom
                     </Button>
                   )}
                 </div>
                 <p className="text-muted small mb-2" style={{ fontSize: "12px" }}>100% of your tip goes to the professional.</p>
-                {(tip > 0 || customTip) && (
+                {tip > 0 && (
                   <Button variant="link" className="p-0 text-danger" style={{ fontSize: "12px" }} onClick={handleRemoveTip}>Remove tip</Button>
                 )}
               </div>
@@ -1201,8 +1161,8 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
               </Col>
             </Row>
           </div>
-        </Col >
-      </Row >
+        </Col>
+      </Row>
 
       <div className="d-md-none position-fixed bottom-0 start-0 end-0 bg-white border-top shadow-lg py-3"
         style={{ zIndex: 1050 }}>
@@ -1298,10 +1258,7 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
                       <Button
                         className="butn fw-bold w-100 p-3"
                         disabled={!canPlaceOrder() || isProcessing}
-                        onClick={() => {
-                          setShowConfirmAddressModal(false);
-                          processPayment();
-                        }}
+                        onClick={processPayment}
                       >
                         {isProcessing ? "Processing..." :
                           !isAuthenticated ? "Login to Continue" :
@@ -1330,15 +1287,13 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
 
       <div className="d-md-none" style={{ height: "80px" }}></div>
 
-      {
-        showModal && (
-          <Salon1modal
-            show={showModal}
-            onHide={() => setShowModal(false)}
-            selectedItem={selectedPkg}
-          />
-        )
-      }
+      {showModal && (
+        <Salon1modal
+          show={showModal}
+          onHide={() => setShowModal(false)}
+          selectedItem={selectedPkg}
+        />
+      )}
 
       <AccountModal
         show={showAccountModal || showBookingsModal}
@@ -1487,7 +1442,111 @@ Note: There was an issue clearing your cart. Please refresh the page manually.`;
           </div>
         </Modal.Footer>
       </Modal>
-    </div >
+
+      {/* Order Confirmation Modal */}
+      <Modal
+        show={showOrderConfirmation}
+        onHide={() => {
+          setShowOrderConfirmation(false);
+          navigate('/');
+        }}
+        centered
+        backdrop="static"
+        keyboard={false}
+      >
+        <Modal.Body className="text-center p-5">
+          <div className="mb-4">
+            <div
+              style={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '50%',
+                backgroundColor: '#d4edda',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto'
+              }}
+            >
+              <svg
+                width="40"
+                height="40"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#28a745"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <h3 className="fw-bold mb-3" style={{ color: '#28a745' }}>Order Confirmed!</h3>
+          <p className="text-muted mb-4">
+            Thank you for your booking. Your order has been successfully placed.
+          </p>
+
+          {orderDetails && (
+            <div className="bg-light p-4 rounded mb-4 text-start">
+              <div className="mb-3">
+                <small className="text-muted d-block mb-1">Order ID</small>
+                <strong style={{ fontSize: '14px' }}>{orderDetails.orderId}</strong>
+              </div>
+
+              {orderDetails.paymentId && (
+                <div className="mb-3">
+                  <small className="text-muted d-block mb-1">Payment ID</small>
+                  <strong style={{ fontSize: '12px', wordBreak: 'break-all' }}>
+                    {orderDetails.paymentId}
+                  </strong>
+                </div>
+              )}
+
+              {orderDetails.serviceName && (
+                <div className="mb-3">
+                  <small className="text-muted d-block mb-1">Services</small>
+                  <strong style={{ fontSize: '14px' }}>{orderDetails.serviceName}</strong>
+                </div>
+              )}
+
+              <div className="pt-3 border-top">
+                <div className="d-flex justify-content-between align-items-center">
+                  <span className="text-muted">Amount Paid</span>
+                  <h4 className="text-success mb-0">₹{orderDetails.amount}</h4>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="d-grid gap-2">
+            <Button
+              variant="outline-primary"
+              onClick={() => {
+                setShowOrderConfirmation(false);
+                setShowAccountModal(true);
+                // You can add logic here to open bookings view in AccountModal
+              }}
+              style={{ height: '45px' }}
+            >
+              View My Bookings
+            </Button>
+
+            <Button
+              className="butn"
+              onClick={() => {
+                setShowOrderConfirmation(false);
+                navigate('/');
+              }}
+              style={{ height: '45px' }}
+            >
+              Continue Shopping
+            </Button>
+          </div>
+        </Modal.Body>
+      </Modal>
+    </div>
   );
 }
 

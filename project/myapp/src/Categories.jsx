@@ -11,10 +11,8 @@ import {
   exportAsPDF,
   exportAsExcel,
   exportAsCSV,
-  getCSVHeadersFromData,
-  generatePDFReportHTML
+  getCSVHeadersFromData
 } from './downloadUtils';
-import API_URL, { getAssetPath } from "./config";
 
 function Categories({
   categories,
@@ -101,15 +99,10 @@ function Categories({
 
   // Download functions using utilities
   const handleDownloadPDF = () => {
-    const data = filteredCategories.map(cat => ({
-      'Image': cat.img ? getAssetPath(cat.img) : null,
-      'Name': cat.name,
-      'Description': cat.description || 'No description',
-      'Status': cat.isActive !== false ? 'Active' : 'Inactive'
-    }));
-    const headers = ['Image', 'Name', 'Description', 'Status'];
-    const element = generatePDFReportHTML('Category Report', headers, data);
-    exportAsPDF(element, 'categories');
+    const tableElement = getTableElement('.table-responsive');
+    if (tableElement) {
+      exportAsPDF(tableElement, 'categories');
+    }
   };
 
   const handleDownloadExcel = () => {
@@ -117,7 +110,7 @@ function Categories({
       'Name': cat.name,
       'Description': cat.description || 'No description',
       'Status': cat.isActive !== false ? 'Active' : 'Inactive',
-      'Image URL': cat.img ? getAssetPath(cat.img) : 'No Image',
+      'Image URL': cat.img ? `http://localhost:5000${cat.img}` : 'No Image',
       'Key': cat.key || ''
     }));
 
@@ -129,7 +122,7 @@ function Categories({
       'Name': cat.name,
       'Description': cat.description || 'No description',
       'Status': cat.isActive !== false ? 'Active' : 'Inactive',
-      'Image URL': cat.img ? getAssetPath(cat.img) : 'No Image',
+      'Image URL': cat.img ? `http://localhost:5000${cat.img}` : 'No Image',
       'Key': cat.key || ''
     }));
 
@@ -176,7 +169,7 @@ function Categories({
       const results = {};
       for (const category of categories) {
         if (category.img) {
-          const fullUrl = getAssetPath(category.img);
+          const fullUrl = `http://localhost:5000${category.img}`;
           const exists = await checkImageExists(fullUrl);
           results[category._id] = exists;
         }
@@ -324,7 +317,9 @@ function Categories({
                       </tr>
                     ) : (
                       filteredCategories.map((category) => {
-                        const imageUrl = getAssetPath(category.img || '/assets/default-category.png');
+                        const imageUrl = category.img
+                          ? `http://localhost:5000${category.img}`
+                          : 'http://localhost:5000/assets/default-category.png';
 
                         return (
                           <tr key={category._id} className="align-middle">
@@ -479,14 +474,14 @@ function Categories({
         <Modal.Body
           className="p-4"
           tabIndex={0}
-        > <Modal.Title> <h5>Category Details</h5></Modal.Title>
+       > <Modal.Title> <h5>Category Details</h5></Modal.Title>
           {selectedCategory && (
             <div>
               <div className="text-center mb-4">
                 <div className="mb-3">
                   {selectedCategory.img ? (
                     <img
-                      src={getAssetPath(selectedCategory.img)}
+                      src={`http://localhost:5000${selectedCategory.img}`}
                       alt={selectedCategory.name}
                       style={{
                         width: '100px',
@@ -561,7 +556,7 @@ function Categories({
                   <div className="list-group-item px-0 border-bottom-0">
                     <small className="text-muted d-block">Image URL</small>
                     <small className="text-truncate d-block" style={{ maxWidth: '100%' }}>
-                      {getAssetPath(selectedCategory.img)}
+                      {`http://localhost:5000${selectedCategory.img}`}
                     </small>
                   </div>
                 )}

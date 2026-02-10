@@ -3,7 +3,6 @@ import { Outlet, useNavigate, Link } from 'react-router-dom'; // Add useNavigate
 import { Navbar, Container, Nav, Dropdown, Button } from 'react-bootstrap';
 import { MdMenu } from "react-icons/md";
 import AdminSidebar from './AdminSidebar';
-import API_URL from './config';
 
 function AdminLayout({ userRole, userProfile, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -13,45 +12,34 @@ function AdminLayout({ userRole, userProfile, onLogout }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 992);
   const navigate = useNavigate();
 
-  const getInitials = (name) => {
-    if (!name || name.trim() === '') return 'NA';
-    const parts = name.trim().split(' ');
-    if (parts.length === 0) return 'NA';
-    let initials = parts[0][0].toUpperCase();
-    if (parts.length > 1 && parts[parts.length - 1][0].toUpperCase() !== initials) {
-      initials += parts[parts.length - 1][0].toUpperCase();
+  // Update the useEffect in AdminLayout.js:
+useEffect(() => {
+  const handleResize = () => {
+    const mobile = window.innerWidth < 992;
+    setIsMobile(mobile);
+    
+    // Only adjust sidebar state on resize, not on initial load
+    // This prevents the sidebar from opening when switching from mobile to desktop
+    if (mobile && sidebarOpen) {
+      setSidebarOpen(false);
     }
-    return initials;
+    // Don't automatically open sidebar on desktop resize
+    // Let user's preference persist
   };
 
-  // Update the useEffect in AdminLayout.js:
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 992;
-      setIsMobile(mobile);
+  window.addEventListener('resize', handleResize);
+  
+  // Initial check - but don't change sidebar state on mount
+  const initialMobile = window.innerWidth < 992;
+  setIsMobile(initialMobile);
+  
+  // If it's desktop on initial load AND sidebar is not explicitly closed, open it
+  if (!initialMobile && sidebarOpen === false) {
+    // Keep it as user set it
+  }
 
-      // Only adjust sidebar state on resize, not on initial load
-      // This prevents the sidebar from opening when switching from mobile to desktop
-      if (mobile && sidebarOpen) {
-        setSidebarOpen(false);
-      }
-      // Don't automatically open sidebar on desktop resize
-      // Let user's preference persist
-    };
-
-    window.addEventListener('resize', handleResize);
-
-    // Initial check - but don't change sidebar state on mount
-    const initialMobile = window.innerWidth < 992;
-    setIsMobile(initialMobile);
-
-    // If it's desktop on initial load AND sidebar is not explicitly closed, open it
-    if (!initialMobile && sidebarOpen === false) {
-      // Keep it as user set it
-    }
-
-    return () => window.removeEventListener('resize', handleResize);
-  }, [sidebarOpen]); // Add sidebarOpen as dependency
+  return () => window.removeEventListener('resize', handleResize);
+}, [sidebarOpen]); // Add sidebarOpen as dependency
 
   return (
     <div className="d-flex position-relative" style={{ minHeight: '100vh', overflowX: 'hidden', backgroundColor: "#acacacff" }}>
@@ -77,7 +65,6 @@ function AdminLayout({ userRole, userProfile, onLogout }) {
         setSidebarOpen={setSidebarOpen}
         userRole={userRole}
         isMobile={isMobile}
-        onLogout={onLogout}
       />
 
       {/* Main Content */}
@@ -105,44 +92,21 @@ function AdminLayout({ userRole, userProfile, onLogout }) {
             <Nav className="align-items-center ms-auto">
               <Dropdown align="end">
                 <Dropdown.Toggle variant="light" className="d-flex align-items-center border-0 bg-transparent">
-                  {userProfile?.profileImage ? (
+                  {userRole === 'user' && userProfile?.profileImage ? (
                     <img
-                      src={`${API_URL}${userProfile.profileImage}`}
+                      src={`http://localhost:5000${userProfile.profileImage}`}
                       alt="Profile"
                       style={{
-                        width: '35px',
-                        height: '35px',
+                        width: '30px',
+                        height: '30px',
                         borderRadius: '50%',
                         marginRight: '8px',
-                        objectFit: 'cover',
-                        border: '2px solid #dee2e6'
-                      }}
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
+                        objectFit: 'cover'
                       }}
                     />
                   ) : (
-                    <div
-                      className="rounded-circle d-flex align-items-center justify-content-center me-2"
-                      style={{
-                        width: '35px',
-                        height: '35px',
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        color: 'white',
-                        fontWeight: 'bold',
-                        fontSize: '14px',
-                        border: '2px solid #dee2e6'
-                      }}
-                    >
-                      {getInitials(userRole === 'admin' ? 'Admin User' : userProfile?.name)}
-                    </div>
+                    <i className="bi bi-person-circle me-2" style={{ fontSize: '1.2rem' }}></i>
                   )}
-                  {/* Fallback for onError (hidden by default) - actually difficult to handle with strict JSX ternary. 
-                      Better to just use the check. If image fails, it's harder to swap in React without state.
-                      But we can assume if profileImage exists, it's valid. 
-                      If not, we show the div. 
-                  */}
                   <span className="d-none d-md-inline">
                     {userRole === 'admin' ? 'Admin User' : userProfile?.name || 'User'}
                   </span>
@@ -159,7 +123,7 @@ function AdminLayout({ userRole, userProfile, onLogout }) {
                     <i className="bi bi-gear me-2"></i>Settings
                   </Dropdown.Item>
                   <Dropdown.Divider />
-                  <Dropdown.Item onClick={(e) => { e.preventDefault(); onLogout(); }}>
+                  <Dropdown.Item onClick={onLogout}>
                     <i className="bi bi-box-arrow-right me-2"></i>Logout
                   </Dropdown.Item>
                 </Dropdown.Menu>

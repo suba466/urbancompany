@@ -31,29 +31,27 @@ import {
   updateCustomerLocalState,
   syncCartWithLocalStorage
 } from './store';
-import API_URL, { shouldCallApi } from "./config";
-
 
 // Custom hook to sync auth state with localStorage
 export const useAuthSync = () => {
   const dispatch = useDispatch();
-
+  
   useEffect(() => {
     // Check localStorage on initial load only
     const customerToken = localStorage.getItem('customerToken');
     const customerInfo = localStorage.getItem('customerInfo');
-
+    
     if (customerToken && customerInfo) {
       try {
         const user = JSON.parse(customerInfo);
         // Only dispatch if we have valid data
         dispatch(setCustomerUser(user));
-        console.log(" Auth state initialized from localStorage");
+        console.log("✅ Auth state initialized from localStorage");
       } catch (error) {
         console.error("Error parsing customer info:", error);
       }
     }
-
+    
     // Listen for storage events (from other tabs/windows) - but be careful
     const handleStorageChange = (event) => {
       // Only handle specific keys to avoid unnecessary updates
@@ -64,9 +62,9 @@ export const useAuthSync = () => {
         }, 0);
       }
     };
-
+    
     window.addEventListener('storage', handleStorageChange);
-
+    
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
@@ -82,7 +80,7 @@ export const notifyAuthChange = () => {
 export const useCustomerAuth = () => {
   const dispatch = useDispatch();
   const auth = useSelector(selectCustomerAuth);
-
+  
   // Memoize the sync function to prevent unnecessary re-renders
   const syncAuth = useCallback(() => {
     dispatch(updateCustomerLocalState());
@@ -125,10 +123,10 @@ export const useAdminAuth = () => {
 export const useAuth = () => {
   // Use auth sync hook only once at the top level
   useAuthSync();
-
+  
   const dispatch = useDispatch();
   const auth = useSelector(selectCustomerAuth);
-
+  
   // Memoize functions to prevent unnecessary re-renders
   const login = useCallback(async (email, password) => {
     const result = await dispatch(loginCustomer({ email, password })).unwrap();
@@ -200,7 +198,7 @@ export const useCart = () => {
 
     window.addEventListener('cartCleared', handleCartCleared);
     window.addEventListener('cartUpdated', handleCartUpdated);
-
+    
     return () => {
       window.removeEventListener('cartCleared', handleCartCleared);
       window.removeEventListener('cartUpdated', handleCartUpdated);
@@ -234,26 +232,25 @@ export const useCart = () => {
 
 // Helper function to clear cart from database
 export const clearCartFromDatabase = async (userEmail) => {
-  if (!shouldCallApi() || !userEmail) {
-    console.log("Skipping database cart clearing (API disabled or no email)");
+  if (!userEmail) {
+    console.log("No user email provided for database cart clearing");
     return;
   }
-
-
+  
   try {
     // Get cart items for this user from database
-    const response = await fetch(`${API_URL}/api/carts/email/${userEmail}`);
-
+    const response = await fetch(`http://localhost:5000/api/carts/email/${userEmail}`);
+    
     if (response.ok) {
       const data = await response.json();
       const userCartItems = data.carts || [];
-
+      
       console.log(`Found ${userCartItems.length} cart items to delete for ${userEmail}`);
-
+      
       // Delete each cart item
       const deletePromises = userCartItems.map(async (item) => {
         try {
-          const deleteResponse = await fetch(`${API_URL}/api/carts/${item._id}`, {
+          const deleteResponse = await fetch(`http://localhost:5000/api/carts/${item._id}`, {
             method: "DELETE"
           });
           if (deleteResponse.ok) {
@@ -263,7 +260,7 @@ export const clearCartFromDatabase = async (userEmail) => {
           console.error(`Failed to delete cart item ${item._id}:`, error);
         }
       });
-
+      
       await Promise.all(deletePromises);
       console.log(`Successfully cleared ${userCartItems.length} cart items from database`);
     } else {

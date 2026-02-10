@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAdminAuth } from './hooks';
 import AdminLayout from './AdminLayout';
@@ -17,9 +17,10 @@ import AdminLogin from './AdminLogin';
 function AdminPanel() {
   const { isAuthenticated, admin, logout, role } = useAdminAuth();
   const navigate = useNavigate();
+
   const handleLogout = () => {
     logout();
-    navigate('/admin', { replace: true });
+    navigate('/admin');
   };
 
   // Check for token expiration
@@ -27,6 +28,7 @@ function AdminPanel() {
     const checkTokenExpiration = () => {
       const token = localStorage.getItem('adminToken');
       if (!token) return;
+
       try {
         // Simple JWT decode (header.payload.signature)
         const payload = JSON.parse(atob(token.split('.')[1]));

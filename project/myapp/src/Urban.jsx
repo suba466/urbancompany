@@ -10,10 +10,9 @@ import Book from './Book.jsx';
 import CartPage from './CartPage.jsx';
 import Salon from './Salon.jsx';
 import CartSummary from './CartSummary';
-import AdminPanel from './AdminPanel.jsx';
 import OrderSuccess from './OrderSuccess.jsx';
-import UCPage from './UCPage.jsx';
-import HelpPage from './HelpPage.jsx';
+import AdminPanel from './AdminPanel.jsx';
+import CategoryPage from './CategoryPage.jsx';
 
 function AuthInitializer() {
   const dispatch = useDispatch();
@@ -61,8 +60,14 @@ function Urban() {
         <Route path='/cart-summary' element={<CartSummary />} />
         <Route path='/cart' element={<><Urbanav /><CartPage /></>} />
         <Route path='/order-success' element={<><Urbanav /><OrderSuccess /></>} />
-        <Route path='/uc' element={<><Urbanav /><UCPage /></>} />
-        <Route path='/help' element={<><Urbanav /><HelpPage /></>} />
+
+        {/* Dynamic category routes - catches all category URLs */}
+        <Route path='/:categorySlug' element={
+          <>
+            <Urbanav />
+            <CategoryPage />
+          </>
+        } />
 
         {/* Admin routes */}
         <Route path='/admin/*' element={<AdminPanel />} />

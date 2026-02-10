@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import CartBlock from './CartBlock';
 import { useCart } from "./hooks";
 
-function Salon1({ idSuffix = "" }) {
+function Salon1() {
   const [savedExtras, setSavedExtras] = useState({});
   const [superPack, setSuperPack] = useState([]);
   const [packages, setPackages] = useState([]);
@@ -21,7 +21,7 @@ function Salon1({ idSuffix = "" }) {
   const [selectedItem, setSelectedItem] = useState(null);
   const addButtonRefs = useRef({});
   const [showDiscountModal, setShowDiscountModal] = useState(false);
-  const normalizeKey = (str) => str?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || "";
+  const normalizeKey = (str) => str?.toLowerCase()?.trim()?.replace(/\s+/g, "-") || "";
   const roundPrice = (price) => Math.round(Number(price) || 0);
   const [showFrequentlyAdded, setShowFrequentlyAdded] = useState(false);
   const navigate = useNavigate();
@@ -52,46 +52,38 @@ function Salon1({ idSuffix = "" }) {
     navigate('/cart-summary');
   };
 
-  // Helper to guess and normalize subcategory titles
-  const guessSubcategory = (pkg) => {
-    const name = (pkg.name || "").toLowerCase();
-    const title = (pkg.title || pkg.subcategory || "").toLowerCase();
-
-    // 1. Name-based checks (Highest Priority)
-    if (name.includes("wax") || name.includes("threading")) return "Waxing & threading";
-    if (name.includes("facial")) return "Signature Facial";
-    if (name.includes("cleanup") || name.includes("bleach") || name.includes("detan")) return "Cleanup";
-    if (name.includes("pedicure") || name.includes("manicure")) return "Pedicure & manicure";
-    if (name.includes("hair")) return "Haircare";
-
-    // 2. Title/Category-based checks (Lower Priority)
-    // Only use title if name didn't match specific keywords, to avoid miscategorization
-    if (title.includes("facial")) return "Signature Facial";
-    if (title.includes("cleanup")) return "Cleanup";
-    if (title.includes("pedicure") || title.includes("manicure")) return "Pedicure & manicure";
-    if (title.includes("hair")) return "Haircare";
-    if (title.includes("waxing") || title.includes("threading")) return "Waxing & threading";
-
-    // Default: return original properly capitalized or fallback
-    return pkg.title || pkg.subcategory || pkg.name || "Uncategorized";
-  };
-
+  // Group packages by subcategory (title)
   // Group packages by subcategory (title)
   const groupPackagesBySubcategory = () => {
     const groups = {};
 
     packages.forEach(pkg => {
-      // Use the helper to get the CORRECT subcategory
-      const subcategory = guessSubcategory(pkg);
+      // Prioritize subcategory field. Handle if it's an object (populated) or string.
+      let subcategoryName = "Uncategorized";
 
-      if (!groups[subcategory]) {
-        groups[subcategory] = {
-          title: subcategory,
+      if (pkg.subcategory) {
+        if (typeof pkg.subcategory === 'string') {
+          subcategoryName = pkg.subcategory;
+        } else if (typeof pkg.subcategory === 'object' && pkg.subcategory.name) {
+          subcategoryName = pkg.subcategory.name;
+        } else {
+          // Fallback if strictly object but no name (unlikely)
+          subcategoryName = String(pkg.subcategory);
+        }
+      } else if (pkg.title) {
+        subcategoryName = pkg.title;
+      } else if (pkg.name) {
+        subcategoryName = pkg.name;
+      }
+
+      if (!groups[subcategoryName]) {
+        groups[subcategoryName] = {
+          title: subcategoryName,
           packages: []
         };
       }
 
-      groups[subcategory].packages.push(pkg);
+      groups[subcategoryName].packages.push(pkg);
     });
 
     return Object.values(groups);
@@ -284,7 +276,7 @@ function Salon1({ idSuffix = "" }) {
   ];
   const basePrice = 2195;
 
-  const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null, isExtraOnly = false) => {
+  const handleAddToCart = async (pkg, selectedServices = [], overridePrice = null, isExtraOnly = false, customCount = null) => {
     try {
       const productId = pkg.productId || pkg._id || Date.now().toString();
       const existing = carts.find(c => c.productId === productId || c._id === productId);
@@ -297,10 +289,19 @@ function Salon1({ idSuffix = "" }) {
           price: s.price || 0,
         }))
         : [
-          ...(pkg.baseServices || baseServices).map(s => ({
-            details: s.content && s.content !== s.title ? `${s.title} (${s.content})` : s.title,
-            price: s.price || 0,
-          })),
+          // Use package items if available
+          ...(pkg.items && pkg.items.length > 0
+            ? pkg.items.map(item => ({
+              details: item.name ? (item.description ? `${item.name} : ${item.description}` : item.name) : (item.description || item.title || ""),
+              price: 0
+            }))
+            : pkg.description
+              ? [{ details: pkg.description, price: 0 }]
+              : (pkg.baseServices || []).map(s => ({ // Only use baseServices if explicitly in pkg
+                details: s.content && s.content !== s.title ? `${s.title} (${s.content})` : s.title,
+                price: s.price || 0,
+              }))
+          ),
           ...selectedServices.map(s => ({
             details: s.content && s.content !== s.title ? `${s.title} (${s.content})` : s.title,
             price: s.price || 0,
@@ -309,13 +310,15 @@ function Salon1({ idSuffix = "" }) {
 
       const totalPrice = overridePrice || (pkg.price ? Number(pkg.price) : content.reduce((sum, s) => sum + s.price, 0));
 
+      const finalCount = customCount !== null ? customCount : (existing ? existing.count + 1 : 1);
+
       const payload = {
         productId,
         title: displayTitle,
         name: productName,
         serviceName: productName,
         price: totalPrice,
-        count: existing ? existing.count + 1 : 1,
+        count: finalCount,
         content,
         savedSelections: selectedServices,
         category: pkg.category || "Salon for women"
@@ -324,23 +327,23 @@ function Salon1({ idSuffix = "" }) {
       // USE REDUX TO UPDATE CART
       if (existing) {
         // Update item count in Redux
-        updateItem(productId, existing.count + 1);
+        updateItem(productId, finalCount);
 
         // Also update in database
         await fetch(`http://localhost:5000/api/carts/${existing._id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ ...payload, count: finalCount }),
         });
       } else {
         // Add new item to Redux
-        addItem(payload);
+        addItem({ ...payload, count: finalCount });
 
         // Also add to database
         await fetch("http://localhost:5000/api/addcarts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ ...payload, count: finalCount }),
         });
       }
 
@@ -421,8 +424,8 @@ function Salon1({ idSuffix = "" }) {
               <div
                 key={groupIndex}
                 className="subcategory-group"
-                id={`section-${normalizeKey(group.title)}${idSuffix ? `-${idSuffix}` : ""}`}
-                style={{ scrollMarginTop: "120px" }}
+                id={`section-${normalizeKey(group.title)}`}
+                style={{ scrollMarginTop: "150px" }}
               >
 
                 {groupedPackages.length > 1 && (
@@ -432,8 +435,7 @@ function Salon1({ idSuffix = "" }) {
                 )}
 
                 {group.packages.map((pkg) => {
-                  // Use group.title as the authoritative subcategory
-                  const displayTitle = group.title || pkg.title || pkg.subcategory || "Unnamed Package";
+                  const displayTitle = pkg.title || pkg.subcategory || "Unnamed Package";
                   const serviceName = pkg.name || "Service";
                   const displayItems = Array.isArray(pkg.items) ? pkg.items : [];
                   const inCart = carts.find(c => c.productId === pkg._id || (c.title === displayTitle && c.serviceName === serviceName));
@@ -445,19 +447,18 @@ function Salon1({ idSuffix = "" }) {
 
                   const hasImage = pkg.img && pkg.img.trim() !== "";
 
-                  const isWaxingGroup = group.title === "Waxing & threading";
+                  // Check if this is the "Waxing" group (which keeps the large banner)
+                  const isWaxingGroup = (group.title || "").toLowerCase().includes("waxing");
 
-                  // Original logic restored for Discount Banner (only for items without images)
+                  const shouldShowLargeBanner = hasImage && isWaxingGroup;
+                  const shouldShowSmallImageBox = hasImage && !isWaxingGroup;
                   const shouldShowDiscountBanner = !hasImage && isSuperSaver;
-
-                  // New Logic: Show Small Image Box for non-waxing items with images
-                  const shouldShowSmallImage = hasImage && !isWaxingGroup;
 
                   return (
                     <div key={pkg._id} className=' position-relative package-item' style={{ marginBottom: "40px" }}>
 
-                      {/* --- BANNER IMAGE SECTION - Only show if has image AND it is a Waxing group (or explicitly requested to show image) --- */}
-                      {hasImage && isWaxingGroup && (
+                      {/* --- BANNER IMAGE SECTION - Only show if Large Banner condition is met (Waxing + Image) --- */}
+                      {shouldShowLargeBanner && (
                         <div
                           className="mb-3 position-relative shadow-sm"
                           onClick={() => handleShowModal(pkg)}
@@ -509,8 +510,8 @@ function Salon1({ idSuffix = "" }) {
                         <Col xs={4} className='position-relative' style={{ minHeight: "100px", display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
                           <div className="d-flex flex-column h-100 w-100 align-items-end">
 
-                            {shouldShowSmallImage ? (
-                              /* --- SMALL IMAGE BOX LAYOUT (New Request) --- */
+                            {shouldShowSmallImageBox ? (
+                              /* --- SMALL IMAGE BOX LAYOUT (For non-Waxing images) --- */
                               <div
                                 onClick={() => handleShowModal(pkg)}
                                 className="shadow-sm mt-auto"
@@ -521,7 +522,7 @@ function Salon1({ idSuffix = "" }) {
                                   justifyContent: "center",
                                   position: "relative",
                                   width: "110px",
-                                  height: "110px", // Square box
+                                  height: "110px",
                                   marginBottom: "10px",
                                   overflow: "visible",
                                   backgroundColor: "white",
@@ -529,7 +530,7 @@ function Salon1({ idSuffix = "" }) {
                                   border: "1px solid #ededed"
                                 }}
                               >
-                                {/* Image filling the box */}
+                                {/* Small Image */}
                                 <img
                                   src={
                                     pkg.img.startsWith("http") ? pkg.img : `http://localhost:5000${pkg.img}`
@@ -541,10 +542,12 @@ function Salon1({ idSuffix = "" }) {
                                     objectFit: "cover",
                                     borderRadius: "8px"
                                   }}
-                                  onError={(e) => e.target.src = "http://localhost:5000/assets/placeholder.png"}
+                                  onError={(e) => {
+                                    e.target.src = "http://localhost:5000/assets/placeholder.png";
+                                  }}
                                 />
 
-                                {/* Add Button Overlay (Identical to Discount Box) */}
+                                {/* Overlaid Add/Counter Button */}
                                 {!inCart ? (
                                   <Button
                                     ref={(el) => (addButtonRefs.current[pkg._id] = el)}
@@ -785,7 +788,14 @@ function Salon1({ idSuffix = "" }) {
                       <div style={{ borderBottom: "1px dashed #bbb6b6ff" }}></div>
                       <br />
                       <div style={{ fontSize: "12px" }}>
-                        {displayItems.length > 0 ? (
+                        {(inCart && inCart.content && inCart.content.length > 0) ? (
+                          inCart.content.map((item, idx) => (
+                            <p key={idx} style={{ margin: "2px 0" }}>
+                              <GoDotFill style={{ fontSize: "10px", color: "#5a5959ff" }} />{" "}
+                              <span>{item.details || item.title || ""}</span>
+                            </p>
+                          ))
+                        ) : displayItems.length > 0 ? (
                           displayItems.map((item, idx) => (
                             <p key={idx} style={{ margin: "2px 0" }}>
                               <GoDotFill style={{ fontSize: "10px", color: "#5a5959ff" }} />{" "}
@@ -865,6 +875,10 @@ function Salon1({ idSuffix = "" }) {
         setShowDiscountModal={setShowDiscountModal}
         handleDecrease={handleDecrease}
         handleIncrease={handleIncrease}
+        carts={carts}
+        addItem={addItem}
+        updateItem={updateItem}
+        removeItem={removeItem}
       />
     </Container>
   );

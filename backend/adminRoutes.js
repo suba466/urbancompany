@@ -886,7 +886,7 @@ router.delete("/packages/:id", checkPermission('Product'), async (req, res) => {
 // ==================== OTHER ROUTES (keeping existing routes) ====================
 
 // Get Admin Profile
-router.get("/profile", async (req, res) => {
+router.get("/profile", checkPermission('Dashboard'), async (req, res) => {
   try {
     const admin = await Admin.findById(req.user.id);
     if (!admin) {
@@ -914,7 +914,7 @@ router.get("/profile", async (req, res) => {
 });
 
 // Get User Profile
-router.get("/user-profile", async (req, res) => {
+router.get("/user-profile", checkPermission('Dashboard'), async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) {
@@ -945,7 +945,7 @@ router.get("/user-profile", async (req, res) => {
 });
 
 // Admin Dashboard Statistics
-router.get("/dashboard", async (req, res) => {
+router.get("/dashboard", checkPermission('Dashboard'), async (req, res) => {
   try {
     const totalCustomers = await Customer.countDocuments();
     const totalBookings = await mongoose.model("Booking").countDocuments();

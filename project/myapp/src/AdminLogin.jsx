@@ -1,18 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Form, Button, Spinner, InputGroup } from 'react-bootstrap';
-import { FaEye, FaEyeSlash } from "react-icons/fa";
-
+import { Container, Row, Col, Card, Form, Button, Spinner } from 'react-bootstrap';
 import { useAdminAuth } from './hooks'; // Import from hooks
-import API_URL, { getAssetPath } from './config';
 
 function AdminLogin({ onLogin }) {
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [touched, setTouched] = useState({ email: false, password: false });
   const [loadingLocal, setLoadingLocal] = useState(false);
   const [errorLocal, setErrorLocal] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-
-  const logoUrl = getAssetPath("/assets/Uc.png");
+  const logoUrl = 'http://localhost:5000/assets/Uc.png';
 
   const { login, token, isAuthenticated, error: authError, loading: authLoading } = useAdminAuth();
 
@@ -114,7 +109,7 @@ function AdminLogin({ onLogin }) {
 
                     <h3 className="text-center mb-1 fw-bold">Urban Company</h3>
                     <p className="text-center mb-0 opacity-75" style={{ fontSize: "1rem" }}>
-                      Administration Portal
+                      Enterprise Administration Portal
                     </p>
                   </div>
                 </Col>
@@ -157,47 +152,27 @@ function AdminLogin({ onLogin }) {
 
                         <Form.Group className="mb-3">
                           <Form.Label className="fw-bold mb-1">Password</Form.Label>
-                          <InputGroup hasValidation>
-                            <Form.Control
-                              type={showPassword ? "text" : "password"}
-                              placeholder="Enter your password"
-                              value={loginData.password}
-                              onChange={(e) => {
-                                setLoginData({ ...loginData, password: e.target.value });
-                                if (touched.password) {
-                                  setErrorLocal('');
-                                }
-                              }}
-                              onBlur={handleBlur('password')}
-                              required
-                              className={`cate py-2 ps-3 ${passwordError ? 'is-invalid' : ''}`}
-                              autoComplete="current-password"
-                              style={{
-                                fontSize: "1rem",
-                                borderRight: "none",
-                                borderTopRightRadius: 0,
-                                borderBottomRightRadius: 0
-                              }}
-                            />
-                            <Button
-                              variant="outline-secondary"
-                              onClick={() => setShowPassword(!showPassword)}
-                              style={{
-                                backgroundColor: "white",
-                                borderColor: "#000000ff",
-                                borderLeft: "none",
-                                zIndex: 0
-                              }}
-                              className={`cate py-2 ps-3 ${passwordError ? 'is-invalid' : ''}`}
-                            >
-                              {showPassword ? <FaEyeSlash color="#6c757d" /> : <FaEye color="#6c757d" />}
-                            </Button>
-                            {passwordError && (
-                              <Form.Control.Feedback type="invalid">
-                                {passwordError}
-                              </Form.Control.Feedback>
-                            )}
-                          </InputGroup>
+                          <Form.Control
+                            type="password"
+                            placeholder="Enter your password"
+                            value={loginData.password}
+                            onChange={(e) => {
+                              setLoginData({ ...loginData, password: e.target.value });
+                              if (touched.password) {
+                                setErrorLocal('');
+                              }
+                            }}
+                            onBlur={handleBlur('password')}
+                            required
+                            className={`cate py-2 ps-3 ${passwordError ? 'is-invalid' : ''}`}
+                            autoComplete="current-password"
+                            style={{ fontSize: "1rem" }}
+                          />
+                          {passwordError && (
+                            <div className="text-danger small mt-1">
+                              {passwordError}
+                            </div>
+                          )}
                         </Form.Group>
 
                         <Button

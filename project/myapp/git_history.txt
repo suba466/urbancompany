@@ -1,0 +1,15 @@
+﻿f37af16 Tue Feb 10 18:43:20 2026 admin
+704378d Mon Feb 9 19:52:31 2026 change
+8a2e6da Mon Feb 9 16:25:01 2026 Fix GitHub Pages deployment: correct base URL and build process
+dc0683f Mon Feb 9 13:28:54 2026 Revert base path configuration
+887996f Sat Feb 7 19:14:33 2026 Merge branch 'main' of https://github.com/suba466/urbancompany
+cf74e4a Sat Feb 7 19:14:30 2026 book
+c9aba98 Sat Feb 7 13:50:28 2026 Add GitHub Actions workflow for GitHub Pages deployment
+e7236c6 Sat Feb 7 13:49:03 2026 account
+bb78d33 Sat Feb 7 12:02:15 2026 Undo GitHub Pages publishing setup: removed workflow, config fallback, and unneeded assets
+6bf9e72 Sat Feb 7 11:53:25 2026 Admin Update: Removed hardcoded subcategories to rely solely on admin data (data.json); removed artificial limit
+b7c5165 Sat Feb 7 11:46:34 2026 Admin Update: Full salon data with subcategories and packages
+c21c38f Sat Feb 7 11:41:48 2026 Admin Update: Populate salon packages to mirror localhost environment
+7c26356 Sat Feb 7 11:38:00 2026 Fix 404: Added missing default-category.png for fallback
+29f622e Sat Feb 7 11:33:57 2026 Admin Update: Replaced Carpenter category with Electrician in data.json
+bad6a8b Sat Feb 7 11:30:33 2026 Fix 404: Ensure assets are in public folder for GitHub Pages deployment

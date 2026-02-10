@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Nav, Dropdown, Button } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
-import { getAssetPath } from './config';
 
-function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole, isMobile, onLogout }) {
+function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole, isMobile }) {
   const location = useLocation();
   const [catOpen, setCatOpen] = useState(false);
   const [subCatOpen, setSubCatOpen] = useState(false);
   const [permissions, setPermissions] = useState({});
-  const logoUrl = getAssetPath("/assets/Uc.png");
+  const logoUrl = 'http://localhost:5000/assets/Uc.png';
 
   useEffect(() => {
     try {
@@ -138,15 +137,17 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole, isMobile, onLogou
 
       <Nav className="flex-column px-2">
         {/* Dashboard */}
-        <Nav.Link
-          as={Link}
-          to="/admin/dashboard"
-          style={getMenuItemStyle('/admin/dashboard')}
-          title="Dashboard"
-        >
-          <i className="bi bi-speedometer2" style={{ fontSize: '1.2rem', marginRight: sidebarOpen ? '0.5rem' : '0' }}></i>
-          {sidebarOpen && <span>Dashboard</span>}
-        </Nav.Link>
+        {(userRole === 'admin' || (userRole === 'user' && permissions['Dashboard'])) && (
+          <Nav.Link
+            as={Link}
+            to="/admin/dashboard"
+            style={getMenuItemStyle('/admin/dashboard')}
+            title="Dashboard"
+          >
+            <i className="bi bi-speedometer2" style={{ fontSize: '1.2rem', marginRight: sidebarOpen ? '0.5rem' : '0' }}></i>
+            {sidebarOpen && <span>Dashboard</span>}
+          </Nav.Link>
+        )}
 
         {/* User Management */}
         {(userRole === 'admin' || (userRole === 'user' && (permissions['Users'] || permissions['User']))) && (
@@ -162,13 +163,16 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole, isMobile, onLogou
               {sidebarOpen && <i className="bi bi-chevron-down ms-auto"></i>}
             </Dropdown.Toggle>
             <Dropdown.Menu style={{ width: sidebarOpen ? '100%' : '200px' }}>
-              <Dropdown.Item
-                as={Link}
-                to="/admin/users/add"
-                className={isActive('/admin/users/add') ? 'active' : ''}
-              >
-                <i className="bi bi-person-plus me-2"></i>Add user
-              </Dropdown.Item>
+              {/* Show Add user for both admins AND users with Users permission */}
+              {(userRole === 'admin' || (userRole === 'user' && (permissions['Users'] || permissions['User']))) && (
+                <Dropdown.Item
+                  as={Link}
+                  to="/admin/users/add"
+                  className={isActive('/admin/users/add') ? 'active' : ''}
+                >
+                  <i className="bi bi-person-plus me-2"></i>Add user
+                </Dropdown.Item>
+              )}
               <Dropdown.Item
                 as={Link}
                 to="/admin/users"
@@ -374,12 +378,8 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole, isMobile, onLogou
             variant="outline-light"
             className="w-100"
             onClick={() => {
-              if (onLogout) {
-                onLogout();
-              } else {
-                localStorage.clear();
-                window.location.href = '/admin';
-              }
+              localStorage.clear();
+              window.location.href = '/admin';
             }}
             style={{
               borderRadius: '8px',
@@ -394,12 +394,8 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole, isMobile, onLogou
             variant="outline-light"
             className="w-100 d-flex justify-content-center"
             onClick={() => {
-              if (onLogout) {
-                onLogout();
-              } else {
-                localStorage.clear();
-                window.location.href = '/admin';
-              }
+              localStorage.clear();
+              window.location.href = '/admin';
             }}
             style={{
               borderRadius: '8px',
