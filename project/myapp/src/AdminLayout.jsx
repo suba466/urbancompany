@@ -77,6 +77,7 @@ function AdminLayout({ userRole, userProfile, onLogout }) {
         setSidebarOpen={setSidebarOpen}
         userRole={userRole}
         isMobile={isMobile}
+        onLogout={onLogout}
       />
 
       {/* Main Content */}
@@ -158,7 +159,7 @@ function AdminLayout({ userRole, userProfile, onLogout }) {
                     <i className="bi bi-gear me-2"></i>Settings
                   </Dropdown.Item>
                   <Dropdown.Divider />
-                  <Dropdown.Item onClick={onLogout}>
+                  <Dropdown.Item onClick={(e) => { e.preventDefault(); onLogout(); }}>
                     <i className="bi bi-box-arrow-right me-2"></i>Logout
                   </Dropdown.Item>
                 </Dropdown.Menu>

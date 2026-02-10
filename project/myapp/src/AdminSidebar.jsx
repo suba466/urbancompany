@@ -3,7 +3,7 @@ import { Nav, Dropdown, Button } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
 import { getAssetPath } from './config';
 
-function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole, isMobile }) {
+function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole, isMobile, onLogout }) {
   const location = useLocation();
   const [catOpen, setCatOpen] = useState(false);
   const [subCatOpen, setSubCatOpen] = useState(false);
@@ -374,8 +374,12 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole, isMobile }) {
             variant="outline-light"
             className="w-100"
             onClick={() => {
-              localStorage.clear();
-              window.location.href = '/admin';
+              if (onLogout) {
+                onLogout();
+              } else {
+                localStorage.clear();
+                window.location.href = '/admin';
+              }
             }}
             style={{
               borderRadius: '8px',
@@ -390,8 +394,12 @@ function AdminSidebar({ sidebarOpen, setSidebarOpen, userRole, isMobile }) {
             variant="outline-light"
             className="w-100 d-flex justify-content-center"
             onClick={() => {
-              localStorage.clear();
-              window.location.href = '/admin';
+              if (onLogout) {
+                onLogout();
+              } else {
+                localStorage.clear();
+                window.location.href = '/admin';
+              }
             }}
             style={{
               borderRadius: '8px',

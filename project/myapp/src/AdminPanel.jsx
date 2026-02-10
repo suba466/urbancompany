@@ -19,7 +19,7 @@ function AdminPanel() {
   const navigate = useNavigate();
   const handleLogout = () => {
     logout();
-    navigate('/admin');
+    navigate('/admin', { replace: true });
   };
 
   // Check for token expiration
