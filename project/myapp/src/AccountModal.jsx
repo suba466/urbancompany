@@ -1171,7 +1171,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
                 {isLoading || authLoading ? (
                   <>
                     <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                    Saving...
+                    Saving..
                   </>
                 ) : (
                   "Save Changes"
@@ -1184,7 +1184,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
     );
   };
 
-  // Render bookings view - UPDATED to show cart items
+  // UPDATED to show cart items
   const renderBookingsView = () => {
     // Calculate total for each booking
     const calculateBookingTotal = (booking) => {
