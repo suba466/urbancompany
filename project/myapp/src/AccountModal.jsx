@@ -563,25 +563,15 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
     });
 
     // servicePrice already includes itemTotal + tax + tip + slotExtraCharge
+    // ALWAYS use servicePrice if it's available and greater than 0
     if (booking.servicePrice) {
       const price = typeof booking.servicePrice === 'string'
         ? Number(booking.servicePrice.replace(/[^0-9.-]+/g, ""))
         : Number(booking.servicePrice);
 
-      const originalPrice = booking.originalPrice
-        ? (typeof booking.originalPrice === 'string'
-          ? Number(booking.originalPrice.replace(/[^0-9.-]+/g, ""))
-          : Number(booking.originalPrice))
-        : 0;
-
-      // Only use servicePrice if it's greater than 0 AND greater than originalPrice
-      // If servicePrice equals originalPrice, tax wasn't included, so recalculate
-      if (price > 0 && (originalPrice === 0 || price > originalPrice)) {
-        console.log("✅ Using servicePrice:", price);
+      if (price > 0) {
+        console.log("✅ Using servicePrice (total with all charges):", price);
         return price;
-      } else if (price > 0 && price === originalPrice) {
-        console.log("⚠️ ServicePrice equals originalPrice - tax not included, will recalculate");
-        // Fall through to recalculation
       }
     }
 
@@ -1242,7 +1232,23 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
         ) : (
           <div className="d-grid gap-3">
             {bookings.map((booking) => {
-              const bookingTotal = calculateBookingTotal(booking);
+              // Directly use servicePrice (the total amount from cart page)
+              console.log("🔍 Booking Display Debug:", {
+                bookingId: booking._id?.toString().substring(0, 8),
+                servicePrice: booking.servicePrice,
+                originalPrice: booking.originalPrice,
+                taxAmount: booking.taxAmount,
+                tipAmount: booking.tipAmount,
+                slotExtraCharge: booking.slotExtraCharge
+              });
+
+              const bookingTotal = booking.servicePrice
+                ? (typeof booking.servicePrice === 'string'
+                  ? Number(booking.servicePrice.replace(/[^0-9.-]+/g, ""))
+                  : Number(booking.servicePrice))
+                : 0;
+
+              console.log("💰 Calculated bookingTotal:", bookingTotal);
 
               return (
                 <Card key={booking._id} className="border-0 shadow-sm">

@@ -184,6 +184,15 @@ function CartPage() {
       const slotExtraCharge = calculateSlotExtraCharge();
       const totalPrice = itemTotal + tax + tip + slotExtraCharge;
 
+      // Debug: Log all price components
+      console.log("💰 PRICE CALCULATION DEBUG:");
+      console.log("  Item Total:", itemTotal);
+      console.log("  Tax:", tax);
+      console.log("  Tip:", tip);
+      console.log("  Slot Extra Charge:", slotExtraCharge);
+      console.log("  TOTAL PRICE (servicePrice):", totalPrice);
+      console.log("========================");
+
       // Razorpay options
       const options = {
         key: "rzp_test_S9N5uYU87mhzcY", // Your Razorpay key_id
@@ -227,6 +236,10 @@ function CartPage() {
           };
 
           console.log("📤 Sending booking data to server:", bookingData);
+          console.log("🔍 KEY VALUES:");
+          console.log("  servicePrice (TOTAL with tax/tip/charges):", bookingData.servicePrice);
+          console.log("  originalPrice (items only):", bookingData.originalPrice);
+          console.log("========================");
 
           // Send booking to server
           const bookingResponse = await fetch("http://localhost:5000/api/bookings", {
@@ -239,6 +252,10 @@ function CartPage() {
 
           const result = await bookingResponse.json();
           console.log("📥 Server response:", result);
+          console.log("🔍 Saved booking data check:");
+          console.log("  Saved servicePrice:", result.booking?.servicePrice || result.servicePrice);
+          console.log("  Saved originalPrice:", result.booking?.originalPrice || result.originalPrice);
+          console.log("========================");
 
           if (!bookingResponse.ok) {
             throw new Error(result.error || "Failed to create booking");
@@ -281,8 +298,8 @@ function CartPage() {
             setSelectedTip(0);
             setCustomTip("");
 
-            // Show success alert
-            alert(`✅ Order Confirmed!\n\nOrder ID: ${result.booking?._id || result._id || result.bookingId}\nPayment ID: ${response.razorpay_payment_id}\nAmount Paid: ₹${totalPrice}\n\nThank you for your booking!`);
+            // Show success alert with total amount
+            alert(`✅ Order Confirmed!\n\nThank you for your booking!`);
 
             // Redirect to home page (Banner)
             navigate('/');
