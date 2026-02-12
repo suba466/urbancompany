@@ -1,7 +1,6 @@
 // downloadUtils.js
 import html2pdf from 'html2pdf.js';
 import * as XLSX from 'xlsx';
-import API_URL from './config';
 
 
 export const getTableElement = (selector = '.table-responsive') => {
@@ -14,7 +13,7 @@ export const prepareUserDataForExport = (users) => {
     'Email': u.email,
     'Phone': u.phone,
     'Designation': u.designation,
-    'Profile Image': u.profileImage ? `${API_URL}${u.profileImage}` : 'No Image',
+    'Profile Image': u.profileImage ? `http://localhost:5000${u.profileImage}` : 'No Image',
     'Permissions': Object.entries(u.permissions || {})
       .filter(([key, value]) => value)
       .map(([key]) => key.charAt(0).toUpperCase() + key.slice(1))
@@ -28,7 +27,7 @@ export const prepareCustomerDataForExport = (customers) => {
     'Email': c.email,
     'Phone': c.phone,
     'City': c.city,
-    'Profile Image': c.profileImage ? `${API_URL}${c.profileImage}` : 'No Image',
+    'Profile Image': c.profileImage ? `http://localhost:5000${c.profileImage}` : 'No Image',
     'Joined Date': new Date(c.createdAt).toLocaleDateString()
   }));
 };
@@ -37,7 +36,7 @@ export const prepareBookingDataForExport = (bookings) => {
   return bookings.map(b => ({
     'Customer': b.customerName,
     'Email': b.customerEmail,
-    'Profile Image': b.customerProfileImage ? `${API_URL}${b.customerProfileImage}` : 'No Image',
+    'Profile Image': b.customerProfileImage ? `http://localhost:5000${b.customerProfileImage}` : 'No Image',
     'Service': b.serviceName,
     'Price': `₹${b.servicePrice}`,
     'Status': b.status,

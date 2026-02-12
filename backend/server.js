@@ -10,8 +10,8 @@ import jwt from "jsonwebtoken";
 import adminRoutes from "./adminRoutes.js";
 
 const app = express();
-const PORT = process.env.PORT || 5000;
-const JWT_SECRET = process.env.JWT_SECRET || "your-jwt-secret-key-change-this";
+const PORT = 5000;
+const JWT_SECRET = "your-jwt-secret-key-change-this";
 
 // Middleware
 app.use(cors());
@@ -53,12 +53,11 @@ const upload = multer({
 });
 
 // --- MongoDB Connection ---
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/suba";
-mongoose.connect(MONGODB_URI)
+mongoose.connect("mongodb://localhost:27017/suba")
   .then(() => {
-    console.log("✅ MongoDB connected successfully");
+    console.log(" MongoDB connected successfully");
   })
-  .catch(err => console.error("❌ MongoDB connection error:", err));
+  .catch(err => console.error(" MongoDB connection error:", err));
 
 
 // Add this to your existing Package schema in server.js
