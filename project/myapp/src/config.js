@@ -2,7 +2,9 @@ const isDevelopment = window.location.hostname === 'localhost' || window.locatio
 
 const API_URL = isDevelopment
     ? "http://localhost:5000"
-    : "";
+    : (import.meta.env.VITE_API_URL || "https://urbancompany-backend.onrender.com");
+
+
 
 window.API_URL = API_URL;
 
