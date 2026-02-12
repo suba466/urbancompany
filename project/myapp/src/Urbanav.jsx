@@ -474,7 +474,7 @@ function Urbanav() {
                   style={{ height: "34px", marginLeft: "10px" }}
                   onError={(e) => {
                     console.error("Failed to load logo:", logo1);
-                    e.target.src = "./assets/urban.png";
+                    e.target.src = getAssetPath("assets/urban.png");
                   }}
                 />
               </Col>
@@ -494,7 +494,7 @@ function Urbanav() {
                 style={{ maxHeight: "40px", objectFit: "contain" }}
                 onError={(e) => {
                   console.error("Failed to load main logo:", logo);
-                  e.target.src = "./assets/Uc.png";
+                  e.target.src = getAssetPath("assets/Uc.png");
                 }}
               />
               {!location.pathname.startsWith("/salon") && (
@@ -651,7 +651,7 @@ function Urbanav() {
                       }}
                       onError={(e) => {
                         console.error("Failed to load logo1:", logo1);
-                        e.target.src = "./assets/uc.png";
+                        e.target.src = getAssetPath("assets/Uc.png");
                       }}
                     />
                     <div className="nav-label" style={{ fontSize: "12px" }}>UC</div>

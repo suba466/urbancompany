@@ -200,7 +200,7 @@ function CartPage() {
         currency: "INR",
         name: "Urban Company",
         description: cartItems.length > 0 ? cartItems.map(item => item.title).join(', ') : "Beauty Services",
-        image: "./assets/urban.png", // Your logo
+        image: getAssetPath("assets/urban.png"), // Your logo
         handler: async function (response) {
           console.log("✅ Payment successful:", response);
 

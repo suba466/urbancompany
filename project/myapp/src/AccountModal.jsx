@@ -607,7 +607,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
       if (url.startsWith('/assets/')) {
         return `${window.API_URL}${url}`;
       }
-      return `./assets/${url}`;
+      return getAssetPath(`assets/${url}`);
     };
 
     const fullImageUrl = getFullImageUrl(pictureUrl);
