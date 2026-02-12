@@ -108,59 +108,33 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
   const loadCustomerData = async () => {
     try {
       if (!user?.email) {
-        console.log("No email found");
         setBookings([]);
         return;
       }
 
       const customerEmail = user.email;
-      console.log("Fetching bookings for:", customerEmail);
+      const bookingsData = await apiFetch(`/api/carts/email/${customerEmail}`);
 
-      // Load bookings from server
-      const bookingsResponse = await fetch(`${window.API_URL}/api/bookings/${customerEmail}`);
-
-      if (bookingsResponse.ok) {
-        const bookingsData = await bookingsResponse.json();
-        console.log("📋 Bookings received:", {
-          count: bookingsData.bookings?.length || 0,
-          bookings: bookingsData.bookings
-        });
-
-        // Debug: Check what's in each booking
-        if (bookingsData.bookings && bookingsData.bookings.length > 0) {
-          bookingsData.bookings.forEach((booking, index) => {
-            console.log(`Booking ${index + 1}:`, {
-              id: booking._id,
-              serviceName: booking.serviceName,
-              hasCartItems: !!booking.cartItems,
-              cartItemsCount: booking.cartItems?.length || 0,
-              hasItems: !!booking.items,
-              itemsCount: booking.items?.length || 0,
-              cartItems: booking.cartItems
-            });
-          });
-        }
-
-        setBookings(bookingsData.bookings || []);
+      if (bookingsData && bookingsData.carts) {
+        const formatted = (bookingsData.carts || []).map(b => ({
+          ...b,
+          id: b._id
+        }));
+        setBookings(formatted);
       } else {
-        console.log("Failed to fetch bookings");
         setBookings([]);
       }
 
-      // Load plans from same email
-      const plansResponse = await fetch(`${window.API_URL}/api/plans/${customerEmail}`);
-      if (plansResponse.ok) {
-        const plansData = await plansResponse.json();
+      const plansData = await apiFetch(`/api/plans/${customerEmail}`);
+      if (plansData && plansData.plans) {
         setPlans(plansData.plans || []);
       }
-
     } catch (error) {
       console.error("Error loading customer data:", error);
       setBookings([]);
     }
   };
 
-  // Fetch logo
   useEffect(() => {
     const fetchLogo = async () => {
       try {
@@ -169,13 +143,12 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
           setLogo1(getAssetPath(data.logo1));
         }
       } catch (error) {
-        console.error("Error fetching logo:", error);
-        setLogo1("./assets/urban.png");
+        setLogo1(getAssetPath("assets/urban.png"));
       }
     };
 
-    fetchLogo();
-  }, []);
+    if (show) fetchLogo();
+  }, [show]);
 
   // Reset state when modal opens
   useEffect(() => {

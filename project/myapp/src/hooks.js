@@ -1,5 +1,6 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { useEffect, useCallback } from 'react';
+import { apiFetch } from './config';
 import {
   loginCustomer,
   registerCustomer,
@@ -35,12 +36,12 @@ import {
 // Custom hook to sync auth state with localStorage
 export const useAuthSync = () => {
   const dispatch = useDispatch();
-  
+
   useEffect(() => {
     // Check localStorage on initial load only
     const customerToken = localStorage.getItem('customerToken');
     const customerInfo = localStorage.getItem('customerInfo');
-    
+
     if (customerToken && customerInfo) {
       try {
         const user = JSON.parse(customerInfo);
@@ -51,7 +52,7 @@ export const useAuthSync = () => {
         console.error("Error parsing customer info:", error);
       }
     }
-    
+
     // Listen for storage events (from other tabs/windows) - but be careful
     const handleStorageChange = (event) => {
       // Only handle specific keys to avoid unnecessary updates
@@ -62,9 +63,9 @@ export const useAuthSync = () => {
         }, 0);
       }
     };
-    
+
     window.addEventListener('storage', handleStorageChange);
-    
+
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
@@ -80,7 +81,7 @@ export const notifyAuthChange = () => {
 export const useCustomerAuth = () => {
   const dispatch = useDispatch();
   const auth = useSelector(selectCustomerAuth);
-  
+
   // Memoize the sync function to prevent unnecessary re-renders
   const syncAuth = useCallback(() => {
     dispatch(updateCustomerLocalState());
@@ -123,10 +124,10 @@ export const useAdminAuth = () => {
 export const useAuth = () => {
   // Use auth sync hook only once at the top level
   useAuthSync();
-  
+
   const dispatch = useDispatch();
   const auth = useSelector(selectCustomerAuth);
-  
+
   // Memoize functions to prevent unnecessary re-renders
   const login = useCallback(async (email, password) => {
     const result = await dispatch(loginCustomer({ email, password })).unwrap();
@@ -198,7 +199,7 @@ export const useCart = () => {
 
     window.addEventListener('cartCleared', handleCartCleared);
     window.addEventListener('cartUpdated', handleCartUpdated);
-    
+
     return () => {
       window.removeEventListener('cartCleared', handleCartCleared);
       window.removeEventListener('cartUpdated', handleCartUpdated);
@@ -236,31 +237,28 @@ export const clearCartFromDatabase = async (userEmail) => {
     console.log("No user email provided for database cart clearing");
     return;
   }
-  
+
   try {
     // Get cart items for this user from database
-    const response = await fetch(`http://localhost:5000/api/carts/email/${userEmail}`);
-    
-    if (response.ok) {
-      const data = await response.json();
+    const data = await apiFetch(`/api/carts/email/${userEmail}`);
+
+    if (data && data.carts) {
       const userCartItems = data.carts || [];
-      
+
       console.log(`Found ${userCartItems.length} cart items to delete for ${userEmail}`);
-      
+
       // Delete each cart item
       const deletePromises = userCartItems.map(async (item) => {
         try {
-          const deleteResponse = await fetch(`http://localhost:5000/api/carts/${item._id}`, {
+          await apiFetch(`/api/carts/${item._id}`, {
             method: "DELETE"
           });
-          if (deleteResponse.ok) {
-            console.log(`Deleted cart item: ${item._id}`);
-          }
+          console.log(`Deleted cart item: ${item._id}`);
         } catch (error) {
           console.error(`Failed to delete cart item ${item._id}:`, error);
         }
       });
-      
+
       await Promise.all(deletePromises);
       console.log(`Successfully cleared ${userCartItems.length} cart items from database`);
     } else {
@@ -268,7 +266,6 @@ export const clearCartFromDatabase = async (userEmail) => {
     }
   } catch (error) {
     console.error("Error clearing cart from database:", error);
-    // Don't throw error, just log it
   }
 };
 

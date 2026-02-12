@@ -32,51 +32,31 @@ export const apiFetch = async (endpoint, options = {}) => {
 
         const response = await fetch(url, options);
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Status: ${response.status}`);
 
         return await response.json();
     } catch (error) {
-        // Fallback for public static data if the API fails (especially on GitHub Pages)
-        if (!isDevelopment || endpoint.includes('api/') || endpoint.includes('static-data') || endpoint.includes('added')) {
+        // Fallback for production/static hosting
+        if (!isDevelopment || endpoint.includes('api/') || endpoint.includes('static-data')) {
             try {
-                // Always fetch data.json from the root of the app
-                const fallbackUrl = `${BASE_URL}data.json`;
-                const fallbackRes = await fetch(fallbackUrl);
-
+                const fallbackRes = await fetch(`${BASE_URL}data.json`);
                 if (fallbackRes.ok) {
                     const allData = await fallbackRes.json();
-
-                    // Try to find the specific key requested
                     const key = endpoint.split('/').pop().split('?')[0];
-                    if (allData[key]) {
-                        return { [key]: allData[key], success: true };
-                    }
 
-                    // Smart fallback for missing keys: 
-                    // If it's a common data key, try to provide a reasonable default from allData
-                    const fallbackData = allData.packages || allData.subcategories || allData;
-                    return {
-                        ...allData,
-                        [key]: fallbackData,
-                        success: true
-                    };
+                    if (allData[key]) return { [key]: allData[key], success: true };
+
+                    // Return everything if specific key not found (good for static-data)
+                    return { ...allData, success: true, [key]: allData.packages || [] };
                 }
-            } catch (fallbackError) {
-                // Silent fallback failure unless both fail
+            } catch (e) {
+                // Silent failure is better than spamming console in production
             }
         }
 
-        // Final fallback: log the error only once if everything fails (including fallback)
-        console.warn(`Note: API ${endpoint} not found, using local data.json fallback if available.`);
-
-        // Return a safe empty object instead of throwing if we're on a static host
-        if (!isDevelopment) {
-            return { success: false, [endpoint.split('/').pop()]: [] };
-        }
-
-        throw error;
+        // Return empty structure to prevent crashes
+        const key = endpoint.split('/').pop().split('?')[0];
+        return { success: false, [key]: [], error: error.message };
     }
 };
 

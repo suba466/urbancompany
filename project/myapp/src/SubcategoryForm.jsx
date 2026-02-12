@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Form, Button, Card, Row, Col, Alert } from 'react-bootstrap';
+import { getAssetPath } from './config';
 
 const SubcategoryForm = ({
   categories,
@@ -35,7 +36,7 @@ const SubcategoryForm = ({
       });
 
       if (subcategoryData.img) {
-        setImagePreview(`${window.API_URL}${subcategoryData.img}`);
+        setImagePreview(getAssetPath(subcategoryData.img));
       }
     }
   }, [subcategoryData]);
@@ -43,7 +44,7 @@ const SubcategoryForm = ({
   // Field-by-field validation
   const validateField = (fieldName, value) => {
     const newErrors = { ...errors };
-    
+
     switch (fieldName) {
       case 'name':
         if (!value.trim()) {
@@ -52,7 +53,7 @@ const SubcategoryForm = ({
           delete newErrors.name;
         }
         break;
-        
+
       case 'categoryId':
         if (!value) {
           newErrors.categoryId = 'Parent category is required';
@@ -60,7 +61,7 @@ const SubcategoryForm = ({
           delete newErrors.categoryId;
         }
         break;
-        
+
       case 'key':
         if (!value.trim()) {
           newErrors.key = 'Key is required';
@@ -70,18 +71,18 @@ const SubcategoryForm = ({
           delete newErrors.key;
         }
         break;
-        
+
       default:
         break;
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleFieldChange = (fieldName, value) => {
     setFormData({ ...formData, [fieldName]: value });
-    
+
     // Auto-validate if field was touched before
     if (touchedFields[fieldName]) {
       validateField(fieldName, value);
@@ -99,15 +100,15 @@ const SubcategoryForm = ({
       .toLowerCase()
       .replace(/ /g, '-')
       .replace(/[^a-z0-9-]/g, '');
-    
+
     const updatedFormData = {
       ...formData,
       name,
       key
     };
-    
+
     setFormData(updatedFormData);
-    
+
     // Auto-validate if name was touched before
     if (touchedFields.name) {
       validateField('name', name);
@@ -124,23 +125,23 @@ const SubcategoryForm = ({
       allTouched[field] = true;
     });
     setTouchedFields(allTouched);
-    
+
     const newErrors = {};
-    
+
     if (!formData.name.trim()) {
       newErrors.name = 'Subcategory name is required';
     }
-    
+
     if (!formData.categoryId) {
       newErrors.categoryId = 'Parent category is required';
     }
-    
+
     if (!formData.key.trim()) {
       newErrors.key = 'Key is required';
     } else if (!/^[a-z0-9-]+$/.test(formData.key)) {
       newErrors.key = 'Key can only contain lowercase letters, numbers, and hyphens';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -272,7 +273,7 @@ const SubcategoryForm = ({
           <Row className="mb-3">
             <Col md={6}>
               <Form.Group>
-                
+
                 <Form.Select
                   value={formData.categoryId}
                   onChange={(e) => handleFieldChange('categoryId', e.target.value)}
@@ -370,7 +371,7 @@ const SubcategoryForm = ({
                   onChange={handleImageChange}
                   className="d-none"
                 />
-                
+
                 {!imagePreview && !subcategoryData && (
                   <small className="text-dark d-block mt-1">
                     Subcategory image is recommended
@@ -381,12 +382,12 @@ const SubcategoryForm = ({
           </Row>
 
           <div className="d-flex justify-content-center gap-3 mt-4">
-            <Button 
-              variant="outline-dark" 
+            <Button
+              variant="outline-dark"
               onClick={() => {
                 resetForm();
                 onCancel();
-              }} 
+              }}
               className="cat"
               type="button"
             >
