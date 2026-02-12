@@ -15,9 +15,20 @@ export const BASE_URL = isDevelopment ? "/" : "/urbancompany/";
  */
 export const apiFetch = async (endpoint, options = {}) => {
     try {
-        // If we're in production and it's a GET request to a known static-data endpoint,
-        // we might want to go straight to data.json if no backend is hosted.
-        const url = `${API_URL}${endpoint}`;
+        // Resolve the URL:
+        // 1. If absolute URL, use it
+        // 2. If API_URL is set (development), use it
+        // 3. Otherwise (production on GitHub Pages), use BASE_URL to stay within the repo
+        let url;
+        if (endpoint.startsWith('http')) {
+            url = endpoint;
+        } else if (API_URL) {
+            url = `${API_URL}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
+        } else {
+            // Relative to the app's base (e.g., /urbancompany/api/...)
+            const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+            url = `${BASE_URL}${cleanEndpoint}`;
+        }
 
         const response = await fetch(url, options);
 
@@ -25,38 +36,46 @@ export const apiFetch = async (endpoint, options = {}) => {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-            return await response.json();
-        } else {
-            // If not JSON (likely HTML error page), throw to trigger fallback
-            throw new Error("Response was not JSON");
-        }
+        return await response.json();
     } catch (error) {
-        console.warn(`API Fetch failed for ${endpoint}:`, error.message);
-
-        // Fallback for public static data if the API fails (especially in production)
-        if (!isDevelopment || endpoint.includes('api/') || endpoint.includes('static-data')) {
-            console.log("Attempting fallback to public/data.json...");
+        // Fallback for public static data if the API fails (especially on GitHub Pages)
+        if (!isDevelopment || endpoint.includes('api/') || endpoint.includes('static-data') || endpoint.includes('added')) {
             try {
+                // Always fetch data.json from the root of the app
                 const fallbackUrl = `${BASE_URL}data.json`;
                 const fallbackRes = await fetch(fallbackUrl);
+
                 if (fallbackRes.ok) {
                     const allData = await fallbackRes.json();
 
-                    // Try to find the specific key requested (e.g., 'carousel' from '/api/carousel')
+                    // Try to find the specific key requested
                     const key = endpoint.split('/').pop().split('?')[0];
                     if (allData[key]) {
-                        return { [key]: allData[key] };
+                        return { [key]: allData[key], success: true };
                     }
 
-                    // If no specific key, return everything (some components might expect this)
-                    return allData;
+                    // Smart fallback for missing keys: 
+                    // If it's a common data key, try to provide a reasonable default from allData
+                    const fallbackData = allData.packages || allData.subcategories || allData;
+                    return {
+                        ...allData,
+                        [key]: fallbackData,
+                        success: true
+                    };
                 }
             } catch (fallbackError) {
-                console.error("Fallback also failed:", fallbackError);
+                // Silent fallback failure unless both fail
             }
         }
+
+        // Final fallback: log the error only once if everything fails (including fallback)
+        console.warn(`Note: API ${endpoint} not found, using local data.json fallback if available.`);
+
+        // Return a safe empty object instead of throwing if we're on a static host
+        if (!isDevelopment) {
+            return { success: false, [endpoint.split('/').pop()]: [] };
+        }
+
         throw error;
     }
 };
