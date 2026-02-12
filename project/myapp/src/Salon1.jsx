@@ -10,6 +10,7 @@ import Salon1modal from './Salon1modal';
 import { useNavigate } from 'react-router-dom';
 import CartBlock from './CartBlock';
 import { useCart } from "./hooks";
+import { apiFetch, getAssetPath } from "./config";
 
 function Salon1() {
   const [savedExtras, setSavedExtras] = useState({});
@@ -132,40 +133,19 @@ function Salon1() {
 
   const fetchPackages = async () => {
     try {
-      let packages = [];
+      let packagesData = [];
+
+      // Try active-packages first
       try {
-        const response1 = await fetch('http://localhost:5000/api/active-packages');
-        if (response1.ok) {
-          const data1 = await response1.json();
-          packages = data1.packages || [];
-          packages.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-        }
-      } catch (error) { console.error(error); }
-
-      if (packages.length === 0) {
-        try {
-          const response2 = await fetch('http://localhost:5000/api/packages');
-          if (response2.ok) {
-            const data2 = await response2.json();
-            packages = (data2.packages || []).filter(pkg => pkg.isActive !== false);
-            packages.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-          }
-        } catch (error) { console.error(error); }
+        const data = await apiFetch("/api/active-packages");
+        packagesData = data.packages || [];
+      } catch (e) {
+        // Fallback to salonforwomen if active-packages fails
+        const data = await apiFetch("/api/salonforwomen");
+        packagesData = data.salonforwomen || [];
       }
 
-      if (packages.length === 0) {
-        try {
-          const response3 = await fetch('http://localhost:5000/api/salonforwomen');
-          if (response3.ok) {
-            const data3 = await response3.json();
-            packages = data3.salonforwomen || [];
-            if (packages[0] && packages[0].isActive !== undefined) {
-              packages = packages.filter(pkg => pkg.isActive !== false);
-            }
-          }
-        } catch (error) { console.error(error); }
-      }
-      setPackages(packages);
+      setPackages(packagesData.filter(pkg => pkg.isActive !== false));
     } catch (error) {
       console.error("Error fetching packages:", error);
       setPackages([]);
@@ -174,31 +154,21 @@ function Salon1() {
 
   const fetchSuperPackages = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/super");
-      if (!response.ok) throw new Error('Failed');
-      const data = await response.json();
+      const data = await apiFetch("/api/super");
       setSuperPack(data.super ? [data.super[0]] : []);
     } catch (error) {
-      try {
-        const staticResponse = await fetch("http://localhost:5000/api/static-data");
-        const staticData = await staticResponse.json();
-        setSuperPack(staticData.super ? [staticData.super[0]] : []);
-      } catch (e) { }
+      console.error("Error fetching super packages:", error);
+      setSuperPack([]);
     }
   };
 
   const fetchSalonForWomen = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/salonforwomen");
-      if (!response.ok) throw new Error('Failed');
-      const data = await response.json();
+      const data = await apiFetch("/api/salonforwomen");
       setSalon(data.salonforwomen || []);
     } catch (error) {
-      try {
-        const staticResponse = await fetch("http://localhost:5000/api/static-data");
-        const staticData = await staticResponse.json();
-        setSalon(staticData.salonforwomen || []);
-      } catch (e) { }
+      console.error("Error fetching salon for women:", error);
+      setSalon([]);
     }
   };
 
@@ -330,7 +300,7 @@ function Salon1() {
         updateItem(productId, finalCount);
 
         // Also update in database
-        await fetch(`http://localhost:5000/api/carts/${existing._id}`, {
+        await apiFetch(`/api/carts/${existing._id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...payload, count: finalCount }),
@@ -340,7 +310,7 @@ function Salon1() {
         addItem({ ...payload, count: finalCount });
 
         // Also add to database
-        await fetch("http://localhost:5000/api/addcarts", {
+        await apiFetch("/api/addcarts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...payload, count: finalCount }),
@@ -363,7 +333,7 @@ function Salon1() {
       updateItem(cartItem._id || cartItem.productId, (cartItem.count || 1) + 1);
 
       // Update database
-      await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
+      await apiFetch(`/api/carts/${cartItem._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ count: (cartItem.count || 1) + 1 })
@@ -378,13 +348,13 @@ function Salon1() {
         removeItem(cartItem._id || cartItem.productId);
 
         // Remove from database
-        await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, { method: "DELETE" });
+        await apiFetch(`/api/carts/${cartItem._id}`, { method: "DELETE" });
       } else {
         // Update in Redux
         updateItem(cartItem._id || cartItem.productId, cartItem.count - 1);
 
         // Update database
-        await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
+        await apiFetch(`/api/carts/${cartItem._id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ count: cartItem.count - 1 })
@@ -471,9 +441,7 @@ function Salon1() {
                           }}
                         >
                           <img
-                            src={
-                              pkg.img.startsWith("http") ? pkg.img : `http://localhost:5000${pkg.img}`
-                            }
+                            src={getAssetPath(pkg.img)}
                             alt={pkg.name || "Service"}
                             style={{
                               width: "100%",
@@ -483,7 +451,7 @@ function Salon1() {
                             }}
                             onError={(e) => {
                               e.target.onerror = null;
-                              e.target.src = "http://localhost:5000/assets/placeholder.png";
+                              e.target.src = getAssetPath("assets/placeholder.png");
                             }}
                           />
                         </div>
@@ -532,9 +500,7 @@ function Salon1() {
                               >
                                 {/* Small Image */}
                                 <img
-                                  src={
-                                    pkg.img.startsWith("http") ? pkg.img : `http://localhost:5000${pkg.img}`
-                                  }
+                                  src={getAssetPath(pkg.img)}
                                   alt={pkg.name}
                                   style={{
                                     width: "100%",
@@ -543,7 +509,7 @@ function Salon1() {
                                     borderRadius: "8px"
                                   }}
                                   onError={(e) => {
-                                    e.target.src = "http://localhost:5000/assets/placeholder.png";
+                                    e.target.src = getAssetPath("assets/placeholder.png");
                                   }}
                                 />
 

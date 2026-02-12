@@ -35,7 +35,7 @@ const SubcategoryForm = ({
       });
 
       if (subcategoryData.img) {
-        setImagePreview(`http://localhost:5000${subcategoryData.img}`);
+        setImagePreview(`${window.API_URL}${subcategoryData.img}`);
       }
     }
   }, [subcategoryData]);

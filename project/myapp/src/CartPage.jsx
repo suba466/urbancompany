@@ -95,7 +95,7 @@ function CartPage() {
       const customerEmail = user.email;
 
       // First, get all cart items for this user
-      const response = await fetch(`http://localhost:5000/api/cart/${customerEmail}`);
+      const response = await fetch(`${window.API_URL}/api/cart/${customerEmail}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -106,7 +106,7 @@ function CartPage() {
         // Delete each cart item
         const deletePromises = userCartItems.map(async (item) => {
           try {
-            await fetch(`http://localhost:5000/api/carts/${item._id}`, {
+            await fetch(`${window.API_URL}/api/carts/${item._id}`, {
               method: "DELETE"
             });
             console.log(`Deleted cart item: ${item._id}`);
@@ -200,7 +200,7 @@ function CartPage() {
         currency: "INR",
         name: "Urban Company",
         description: cartItems.length > 0 ? cartItems.map(item => item.title).join(', ') : "Beauty Services",
-        image: "http://localhost:5000/assets/urban.png", // Your logo
+        image: "./assets/urban.png", // Your logo
         handler: async function (response) {
           console.log("✅ Payment successful:", response);
 
@@ -242,7 +242,7 @@ function CartPage() {
           console.log("========================");
 
           // Send booking to server
-          const bookingResponse = await fetch("http://localhost:5000/api/bookings", {
+          const bookingResponse = await fetch(`${window.API_URL}/api/bookings`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -419,7 +419,7 @@ function CartPage() {
     try {
       console.log("📤 Sending test data:", testData);
 
-      const response = await fetch("http://localhost:5000/api/bookings", {
+      const response = await fetch(`${window.API_URL}/api/bookings`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -475,7 +475,7 @@ function CartPage() {
   };
 
   const fetchAddedItems = () => {
-    fetch("http://localhost:5000/api/added")
+    fetch(`${window.API_URL}/api/added`)
       .then(res => res.json())
       .then(data => setAddedImgs(data.added || []))
       .catch(err => console.error("Failed to load added images:", err));
@@ -608,7 +608,7 @@ function CartPage() {
         const existingItem = cartItems.find(cart => cart.title === item.name);
 
         if (existingItem) {
-          await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
+          await fetch(`${window.API_URL}/api/carts/${existingItem._id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -618,7 +618,7 @@ function CartPage() {
           });
           updateItem(existingItem._id || existingItem.productId, existingItem.count + 1);
         } else {
-          await fetch("http://localhost:5000/api/addcarts", {
+          await fetch(`${window.API_URL}/api/addcarts`, {
             method: "POST",
             body: JSON.stringify(cartPayload)
           });
@@ -628,14 +628,14 @@ function CartPage() {
         const existingItem = cartItems.find(cart => cart.title === item.name);
         if (existingItem) {
           if (existingItem.count > 1) {
-            await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
+            await fetch(`${window.API_URL}/api/carts/${existingItem._id}`, {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ count: existingItem.count - 1 })
             });
             updateItem(existingItem._id || existingItem.productId, existingItem.count - 1);
           } else {
-            await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
+            await fetch(`${window.API_URL}/api/carts/${existingItem._id}`, {
               method: "DELETE"
             });
             removeItem(existingItem._id || existingItem.productId);
@@ -849,7 +849,7 @@ function CartPage() {
         <div className="text-center mt-5">
           <div>
             <img
-              src="http://localhost:5000/assets/cart.png"
+              src="./assets/cart.png"
               alt="cart-placeholder"
               style={{ padding: "10px", width: "33%" }}
             />

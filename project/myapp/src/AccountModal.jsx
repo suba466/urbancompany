@@ -8,6 +8,7 @@ import { PiNotepadLight } from "react-icons/pi";
 import { IoSettingsOutline } from "react-icons/io5";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { useAuth, useCart, useBookings, notifyAuthChange } from "./hooks"; // Import notifyAuthChange
+import { apiFetch, getAssetPath } from "./config";
 
 function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "main" }) {
   const [logo1, setLogo1] = useState("");
@@ -116,7 +117,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
       console.log("Fetching bookings for:", customerEmail);
 
       // Load bookings from server
-      const bookingsResponse = await fetch(`http://localhost:5000/api/bookings/${customerEmail}`);
+      const bookingsResponse = await fetch(`${window.API_URL}/api/bookings/${customerEmail}`);
 
       if (bookingsResponse.ok) {
         const bookingsData = await bookingsResponse.json();
@@ -147,7 +148,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
       }
 
       // Load plans from same email
-      const plansResponse = await fetch(`http://localhost:5000/api/plans/${customerEmail}`);
+      const plansResponse = await fetch(`${window.API_URL}/api/plans/${customerEmail}`);
       if (plansResponse.ok) {
         const plansData = await plansResponse.json();
         setPlans(plansData.plans || []);
@@ -163,19 +164,13 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
   useEffect(() => {
     const fetchLogo = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/static-data");
-        if (response.ok) {
-          const data = await response.json();
-          if (data && data.logo1) {
-            const logoUrl = data.logo1.startsWith('http')
-              ? data.logo1
-              : `http://localhost:5000${data.logo1}`;
-            setLogo1(logoUrl);
-          }
+        const data = await apiFetch("/api/static-data");
+        if (data && data.logo1) {
+          setLogo1(getAssetPath(data.logo1));
         }
       } catch (error) {
         console.error("Error fetching logo:", error);
-        setLogo1("http://localhost:5000/assets/urban.png");
+        setLogo1("./assets/urban.png");
       }
     };
 
@@ -637,9 +632,9 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
         return url;
       }
       if (url.startsWith('/assets/')) {
-        return `http://localhost:5000${url}`;
+        return `${window.API_URL}${url}`;
       }
-      return `http://localhost:5000/assets/${url}`;
+      return `./assets/${url}`;
     };
 
     const fullImageUrl = getFullImageUrl(pictureUrl);
@@ -1370,7 +1365,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
                         onClick={async () => {
                           if (window.confirm("Are you sure you want to delete this booking record?")) {
                             try {
-                              const response = await fetch(`http://localhost:5000/api/bookings/${booking._id}`, {
+                              const response = await fetch(`${window.API_URL}/api/bookings/${booking._id}`, {
                                 method: "DELETE"
                               });
 
@@ -1507,11 +1502,11 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
             <div className="d-flex align-items-center gap-3">
               <span className="text-muted">
                 <img
-                  src={logo1 || "http://localhost:5000/assets/urban.png"}
+                  src={logo1 || "./assets/urban.png"}
                   alt="UC"
                   style={{ width: "20px", height: "20px", objectFit: "contain" }}
                   onError={(e) => {
-                    e.target.src = "http://localhost:5000/assets/urban.png";
+                    e.target.src = "./assets/urban.png";
                   }}
                 />
               </span>
@@ -1593,11 +1588,11 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
             <div className="d-flex align-items-center gap-3">
               <span className="text-muted">
                 <img
-                  src={logo1 || "http://localhost:5000/assets/urban.png"}
+                  src={logo1 || "./assets/urban.png"}
                   alt="UC"
                   style={{ width: "20px", height: "20px", objectFit: "contain" }}
                   onError={(e) => {
-                    e.target.src = "http://localhost:5000/assets/urban.png";
+                    e.target.src = "./assets/urban.png";
                   }}
                 />
               </span>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Row, Col, Card } from "react-bootstrap";
 import { FaStar } from "react-icons/fa";
+import { apiFetch, getAssetPath } from "./config";
 
 function Book() {
   const [carouselItems, setCarouselItems] = useState([]);
@@ -13,32 +14,17 @@ function Book() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch only book & salon data
-        const [bookRes, salonRes] = await Promise.all([
-          fetch("http://localhost:5000/api/book"),
-          fetch("http://localhost:5000/api/salon"),
+        // Fetch book & salon data using apiFetch (handles fallback)
+        const [bookData, salonData] = await Promise.all([
+          apiFetch("/api/book"),
+          apiFetch("/api/salon"),
         ]);
-
-        if (!bookRes.ok || !salonRes.ok)
-          throw new Error("Failed to fetch data");
-
-        const bookData = await bookRes.json();
-        const salonData = await salonRes.json();
 
         setCarouselItems(bookData.book || []);
         setSalonItems(salonData.salon || []);
       } catch (err) {
-        console.error(err);
+        console.error("Fetch data error:", err);
         setError("Failed to fetch service data");
-        // Fallback to static data
-        try {
-          const staticRes = await fetch("http://localhost:5000/api/static-data");
-          const staticData = await staticRes.json();
-          setCarouselItems(staticData.book || []);
-          setSalonItems(staticData.salon || []);
-        } catch (staticError) {
-          console.error("Error fetching static data:", staticError);
-        }
       } finally {
         setLoading(false);
       }
@@ -102,7 +88,7 @@ function Book() {
               }}
             >
               <img
-                src={`http://localhost:5000${item.img}`}
+                src={getAssetPath(item.img)}
                 alt={item.name}
                 style={{
                   width: "101%",
@@ -112,7 +98,7 @@ function Book() {
                 }}
                 onError={(e) => {
                   // Fallback if image fails to load
-                  e.target.src = "http://localhost:5000/assets/placeholder.png";
+                  e.target.src = "./assets/placeholder.png";
                 }}
               />
               <p
@@ -195,12 +181,12 @@ function Book() {
                     </Card.Body>
                     <Card.Img
                       variant="bottom"
-                      src={`http://localhost:5000${item.img}`}
+                      src={getAssetPath(item.img)}
                       alt={item.key}
                       style={{ height: "200px", objectFit: "cover" }}
                       onError={(e) => {
                         // Fallback if image fails to load
-                        e.target.src = "http://localhost:5000/assets/placeholder.png";
+                        e.target.src = "./assets/placeholder.png";
                       }}
                     />
                   </Card>
@@ -224,7 +210,7 @@ function Book() {
                   </Card.Body>
                   <Card.Img
                     variant="bottom"
-                    src={`http://localhost:5000${item.img}`}
+                    src={getAssetPath(item.img)}
                     alt={item.key}
                     style={{
                       height: "200px",
@@ -233,7 +219,7 @@ function Book() {
                     }}
                     onError={(e) => {
                       // Fallback if image fails to load
-                      e.target.src = "http://localhost:5000/assets/placeholder.png";
+                      e.target.src = "./assets/placeholder.png";
                     }}
                   />
                 </Card>

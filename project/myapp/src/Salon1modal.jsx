@@ -6,6 +6,7 @@ import { TbCirclePercentageFilled } from "react-icons/tb";
 import { FaStar, FaTag } from "react-icons/fa";
 import { GoDotFill } from "react-icons/go";
 import FrequentlyAddedCarousel from "./FrequentlyAddedCarousel";
+import { apiFetch } from "./config";
 
 function Salon1modal({
   show,
@@ -133,23 +134,11 @@ function Salon1modal({
   useEffect(() => {
     const fetchAddedImages = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/added");
-        if (!response.ok) {
-          throw new Error('Failed to fetch added items');
-        }
-        const data = await response.json();
+        const data = await apiFetch("/api/added");
         setAddedImgs(data.added || []);
       } catch (error) {
         console.error("Failed to load added images:", error);
-        // Fallback: Try static data API
-        try {
-          const staticResponse = await fetch("http://localhost:5000/api/static-data");
-          const staticData = await staticResponse.json();
-          setAddedImgs(staticData.added || []);
-        } catch (staticError) {
-          console.error("Error fetching static data:", staticError);
-          setAddedImgs([]);
-        }
+        setAddedImgs([]);
       }
     };
 
@@ -178,20 +167,20 @@ function Salon1modal({
 
 
 
-  const fetchCarts = () => {
-    return fetch("http://localhost:5000/api/carts")
-      .then(res => res.json())
-      .then(data => {
-        if (typeof setCarts === 'function') setCarts(data.carts || []);
-        return data.carts || [];
-      })
-      .catch(err => console.error("Error fetching carts:", err));
+  const fetchCarts = async () => {
+    try {
+      const data = await apiFetch("/api/carts");
+      if (typeof setCarts === 'function') setCarts(data.carts || []);
+      return data.carts || [];
+    } catch (err) {
+      console.error("Error fetching carts:", err);
+      return [];
+    }
   };
 
   useEffect(() => {
     if (show && selectedItem) {
-      fetch("http://localhost:5000/api/carts")
-        .then(res => res.json())
+      apiFetch("/api/carts")
         .then(data => {
           const found = (data?.carts || []).find(c => c.title === selectedItem.title);
           if (found?.savedSelections?.length > 0) {
@@ -361,7 +350,8 @@ function Salon1modal({
 
                     // Refresh cart from server
                     try {
-                      const refreshed = await fetch("http://localhost:5000/api/carts").then(r => r.json()).then(d => d.carts || []);
+                      const data = await apiFetch("/api/carts");
+                      const refreshed = data.carts || [];
                       if (typeof setCarts === 'function') setCarts(refreshed);
                     } catch (err) {
                       console.error("Failed to refresh cart:", err);
@@ -607,7 +597,7 @@ function Salon1modal({
                         if (originalCartItem) {
                           // Update existing
                           try {
-                            await fetch(`http://localhost:5000/api/carts/${originalCartItem._id}`, {
+                            await apiFetch(`/api/carts/${originalCartItem._id}`, {
                               method: "PUT",
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify({ count: cartCount })
@@ -623,7 +613,7 @@ function Salon1modal({
                         // Remove
                         if (originalCartItem) {
                           try {
-                            await fetch(`http://localhost:5000/api/carts/${originalCartItem._id}`, {
+                            await apiFetch(`/api/carts/${originalCartItem._id}`, {
                               method: "DELETE"
                             });
                             if (removeItem) removeItem(originalCartItem._id || originalCartItem.productId);
@@ -652,7 +642,7 @@ function Salon1modal({
 
                               if (existingCarouselItem) {
                                 // Update
-                                await fetch(`http://localhost:5000/api/carts/${existingCarouselItem._id}`, {
+                                await apiFetch(`/api/carts/${existingCarouselItem._id}`, {
                                   method: "PUT",
                                   headers: { "Content-Type": "application/json" },
                                   body: JSON.stringify({ ...cartPayload, count: count })
@@ -660,7 +650,7 @@ function Salon1modal({
                                 if (updateItem) updateItem(existingCarouselItem._id || existingCarouselItem.productId, count);
                               } else {
                                 // Add
-                                await fetch("http://localhost:5000/api/addcarts", {
+                                await apiFetch("/api/addcarts", {
                                   method: "POST",
                                   headers: { "Content-Type": "application/json" },
                                   body: JSON.stringify(cartPayload)
@@ -670,7 +660,7 @@ function Salon1modal({
                             } else {
                               // Remove
                               if (existingCarouselItem) {
-                                await fetch(`http://localhost:5000/api/carts/${existingCarouselItem._id}`, {
+                                await apiFetch(`/api/carts/${existingCarouselItem._id}`, {
                                   method: "DELETE"
                                 });
                                 if (removeItem) removeItem(existingCarouselItem._id || existingCarouselItem.productId);

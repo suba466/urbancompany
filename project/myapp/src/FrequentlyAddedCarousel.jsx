@@ -49,7 +49,7 @@ export default function FrequentlyAddedCarousel({
               onClick={() => onViewProduct(item)} // 👈 Open product on click
             ><Row><Col style={{height:"140px"}}>
               <img
-              src={`http://localhost:5000/${item.img}`}
+              src={`${window.API_URL}/${item.img}`}
               alt={item.name}
               style={{
                 width: "100px",

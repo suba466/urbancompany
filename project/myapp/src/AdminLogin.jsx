@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Spinner } from 'react-bootstrap';
 import { useAdminAuth } from './hooks'; // Import from hooks
+import { getAssetPath } from './config';
 
 function AdminLogin({ onLogin }) {
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [touched, setTouched] = useState({ email: false, password: false });
   const [loadingLocal, setLoadingLocal] = useState(false);
   const [errorLocal, setErrorLocal] = useState('');
-  const logoUrl = 'http://localhost:5000/assets/Uc.png';
+  const logoUrl = getAssetPath('assets/Uc.png');
 
   const { login, token, isAuthenticated, error: authError, loading: authLoading } = useAdminAuth();
 
@@ -102,6 +103,15 @@ function AdminLogin({ onLogin }) {
                             width: "90px",
                             height: "90px",
                             objectFit: "contain",
+                          }}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "data:image/svg+xml;base64," + btoa(`
+                              <svg xmlns="http://www.w3.org/2000/svg" width="90" height="90" viewBox="0 0 90 90">
+                                <rect width="90" height="90" fill="white" rx="45"/>
+                                <text x="45" y="55" text-anchor="middle" font-family="Arial" font-size="24" font-weight="bold" fill="black">UC</text>
+                              </svg>
+                            `);
                           }}
                         />
                       </div>

@@ -6,6 +6,7 @@ import Col from "react-bootstrap/Col";
 import { CiStar } from "react-icons/ci";
 import { TiGroup } from "react-icons/ti";
 import { Alert, Spinner } from "react-bootstrap";
+import { apiFetch, getAssetPath } from "./config";
 
 function Banner() {
   const [banner, setBanner] = useState(null);
@@ -17,9 +18,7 @@ function Banner() {
   const fetchBanner = async () => {
     try {
       setError(null);
-      const res = await fetch("http://localhost:5000/api/banner");
-      if (!res.ok) throw new Error("Failed to fetch banner");
-      const data = await res.json();
+      const data = await apiFetch("/api/banner");
       setBanner(data.banner);
     } catch (err) {
       console.error("Error fetching banner:", err);
@@ -32,13 +31,7 @@ function Banner() {
       setError(null);
       setLoading(true);
       console.log("Fetching categories from API...");
-      const response = await fetch("http://localhost:5000/api/categories");
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: Failed to fetch categories`);
-      }
-
-      const data = await response.json();
+      const data = await apiFetch("/api/categories");
       console.log("API Response:", data);
 
       // Check if data has categories array
@@ -111,9 +104,7 @@ function Banner() {
 
   // Render category image with fallback
   const renderCategoryImage = (category) => {
-    const imageUrl = category.img
-      ? `http://localhost:5000${category.img}`
-      : 'http://localhost:5000/assets/default-category.png';
+    const imageUrl = getAssetPath(category.img || 'assets/default-category.png');
 
     return (
       <div>
@@ -121,6 +112,9 @@ function Banner() {
           src={imageUrl}
           alt={category.name}
           style={{ width: '60px', height: '60px', objectFit: 'cover' }}
+          onError={(e) => {
+            e.target.src = getAssetPath('assets/default-category.png');
+          }}
         />
       </div>
     );
@@ -394,12 +388,12 @@ function Banner() {
         <Col md={6} className="text-center">
           {banner ? (
             <img
-              src={`http://localhost:5000${banner.img}`}
+              src={getAssetPath(banner.img)}
               alt="Banner"
               className="banner-img w-100"
               style={{ maxHeight: "400px", objectFit: "cover", borderRadius: "10px" }}
               onError={(e) => {
-                e.target.src = 'http://localhost:5000/assets/default.png';
+                e.target.src = getAssetPath('assets/default.png');
               }}
             />
           ) : (

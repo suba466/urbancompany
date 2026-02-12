@@ -27,7 +27,7 @@ function AdminDashboard() {
   const fetchDashboardData = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch('http://localhost:5000/api/admin/dashboard', {
+      const response = await fetch(`${window.API_URL}/api/admin/dashboard`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -161,7 +161,7 @@ function AdminDashboard() {
                           }}>
                             {booking.customerProfileImage ? (
                               <img
-                                src={`http://localhost:5000${booking.customerProfileImage}`}
+                                src={`${window.API_URL}${booking.customerProfileImage}`}
                                 alt={booking.customerName}
                                 style={{
                                   width: '100%',
@@ -232,7 +232,7 @@ function AdminDashboard() {
                   }}>
                     {customer.profileImage ? (
                       <img
-                        src={`http://localhost:5000${customer.profileImage}`}
+                        src={`${window.API_URL}${customer.profileImage}`}
                         alt={customer.name}
                         style={{
                           width: '100%',

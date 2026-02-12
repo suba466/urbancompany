@@ -34,7 +34,7 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
       });
 
       if (categoryData.img) {
-        setPreviewUrl(`http://localhost:5000${categoryData.img}`);
+        setPreviewUrl(`${window.API_URL}${categoryData.img}`);
       }
     }
   }, [isEditing, categoryData]);
