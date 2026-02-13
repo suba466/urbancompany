@@ -1,6 +1,5 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { useEffect, useCallback } from 'react';
-import { apiFetch } from './config';
 import {
   loginCustomer,
   registerCustomer,
@@ -225,7 +224,7 @@ export const useCart = () => {
     total: useSelector(selectCartTotal),
     addItem: (item) => dispatch(addToCart(item)),
     removeItem: (productId) => dispatch(removeFromCart(productId)),
-    updateItem: (productId, count) => dispatch(updateCartItem({ productId, count })),
+    updateItem: (productId, count, updates = {}) => dispatch(updateCartItem({ productId, count, ...updates })),
     clear: clearCartWithForce, // Use the enhanced clear function
     setEmail: (email) => dispatch(setCustomerEmail(email))
   };
@@ -240,9 +239,10 @@ export const clearCartFromDatabase = async (userEmail) => {
 
   try {
     // Get cart items for this user from database
-    const data = await apiFetch(`/api/carts/email/${userEmail}`);
+    const response = await fetch(`http://localhost:5000/api/carts/email/${userEmail}`);
 
-    if (data && data.carts) {
+    if (response.ok) {
+      const data = await response.json();
       const userCartItems = data.carts || [];
 
       console.log(`Found ${userCartItems.length} cart items to delete for ${userEmail}`);
@@ -250,10 +250,12 @@ export const clearCartFromDatabase = async (userEmail) => {
       // Delete each cart item
       const deletePromises = userCartItems.map(async (item) => {
         try {
-          await apiFetch(`/api/carts/${item._id}`, {
+          const deleteResponse = await fetch(`http://localhost:5000/api/carts/${item._id}`, {
             method: "DELETE"
           });
-          console.log(`Deleted cart item: ${item._id}`);
+          if (deleteResponse.ok) {
+            console.log(`Deleted cart item: ${item._id}`);
+          }
         } catch (error) {
           console.error(`Failed to delete cart item ${item._id}:`, error);
         }
@@ -266,6 +268,7 @@ export const clearCartFromDatabase = async (userEmail) => {
     }
   } catch (error) {
     console.error("Error clearing cart from database:", error);
+    // Don't throw error, just log it
   }
 };
 

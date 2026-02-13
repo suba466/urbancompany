@@ -1,20 +1,16 @@
 import { configureStore, createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { apiFetch } from './config';
+import axios from 'axios';
 
 // Async thunks for Customer Authentication
 export const loginCustomer = createAsyncThunk(
   'customerAuth/login',
   async ({ email, password }, { rejectWithValue }) => {
     try {
-      const data = await apiFetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
+      const response = await axios.post('http://localhost:5000/api/login', { email, password });
 
-      if (data.success) {
-        const token = data.token;
-        const userInfo = data.user || data.customer;
+      if (response.data.success) {
+        const token = response.data.token;
+        const userInfo = response.data.user || response.data.customer;
         const role = 'user';
 
         localStorage.setItem('customerToken', token);
@@ -22,7 +18,7 @@ export const loginCustomer = createAsyncThunk(
 
         return { token, user: userInfo, role };
       }
-      return rejectWithValue(data.error || 'Login failed');
+      return rejectWithValue(response.data.error || 'Login failed');
     } catch (error) {
       return rejectWithValue(error.response?.data?.error || 'Login failed');
     }
@@ -38,14 +34,11 @@ export const registerCustomer = createAsyncThunk(
         if (userData[key]) formData.append(key, userData[key]);
       });
 
-      const data = await apiFetch('/api/register', {
-        method: 'POST',
-        body: formData
-      });
+      const response = await axios.post('http://localhost:5000/api/register', formData);
 
-      if (data.success) {
-        const token = data.token;
-        const userInfo = data.customer;
+      if (response.data.success) {
+        const token = response.data.token;
+        const userInfo = response.data.customer;
 
         localStorage.setItem('customerToken', token);
         localStorage.setItem('customerInfo', JSON.stringify(userInfo));
@@ -55,7 +48,7 @@ export const registerCustomer = createAsyncThunk(
           token: token
         };
       }
-      return rejectWithValue(data.error || 'Registration failed');
+      return rejectWithValue(response.data.error || 'Registration failed');
     } catch (error) {
       return rejectWithValue(error.response?.data?.error || 'Registration failed');
     }
@@ -82,17 +75,14 @@ export const updateCustomerProfile = createAsyncThunk(
         if (profileData[key]) formData.append(key, profileData[key]);
       });
 
-      const data = await apiFetch('/api/update-profile', {
-        method: 'POST',
-        body: formData
-      });
+      const response = await axios.post('http://localhost:5000/api/update-profile', formData);
 
-      if (data.success) {
-        const updatedUser = data.customer;
+      if (response.data.success) {
+        const updatedUser = response.data.customer;
         localStorage.setItem('customerInfo', JSON.stringify(updatedUser));
         return updatedUser;
       }
-      return rejectWithValue(data.error || 'Update failed');
+      return rejectWithValue(response.data.error || 'Update failed');
     } catch (error) {
       return rejectWithValue(error.response?.data?.error || 'Update failed');
     }
@@ -106,15 +96,15 @@ export const fetchCustomerProfile = createAsyncThunk(
       const token = localStorage.getItem('customerToken');
       if (!token) return rejectWithValue('No token found');
 
-      const data = await apiFetch('/api/customer/profile', {
+      const response = await axios.get('http://localhost:5000/api/customer/profile', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (data.success) {
-        localStorage.setItem('customerInfo', JSON.stringify(data.customer));
-        return data.customer;
+      if (response.data.success) {
+        localStorage.setItem('customerInfo', JSON.stringify(response.data.customer));
+        return response.data.customer;
       }
-      return rejectWithValue(data.error || 'Failed to fetch profile');
+      return rejectWithValue(response.data.error || 'Failed to fetch profile');
     } catch (error) {
       return rejectWithValue(error.response?.data?.error || 'Failed to fetch profile');
     }
@@ -126,15 +116,11 @@ export const loginAdmin = createAsyncThunk(
   'adminAuth/login',
   async ({ email, password }, { rejectWithValue }) => {
     try {
-      const data = await apiFetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
+      const response = await axios.post('http://localhost:5000/api/admin/login', { email, password });
 
-      if (data.success) {
-        const token = data.token;
-        const adminInfo = data.admin || data.user;
+      if (response.data.success) {
+        const token = response.data.token;
+        const adminInfo = response.data.admin || response.data.user;
 
         // Determine role: 'admin' for superuser, 'user' for others (to trigger permission checks)
         const role = email === 'admin@urbancompany.com' ? 'admin' : 'user';
@@ -147,7 +133,7 @@ export const loginAdmin = createAsyncThunk(
 
         return { token, admin: { ...adminInfo, role }, role, permissions };
       }
-      return rejectWithValue(data.error || 'Admin Login failed');
+      return rejectWithValue(response.data.error || 'Admin Login failed');
     } catch (error) {
       return rejectWithValue(error.response?.data?.error || 'Admin Login failed');
     }
@@ -386,9 +372,9 @@ const cartSlice = createSlice({
       localStorage.setItem('cartItems', JSON.stringify(state.items));
     },
     updateCartItem: (state, action) => {
-      const item = state.items.find(item => item.productId === action.payload.productId);
-      if (item) {
-        item.count = action.payload.count;
+      const index = state.items.findIndex(item => item.productId === action.payload.productId);
+      if (index !== -1) {
+        state.items[index] = { ...state.items[index], ...action.payload };
       }
       localStorage.setItem('cartItems', JSON.stringify(state.items));
     },

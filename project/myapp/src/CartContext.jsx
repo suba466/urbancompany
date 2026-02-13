@@ -13,7 +13,7 @@ export const CartProvider = ({ children }) => {
 
   const fetchCartItems = async () => {
     try {
-      const response = await fetch(`${window.API_URL}/api/carts`);
+      const response = await fetch("http://localhost:5000/api/carts");
       if (response.ok) {
         const data = await response.json();
         setCartItems(data.carts || []);
@@ -31,7 +31,7 @@ export const CartProvider = ({ children }) => {
 
   const addToCart = async (item) => {
     try {
-      const response = await fetch(`${window.API_URL}/api/addcarts`, {
+      const response = await fetch("http://localhost:5000/api/addcarts", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -50,7 +50,7 @@ export const CartProvider = ({ children }) => {
 
   const removeFromCart = async (id) => {
     try {
-      await fetch(`${window.API_URL}/api/carts/${id}`, {
+      await fetch(`http://localhost:5000/api/carts/${id}`, {
         method: "DELETE",
       });
       fetchCartItems(); // Refresh cart items
@@ -64,7 +64,7 @@ export const CartProvider = ({ children }) => {
     try {
       const items = [...cartItems];
       for (const item of items) {
-        await fetch(`${window.API_URL}/api/carts/${item._id}`, {
+        await fetch(`http://localhost:5000/api/carts/${item._id}`, {
           method: "DELETE",
         });
       }

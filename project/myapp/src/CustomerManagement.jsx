@@ -46,7 +46,7 @@ function CustomerManagement() {
 
   const fetchCustomers = async (page = 1, search = '', perPage = customerPerPage) => {
     try {
-      let url = `${window.API_URL}/api/admin/customers?page=${page}&limit=${perPage}`;
+      let url = `http://localhost:5000/api/admin/customers?page=${page}&limit=${perPage}`;
 
       // Build query params properly
       const params = new URLSearchParams();
@@ -81,7 +81,7 @@ function CustomerManagement() {
   const deleteCustomer = async (customerId) => {
     if (window.confirm('Are you sure you want to delete this customer?')) {
       try {
-        const response = await fetch(`${window.API_URL}/api/admin/customers/${customerId}`, {
+        const response = await fetch(`http://localhost:5000/api/admin/customers/${customerId}`, {
           method: 'DELETE',
           headers: getAuthHeaders()
         });
@@ -104,7 +104,7 @@ function CustomerManagement() {
 
     if (window.confirm(`Are you sure you want to delete ${selectedIds.length} customer(s)?`)) {
       try {
-        const response = await fetch(`${window.API_URL}/api/admin/bulk-delete`, {
+        const response = await fetch('http://localhost:5000/api/admin/bulk-delete', {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({
@@ -225,7 +225,7 @@ function CustomerManagement() {
         setSelectedCustomer(prev => ({ ...prev, isActive: newStatus }));
       }
 
-      const response = await fetch(`${window.API_URL}/api/admin/customers/${customerId}/toggle-status`, {
+      const response = await fetch(`http://localhost:5000/api/admin/customers/${customerId}/toggle-status`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ isActive: newStatus })
@@ -269,7 +269,7 @@ function CustomerManagement() {
 
     if (window.confirm(confirmMessage)) {
       try {
-        const response = await fetch(`${window.API_URL}/api/admin/customers/bulk-block`, {
+        const response = await fetch('http://localhost:5000/api/admin/customers/bulk-block', {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({
@@ -421,7 +421,7 @@ function CustomerManagement() {
                         }}>
                           {customer.profileImage ? (
                             <img
-                              src={`${window.API_URL}${customer.profileImage}`}
+                              src={`http://localhost:5000${customer.profileImage}`}
                               alt={customer.name}
                               style={{
                                 width: '100%',
@@ -521,7 +521,7 @@ function CustomerManagement() {
                 <div className="mb-3">
                   {selectedCustomer.profileImage ? (
                     <img
-                      src={`${window.API_URL}${selectedCustomer.profileImage}`}
+                      src={`http://localhost:5000${selectedCustomer.profileImage}`}
                       alt={selectedCustomer.name}
                       style={{
                         width: '150px',
@@ -600,7 +600,7 @@ function CustomerManagement() {
                   <div className="list-group-item px-0 border-bottom-0">
                     <small className="text-muted d-block">Profile Image URL</small>
                     <small className="text-truncate d-block" style={{ maxWidth: '100%' }}>
-                      {`${window.API_URL}${selectedCustomer.profileImage}`}
+                      {`http://localhost:5000${selectedCustomer.profileImage}`}
                     </small>
                   </div>
                 )}

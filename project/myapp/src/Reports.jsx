@@ -29,7 +29,7 @@ function Reports() {
   const getImageUrl = (imgPath) => {
     if (!imgPath) return '';
     if (imgPath.startsWith('http')) return imgPath;
-    return `${window.API_URL}${imgPath}`;
+    return `http://localhost:5000${imgPath}`;
   };
 
   // Helper function to get initials
@@ -60,7 +60,7 @@ function Reports() {
       let reportHeaders = [];
 
       if (reportType === 'Category') {
-        const response = await fetch(`${window.API_URL}/api/admin/categories?limit=1000`, { headers: getAuthHeaders() });
+        const response = await fetch('http://localhost:5000/api/admin/categories?limit=1000', { headers: getAuthHeaders() });
         const data = await response.json();
         const categories = data.categories || [];
 
@@ -74,7 +74,7 @@ function Reports() {
         reportHeaders = ['Category Image', 'Category Name', 'Status', 'Description'];
 
       } else if (reportType === 'Subcategory') {
-        const response = await fetch(`${window.API_URL}/api/admin/subcategories?limit=1000`, { headers: getAuthHeaders() });
+        const response = await fetch('http://localhost:5000/api/admin/subcategories?limit=1000', { headers: getAuthHeaders() });
         const data = await response.json();
         const subcategories = data.subcategories || [];
 
@@ -88,7 +88,7 @@ function Reports() {
         reportHeaders = ['Subcategory Image', 'Subcategory Name', 'Category Name', 'Status'];
 
       } else if (reportType === 'Products') {
-        const response = await fetch(`${window.API_URL}/api/admin/packages?limit=1000`, { headers: getAuthHeaders() });
+        const response = await fetch('http://localhost:5000/api/admin/packages?limit=1000', { headers: getAuthHeaders() });
         const data = await response.json();
         const products = data.packages || [];
 
@@ -116,7 +116,7 @@ function Reports() {
         reportHeaders = ['Product Image', 'Product Name', 'Category', 'Subcategory', 'Price', 'Status'];
 
       } else if (reportType === 'Bookings') {
-        let url = `${window.API_URL}/api/admin/bookings?limit=1000`;
+        let url = 'http://localhost:5000/api/admin/bookings?limit=1000';
 
         const response = await fetch(url, { headers: getAuthHeaders() });
         const data = await response.json();
@@ -146,7 +146,7 @@ function Reports() {
         // Fetch customer profiles in bulk (similar to BookingManagement)
         if (customerEmails.length > 0) {
           try {
-            const customersResponse = await fetch(`${window.API_URL}/api/admin/customers-by-emails`, {
+            const customersResponse = await fetch('http://localhost:5000/api/admin/customers-by-emails', {
               method: 'POST',
               headers: getAuthHeaders(),
               body: JSON.stringify({ emails: customerEmails })
@@ -164,7 +164,7 @@ function Reports() {
                   if (customer.profileImage.startsWith('http')) {
                     validProfileImage = customer.profileImage;
                   } else {
-                    validProfileImage = `${window.API_URL}${customer.profileImage}`;
+                    validProfileImage = `http://localhost:5000${customer.profileImage}`;
                   }
                 }
                 

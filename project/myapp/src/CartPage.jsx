@@ -95,7 +95,7 @@ function CartPage() {
       const customerEmail = user.email;
 
       // First, get all cart items for this user
-      const response = await fetch(`${window.API_URL}/api/cart/${customerEmail}`);
+      const response = await fetch(`http://localhost:5000/api/cart/${customerEmail}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -106,7 +106,7 @@ function CartPage() {
         // Delete each cart item
         const deletePromises = userCartItems.map(async (item) => {
           try {
-            await fetch(`${window.API_URL}/api/carts/${item._id}`, {
+            await fetch(`http://localhost:5000/api/carts/${item._id}`, {
               method: "DELETE"
             });
             console.log(`Deleted cart item: ${item._id}`);
@@ -200,7 +200,7 @@ function CartPage() {
         currency: "INR",
         name: "Urban Company",
         description: cartItems.length > 0 ? cartItems.map(item => item.title).join(', ') : "Beauty Services",
-        image: getAssetPath("assets/urban.png"), // Your logo
+        image: "http://localhost:5000/assets/urban.png", // Your logo
         handler: async function (response) {
           console.log("✅ Payment successful:", response);
 
@@ -242,7 +242,7 @@ function CartPage() {
           console.log("========================");
 
           // Send booking to server
-          const bookingResponse = await fetch(`${window.API_URL}/api/bookings`, {
+          const bookingResponse = await fetch("http://localhost:5000/api/bookings", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -419,7 +419,7 @@ function CartPage() {
     try {
       console.log("📤 Sending test data:", testData);
 
-      const response = await fetch(`${window.API_URL}/api/bookings`, {
+      const response = await fetch("http://localhost:5000/api/bookings", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -475,7 +475,7 @@ function CartPage() {
   };
 
   const fetchAddedItems = () => {
-    fetch(`${window.API_URL}/api/added`)
+    fetch("http://localhost:5000/api/added")
       .then(res => res.json())
       .then(data => setAddedImgs(data.added || []))
       .catch(err => console.error("Failed to load added images:", err));
@@ -608,7 +608,7 @@ function CartPage() {
         const existingItem = cartItems.find(cart => cart.title === item.name);
 
         if (existingItem) {
-          await fetch(`${window.API_URL}/api/carts/${existingItem._id}`, {
+          await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -618,7 +618,7 @@ function CartPage() {
           });
           updateItem(existingItem._id || existingItem.productId, existingItem.count + 1);
         } else {
-          await fetch(`${window.API_URL}/api/addcarts`, {
+          await fetch("http://localhost:5000/api/addcarts", {
             method: "POST",
             body: JSON.stringify(cartPayload)
           });
@@ -628,14 +628,14 @@ function CartPage() {
         const existingItem = cartItems.find(cart => cart.title === item.name);
         if (existingItem) {
           if (existingItem.count > 1) {
-            await fetch(`${window.API_URL}/api/carts/${existingItem._id}`, {
+            await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ count: existingItem.count - 1 })
             });
             updateItem(existingItem._id || existingItem.productId, existingItem.count - 1);
           } else {
-            await fetch(`${window.API_URL}/api/carts/${existingItem._id}`, {
+            await fetch(`http://localhost:5000/api/carts/${existingItem._id}`, {
               method: "DELETE"
             });
             removeItem(existingItem._id || existingItem.productId);
@@ -659,6 +659,82 @@ function CartPage() {
     const inCart = cartItems.some(c => c.title === img.name);
     return !inCart;
   });
+
+  const handleAddToCartForPackage = async (pkg, selectedServices = [], overridePrice = null, isExtraOnly = false, customCount = null) => {
+    try {
+      const productId = pkg.productId || pkg._id || Date.now().toString();
+      const existing = cartItems.find(c => c.productId === productId || c._id === productId);
+      const displayTitle = pkg.title || pkg.subcategory || "Package";
+      const productName = pkg.name || "Make Your Package";
+
+      const grouped = {};
+      selectedServices.forEach(s => {
+        const g = s.group || "Services";
+        if (!grouped[g]) grouped[g] = [];
+        grouped[g].push(s);
+      });
+
+      const selectedContent = Object.entries(grouped).map(([gName, svcs]) => ({
+        details: `${gName} : ${svcs.map(s => s.content && s.content !== s.title ? `${s.title} - ${s.content}` : s.title).join(", ")}`,
+        price: 0
+      }));
+
+      const content = isExtraOnly
+        ? selectedContent
+        : [
+          // Use package items if available
+          ...(pkg.items && pkg.items.length > 0
+            ? pkg.items.map(item => ({
+              details: item.name ? (item.description ? `${item.name} : ${item.description}` : item.name) : (item.description || item.title || ""),
+              price: 0
+            }))
+            : pkg.description
+              ? [{ details: pkg.description, price: 0 }]
+              : []
+          ),
+          ...selectedContent
+        ];
+
+      const totalPrice = overridePrice || (pkg.price ? Number(pkg.price) : content.reduce((sum, s) => sum + s.price, 0));
+      const finalCount = customCount !== null ? customCount : (existing ? existing.count + 1 : 1);
+
+      const payload = {
+        productId,
+        title: displayTitle,
+        name: productName,
+        serviceName: productName,
+        price: totalPrice,
+        count: finalCount,
+        content,
+        savedSelections: selectedServices,
+        category: pkg.category || "Salon for women"
+      };
+
+      if (existing) {
+        // Update in Redux
+        updateItem(productId, finalCount, payload);
+        // Update in database
+        await fetch(`http://localhost:5000/api/carts/${existing._id || existing.productId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...payload, count: finalCount }),
+        });
+      } else {
+        // Add to Redux
+        addItem(payload);
+        // Add to database
+        await fetch("http://localhost:5000/api/addcarts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...payload, count: finalCount }),
+        });
+      }
+
+      window.dispatchEvent(new Event('cartUpdated'));
+    } catch (error) {
+      console.error("Error handling package cart:", error);
+    }
+  };
 
   const openEditModal = (item) => {
     setSelectedPkg(item);
@@ -849,7 +925,7 @@ function CartPage() {
         <div className="text-center mt-5">
           <div>
             <img
-              src="./assets/cart.png"
+              src="http://localhost:5000/assets/cart.png"
               alt="cart-placeholder"
               style={{ padding: "10px", width: "33%" }}
             />
@@ -1083,15 +1159,6 @@ function CartPage() {
           <div style={{ border: "1px solid #d9d9d9", borderRadius: "8px", marginTop: "15px" }}>
             <div style={{ padding: "12px" }}>
               <h5 className="fw-semibold mb-2">Payment summary</h5>
-              <Row className="mb-1">
-                <Col><p style={{ fontSize: "14px" }}>Item total</p></Col>
-                <Col className="text-end"><p style={{ fontSize: "14px" }}>{formatPrice(itemTotal)}</p></Col>
-              </Row>
-              <Row className="mb-1">
-                <Col><p style={{ textDecoration: "underline dotted", cursor: "pointer", fontSize: "14px" }} title="18% GST">Taxes and fee</p></Col>
-                <Col className="text-end"><p style={{ fontSize: "14px" }}>{formatPrice(tax)}</p></Col>
-              </Row>
-
               {slotExtraCharge > 0 && (
                 <Row className="mb-1">
                   <Col><p style={{ fontSize: "14px" }}>Evening slot charge</p></Col>
@@ -1105,11 +1172,6 @@ function CartPage() {
                   <Col className="text-end"><p style={{ fontSize: "14px" }}>{formatPrice(tip)}</p></Col>
                 </Row>
               )}
-              <hr />
-              <Row className="mb-1">
-                <Col><p className="fw-semibold" style={{ fontSize: "14px" }}>Total price</p></Col>
-                <Col className="text-end"><p className="fw-semibold" style={{ fontSize: "14px" }}>{formatPrice(totalPrice)}</p></Col>
-              </Row>
               <hr />
               <Row className="mb-1">
                 <Col><p className="fw-semibold" style={{ fontSize: "14px" }}>Amount to pay</p></Col>
@@ -1309,6 +1371,11 @@ function CartPage() {
           show={showModal}
           onHide={() => setShowModal(false)}
           selectedItem={selectedPkg}
+          handleAddToCart={handleAddToCartForPackage}
+          carts={cartItems}
+          updateItem={updateItem}
+          removeItem={removeItem}
+          addItem={addItem}
         />
       )}
 

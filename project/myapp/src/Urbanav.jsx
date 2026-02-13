@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { apiFetch, getAssetPath } from "./config";
 import {
   Navbar, Container, Nav, FormControl, Modal, Button, Row, Col, Dropdown, Badge
 } from "react-bootstrap";
@@ -39,8 +38,8 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 function Urbanav() {
   const navigate = useNavigate();
-  const [logo, setLogo] = useState(getAssetPath("assets/Uc.png"));
-  const [logo1, setLogo1] = useState(getAssetPath("assets/urban.png"));
+  const [logo, setLogo] = useState("http://localhost:5000/assets/Uc.png");
+  const [logo1, setLogo1] = useState("http://localhost:5000/assets/urban.png");
   const [searchValue, setSearchValue] = useState("");
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
@@ -113,28 +112,37 @@ function Urbanav() {
     }
   };
 
-
   // Fetch logos from backend
   useEffect(() => {
     const fetchLogos = async () => {
       try {
         console.log("Fetching logos from backend...");
-        const data = await apiFetch("/api/static-data");
+        const response = await fetch("http://localhost:5000/api/static-data");
+        if (!response.ok) {
+          throw new Error('Failed to fetch static data');
+        }
+        const data = await response.json();
         console.log("Static data received:", data);
 
         if (data && data.logo) {
-          setLogo(getAssetPath(data.logo));
+          const logoUrl = data.logo.startsWith('http')
+            ? data.logo
+            : `http://localhost:5000${data.logo}`;
+          setLogo(logoUrl);
         } else {
-          setLogo(getAssetPath("assets/Uc.png"));
+          setLogo("http://localhost:5000/assets/Uc.png");
         }
 
         if (data && data.logo1) {
-          setLogo1(getAssetPath(data.logo1));
+          const logo1Url = data.logo1.startsWith('http')
+            ? data.logo1
+            : `http://localhost:5000${data.logo1}`;
+          setLogo1(logo1Url);
         }
       } catch (error) {
         console.error("Error fetching logos:", error);
-        setLogo(getAssetPath("assets/Uc.png"));
-        setLogo1(getAssetPath("assets/urban.png"));
+        setLogo("http://localhost:5000/assets/Uc.png");
+        setLogo1("http://localhost:5000/assets/urban.png");
       }
     };
 
@@ -257,6 +265,29 @@ function Urbanav() {
     }));
   };
 
+  const parseAddress = (data) => {
+    if (!data) return { mainText: "", subText: "" };
+    const address = data.address || {};
+
+    // Pick the most specific name for the main text
+    const main = address.house_number
+      ? `${address.house_number}, ${address.road || address.suburb || ""}`
+      : (address.road || address.amenity || address.building || address.suburb || address.neighbourhood || data.display_name.split(",")[0]);
+
+    const mainText = main.toString().trim().replace(/,$/, "");
+
+    // The rest goes to subText
+    let subText = data.display_name.replace(mainText, "").trim().replace(/^,/, "").trim();
+    if (!subText) subText = data.display_name;
+
+    return {
+      mainText,
+      subText,
+      fullAddress: data.display_name,
+      houseNumber: address.house_number || ""
+    };
+  };
+
   const handleUseCurrentLocation = () => {
     setCurrentLocationStatus("fetching");
     setIsGettingLocation(true);
@@ -269,13 +300,15 @@ function Urbanav() {
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
 
-          // Set coordinates immediately and show map
+          // Set coordinates immediately and show map with a high zoom level
           const tempLocation = {
             id: Date.now(),
             mainText: "Fetching address...",
             subText: "Please wait...",
-            fullAddress: "Locating your address...",
-            coordinates: { lat, lng }
+            fullAddress: "Locating your exact address...",
+            coordinates: { lat, lng },
+            zoomLevel: 18,
+            isManual: false // Force tracking
           };
           setSelectedLocation(tempLocation);
           setShowAddressMap(true);
@@ -283,26 +316,27 @@ function Urbanav() {
           // Reverse geocode to get address
           try {
             const response = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
             );
             const data = await response.json();
 
             if (data && data.display_name) {
-              const parts = data.display_name.split(', ');
-              const mainText = parts.length > 0 ? parts[0] : "Your Current Location";
-              const subText = parts.slice(1, 3).join(', ');
+              const parsed = parseAddress(data);
 
               setSelectedLocation({
                 id: Date.now(),
-                mainText: mainText,
-                subText: subText,
-                fullAddress: data.display_name,
-                coordinates: { lat, lng }
+                mainText: parsed.mainText,
+                subText: parsed.subText,
+                fullAddress: parsed.fullAddress,
+                coordinates: { lat, lng },
+                zoomLevel: 18,
+                isManual: false // Still tracking
               });
 
               setAddressDetails(prev => ({
                 ...prev,
-                landmark: mainText
+                landmark: parsed.mainText,
+                doorNo: prev.doorNo || parsed.houseNumber || ""
               }));
             }
           } catch (error) {
@@ -310,9 +344,11 @@ function Urbanav() {
             setSelectedLocation({
               id: Date.now(),
               mainText: "Your Current Location",
-              subText: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`,
-              fullAddress: `Current location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-              coordinates: { lat, lng }
+              subText: `Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}`,
+              fullAddress: `Exact location at ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+              coordinates: { lat, lng },
+              zoomLevel: 18,
+              isManual: false
             });
           }
 
@@ -321,13 +357,18 @@ function Urbanav() {
         },
         (error) => {
           console.error("Geolocation error:", error);
-          alert("Unable to get your location. Please check your browser permissions or search for your address manually.");
+          let msg = "Unable to get your location.";
+          if (error.code === 1) msg = "Location permission denied. Please allow location access in your browser settings.";
+          else if (error.code === 2) msg = "Location unavailable. Please check your GPS/internet connection.";
+          else if (error.code === 3) msg = "Location request timed out. Trying again might help.";
+
+          alert(msg);
           setCurrentLocationStatus("idle");
           setIsGettingLocation(false);
         },
         {
           enableHighAccuracy: true,
-          timeout: 10000,
+          timeout: 20000,
           maximumAge: 0
         }
       );
@@ -474,7 +515,7 @@ function Urbanav() {
                   style={{ height: "34px", marginLeft: "10px" }}
                   onError={(e) => {
                     console.error("Failed to load logo:", logo1);
-                    e.target.src = getAssetPath("assets/urban.png");
+                    e.target.src = "http://localhost:5000/assets/urban.png";
                   }}
                 />
               </Col>
@@ -494,7 +535,7 @@ function Urbanav() {
                 style={{ maxHeight: "40px", objectFit: "contain" }}
                 onError={(e) => {
                   console.error("Failed to load main logo:", logo);
-                  e.target.src = getAssetPath("assets/Uc.png");
+                  e.target.src = "http://localhost:5000/assets/Uc.png";
                 }}
               />
               {!location.pathname.startsWith("/salon") && (
@@ -651,7 +692,7 @@ function Urbanav() {
                       }}
                       onError={(e) => {
                         console.error("Failed to load logo1:", logo1);
-                        e.target.src = getAssetPath("assets/Uc.png");
+                        e.target.src = "http://localhost:5000/assets/uc.png";
                       }}
                     />
                     <div className="nav-label" style={{ fontSize: "12px" }}>UC</div>
@@ -751,7 +792,7 @@ function Urbanav() {
                     }}
                   >
                     <IoMdLocate size={20} />
-                    {currentLocationStatus === "fetching" ? "Fetching your location..." : "Use my current location"}
+                    {currentLocationStatus === "fetching" ? "Fetching live location..." : "Allow live location"}
                   </a>
                 </div>
               </div>
@@ -889,54 +930,90 @@ function Urbanav() {
                     <TileLayer
                       attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
                       url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                      maxZoom={18}
                     />
+                    <div
+                      className="position-absolute"
+                      style={{
+                        zIndex: 1000,
+                        bottom: '20px',
+                        right: '20px',
+                        cursor: 'pointer'
+                      }}
+                      onClick={handleUseCurrentLocation}
+                    >
+                      <Button variant="white" className="shadow-sm rounded-circle p-2 bg-white d-flex align-items-center justify-content-center" style={{ width: '40px', height: '40px' }}>
+                        <IoMdLocate size={24} color="#033870" />
+                      </Button>
+                    </div>
                     <MapController selectedLocation={selectedLocation} />
+                    <MapClickHandler onMapClick={async (newPos) => {
+                      const lat = newPos.lat;
+                      const lng = newPos.lng;
+
+                      setSelectedLocation(prev => ({
+                        ...prev,
+                        coordinates: { lat, lng },
+                        mainText: "Fetching address...",
+                        subText: "Please wait...",
+                        isManual: true
+                      }));
+
+                      try {
+                        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+                        const data = await response.json();
+                        if (data && data.display_name) {
+                          const parsed = parseAddress(data);
+                          setSelectedLocation(prev => ({
+                            ...prev,
+                            mainText: parsed.mainText,
+                            subText: parsed.subText,
+                            fullAddress: parsed.fullAddress,
+                            coordinates: { lat, lng },
+                            isManual: true
+                          }));
+                          setAddressDetails(prev => ({
+                            ...prev,
+                            landmark: parsed.mainText,
+                            doorNo: prev.doorNo || parsed.houseNumber || ""
+                          }));
+                        }
+                      } catch (err) { console.error(err); }
+                    }} />
                     <DraggableMarker
                       position={[selectedLocation?.coordinates?.lat || 11.0168, selectedLocation?.coordinates?.lng || 76.9558]}
                       onDragEnd={async (newPos) => {
                         const lat = newPos.lat;
                         const lng = newPos.lng;
 
-                        // Optimistically update coordinates first
                         setSelectedLocation(prev => ({
                           ...prev,
                           coordinates: { lat, lng },
                           mainText: "Fetching address...",
-                          subText: "Please wait..."
+                          subText: "Please wait...",
+                          isManual: true
                         }));
 
                         try {
-                          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
                           const data = await response.json();
-
                           if (data && data.display_name) {
-                            // Extract relevant parts for better display
-                            const parts = data.display_name.split(', ');
-                            const mainText = parts.length > 0 ? parts[0] : "Pinned Location";
-                            const subText = parts.slice(1).join(', ');
-
+                            const parsed = parseAddress(data);
                             setSelectedLocation(prev => ({
                               ...prev,
-                              mainText: mainText,
-                              subText: subText,
-                              fullAddress: data.display_name,
-                              coordinates: { lat, lng }
+                              mainText: parsed.mainText,
+                              subText: parsed.subText,
+                              fullAddress: parsed.fullAddress,
+                              coordinates: { lat, lng },
+                              isManual: true
                             }));
-
-                            // Auto-fill landmark if possible
                             setAddressDetails(prev => ({
                               ...prev,
-                              landmark: mainText
+                              landmark: parsed.mainText,
+                              doorNo: prev.doorNo || parsed.houseNumber || ""
                             }));
                           }
-                        } catch (error) {
-                          console.error("Reverse geocoding failed:", error);
-                          setSelectedLocation(prev => ({
-                            ...prev,
-                            mainText: "Pinned Location",
-                            subText: "Address lookup failed"
-                          }));
-                        }
+                        } catch (err) { console.error(err); }
                       }}
                     />
                   </MapContainer>
@@ -1038,11 +1115,33 @@ function Urbanav() {
 // Helper to re-center map when location changes
 function MapController({ selectedLocation }) {
   const map = useMap();
+
   useEffect(() => {
-    if (selectedLocation?.coordinates) {
-      map.flyTo([selectedLocation.coordinates.lat, selectedLocation.coordinates.lng], map.getZoom());
+    // Fix for Leaflet maps not rendering correctly in modals/hidden containers
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
+  }, [map]);
+
+  useEffect(() => {
+    if (selectedLocation?.coordinates && !selectedLocation.isManual) {
+      const zoom = selectedLocation.zoomLevel || map.getZoom() || 18;
+      map.flyTo([selectedLocation.coordinates.lat, selectedLocation.coordinates.lng], zoom, {
+        animate: true,
+        duration: 1.5
+      });
     }
   }, [selectedLocation, map]);
+  return null;
+}
+
+// Map Click Handler Component
+function MapClickHandler({ onMapClick }) {
+  useMapEvents({
+    click(e) {
+      onMapClick(e.latlng);
+    },
+  });
   return null;
 }
 

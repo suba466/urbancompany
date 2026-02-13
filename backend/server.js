@@ -59,7 +59,6 @@ mongoose.connect("mongodb://localhost:27017/suba")
   })
   .catch(err => console.error(" MongoDB connection error:", err));
 
-
 // Add this to your existing Package schema in server.js
 const packageSchema = new mongoose.Schema({
   name: String,           // Product name (e.g., "Premium Hair Care Package")
@@ -315,12 +314,7 @@ app.post("/api/bookings", async (req, res) => {
       }, 0);
 
       finalServiceName = cartItems.map(item => item.name || item.title || "Service").join(", ");
-
-      // FIX: Only use calculated item total if servicePrice wasn't provided 
-      // This prevents overwriting the full amount (with tax/tip) sent from frontend
-      if (!servicePrice) {
-        finalServicePrice = totalPrice.toString();
-      }
+      finalServicePrice = totalPrice.toString();
 
       console.log(`Total calculated from cart: ₹${totalPrice}`);
 

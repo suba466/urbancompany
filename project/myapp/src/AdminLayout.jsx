@@ -94,7 +94,7 @@ useEffect(() => {
                 <Dropdown.Toggle variant="light" className="d-flex align-items-center border-0 bg-transparent">
                   {userRole === 'user' && userProfile?.profileImage ? (
                     <img
-                      src={`${window.API_URL}${userProfile.profileImage}`}
+                      src={`http://localhost:5000${userProfile.profileImage}`}
                       alt="Profile"
                       style={{
                         width: '30px',

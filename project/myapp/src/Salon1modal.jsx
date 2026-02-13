@@ -6,7 +6,6 @@ import { TbCirclePercentageFilled } from "react-icons/tb";
 import { FaStar, FaTag } from "react-icons/fa";
 import { GoDotFill } from "react-icons/go";
 import FrequentlyAddedCarousel from "./FrequentlyAddedCarousel";
-import { apiFetch } from "./config";
 
 function Salon1modal({
   show,
@@ -39,11 +38,11 @@ function Salon1modal({
 
   // ---------- static data ----------
   const initialServices = {
-    "waxingOptions:Full arms (including underarms)": { title: "Full arms (including underarms)", price: 599, count: 1, content: "Chocolate Roll on" },
-    "waxingOptions:Full legs": { title: "Full legs", price: 499, count: 1, content: "Chocolate Roll on" },
-    "facialOptions:O3+ shine & glow facial": { title: "O3+ shine & glow facial", price: 1699, count: 1, content: "Facial" },
-    "facialHairOptions:Eyebrow": { title: "Eyebrow", price: 49, count: 1, content: "Threading" },
-    "facialHairOptions:Upper lip": { title: "Upper lip", price: 49, count: 1, content: "Threading" },
+    "waxingOptions:Full arms (including underarms)": { title: "Full arms (including underarms)", price: 599, count: 1, content: "Chocolate Roll on", group: "Waxing" },
+    "waxingOptions:Full legs": { title: "Full legs", price: 499, count: 1, content: "Chocolate Roll on", group: "Waxing" },
+    "facialOptions:O3+ shine & glow facial": { title: "O3+ shine & glow facial", price: 1699, count: 1, content: "Facial", group: "Facial & cleanup" },
+    "facialHairOptions:Eyebrow": { title: "Eyebrow", price: 49, count: 1, content: "Threading", group: "Facial hair removal" },
+    "facialHairOptions:Upper lip": { title: "Upper lip", price: 49, count: 1, content: "Threading", group: "Facial hair removal" },
   };
 
   const [selectedServices, setSelectedServices] = useState(initialServices);
@@ -101,7 +100,7 @@ function Salon1modal({
   const hair = [{ label: "Hair color application", price: 249 }, { label: "Henna mehendi application", price: 399 }, { label: "Head massage (10 mins)", price: 199 }, { label: "Head massage (20 mins)", price: 349 }, { label: "I don't need anything" }];
 
   // ---------- ADD THE MISSING FUNCTION HERE ----------
-  const handleCheckboxChange = (sectionName, label, item, isChecked) => {
+  const handleCheckboxChange = (sectionName, label, item, isChecked, groupName) => {
     const key = `${sectionName}:${label}`;
 
     if (isChecked) {
@@ -113,6 +112,7 @@ function Salon1modal({
           price: roundPrice(Number(item.price || (item.options ? item.options[0]?.price : 0) || 0)),
           count: 1,
           content: item.options ? item.options[0]?.name : label,
+          group: groupName
         }
       }));
     } else {
@@ -134,11 +134,23 @@ function Salon1modal({
   useEffect(() => {
     const fetchAddedImages = async () => {
       try {
-        const data = await apiFetch("/api/added");
+        const response = await fetch("http://localhost:5000/api/added");
+        if (!response.ok) {
+          throw new Error('Failed to fetch added items');
+        }
+        const data = await response.json();
         setAddedImgs(data.added || []);
       } catch (error) {
         console.error("Failed to load added images:", error);
-        setAddedImgs([]);
+        // Fallback: Try static data API
+        try {
+          const staticResponse = await fetch("http://localhost:5000/api/static-data");
+          const staticData = await staticResponse.json();
+          setAddedImgs(staticData.added || []);
+        } catch (staticError) {
+          console.error("Error fetching static data:", staticError);
+          setAddedImgs([]);
+        }
       }
     };
 
@@ -167,34 +179,69 @@ function Salon1modal({
 
 
 
-  const fetchCarts = async () => {
-    try {
-      const data = await apiFetch("/api/carts");
-      if (typeof setCarts === 'function') setCarts(data.carts || []);
-      return data.carts || [];
-    } catch (err) {
-      console.error("Error fetching carts:", err);
-      return [];
-    }
+  const fetchCarts = () => {
+    return fetch("http://localhost:5000/api/carts")
+      .then(res => res.json())
+      .then(data => {
+        if (typeof setCarts === 'function') setCarts(data.carts || []);
+        return data.carts || [];
+      })
+      .catch(err => console.error("Error fetching carts:", err));
   };
 
   useEffect(() => {
     if (show && selectedItem) {
-      apiFetch("/api/carts")
-        .then(data => {
-          const found = (data?.carts || []).find(c => c.title === selectedItem.title);
-          if (found?.savedSelections?.length > 0) {
-            const restored = {};
-            found.savedSelections.forEach(s => {
-              const key = `restored:${s.title}`;
-              restored[key] = { title: s.title, content: s.content, price: Number(s.price), count: 1 };
-            });
-            setSelectedServices(prev => ({ ...prev, ...restored }));
-          }
-        })
-        .catch(err => console.error("Error syncing cart saved selections:", err));
+      const foundInProps = Array.isArray(carts) ? carts.find(c => c.title === (selectedItem.title || selectedItem.name)) : null;
+
+      const allSections = {
+        waxingOptions,
+        facialOptions: facial,
+        pedicureOptions: pedicure,
+        manicureOptions: manicure,
+        facialHairOptions: facialHair,
+        bleachOptions: bleach,
+        hairOptions: hair
+      };
+
+      const processFound = (found) => {
+        if (found?.savedSelections?.length > 0) {
+          const restored = {};
+          found.savedSelections.forEach(s => {
+            let foundKey = null;
+            // Try to find which section this title belongs to for correct UI state
+            for (const [sectionName, items] of Object.entries(allSections)) {
+              if (items.some(it => it.label === s.title)) {
+                foundKey = `${sectionName}:${s.title}`;
+                break;
+              }
+            }
+
+            const key = foundKey || `restored:${s.title}`;
+            restored[key] = {
+              title: s.title,
+              content: s.content,
+              price: Number(s.price),
+              count: 1,
+              group: s.group || (foundKey ? foundKey.split(':')[0] : "Waxing")
+            };
+          });
+          setSelectedServices(prev => ({ ...prev, ...restored }));
+        }
+      };
+
+      if (foundInProps) {
+        processFound(foundInProps);
+      } else {
+        fetch("http://localhost:5000/api/carts")
+          .then(res => res.json())
+          .then(data => {
+            const found = (data?.carts || []).find(c => c.title === (selectedItem.title || selectedItem.name));
+            processFound(found);
+          })
+          .catch(err => console.error("Error syncing cart saved selections:", err));
+      }
     }
-  }, [show, selectedItem]);
+  }, [show, selectedItem, carts]);
 
   // No filtering - show all added items so user can edit qty
 
@@ -230,7 +277,7 @@ function Salon1modal({
                   type="checkbox"
                   label={item.label}
                   checked={isChecked}
-                  onChange={(e) => handleCheckboxChange(sectionName, item.label, item.options ? item.options[0] : item, e.target.checked)}
+                  onChange={(e) => handleCheckboxChange(sectionName, item.label, item.options ? item.options[0] : item, e.target.checked, displayName)}
                   className="fw-semibold"
                   style={{ fontSize: "14px" }}
                 />
@@ -344,20 +391,23 @@ function Salon1modal({
                 <Button
                   className="butn w-100 fw-bold"
                   onClick={async () => {
-                    const extraSelected = Object.values(selectedServices).filter(s => !Array.isArray(baseServices) || !baseServices.some(bs => bs.title === s.title && bs.content === s.content));
+                    const allSelected = Object.values(selectedServices);
 
-                    await handleAddToCart(selectedItem, extraSelected, discountedPrice ? discountedPrice : totalPrice, discountedPrice ? totalPrice - discountedPrice : 0);
+                    // Get current count from cart or default to 1 (to keep count same when editing)
+                    const existingItem = Array.isArray(carts) ? carts.find(c => c.title === (selectedItem.title || selectedItem.name)) : null;
+                    const currentCount = existingItem ? existingItem.count || 1 : 1;
+
+                    await handleAddToCart(selectedItem, allSelected, discountedPrice ? discountedPrice : totalPrice, false, currentCount);
 
                     // Refresh cart from server
                     try {
-                      const data = await apiFetch("/api/carts");
-                      const refreshed = data.carts || [];
+                      const refreshed = await fetch("http://localhost:5000/api/carts").then(r => r.json()).then(d => d.carts || []);
                       if (typeof setCarts === 'function') setCarts(refreshed);
                     } catch (err) {
                       console.error("Failed to refresh cart:", err);
                     }
 
-                    if (typeof window.updateCartInstantly === "function") window.updateCartInstantly(selectedItem.title);
+                    if (typeof window.updateCartInstantly === "function") window.updateCartInstantly(selectedItem.title || selectedItem.name);
 
                     onHide();
                     // Don't modify showFrequentlyAdded here, it should be controlled by caller or specific logic
@@ -402,6 +452,7 @@ function Salon1modal({
                           price: roundPrice(Number(opt.price || 0)),
                           count: 1,
                           content: opt.name,
+                          group: selectedServices[currentKey]?.group || dropdownModal.label
                         };
                         return updated;
                       });
@@ -597,7 +648,7 @@ function Salon1modal({
                         if (originalCartItem) {
                           // Update existing
                           try {
-                            await apiFetch(`/api/carts/${originalCartItem._id}`, {
+                            await fetch(`http://localhost:5000/api/carts/${originalCartItem._id}`, {
                               method: "PUT",
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify({ count: cartCount })
@@ -613,7 +664,7 @@ function Salon1modal({
                         // Remove
                         if (originalCartItem) {
                           try {
-                            await apiFetch(`/api/carts/${originalCartItem._id}`, {
+                            await fetch(`http://localhost:5000/api/carts/${originalCartItem._id}`, {
                               method: "DELETE"
                             });
                             if (removeItem) removeItem(originalCartItem._id || originalCartItem.productId);
@@ -642,7 +693,7 @@ function Salon1modal({
 
                               if (existingCarouselItem) {
                                 // Update
-                                await apiFetch(`/api/carts/${existingCarouselItem._id}`, {
+                                await fetch(`http://localhost:5000/api/carts/${existingCarouselItem._id}`, {
                                   method: "PUT",
                                   headers: { "Content-Type": "application/json" },
                                   body: JSON.stringify({ ...cartPayload, count: count })
@@ -650,7 +701,7 @@ function Salon1modal({
                                 if (updateItem) updateItem(existingCarouselItem._id || existingCarouselItem.productId, count);
                               } else {
                                 // Add
-                                await apiFetch("/api/addcarts", {
+                                await fetch("http://localhost:5000/api/addcarts", {
                                   method: "POST",
                                   headers: { "Content-Type": "application/json" },
                                   body: JSON.stringify(cartPayload)
@@ -660,7 +711,7 @@ function Salon1modal({
                             } else {
                               // Remove
                               if (existingCarouselItem) {
-                                await apiFetch(`/api/carts/${existingCarouselItem._id}`, {
+                                await fetch(`http://localhost:5000/api/carts/${existingCarouselItem._id}`, {
                                   method: "DELETE"
                                 });
                                 if (removeItem) removeItem(existingCarouselItem._id || existingCarouselItem.productId);

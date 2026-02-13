@@ -238,7 +238,7 @@ const Subcategories = ({
                       <td>
                         <img
                           src={sub.img
-                            ? `${window.API_URL}${sub.img}`
+                            ? `http://localhost:5000${sub.img}`
                             : 'https://via.placeholder.com/40'}
                           alt={sub.name}
                           width="40"

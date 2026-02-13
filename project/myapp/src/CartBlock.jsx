@@ -20,16 +20,18 @@ function CartBlock({
     return isNaN(num) ? 0 : num;
   };
 
-  // Calculate TOTAL PRICE of ALL items in cart
-  const calculateTotalPrice = () => {
-    return carts.reduce((total, item) => {
+  // Calculate TOTAL PRICE of ALL items in cart (including tax)
+  const calculateFinalTotal = () => {
+    const subtotal = carts.reduce((total, item) => {
       const itemPrice = safePrice(item.price);
       const itemCount = item.count || 1;
       return total + (itemPrice * itemCount);
     }, 0);
+    const tax = Math.round(subtotal * 0.068); // Consistent with CartPage logic
+    return subtotal + tax;
   };
 
-  const totalPrice = calculateTotalPrice();
+  const totalPrice = calculateFinalTotal();
 
   const handleIncrease = (item) => {
     if (item.isFrequentlyAdded) return; // Prevent increase for frequently added items
@@ -68,7 +70,7 @@ function CartBlock({
       {carts.length === 0 ? (
         <div className="text-center py-4">
           <img
-            src="./assets/cart.jpg"
+            src="http://localhost:5000/assets/cart.jpg"
             alt="cart-empty"
             className="w-50 mb-3"
             style={{ maxWidth: "120px", objectFit: "contain" }}
@@ -155,7 +157,7 @@ function CartBlock({
                 )}
 
                 {/* EDIT BUTTON */}
-                {onEdit && (
+                {onEdit && (c.title || c.name || c.serviceName || "").toLowerCase().includes("super saver") && (
                   <Button
                     className="text-start fw-semibold mt-2 editbtn"
                     onClick={() => onEdit(c)}
@@ -179,7 +181,7 @@ function CartBlock({
             <Row className="align-items-center">
               <Col>
                 <p className="fw-semibold mb-0" style={{ fontSize: "14px" }}>
-                  Total
+                  Amount to Pay
                 </p>
               </Col>
               <Col className="text-end">

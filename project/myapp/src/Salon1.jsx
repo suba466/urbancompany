@@ -10,7 +10,6 @@ import Salon1modal from './Salon1modal';
 import { useNavigate } from 'react-router-dom';
 import CartBlock from './CartBlock';
 import { useCart } from "./hooks";
-import { apiFetch, getAssetPath } from "./config";
 
 function Salon1() {
   const [savedExtras, setSavedExtras] = useState({});
@@ -133,19 +132,40 @@ function Salon1() {
 
   const fetchPackages = async () => {
     try {
-      let packagesData = [];
-
-      // Try active-packages first
+      let packages = [];
       try {
-        const data = await apiFetch("/api/active-packages");
-        packagesData = data.packages || [];
-      } catch (e) {
-        // Fallback to salonforwomen if active-packages fails
-        const data = await apiFetch("/api/salonforwomen");
-        packagesData = data.salonforwomen || [];
+        const response1 = await fetch('http://localhost:5000/api/active-packages');
+        if (response1.ok) {
+          const data1 = await response1.json();
+          packages = data1.packages || [];
+          packages.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        }
+      } catch (error) { console.error(error); }
+
+      if (packages.length === 0) {
+        try {
+          const response2 = await fetch('http://localhost:5000/api/packages');
+          if (response2.ok) {
+            const data2 = await response2.json();
+            packages = (data2.packages || []).filter(pkg => pkg.isActive !== false);
+            packages.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+          }
+        } catch (error) { console.error(error); }
       }
 
-      setPackages(packagesData.filter(pkg => pkg.isActive !== false));
+      if (packages.length === 0) {
+        try {
+          const response3 = await fetch('http://localhost:5000/api/salonforwomen');
+          if (response3.ok) {
+            const data3 = await response3.json();
+            packages = data3.salonforwomen || [];
+            if (packages[0] && packages[0].isActive !== undefined) {
+              packages = packages.filter(pkg => pkg.isActive !== false);
+            }
+          }
+        } catch (error) { console.error(error); }
+      }
+      setPackages(packages);
     } catch (error) {
       console.error("Error fetching packages:", error);
       setPackages([]);
@@ -154,21 +174,31 @@ function Salon1() {
 
   const fetchSuperPackages = async () => {
     try {
-      const data = await apiFetch("/api/super");
+      const response = await fetch("http://localhost:5000/api/super");
+      if (!response.ok) throw new Error('Failed');
+      const data = await response.json();
       setSuperPack(data.super ? [data.super[0]] : []);
     } catch (error) {
-      console.error("Error fetching super packages:", error);
-      setSuperPack([]);
+      try {
+        const staticResponse = await fetch("http://localhost:5000/api/static-data");
+        const staticData = await staticResponse.json();
+        setSuperPack(staticData.super ? [staticData.super[0]] : []);
+      } catch (e) { }
     }
   };
 
   const fetchSalonForWomen = async () => {
     try {
-      const data = await apiFetch("/api/salonforwomen");
+      const response = await fetch("http://localhost:5000/api/salonforwomen");
+      if (!response.ok) throw new Error('Failed');
+      const data = await response.json();
       setSalon(data.salonforwomen || []);
     } catch (error) {
-      console.error("Error fetching salon for women:", error);
-      setSalon([]);
+      try {
+        const staticResponse = await fetch("http://localhost:5000/api/static-data");
+        const staticData = await staticResponse.json();
+        setSalon(staticData.salonforwomen || []);
+      } catch (e) { }
     }
   };
 
@@ -253,11 +283,20 @@ function Salon1() {
       const displayTitle = pkg.title || pkg.subcategory || "Package";
       const productName = pkg.name || "Make Your Package";
 
+      const grouped = {};
+      selectedServices.forEach(s => {
+        const g = s.group || "Services";
+        if (!grouped[g]) grouped[g] = [];
+        grouped[g].push(s);
+      });
+
+      const selectedContent = Object.entries(grouped).map(([gName, svcs]) => ({
+        details: `${gName} : ${svcs.map(s => s.content && s.content !== s.title ? `${s.title} - ${s.content}` : s.title).join(", ")}`,
+        price: 0
+      }));
+
       const content = isExtraOnly
-        ? selectedServices.map(s => ({
-          details: s.content && s.content !== s.title ? `${s.title} (${s.content})` : s.title,
-          price: s.price || 0,
-        }))
+        ? selectedContent
         : [
           // Use package items if available
           ...(pkg.items && pkg.items.length > 0
@@ -267,15 +306,9 @@ function Salon1() {
             }))
             : pkg.description
               ? [{ details: pkg.description, price: 0 }]
-              : (pkg.baseServices || []).map(s => ({ // Only use baseServices if explicitly in pkg
-                details: s.content && s.content !== s.title ? `${s.title} (${s.content})` : s.title,
-                price: s.price || 0,
-              }))
+              : []
           ),
-          ...selectedServices.map(s => ({
-            details: s.content && s.content !== s.title ? `${s.title} (${s.content})` : s.title,
-            price: s.price || 0,
-          })),
+          ...selectedContent
         ];
 
       const totalPrice = overridePrice || (pkg.price ? Number(pkg.price) : content.reduce((sum, s) => sum + s.price, 0));
@@ -296,11 +329,11 @@ function Salon1() {
 
       // USE REDUX TO UPDATE CART
       if (existing) {
-        // Update item count in Redux
-        updateItem(productId, finalCount);
+        // Update item in Redux with full payload info
+        updateItem(productId, finalCount, payload);
 
         // Also update in database
-        await apiFetch(`/api/carts/${existing._id}`, {
+        await fetch(`http://localhost:5000/api/carts/${existing._id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...payload, count: finalCount }),
@@ -310,7 +343,7 @@ function Salon1() {
         addItem({ ...payload, count: finalCount });
 
         // Also add to database
-        await apiFetch("/api/addcarts", {
+        await fetch("http://localhost:5000/api/addcarts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...payload, count: finalCount }),
@@ -333,7 +366,7 @@ function Salon1() {
       updateItem(cartItem._id || cartItem.productId, (cartItem.count || 1) + 1);
 
       // Update database
-      await apiFetch(`/api/carts/${cartItem._id}`, {
+      await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ count: (cartItem.count || 1) + 1 })
@@ -348,13 +381,13 @@ function Salon1() {
         removeItem(cartItem._id || cartItem.productId);
 
         // Remove from database
-        await apiFetch(`/api/carts/${cartItem._id}`, { method: "DELETE" });
+        await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, { method: "DELETE" });
       } else {
         // Update in Redux
         updateItem(cartItem._id || cartItem.productId, cartItem.count - 1);
 
         // Update database
-        await apiFetch(`/api/carts/${cartItem._id}`, {
+        await fetch(`http://localhost:5000/api/carts/${cartItem._id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ count: cartItem.count - 1 })
@@ -441,7 +474,9 @@ function Salon1() {
                           }}
                         >
                           <img
-                            src={getAssetPath(pkg.img)}
+                            src={
+                              pkg.img.startsWith("http") ? pkg.img : `http://localhost:5000${pkg.img}`
+                            }
                             alt={pkg.name || "Service"}
                             style={{
                               width: "100%",
@@ -451,7 +486,7 @@ function Salon1() {
                             }}
                             onError={(e) => {
                               e.target.onerror = null;
-                              e.target.src = getAssetPath("assets/placeholder.png");
+                              e.target.src = "http://localhost:5000/assets/placeholder.png";
                             }}
                           />
                         </div>
@@ -500,7 +535,9 @@ function Salon1() {
                               >
                                 {/* Small Image */}
                                 <img
-                                  src={getAssetPath(pkg.img)}
+                                  src={
+                                    pkg.img.startsWith("http") ? pkg.img : `http://localhost:5000${pkg.img}`
+                                  }
                                   alt={pkg.name}
                                   style={{
                                     width: "100%",
@@ -509,7 +546,7 @@ function Salon1() {
                                     borderRadius: "8px"
                                   }}
                                   onError={(e) => {
-                                    e.target.src = getAssetPath("assets/placeholder.png");
+                                    e.target.src = "http://localhost:5000/assets/placeholder.png";
                                   }}
                                 />
 
@@ -779,21 +816,25 @@ function Salon1() {
                           <p className="text-muted">No service details available</p>
                         )}
                       </div>
-                      <br /><div>
-                        <Button
-                          className='edit '
-                          onClick={() => handleShowModal(pkg)}
-                          style={{
-                            backgroundColor: "transparent",
-                            border: "1px solid #ccc",
-                            color: "#333",
-                            padding: "5px 15px",
-                            fontSize: "14px"
-                          }}
-                        >
-                          Edit your package
-                        </Button>
-                      </div> <br />
+                      <br />
+                      {isSuperSaver && (
+                        <div>
+                          <Button
+                            className='edit '
+                            onClick={() => handleShowModal(pkg)}
+                            style={{
+                              backgroundColor: "transparent",
+                              border: "1px solid #ccc",
+                              color: "#333",
+                              padding: "5px 15px",
+                              fontSize: "14px"
+                            }}
+                          >
+                            Edit your package
+                          </Button>
+                        </div>
+                      )}
+                      <br />
                       <div className='border-bottom'></div>
                     </div>
 

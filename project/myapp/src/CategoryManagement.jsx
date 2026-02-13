@@ -38,7 +38,7 @@ function CategoryManagement({ isAdding, isEditing }) {
       setLoading(true);
       console.log(`Fetching categories... Page: ${page}, Search: ${search}, PerPage: ${perPage}`);
 
-      let url = `${window.API_URL}/api/admin/categories?page=${page}&limit=${perPage}&sort=-createdAt`;
+      let url = `http://localhost:5000/api/admin/categories?page=${page}&limit=${perPage}&sort=-createdAt`;
 
       if (search) {
         url += `&search=${encodeURIComponent(search)}`;
@@ -171,7 +171,7 @@ function CategoryManagement({ isAdding, isEditing }) {
       localStorage.setItem('categoriesCache', JSON.stringify(updatedCache));
 
       // Make API call in background
-      const response = await fetch(`${window.API_URL}/api/admin/categories/${categoryId}/toggle-status`, {
+      const response = await fetch(`http://localhost:5000/api/admin/categories/${categoryId}/toggle-status`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ isActive })
@@ -215,7 +215,7 @@ function CategoryManagement({ isAdding, isEditing }) {
   const deleteCategory = async (categoryId) => {
     if (window.confirm('Are you sure you want to delete this category?')) {
       try {
-        const response = await fetch(`${window.API_URL}/api/admin/categories/${categoryId}`, {
+        const response = await fetch(`http://localhost:5000/api/admin/categories/${categoryId}`, {
           method: 'DELETE',
           headers: getAuthHeaders()
         });
@@ -243,7 +243,7 @@ function CategoryManagement({ isAdding, isEditing }) {
 
     if (window.confirm(`Are you sure you want to delete ${selectedIds.length} category(ies)?`)) {
       try {
-        const response = await fetch(`${window.API_URL}/api/admin/categories/bulk-delete`, {
+        const response = await fetch('http://localhost:5000/api/admin/categories/bulk-delete', {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({ ids: selectedIds })
@@ -284,8 +284,8 @@ function CategoryManagement({ isAdding, isEditing }) {
       }
 
       const url = isEditing
-        ? `${window.API_URL}/api/admin/categories/${editCategory._id}`
-        : `${window.API_URL}/api/admin/categories`;
+        ? `http://localhost:5000/api/admin/categories/${editCategory._id}`
+        : 'http://localhost:5000/api/admin/categories';
 
       const response = await fetch(url, {
         method: isEditing ? 'PUT' : 'POST',

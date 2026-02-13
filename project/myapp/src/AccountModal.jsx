@@ -8,7 +8,6 @@ import { PiNotepadLight } from "react-icons/pi";
 import { IoSettingsOutline } from "react-icons/io5";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { useAuth, useCart, useBookings, notifyAuthChange } from "./hooks"; // Import notifyAuthChange
-import { apiFetch, getAssetPath } from "./config";
 
 function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "main" }) {
   const [logo1, setLogo1] = useState("");
@@ -108,47 +107,80 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
   const loadCustomerData = async () => {
     try {
       if (!user?.email) {
+        console.log("No email found");
         setBookings([]);
         return;
       }
 
       const customerEmail = user.email;
-      const bookingsData = await apiFetch(`/api/carts/email/${customerEmail}`);
+      console.log("Fetching bookings for:", customerEmail);
 
-      if (bookingsData && bookingsData.carts) {
-        const formatted = (bookingsData.carts || []).map(b => ({
-          ...b,
-          id: b._id
-        }));
-        setBookings(formatted);
+      // Load bookings from server
+      const bookingsResponse = await fetch(`http://localhost:5000/api/bookings/${customerEmail}`);
+
+      if (bookingsResponse.ok) {
+        const bookingsData = await bookingsResponse.json();
+        console.log("📋 Bookings received:", {
+          count: bookingsData.bookings?.length || 0,
+          bookings: bookingsData.bookings
+        });
+
+        // Debug: Check what's in each booking
+        if (bookingsData.bookings && bookingsData.bookings.length > 0) {
+          bookingsData.bookings.forEach((booking, index) => {
+            console.log(`Booking ${index + 1}:`, {
+              id: booking._id,
+              serviceName: booking.serviceName,
+              hasCartItems: !!booking.cartItems,
+              cartItemsCount: booking.cartItems?.length || 0,
+              hasItems: !!booking.items,
+              itemsCount: booking.items?.length || 0,
+              cartItems: booking.cartItems
+            });
+          });
+        }
+
+        setBookings(bookingsData.bookings || []);
       } else {
+        console.log("Failed to fetch bookings");
         setBookings([]);
       }
 
-      const plansData = await apiFetch(`/api/plans/${customerEmail}`);
-      if (plansData && plansData.plans) {
+      // Load plans from same email
+      const plansResponse = await fetch(`http://localhost:5000/api/plans/${customerEmail}`);
+      if (plansResponse.ok) {
+        const plansData = await plansResponse.json();
         setPlans(plansData.plans || []);
       }
+
     } catch (error) {
       console.error("Error loading customer data:", error);
       setBookings([]);
     }
   };
 
+  // Fetch logo
   useEffect(() => {
     const fetchLogo = async () => {
       try {
-        const data = await apiFetch("/api/static-data");
-        if (data && data.logo1) {
-          setLogo1(getAssetPath(data.logo1));
+        const response = await fetch("http://localhost:5000/api/static-data");
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.logo1) {
+            const logoUrl = data.logo1.startsWith('http')
+              ? data.logo1
+              : `http://localhost:5000${data.logo1}`;
+            setLogo1(logoUrl);
+          }
         }
       } catch (error) {
-        setLogo1(getAssetPath("assets/urban.png"));
+        console.error("Error fetching logo:", error);
+        setLogo1("http://localhost:5000/assets/urban.png");
       }
     };
 
-    if (show) fetchLogo();
-  }, [show]);
+    fetchLogo();
+  }, []);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -521,78 +553,33 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
 
   // Calculate booking total - use servicePrice which includes all taxes and charges
   const calculateBookingTotal = (booking) => {
-    console.log("📊 Calculating total for booking:", {
-      id: booking._id,
-      servicePrice: booking.servicePrice,
-      originalPrice: booking.originalPrice,
-      taxAmount: booking.taxAmount,
-      tipAmount: booking.tipAmount,
-      slotExtraCharge: booking.slotExtraCharge
-    });
+    let subtotal = 0;
 
-    // servicePrice already includes itemTotal + tax + tip + slotExtraCharge
-    // ALWAYS use servicePrice if it's available and greater than 0
-    if (booking.servicePrice) {
-      const price = typeof booking.servicePrice === 'string'
-        ? Number(booking.servicePrice.replace(/[^0-9.-]+/g, ""))
-        : Number(booking.servicePrice);
-
-      if (price > 0) {
-        console.log("✅ Using servicePrice (total with all charges):", price);
-        return price;
-      }
-    }
-
-    // Fallback: calculate from items + tax + tip + slot charges
-    console.log("⚠️ ServicePrice not available or invalid, calculating from items...");
-    let total = 0;
-
-    // Calculate items total
+    // Calculate subtotal from items
     if (booking.cartItems && booking.cartItems.length > 0) {
       booking.cartItems.forEach(item => {
-        const itemPrice = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
+        const itemPrice = Number(item.price?.toString().replace(/[^0-9.-]+/g, "")) || 0;
         const count = item.count || item.quantity || 1;
-        total += itemPrice * count;
+        subtotal += itemPrice * count;
       });
     } else if (booking.items && booking.items.length > 0) {
       booking.items.forEach(item => {
-        const itemPrice = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
+        const itemPrice = Number(item.price?.toString().replace(/[^0-9.-]+/g, "")) || 0;
         const quantity = item.quantity || 1;
-        total += itemPrice * quantity;
+        subtotal += itemPrice * quantity;
       });
-    } else if (booking.originalPrice) {
-      // If no cart items, use originalPrice as the base
-      total = typeof booking.originalPrice === 'string'
-        ? Number(booking.originalPrice.replace(/[^0-9.-]+/g, ""))
-        : Number(booking.originalPrice);
-      console.log("Using originalPrice as base:", total);
+    } else {
+      // Fallback
+      subtotal = Number(booking.originalPrice?.toString().replace(/[^0-9.-]+/g, "")) ||
+        Number(booking.servicePrice?.toString().replace(/[^0-9.-]+/g, "")) || 0;
     }
 
-    console.log("Items total:", total);
+    // Force 6.8% tax calculation to match Cart logic
+    const tax = Math.round(subtotal * 0.068);
+    const tip = Number(booking.tipAmount) || 0;
+    const slotCharge = Number(booking.slotExtraCharge) || 0;
 
-    // Add tax (IMPORTANT: This should always be added)
-    if (booking.taxAmount) {
-      const tax = Number(booking.taxAmount) || 0;
-      total += tax;
-      console.log("Added tax:", tax, "New total:", total);
-    }
-
-    // Add tip
-    if (booking.tipAmount) {
-      const tip = Number(booking.tipAmount) || 0;
-      total += tip;
-      console.log("Added tip:", tip, "New total:", total);
-    }
-
-    // Add slot extra charge (IMPORTANT: This should always be added)
-    if (booking.slotExtraCharge) {
-      const slotCharge = Number(booking.slotExtraCharge) || 0;
-      total += slotCharge;
-      console.log("Added slot charge:", slotCharge, "New total:", total);
-    }
-
-    console.log("✅ Final calculated total:", total);
-    return total;
+    return subtotal + tax + tip + slotCharge;
   };
 
 
@@ -605,9 +592,9 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
         return url;
       }
       if (url.startsWith('/assets/')) {
-        return `${window.API_URL}${url}`;
+        return `http://localhost:5000${url}`;
       }
-      return getAssetPath(`assets/${url}`);
+      return `http://localhost:5000/assets/${url}`;
     };
 
     const fullImageUrl = getFullImageUrl(pictureUrl);
@@ -1139,7 +1126,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
                 {isLoading || authLoading ? (
                   <>
                     <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                    Saving..
+                    Saving...
                   </>
                 ) : (
                   "Save Changes"
@@ -1152,36 +1139,8 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
     );
   };
 
-  // UPDATED to show cart items
+  // Render bookings view - UPDATED to show cart items
   const renderBookingsView = () => {
-    // Calculate total for each booking
-    const calculateBookingTotal = (booking) => {
-      if (booking.isCurrent && totalPrice) {
-        return totalPrice();
-      }
-      if (booking.servicePrice) {
-        return Number(booking.servicePrice) || 0;
-      }
-      // Calculate from cart items
-      if (booking.cartItems && booking.cartItems.length > 0) {
-        return booking.cartItems.reduce((sum, item) => {
-          const price = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
-          const count = item.count || 1;
-          return sum + (price * count);
-        }, 0);
-      }
-      // Calculate from items
-      if (booking.items && booking.items.length > 0) {
-        return booking.items.reduce((sum, item) => {
-          const price = Number(item.price?.replace(/[^0-9.-]+/g, "")) || 0;
-          const quantity = item.quantity || 1;
-          return sum + (price * quantity);
-        }, 0);
-      }
-
-      return 0;
-    };
-
     return (
       <div className="p-2">
         {bookingsLoading ? (
@@ -1210,13 +1169,9 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
                 slotExtraCharge: booking.slotExtraCharge
               });
 
-              const bookingTotal = booking.servicePrice
-                ? (typeof booking.servicePrice === 'string'
-                  ? Number(booking.servicePrice.replace(/[^0-9.-]+/g, ""))
-                  : Number(booking.servicePrice))
-                : 0;
+              const bookingTotal = calculateBookingTotal(booking);
 
-              console.log("💰 Calculated bookingTotal:", bookingTotal);
+              console.log("💰 Final Displayed Booking Total:", bookingTotal);
 
               return (
                 <Card key={booking._id} className="border-0 shadow-sm">
@@ -1304,11 +1259,11 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
                       </div>
                     ) : null}
 
-                    {/* Total Amount - Final amount paid */}
-                    <div className="pt-2">
-                      <div className="d-flex justify-content-between mt-2 pt-2 border-top">
-                        <span className="fw-semibold">Total Amount:</span>
-                        <span className="fw-semibold text-success">
+                    {/* Total Amount Row */}
+                    <div className="pt-2 border-top">
+                      <div className="d-flex justify-content-between mt-2">
+                        <span className="fw-semibold">Amount to Pay</span>
+                        <span className="fw-semibold" style={{ color: "#4433caff" }}>
                           ₹{bookingTotal.toLocaleString('en-IN')}
                         </span>
                       </div>
@@ -1338,7 +1293,7 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
                         onClick={async () => {
                           if (window.confirm("Are you sure you want to delete this booking record?")) {
                             try {
-                              const response = await fetch(`${window.API_URL}/api/bookings/${booking._id}`, {
+                              const response = await fetch(`http://localhost:5000/api/bookings/${booking._id}`, {
                                 method: "DELETE"
                               });
 
@@ -1475,11 +1430,11 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
             <div className="d-flex align-items-center gap-3">
               <span className="text-muted">
                 <img
-                  src={logo1 || "./assets/urban.png"}
+                  src={logo1 || "http://localhost:5000/assets/urban.png"}
                   alt="UC"
                   style={{ width: "20px", height: "20px", objectFit: "contain" }}
                   onError={(e) => {
-                    e.target.src = "./assets/urban.png";
+                    e.target.src = "http://localhost:5000/assets/urban.png";
                   }}
                 />
               </span>
@@ -1561,11 +1516,11 @@ function AccountModal({ show, totalPrice = () => { }, onHide, initialView = "mai
             <div className="d-flex align-items-center gap-3">
               <span className="text-muted">
                 <img
-                  src={logo1 || "./assets/urban.png"}
+                  src={logo1 || "http://localhost:5000/assets/urban.png"}
                   alt="UC"
                   style={{ width: "20px", height: "20px", objectFit: "contain" }}
                   onError={(e) => {
-                    e.target.src = "./assets/urban.png";
+                    e.target.src = "http://localhost:5000/assets/urban.png";
                   }}
                 />
               </span>

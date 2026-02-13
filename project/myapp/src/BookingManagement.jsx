@@ -35,7 +35,7 @@ function BookingManagement() {
 
   const fetchBookings = async (page = 1, search = '', status = '', perPage = bookingPerPage) => {
     try {
-      let url = `${window.API_URL}/api/admin/bookings?page=${page}&limit=${perPage}`;
+      let url = `http://localhost:5000/api/admin/bookings?page=${page}&limit=${perPage}`;
 
       // Build query params
       const params = new URLSearchParams();
@@ -58,7 +58,7 @@ function BookingManagement() {
         const customerEmails = [...new Set(data.bookings.map(b => b.customerEmail).filter(email => email && email.trim() !== ''))];
 
         // Fetch customer profile images
-        const customersResponse = await fetch(`${window.API_URL}/api/admin/customers-by-emails`, {
+        const customersResponse = await fetch(`http://localhost:5000/api/admin/customers-by-emails`, {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({ emails: customerEmails })
@@ -91,7 +91,7 @@ function BookingManagement() {
             if (customerDetails.profileImage.startsWith('http')) {
               validProfileImage = customerDetails.profileImage;
             } else {
-              validProfileImage = `${window.API_URL}${customerDetails.profileImage}`;
+              validProfileImage = `http://localhost:5000${customerDetails.profileImage}`;
             }
           }
 
@@ -121,7 +121,7 @@ function BookingManagement() {
   const deleteBooking = async (bookingId) => {
     if (window.confirm('Are you sure you want to delete this booking?')) {
       try {
-        const response = await fetch(`${window.API_URL}/api/admin/bookings/${bookingId}`, {
+        const response = await fetch(`http://localhost:5000/api/admin/bookings/${bookingId}`, {
           method: 'DELETE',
           headers: getAuthHeaders()
         });
@@ -141,7 +141,7 @@ function BookingManagement() {
 
   const updateBookingStatus = async (bookingId, newStatus) => {
     try {
-      const response = await fetch(`${window.API_URL}/api/admin/bookings/${bookingId}/status`, {
+      const response = await fetch(`http://localhost:5000/api/admin/bookings/${bookingId}/status`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ status: newStatus })
@@ -172,7 +172,7 @@ function BookingManagement() {
 
     if (window.confirm(`Are you sure you want to delete ${selectedIds.length} booking(s)?`)) {
       try {
-        const response = await fetch(`${window.API_URL}/api/admin/bulk-delete`, {
+        const response = await fetch('http://localhost:5000/api/admin/bulk-delete', {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({

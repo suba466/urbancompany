@@ -43,8 +43,8 @@ function Profile() {
       }
 
       const endpoint = userRole === 'admin'
-        ? `${window.API_URL}/api/admin/profile`
-        : `${window.API_URL}/api/admin/user-profile`;
+        ? 'http://localhost:5000/api/admin/profile'
+        : 'http://localhost:5000/api/admin/user-profile';
 
       const response = await fetch(endpoint, {
         headers: getAuthHeaders()
@@ -53,8 +53,8 @@ function Profile() {
       if (response.status === 401) {
         // Try the other endpoint if 401 (maybe role mismatch in local storage)
         const otherEndpoint = userRole === 'admin'
-          ? `${window.API_URL}/api/admin/user-profile`
-          : `${window.API_URL}/api/admin/profile`;
+          ? 'http://localhost:5000/api/admin/user-profile'
+          : 'http://localhost:5000/api/admin/profile';
 
         const retryResponse = await fetch(otherEndpoint, { headers: getAuthHeaders() });
 
@@ -188,7 +188,7 @@ function Profile() {
             <div className="mb-3">
               {profile.profileImage ? (
                 <img
-                  src={`${window.API_URL}${profile.profileImage}`}
+                  src={`http://localhost:5000${profile.profileImage}`}
                   alt={profile.name}
                   className="rounded-circle"
                   style={{

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Row, Col, Card, Alert } from 'react-bootstrap';
-import { getAssetPath } from './config';
 
 function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
@@ -35,7 +34,7 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
       });
 
       if (categoryData.img) {
-        setPreviewUrl(getAssetPath(categoryData.img));
+        setPreviewUrl(`http://localhost:5000${categoryData.img}`);
       }
     }
   }, [isEditing, categoryData]);
@@ -43,7 +42,7 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
   // Field-by-field validation
   const validateField = (fieldName, value) => {
     const newErrors = { ...errors };
-
+    
     switch (fieldName) {
       case 'name':
         if (!value.trim()) {
@@ -52,7 +51,7 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
           delete newErrors.name;
         }
         break;
-
+        
       case 'description':
         if (!value.trim()) {
           newErrors.description = 'Description is required';
@@ -60,7 +59,7 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
           delete newErrors.description;
         }
         break;
-
+        
       case 'key':
         if (!value.trim()) {
           newErrors.key = 'Key is required';
@@ -70,18 +69,18 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
           delete newErrors.key;
         }
         break;
-
+        
       default:
         break;
     }
-
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleFieldChange = (fieldName, value) => {
     setFormData({ ...formData, [fieldName]: value });
-
+    
     // Auto-validate if field was touched before
     if (touchedFields[fieldName]) {
       validateField(fieldName, value);
@@ -100,30 +99,30 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
       allTouched[field] = true;
     });
     setTouchedFields(allTouched);
-
+    
     const newErrors = {};
-
+    
     if (!formData.name.trim()) {
       newErrors.name = 'Category name is required';
     }
-
+    
     if (!formData.description.trim()) {
       newErrors.description = 'Description is required';
     }
-
+    
     if (!formData.key.trim()) {
       newErrors.key = 'Key is required';
     } else if (!/^[a-z0-9-]+$/.test(formData.key)) {
       newErrors.key = 'Key can only contain lowercase letters, numbers, and hyphens';
     }
-
+    
     // Auto-generate key from name if key is empty
     if (!formData.key.trim() && formData.name.trim()) {
       const generatedKey = formData.name.toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '');
       setFormData(prev => ({ ...prev, key: generatedKey }));
       delete newErrors.key; // Remove key error since we generated it
     }
-
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -169,10 +168,10 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
         const generatedKey = finalFormData.name.toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '');
         finalFormData.key = generatedKey;
       }
-
+      
       await onSubmit(finalFormData, imageFile);
       setFormSuccess(true);
-
+      
       // Reset form if not editing
       if (!isEditing) {
         resetForm();
@@ -249,7 +248,7 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
               ? 'Use below form to edit Category'
               : 'Use below form to create a new Category'}
           </p>
-
+          
           {formSuccess && (
             <Alert
               variant="success"
@@ -377,7 +376,7 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
                     onChange={handleImageChange}
                     className="d-none"
                   />
-
+                  
                   {!previewUrl && !isEditing && (
                     <small className="text-dark d-block mt-1">
                       Category image is recommended
@@ -388,12 +387,12 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
             </Row>
 
             <div className="d-flex justify-content-center gap-3">
-              <Button
-                variant="outline-dark"
+              <Button 
+                variant="outline-dark" 
                 onClick={() => {
                   resetForm();
                   onCancel();
-                }}
+                }} 
                 className="cat"
                 type="button"
               >
@@ -402,8 +401,9 @@ function CategoryForm({ isEditing, categoryData, onSubmit, onCancel }) {
 
               <Button variant="dark" type="submit" className="cat">
                 <i
-                  className={`bi ${isEditing ? 'bi-pencil' : 'bi-plus-circle'
-                    } me-2`}
+                  className={`bi ${
+                    isEditing ? 'bi-pencil' : 'bi-plus-circle'
+                  } me-2`}
                 ></i>
                 {isEditing ? 'Update' : 'Submit'}
               </Button>

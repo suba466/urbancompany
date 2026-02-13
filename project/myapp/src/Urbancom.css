@@ -720,7 +720,7 @@
 ============================ 
 .smartlock-section {
   position: relative;
-  background-image: url("./assets/smartlocks.png");
+  background-image: url("http://localhost:5000/assets/smartlocks.png");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

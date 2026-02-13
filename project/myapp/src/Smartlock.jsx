@@ -13,7 +13,7 @@ function Smartlock(){
 
       {/* Floating image (images.png) */}
       <img
-        src="./assets/images.png"
+        src="http://localhost:5000/assets/images.png"
         alt="Smart Lock Device"
         className="smart-float-img"
       />
