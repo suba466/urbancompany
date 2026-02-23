@@ -225,12 +225,40 @@ function CartSummary() {
           {/* Final Price Summary */}
           <Card className="border-0 shadow-sm mb-4">
             <Card.Body className="p-3">
-              <Row className="align-items-center">
+              <div className="payment-summary-details">
+                <Row className="mb-2">
+                  <Col><p style={{ fontSize: "14px", margin: 0 }}>Item total</p></Col>
+                  <Col className="text-end"><p style={{ fontSize: "14px", margin: 0 }}>{formatPrice(subtotal)}</p></Col>
+                </Row>
+                <Row className="mb-2">
+                  <Col>
+                    <p style={{
+                      fontSize: "14px",
+                      margin: 0,
+                      display: "inline-block",
+                      borderBottom: "1px dotted #999",
+                      cursor: "pointer"
+                    }}>Taxes and Fee</p>
+                  </Col>
+                  <Col className="text-end"><p style={{ fontSize: "14px", margin: 0 }}>{formatPrice(taxesAndFees)}</p></Col>
+                </Row>
+              </div>
+
+              <hr style={{ margin: "12px 0", opacity: 0.2 }} />
+
+              <Row className="mb-2">
+                <Col><p className="fw-bold" style={{ fontSize: "15px", margin: 0 }}>Total amount</p></Col>
+                <Col className="text-end"><p className="fw-bold" style={{ fontSize: "15px", margin: 0 }}>{formatPrice(subtotal + taxesAndFees)}</p></Col>
+              </Row>
+
+              <hr style={{ margin: "12px 0", opacity: 0.2 }} />
+
+              <Row className="align-items-center mb-0">
                 <Col>
-                  <h5 className="fw-bold mb-0">Amount to Pay</h5>
+                  <h5 className="fw-bold mb-0" style={{ fontSize: "16px" }}>Amount to Pay</h5>
                 </Col>
                 <Col className="text-end">
-                  <h5 className="fw-bold mb-0" style={{ color: "#4433caff" }}>
+                  <h5 className="fw-bold mb-0" style={{ color: "#4433caff", fontSize: "16px" }}>
                     {formatPrice(totalPrice)}
                   </h5>
                 </Col>

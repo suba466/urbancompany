@@ -1158,24 +1158,52 @@ function CartPage() {
 
           <div style={{ border: "1px solid #d9d9d9", borderRadius: "8px", marginTop: "15px" }}>
             <div style={{ padding: "12px" }}>
-              <h5 className="fw-semibold mb-2">Payment summary</h5>
+              <h5 className="fw-semibold mb-3">Payment summary</h5>
+              <div className="payment-summary-items">
+                <Row className="mb-2">
+                  <Col><p style={{ fontSize: "14px", margin: 0 }}>Item total</p></Col>
+                  <Col className="text-end"><p style={{ fontSize: "14px", margin: 0 }}>{formatPrice(itemTotal)}</p></Col>
+                </Row>
+                <Row className="mb-2">
+                  <Col>
+                    <p style={{
+                      fontSize: "14px",
+                      margin: 0,
+                      display: "inline-block",
+                      borderBottom: "1px dotted #999",
+                      cursor: "pointer"
+                    }}>Taxes and Fee</p>
+                  </Col>
+                  <Col className="text-end"><p style={{ fontSize: "14px", margin: 0 }}>{formatPrice(tax)}</p></Col>
+                </Row>
+              </div>
+
+              <hr style={{ margin: "12px 0", opacity: 0.2 }} />
+
+              <Row className="mb-2">
+                <Col><p className="fw-bold" style={{ fontSize: "15px", margin: 0 }}>Total amount</p></Col>
+                <Col className="text-end"><p className="fw-bold" style={{ fontSize: "15px", margin: 0 }}>{formatPrice(itemTotal + tax)}</p></Col>
+              </Row>
+
               {slotExtraCharge > 0 && (
-                <Row className="mb-1">
-                  <Col><p style={{ fontSize: "14px" }}>Evening slot charge</p></Col>
-                  <Col className="text-end"><p style={{ fontSize: "14px" }}>{formatPrice(slotExtraCharge)}</p></Col>
+                <Row className="mb-2">
+                  <Col><p style={{ fontSize: "14px", margin: 0 }}>Evening slot charge</p></Col>
+                  <Col className="text-end"><p style={{ fontSize: "14px", margin: 0 }}>{formatPrice(slotExtraCharge)}</p></Col>
                 </Row>
               )}
 
               {tip > 0 && (
-                <Row className="mb-1">
-                  <Col><p style={{ fontSize: "14px" }}>Tip</p></Col>
-                  <Col className="text-end"><p style={{ fontSize: "14px" }}>{formatPrice(tip)}</p></Col>
+                <Row className="mb-2">
+                  <Col><p style={{ fontSize: "14px", margin: 0 }}>Tip</p></Col>
+                  <Col className="text-end"><p style={{ fontSize: "14px", margin: 0 }}>{formatPrice(tip)}</p></Col>
                 </Row>
               )}
-              <hr />
-              <Row className="mb-1">
-                <Col><p className="fw-semibold" style={{ fontSize: "14px" }}>Amount to pay</p></Col>
-                <Col className="text-end"><p className="fw-semibold" style={{ fontSize: "14px" }}>{formatPrice(totalPrice)}</p></Col>
+
+              <hr style={{ margin: "12px 0", opacity: 0.2 }} />
+
+              <Row className="mb-0">
+                <Col><p className="fw-bold" style={{ fontSize: "16px", margin: 0 }}>Amount to pay</p></Col>
+                <Col className="text-end"><p className="fw-bold" style={{ fontSize: "16px", margin: 0 }}>{formatPrice(totalPrice)}</p></Col>
               </Row>
               <hr />
 
@@ -1183,14 +1211,28 @@ function CartPage() {
                 <p className="fw-semibold mb-1" style={{ fontSize: "14px" }}>Add a tip to thank the professional</p>
                 <div className="d-flex gap-2 mb-2 align-items-center flex-wrap">
                   {[50, 75, 100].map(amount => (
-                    <Button
-                      key={amount}
-                      onClick={() => handleTipSelect(amount)}
-                      className="edit fw-semibold"
-                      style={{ color: selectedTip === amount ? "black" : "", borderRadius: "6px", padding: "6px 12px", fontSize: "13px" }}
-                    >
-                      ₹{amount}
-                    </Button>
+                    <div key={amount} className="position-relative">
+                      <Button
+                        onClick={() => handleTipSelect(amount)}
+                        className="edit fw-semibold"
+                        style={{
+                          color: selectedTip === amount ? "white" : "black",
+                          backgroundColor: selectedTip === amount ? "#4433ca" : "transparent",
+                          borderRadius: "8px",
+                          padding: "8px 16px",
+                          fontSize: "14px",
+                          minWidth: "70px",
+                          border: "1px solid #ddd"
+                        }}
+                      >
+                        ₹{amount}
+                      </Button>
+                      {amount === 75 && (
+                        <div className="position-absolute start-50 translate-middle-x" style={{ bottom: "-15px" }}>
+                          <Badge bg="success" style={{ fontSize: "10px", padding: "2px 6px", textTransform: "uppercase" }}>Popular</Badge>
+                        </div>
+                      )}
+                    </div>
                   ))}
                   {showCustomTip ? (
                     <div className="d-flex gap-2 align-items-center">
