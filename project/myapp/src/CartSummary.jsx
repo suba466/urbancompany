@@ -13,6 +13,10 @@ function CartSummary() {
   const { isAuthenticated, user } = useAuth();
   const [loading, setLoading] = useState(false);
 
+  const handleBack = () => {
+    navigate(-1);
+  };
+
   const handleContinueShopping = () => {
     navigate('/salon');
   };
@@ -103,7 +107,7 @@ function CartSummary() {
       <Button
         variant="link"
         className="p-0 text-dark me-3"
-        onClick={handleContinueShopping}
+        onClick={handleBack}
       >
         <BiLeftArrowAlt size={28} />
       </Button>
