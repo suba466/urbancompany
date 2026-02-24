@@ -314,9 +314,14 @@ app.post("/api/bookings", async (req, res) => {
       }, 0);
 
       finalServiceName = cartItems.map(item => item.name || item.title || "Service").join(", ");
-      finalServicePrice = totalPrice.toString();
 
-      console.log(`Total calculated from cart: ₹${totalPrice}`);
+      // Don't overwrite finalServicePrice if it's already provided from the frontend
+      // because frontend sends the full total including taxes/tips
+      if (!servicePrice) {
+        finalServicePrice = totalPrice.toString();
+      }
+
+      console.log(`Total subtotal calculated from cart: ₹${totalPrice}`);
 
     } else if (items && items.length > 0) {
       // Use the existing items format

@@ -956,12 +956,22 @@ router.get("/dashboard", checkPermission('Dashboard'), async (req, res) => {
       {
         $group: {
           _id: null,
-          total: { $sum: { $toDouble: "$servicePrice" } }
+          total: {
+            $sum: {
+              $add: [
+                { $toDouble: { $ifNull: ["$servicePrice", "0"] } },
+                { $ifNull: ["$slotExtraCharge", 0] },
+                { $ifNull: ["$tipAmount", 0] },
+                { $ifNull: ["$taxAmount", 0] }
+              ]
+            }
+          }
         }
       }
     ]);
 
-    // Get recent bookings with customer details
+    // ... Get recent bookings and customers ...
+
     const recentBookings = await mongoose.model("Booking").find()
       .sort({ createdAt: -1 })
       .limit(10)
@@ -1013,7 +1023,16 @@ router.get("/dashboard", checkPermission('Dashboard'), async (req, res) => {
             year: { $year: "$createdAt" },
             month: { $month: "$createdAt" }
           },
-          revenue: { $sum: { $toDouble: "$servicePrice" } },
+          revenue: {
+            $sum: {
+              $add: [
+                { $toDouble: { $ifNull: ["$servicePrice", "0"] } },
+                { $ifNull: ["$slotExtraCharge", 0] },
+                { $ifNull: ["$tipAmount", 0] },
+                { $ifNull: ["$taxAmount", 0] }
+              ]
+            }
+          },
           bookings: { $sum: 1 }
         }
       },
@@ -1025,7 +1044,16 @@ router.get("/dashboard", checkPermission('Dashboard'), async (req, res) => {
         $group: {
           _id: "$serviceName",
           count: { $sum: 1 },
-          revenue: { $sum: { $toDouble: "$servicePrice" } }
+          revenue: {
+            $sum: {
+              $add: [
+                { $toDouble: { $ifNull: ["$servicePrice", "0"] } },
+                { $ifNull: ["$slotExtraCharge", 0] },
+                { $ifNull: ["$tipAmount", 0] },
+                { $ifNull: ["$taxAmount", 0] }
+              ]
+            }
+          }
         }
       },
       { $sort: { count: -1 } },

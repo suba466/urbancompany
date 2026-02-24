@@ -4,6 +4,36 @@ import { exportAsExcel, exportAsCSV, exportAsPDF } from './downloadUtils';
 import { FaEye, FaFilePdf, FaFileExcel, FaFileCsv } from "react-icons/fa";
 
 function Reports() {
+  const calculateBookingTotal = (booking) => {
+    let subtotal = 0;
+
+    // Calculate subtotal from items
+    if (booking.cartItems && booking.cartItems.length > 0) {
+      booking.cartItems.forEach(item => {
+        const itemPrice = Number(item.price?.toString().replace(/[^0-9.-]+/g, "")) || 0;
+        const count = item.count || item.quantity || 1;
+        subtotal += itemPrice * count;
+      });
+    } else if (booking.items && booking.items.length > 0) {
+      booking.items.forEach(item => {
+        const itemPrice = Number(item.price?.toString().replace(/[^0-9.-]+/g, "")) || 0;
+        const quantity = item.quantity || 1;
+        subtotal += itemPrice * quantity;
+      });
+    } else {
+      // Fallback
+      subtotal = Number(booking.originalPrice?.toString().replace(/[^0-9.-]+/g, "")) ||
+        Number(booking.servicePrice?.toString().replace(/[^0-9.-]+/g, "")) || 0;
+    }
+
+    // Force 6.8% tax calculation to match Cart logic
+    const tax = Math.round(subtotal * 0.068);
+    const tip = Number(booking.tipAmount) || 0;
+    const slotCharge = Number(booking.slotExtraCharge) || 0;
+
+    return subtotal + tax + tip + slotCharge;
+  };
+
   const [reportType, setReportType] = useState('Category');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -142,7 +172,7 @@ function Reports() {
 
         // Create a map to store customer profiles
         const customerMap = {};
-        
+
         // Fetch customer profiles in bulk (similar to BookingManagement)
         if (customerEmails.length > 0) {
           try {
@@ -151,14 +181,14 @@ function Reports() {
               headers: getAuthHeaders(),
               body: JSON.stringify({ emails: customerEmails })
             });
-            
+
             const customersData = await customersResponse.json();
-            
+
             if (customersData.success && customersData.customers) {
               customersData.customers.forEach(customer => {
                 const normalizedEmail = customer.email.toLowerCase().trim();
                 let validProfileImage = '';
-                
+
                 if (customer.profileImage) {
                   // Check if it's already an absolute URL (e.g. Google Auth) or relative
                   if (customer.profileImage.startsWith('http')) {
@@ -167,7 +197,7 @@ function Reports() {
                     validProfileImage = `http://localhost:5000${customer.profileImage}`;
                   }
                 }
-                
+
                 customerMap[normalizedEmail] = {
                   name: customer.name,
                   profileImage: validProfileImage
@@ -211,7 +241,7 @@ function Reports() {
           // Get customer info - EXACTLY LIKE BOOKING MANAGEMENT
           const emailKey = (b.customerEmail || b.customer?.email || '').toLowerCase().trim();
           const customerDetails = customerMap[emailKey];
-          
+
           const customerName = customerDetails?.name || b.customerName || b.customer?.name || 'N/A';
           const profileImage = customerDetails?.profileImage || '';
 
@@ -220,7 +250,7 @@ function Reports() {
             'Customer Name': customerName,
             'Customer Email': b.customerEmail || b.customer?.email || 'N/A',
             'Service': serviceName,
-            'Total Amount': `₹${totalAmount}`,
+            'Total Amount': `₹${calculateBookingTotal(b).toLocaleString('en-IN')}`,
             'Status': b.status || 'N/A',
             'Booking Date': b.createdAt ? new Date(b.createdAt).toLocaleDateString() : 'N/A',
           };
@@ -271,7 +301,7 @@ function Reports() {
       }
     });
     html += '</tr></thead><tbody>';
-    
+
     reportData.forEach(row => {
       html += '<tr>';
       headers.forEach(h => {
@@ -303,7 +333,7 @@ function Reports() {
       });
       html += '</tr>';
     });
-    
+
     html += '</tbody></table>';
 
     const element = document.createElement('div');
@@ -319,7 +349,7 @@ function Reports() {
 
     const timestamp = new Date().toISOString().split('T')[0];
     const finalFilename = `${reportType}_Report_${timestamp}`;
-    
+
     exportAsExcel(reportData, finalFilename);
   };
 
@@ -331,7 +361,7 @@ function Reports() {
 
     const timestamp = new Date().toISOString().split('T')[0];
     const finalFilename = `${reportType}_Report_${timestamp}`;
-    
+
     exportAsCSV(reportData, headers, finalFilename);
   };
 
@@ -378,7 +408,7 @@ function Reports() {
   // Direct render function for product/category images
   const renderProductImage = (imgPath, altName) => {
     if (!imgPath) return 'No Image';
-    
+
     const imageUrl = getImageUrl(imgPath);
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -520,7 +550,7 @@ function Reports() {
                 onClick={handleDownloadPDF}
                 title="Download as PDF"
               >
-                <FaFilePdf className="text-danger" /> 
+                <FaFilePdf className="text-danger" />
               </Button>
               <Button
                 variant="outline-light"
@@ -528,7 +558,7 @@ function Reports() {
                 onClick={handleDownloadExcel}
                 title="Download as Excel"
               >
-                <FaFileExcel className="text-success" /> 
+                <FaFileExcel className="text-success" />
               </Button>
               <Button
                 variant="outline-light"
@@ -536,7 +566,7 @@ function Reports() {
                 onClick={handleDownloadCSV}
                 title="Download as CSV"
               >
-                <FaFileCsv className="text-primary" /> 
+                <FaFileCsv className="text-primary" />
               </Button>
             </div>
 
@@ -557,11 +587,11 @@ function Reports() {
                     <tr key={rowIndex}>
                       {headers.map((header, colIndex) => (
                         <td key={colIndex} style={{ textAlign: header.includes('Image') || header.includes('Profile') ? 'center' : 'left', verticalAlign: 'middle' }}>
-                          {header.includes('Profile') ? 
-                            renderProfileImage(row[header], row['Customer Name'] || 'Customer') : 
-                            header.includes('Image') && !header.includes('Profile') ? 
-                            renderProductImage(row[header], row[`${reportType} Name`] || '') : 
-                            row[header] || 'N/A'
+                          {header.includes('Profile') ?
+                            renderProfileImage(row[header], row['Customer Name'] || 'Customer') :
+                            header.includes('Image') && !header.includes('Profile') ?
+                              renderProductImage(row[header], row[`${reportType} Name`] || '') :
+                              row[header] || 'N/A'
                           }
                         </td>
                       ))}

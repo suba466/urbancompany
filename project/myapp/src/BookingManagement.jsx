@@ -11,6 +11,36 @@ import {
 } from './downloadUtils';
 
 function BookingManagement() {
+  const calculateBookingTotal = (booking) => {
+    let subtotal = 0;
+
+    // Calculate subtotal from items
+    if (booking.cartItems && booking.cartItems.length > 0) {
+      booking.cartItems.forEach(item => {
+        const itemPrice = Number(item.price?.toString().replace(/[^0-9.-]+/g, "")) || 0;
+        const count = item.count || item.quantity || 1;
+        subtotal += itemPrice * count;
+      });
+    } else if (booking.items && booking.items.length > 0) {
+      booking.items.forEach(item => {
+        const itemPrice = Number(item.price?.toString().replace(/[^0-9.-]+/g, "")) || 0;
+        const quantity = item.quantity || 1;
+        subtotal += itemPrice * quantity;
+      });
+    } else {
+      // Fallback
+      subtotal = Number(booking.originalPrice?.toString().replace(/[^0-9.-]+/g, "")) ||
+        Number(booking.servicePrice?.toString().replace(/[^0-9.-]+/g, "")) || 0;
+    }
+
+    // Force 6.8% tax calculation to match Cart logic
+    const tax = Math.round(subtotal * 0.068);
+    const tip = Number(booking.tipAmount) || 0;
+    const slotCharge = Number(booking.slotExtraCharge) || 0;
+
+    return subtotal + tax + tip + slotCharge;
+  };
+
   const [bookings, setBookings] = useState([]);
   const [bookingSearch, setBookingSearch] = useState('');
   const [bookingStatus, setBookingStatus] = useState('');
@@ -146,13 +176,13 @@ function BookingManagement() {
         headers: getAuthHeaders(),
         body: JSON.stringify({ status: newStatus })
       });
-      
+
       const data = await response.json();
       if (data.success) {
         // Update the local state immediately
-        setBookings(prevBookings => 
-          prevBookings.map(booking => 
-            booking._id === bookingId 
+        setBookings(prevBookings =>
+          prevBookings.map(booking =>
+            booking._id === bookingId
               ? { ...booking, status: newStatus }
               : booking
           )
@@ -239,7 +269,7 @@ function BookingManagement() {
   };
 
   const getStatusBadgeColor = (status) => {
-    switch(status) {
+    switch (status) {
       case 'Completed': return 'success';
       case 'Confirmed': return 'primary';
       case 'Pending': return 'warning';
@@ -424,10 +454,10 @@ function BookingManagement() {
                         </div>
                       </td>
                       <td>{booking.serviceName}</td>
-                      <td><strong>₹{booking.servicePrice}</strong></td>
+                      <td><strong>₹{calculateBookingTotal(booking).toLocaleString('en-IN')}</strong></td>
                       <td>
                         <Dropdown>
-                          <Dropdown.Toggle 
+                          <Dropdown.Toggle
                             as={Badge}
                             bg={getStatusBadgeColor(booking.status)}
                             className="cursor-pointer"
@@ -437,28 +467,28 @@ function BookingManagement() {
                           </Dropdown.Toggle>
 
                           <Dropdown.Menu>
-                            <Dropdown.Item 
+                            <Dropdown.Item
                               onClick={() => updateBookingStatus(booking._id, 'Pending')}
                               className={booking.status === 'Pending' ? 'active fw-bold' : ''}
                             >
                               <Badge bg="warning" className="me-2">Pending</Badge>
                               {booking.status === 'Pending' && '✓'}
                             </Dropdown.Item>
-                            <Dropdown.Item 
+                            <Dropdown.Item
                               onClick={() => updateBookingStatus(booking._id, 'Confirmed')}
                               className={booking.status === 'Confirmed' ? 'active fw-bold' : ''}
                             >
                               <Badge bg="primary" className="me-2">Confirmed</Badge>
                               {booking.status === 'Confirmed' && '✓'}
                             </Dropdown.Item>
-                            <Dropdown.Item 
+                            <Dropdown.Item
                               onClick={() => updateBookingStatus(booking._id, 'Completed')}
                               className={booking.status === 'Completed' ? 'active fw-bold' : ''}
                             >
                               <Badge bg="success" className="me-2">Completed</Badge>
                               {booking.status === 'Completed' && '✓'}
                             </Dropdown.Item>
-                            <Dropdown.Item 
+                            <Dropdown.Item
                               onClick={() => updateBookingStatus(booking._id, 'Cancelled')}
                               className={booking.status === 'Cancelled' ? 'active fw-bold' : ''}
                             >
